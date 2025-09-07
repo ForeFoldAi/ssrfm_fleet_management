@@ -1,0 +1,394 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* SSRFM Materials Management Design System
+Warm, friendly colors for industrial users who need clear, simple interfaces
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Warm, friendly background with subtle warmth */
+    --background: 210 40% 98%;
+    --foreground: 215 25% 15%;
+
+    /* Clean white cards with subtle warmth */
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    /* Warm, friendly blue primary - easy to see and trust */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 91% 55%;
+
+    /* Soft gray secondary */
+    --secondary: 210 40% 94%;
+    --secondary-foreground: 215 25% 15%;
+
+    /* Light muted tones */
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 15% 50%;
+
+    /* Friendly accent color */
+    --accent: 180 60% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Clear warning and success colors */
+    --success: 217 91% 60%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Soft borders and inputs */
+    --border: 214 32% 86%;
+    --input: 214 32% 86%;
+    --ring: 217 91% 60%;
+
+    /* Friendly rounded corners */
+    --radius: 0.75rem;
+
+    /* Status colors for materials */
+    --status-in-stock: 142 76% 36%;
+    --status-low-stock: 38 92% 50%;
+    --status-out-stock: 0 84% 60%;
+    
+    /* Priority colors */
+    --priority-high: 0 84% 60%;
+    --priority-medium: 38 92% 50%;
+    --priority-low: 217 91% 60%;
+
+    /* Gradients for hero sections */
+    --gradient-hero: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(142 76% 36%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(210 40% 98%) 100%);
+    
+    /* Shadows for depth */
+    --shadow-sm: 0 2px 4px -1px hsl(215 25% 15% / 0.1);
+    --shadow-md: 0 4px 6px -1px hsl(215 25% 15% / 0.1), 0 2px 4px -1px hsl(215 25% 15% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(215 25% 15% / 0.1), 0 4px 6px -2px hsl(215 25% 15% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(215 25% 15% / 0.1), 0 10px 10px -5px hsl(215 25% 15% / 0.04);
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark mode with warm undertones */
+    --background: 215 25% 8%;
+    --foreground: 210 40% 92%;
+
+    --card: 215 25% 10%;
+    --card-foreground: 210 40% 92%;
+
+    --popover: 215 25% 10%;
+    --popover-foreground: 210 40% 92%;
+
+    --primary: 217 91% 65%;
+    --primary-foreground: 215 25% 8%;
+    --primary-hover: 217 91% 70%;
+
+    --secondary: 215 25% 14%;
+    --secondary-foreground: 210 40% 92%;
+
+    --muted: 215 25% 12%;
+    --muted-foreground: 215 15% 65%;
+
+    --accent: 142 76% 42%;
+    --accent-foreground: 215 25% 8%;
+
+    --success: 217 91% 65%;
+    --success-foreground: 215 25% 8%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 215 25% 8%;
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 215 25% 8%;
+
+    --border: 215 25% 18%;
+    --input: 215 25% 18%;
+    --ring: 217 91% 65%;
+
+    --gradient-hero: linear-gradient(135deg, hsl(217 91% 65%) 0%, hsl(142 76% 42%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(215 25% 10%) 0%, hsl(215 25% 12%) 100%);
+    
+    --shadow-sm: 0 2px 4px -1px hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -1px hsl(0 0% 0% / 0.2);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.3), 0 4px 6px -2px hsl(0 0% 0% / 0.2);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.3), 0 10px 10px -5px hsl(0 0% 0% / 0.2);
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  /* Friendly button styles for illiterate users */
+  .btn-friendly {
+    @apply px-6 py-4 text-lg font-semibold rounded-xl shadow-md transition-all duration-200 
+           hover:shadow-lg hover:scale-105 active:scale-95 
+           focus:outline-none focus:ring-4 focus:ring-primary/30;
+  }
+
+  .btn-primary {
+    @apply btn-friendly bg-primary text-primary-foreground hover:bg-primary-hover;
+  }
+
+  .btn-success {
+    @apply btn-friendly bg-success text-success-foreground;
+  }
+  .btn-success:hover {
+    background-color: hsl(var(--secondary) / 0.3);
+  }
+
+  /* Override all green hover effects globally */
+  .bg-blue-500:hover,
+  .bg-blue-600:hover,
+  .bg-blue-400:hover,
+  .bg-blue-500:hover,
+  .bg-blue-600:hover,
+  .bg-success:hover,
+  [class*="bg-blue"]:hover,
+  button.bg-blue-500:hover,
+  button[class*="bg-blue"]:hover,
+  .btn-success:hover,
+  [data-state="open"].bg-blue-500,
+  [data-state="open"][class*="bg-blue"] {
+    background-color: hsl(var(--secondary) / 0.3) !important;
+    color: #000000 !important;
+    color: black !important;
+  }
+
+  /* Also override any green button hover effects */
+  button:hover[class*="bg-blue"],
+  .button:hover[class*="bg-blue"],
+  *[role="button"]:hover[class*="bg-blue"] {
+    background-color: hsl(var(--secondary) / 0.3) !important;
+    color: #000000 !important;
+    color: black !important;
+  }
+
+  /* Comprehensive override for all possible green hover states */
+  * {
+    --tw-bg-opacity: 1;
+  }
+  
+  *:hover[class*="bg-blue"] {
+    background-color: hsl(var(--secondary) / 0.3) !important;
+    color: #000000 !important;
+    color: black !important;
+  }
+  
+  *:hover[class*="bg-success"] {
+    background-color: hsl(var(--secondary) / 0.3) !important;
+    color: #000000 !important;
+    color: black !important;
+  }
+  
+  *:hover[class*="bg-blue"] {
+    background-color: hsl(var(--secondary) / 0.3) !important;
+    color: #000000 !important;
+    color: black !important;
+  }
+
+  /* Specific override for dropdown menu items */
+  [data-radix-dropdown-menu-item]:hover[class*="bg-blue"],
+  [data-radix-dropdown-menu-item]:hover[class*="bg-success"],
+  [data-radix-dropdown-menu-item]:hover[class*="bg-blue"],
+  .dropdown-menu-item:hover[class*="bg-blue"] {
+    background-color: hsl(var(--secondary) / 0.3) !important;
+    color: #000000 !important;
+    color: black !important;
+  }
+
+  .btn-warning {
+    @apply btn-friendly bg-warning text-warning-foreground hover:bg-warning/90;
+  }
+
+  .btn-danger {
+    @apply btn-friendly bg-destructive text-destructive-foreground hover:bg-destructive/90;
+  }
+
+  /* Friendly card styles */
+  .card-friendly {
+    @apply bg-card border border-border rounded-xl shadow-md hover:shadow-lg 
+           transition-all duration-200 overflow-hidden;
+  }
+
+  /* Status badges */
+  .badge-status {
+    @apply px-3 py-1.5 text-sm font-bold rounded-full uppercase tracking-wide;
+  }
+
+  .badge-in-stock {
+    @apply badge-status bg-success/10 text-success ring-1 ring-success/20;
+  }
+
+  .badge-low-stock {
+    @apply badge-status bg-warning/10 text-warning ring-1 ring-warning/20;
+  }
+
+  .badge-out-stock {
+    @apply badge-status bg-destructive/10 text-destructive ring-1 ring-destructive/20;
+  }
+
+  /* Large, friendly input styles */
+  .input-friendly {
+    @apply w-full px-4 py-3 text-lg border border-input rounded-xl 
+           focus:outline-none focus:ring-4 focus:ring-primary/30 focus:border-primary
+           transition-all duration-200;
+  }
+}
+  /* Blue text hover styles for better visibility */
+  .text-blue-500:hover,
+  .text-blue-600:hover,
+  .text-blue-400:hover,
+  .text-blue-700:hover,
+  .text-blue-800:hover,
+  .text-blue-900:hover,
+  [class*="text-blue"]:hover {
+    color: #000000 !important;
+    color: black !important;
+  }
+
+  /* Success text hover styles for better visibility */
+  .text-success:hover {
+    color: #000000 !important;
+    color: black !important;
+  }
+
+  /* More specific blue hover styles to override white text */
+  .bg-blue-500:hover *,
+  .bg-blue-600:hover *,
+  .bg-success:hover *,
+  [class*="bg-blue"]:hover *,
+  button.bg-blue-500:hover *,
+  button[class*="bg-blue"]:hover *,
+  .btn-success:hover * {
+    color: #000000 !important;
+  }
+
+  /* Override white text specifically */
+  .bg-blue-500:hover .text-white,
+  .bg-blue-600:hover .text-white,
+  .bg-success:hover .text-white,
+  [class*="bg-blue"]:hover .text-white,
+  button.bg-blue-500:hover .text-white,
+  button[class*="bg-blue"]:hover .text-white,
+  .btn-success:hover .text-white {
+    color: #000000 !important;
+  }
+
+  /* Override foreground text colors */
+  .bg-blue-500:hover .text-primary-foreground,
+  .bg-blue-600:hover .text-primary-foreground,
+  .bg-success:hover .text-success-foreground,
+  [class*="bg-blue"]:hover .text-primary-foreground,
+  [class*="bg-blue"]:hover .text-success-foreground {
+    color: #000000 !important;
+  }
+
+  /* Ultimate override for any white text on blue hover */
+  .bg-blue-500:hover,
+  .bg-blue-600:hover,
+  .bg-success:hover,
+  [class*="bg-blue"]:hover,
+  button.bg-blue-500:hover,
+  button[class*="bg-blue"]:hover,
+  .btn-success:hover {
+    color: #000000 !important;
+  }
+  
+  .bg-blue-500:hover *,
+  .bg-blue-600:hover *,
+  .bg-success:hover *,
+  [class*="bg-blue"]:hover *,
+  button.bg-blue-500:hover *,
+  button[class*="bg-blue"]:hover *,
+  .btn-success:hover * {
+    color: #000000 !important;
+  }
+
+  /* Ultra-specific override for blue backgrounds with white text */
+  .bg-blue-500.text-white:hover,
+  .bg-blue-600.text-white:hover,
+  .bg-success.text-white:hover {
+    color: #000000 !important;
+  }
+  
+  /* Override for any element with both blue background and white text */
+  [class*="bg-blue"][class*="text-white"]:hover {
+    color: #000000 !important;
+  }
+
+  /* Nuclear option - override ALL text on blue hover */
+  *:hover[class*="bg-blue"] {
+    color: #000000 !important;
+  }
+  
+  *:hover[class*="bg-blue"] * {
+    color: #000000 !important;
+  }
+  
+  *:hover[class*="bg-blue"] svg {
+    color: #000000 !important;
+  }
+
+  /* Mobile-specific improvements */
+  @media (max-width: 768px) {
+    /* Improve touch targets */
+    button, [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    /* Better spacing for mobile */
+    .space-y-4 > * + * {
+      margin-top: 1rem;
+    }
+    
+    /* Improve form inputs on mobile */
+    input, textarea, select {
+      font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    /* Better card padding on mobile */
+    .card-friendly {
+      padding: 1rem;
+    }
+    
+    /* Improve table responsiveness */
+    .table-responsive {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
