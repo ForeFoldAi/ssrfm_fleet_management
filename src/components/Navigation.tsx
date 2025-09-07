@@ -33,30 +33,20 @@ export const Navigation = () => {
     ];
 
     const roleSpecificItems = {
-      "Site Supervisor": [
-        { to: "/material-request", label: "Request Materials", icon: Plus, permission: "create_requests" },
-        { to: "/requests-list", label: "My Requests", icon: List, permission: "view_own_requests" },
+      "site_supervisor": [
+        { to: "/material-request", label: "Request Materials", icon: Plus, permission: "request:create" },
+        { to: "/supervisor-requests", label: "My Requests", icon: List, permission: "request:view_own" },
+        { to: "/materials-inventory", label: "Inventory", icon: Package, permission: "material:view" },
       ],
-      "Inventory Manager": [
-        { to: "/materials-inventory", label: "Inventory", icon: Package, permission: "manage_inventory" },
-        { to: "/requests-list", label: "All Requests", icon: List, permission: "view_all_requests" },
-        { to: "/stock-management", label: "Stock Management", icon: Database, permission: "manage_stock" },
+      "inventory_manager": [
+        { to: "/requests-list", label: "All Requests", icon: List, permission: "request:view_all" },
+        { to: "/materials-inventory", label: "Inventory", icon: Package, permission: "material:view" },
+        { to: "/material-request", label: "Request Materials", icon: Plus, permission: "request:create" },
       ],
-      "Company Owner": [
-        { to: "/approval-center", label: "Approval Center", icon: Shield, permission: "approve_requests" },
-        { to: "/materials-inventory", label: "Inventory", icon: Package, permission: "view_inventory" },
-        { to: "/requests-list", label: "All Requests", icon: List, permission: "view_all_requests" },
-        { to: "/analytics", label: "Analytics", icon: Activity, permission: "view_analytics" },
-        { to: "/organizational-management", label: "Organization", icon: Users, permission: "manage_organization" },
-        { to: "/settings", label: "Settings", icon: Settings, permission: "manage_settings" },
-      ],
-      "System Administrator": [
-        { to: "/materials-inventory", label: "Inventory", icon: Package, permission: "manage_inventory" },
-        { to: "/requests-list", label: "All Requests", icon: List, permission: "view_all_requests" },
-        { to: "/analytics", label: "Analytics", icon: Activity, permission: "view_analytics" },
-        { to: "/organizational-management", label: "Organization", icon: Users, permission: "manage_organization" },
-        { to: "/settings", label: "Settings", icon: Settings, permission: "manage_settings" },
-        { to: "/stock-management", label: "Stock Management", icon: Database, permission: "manage_stock" },
+      "company_owner": [
+        { to: "/approval-center", label: "Approval Center", icon: Shield, permission: "request:approve_unlimited" },
+        { to: "/stock-management", label: "Stock Management", icon: Database, permission: "stock:manage" },
+        { to: "/materials-inventory", label: "Inventory", icon: Package, permission: "material:view" },
       ]
     };
 
@@ -73,8 +63,8 @@ export const Navigation = () => {
   
   // Determine how many items to show based on screen size
   const getVisibleItemsCount = () => {
-    if (navItems.length <= 3) return navItems.length;
-    return 3; // Show first 3 items, rest in dropdown
+    if (navItems.length <= 5) return navItems.length;
+    return 5; // Show first 5 items on desktop, rest in dropdown
   };
 
   const visibleItemsCount = getVisibleItemsCount();
@@ -97,7 +87,7 @@ export const Navigation = () => {
           </div>
 
           {/* Navigation Links - Desktop & Tablet */}
-          <div className="hidden md:flex items-center space-x-1 flex-1 justify-center max-w-2xl">
+          <div className="hidden md:flex items-center space-x-1 flex-1 justify-center">
             {visibleItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -106,7 +96,7 @@ export const Navigation = () => {
                   to={item.to}
                   end={item.to === "/"}
                   className={({ isActive }) =>
-                    `flex items-center space-x-1 lg:space-x-2 px-2 lg:px-4 py-2 rounded-xl font-medium transition-all duration-200 whitespace-nowrap ${
+                    `flex items-center space-x-1 lg:space-x-2 px-3 lg:px-4 py-2 rounded-xl font-medium transition-all duration-200 whitespace-nowrap ${
                       isActive
                         ? "bg-blue-600 text-white shadow-md shadow-blue-600/25"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-200"
@@ -115,7 +105,7 @@ export const Navigation = () => {
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
                   <div className="text-left">
-                    <div className="text-xs lg:text-sm font-semibold">{item.label}</div>
+                    <div className="text-sm font-semibold">{item.label}</div>
                   </div>
                 </NavLink>
               );
@@ -126,10 +116,10 @@ export const Navigation = () => {
               <div className="relative">
                 <button 
                   onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                  className="flex items-center space-x-1 px-2 lg:px-3 py-2 rounded-xl font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-200 transition-all duration-200"
+                  className="flex items-center space-x-1 px-3 py-2 rounded-xl font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-200 transition-all duration-200"
                 >
                   <Settings className="w-4 h-4" />
-                  <span className="text-xs lg:text-sm font-semibold">More</span>
+                  <span className="text-sm font-semibold">More</span>
                   <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isMoreMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
                 
@@ -170,18 +160,16 @@ export const Navigation = () => {
           </div>
 
           {/* Right Side - Role Switcher and Logout */}
-          <div className="hidden md:flex items-center space-x-2 flex-shrink-0">
-            <div className="hidden lg:block">
-              <RoleSwitcher />
-            </div>
+          <div className="hidden md:flex items-center space-x-2 lg:space-x-3 flex-shrink-0">
+            <RoleSwitcher />
             <Button
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="gap-1 lg:gap-2 border-gray-300 hover:bg-gray-200 text-xs lg:text-sm px-2 lg:px-3"
+              className="gap-2 border-gray-300 hover:bg-gray-200 text-sm px-3"
             >
-              <LogOut className="w-3 h-3 lg:w-4 lg:h-4" />
-              <span className="hidden lg:inline">Logout</span>
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
             </Button>
           </div>
         </div>

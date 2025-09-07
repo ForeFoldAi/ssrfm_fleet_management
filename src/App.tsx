@@ -42,21 +42,28 @@ const AppRoutes = () => {
           <Layout />
         </ProtectedRoute>
       }>
-                      <Route index element={<Dashboard />} />
-              <Route path="materials" element={<MaterialsInventory />} />
-              <Route path="material-request" element={<MaterialRequest />} />
-              <Route path="requests" element={<RequestsList />} />
-              <Route path="approvals" element={<ApprovalCenter />} />
-              <Route path="stock" element={<StockManagement />} />
-              <Route path="inventory" element={<MaterialsInventory />} />
-              <Route path="my-requests" element={<SupervisorRequests />} />
-              <Route path="generate-report" element={<GenerateReport />} />
-              <Route path="analytics" element={<Analytics />} />
-              <Route path="strategic-analytics" element={<StrategicAnalytics />} />
-              <Route path="financial-dashboard" element={<FinancialDashboard />} />
-              <Route path="organizational-management" element={<OrganizationalManagement />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="settings" element={<Settings />} />
+                              <Route index element={<Dashboard />} />
+        <Route path="materials-inventory" element={<MaterialsInventory />} />
+        <Route path="material-request" element={<MaterialRequest />} />
+        <Route path="requests-list" element={<RequestsList />} />
+        <Route path="approval-center" element={<ApprovalCenter />} />
+        <Route path="stock-management" element={<StockManagement />} />
+        <Route path="supervisor-requests" element={<SupervisorRequests />} />
+        <Route path="generate-report" element={<GenerateReport />} />
+        <Route path="analytics" element={<Analytics />} />
+        <Route path="strategic-analytics" element={<StrategicAnalytics />} />
+        <Route path="financial-dashboard" element={<FinancialDashboard />} />
+        <Route path="organizational-management" element={<OrganizationalManagement />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="settings" element={<Settings />} />
+        
+        {/* Legacy routes for backwards compatibility */}
+        <Route path="materials" element={<MaterialsInventory />} />
+        <Route path="requests" element={<RequestsList />} />
+        <Route path="approvals" element={<ApprovalCenter />} />
+        <Route path="stock" element={<StockManagement />} />
+        <Route path="inventory" element={<MaterialsInventory />} />
+        <Route path="my-requests" element={<SupervisorRequests />} />
               
       </Route>
       <Route path="*" element={<NotFound />} />
