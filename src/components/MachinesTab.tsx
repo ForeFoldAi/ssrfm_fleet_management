@@ -2,12 +2,14 @@ import { useState } from "react";
 import { Plus, Search, List, Table, Edit, Eye, Settings, MapPin } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { AddMachineForm } from "./AddMachineForm";
 
 export const MachinesTab = () => {
-  const [viewMode, setViewMode] = useState<"table" | "list">("list");
+  const [viewMode, setViewMode] = useState<"table" | "list">("table");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAddMachineOpen, setIsAddMachineOpen] = useState(false);
 
-  const machines = [
+  const [machines, setMachines] = useState([
     {
       id: 1,
       name: "Machine #45",
@@ -58,7 +60,11 @@ export const MachinesTab = () => {
       lastMaintenance: "2024-01-12",
       specifications: "Multi-process welding station, TIG/MIG capable"
     }
-  ];
+  ]);
+
+  const handleAddMachine = (machineData: any) => {
+    setMachines(prev => [...prev, machineData]);
+  };
 
   const filteredMachines = machines.filter(machine =>
     machine.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -93,7 +99,10 @@ export const MachinesTab = () => {
           </div>
         </div>
         
-        <Button className="btn-primary w-full sm:w-auto text-sm sm:text-base">
+        <Button 
+          className="btn-primary w-full sm:w-auto text-sm sm:text-base"
+          onClick={() => setIsAddMachineOpen(true)}
+        >
           <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
           Add New Machine
         </Button>
@@ -187,55 +196,55 @@ export const MachinesTab = () => {
       ) : (
         <div className="card-friendly overflow-x-auto">
           <div className="p-3 sm:p-6 min-w-[700px]">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border">
                   <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Machine</th>
                   <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Type</th>
                   <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Location</th>
                   <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Status</th>
                   <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Last Service</th>
                   <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredMachines.map((machine) => (
-                  <tr key={machine.id} className="border-b border-border hover:bg-secondary/30 transition-colors duration-200">
+              </tr>
+            </thead>
+            <tbody>
+              {filteredMachines.map((machine) => (
+                <tr key={machine.id} className="border-b border-border hover:bg-secondary/30 transition-colors duration-200">
                     <td className="py-2 sm:py-3 px-1 sm:px-2">
                       <div className="flex items-center gap-2 sm:gap-3">
                         <div className="w-6 h-6 sm:w-8 sm:h-8 bg-primary/10 rounded-lg flex items-center justify-center">
                           <Settings className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                        </div>
-                        <span className="font-semibold text-foreground text-xs sm:text-sm">{machine.name}</span>
                       </div>
-                    </td>
+                        <span className="font-semibold text-foreground text-xs sm:text-sm">{machine.name}</span>
+                    </div>
+                  </td>
                     <td className="py-2 sm:py-3 px-1 sm:px-2 text-primary font-semibold text-xs sm:text-sm">{machine.type}</td>
                     <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground text-xs sm:text-sm">
-                      <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1">
                         <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
                         <span className="truncate max-w-24 sm:max-w-none">{machine.location}</span>
-                      </div>
-                    </td>
+                    </div>
+                  </td>
                     <td className="py-2 sm:py-3 px-1 sm:px-2">
                       <span className={`${getStatusBadge(machine.status)} text-xs`}>
-                        {machine.status}
-                      </span>
-                    </td>
+                      {machine.status}
+                    </span>
+                  </td>
                     <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground text-xs sm:text-sm">{machine.lastMaintenance}</td>
                     <td className="py-2 sm:py-3 px-1 sm:px-2">
-                      <div className="flex gap-1">
+                    <div className="flex gap-1">
                         <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
                           <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </Button>
+                      </Button>
                         <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
                           <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           </div>
         </div>
       )}
@@ -250,12 +259,22 @@ export const MachinesTab = () => {
           <p className="text-sm sm:text-base text-muted-foreground mb-4">
             {searchQuery ? "Try adjusting your search terms" : "Start by adding your first machine"}
           </p>
-          <Button className="btn-primary text-sm sm:text-base">
+          <Button 
+            className="btn-primary text-sm sm:text-base"
+            onClick={() => setIsAddMachineOpen(true)}
+          >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Add First Machine
           </Button>
         </div>
       )}
+
+      {/* Add Machine Form */}
+      <AddMachineForm
+        isOpen={isAddMachineOpen}
+        onClose={() => setIsAddMachineOpen(false)}
+        onSubmit={handleAddMachine}
+      />
     </div>
   );
 };

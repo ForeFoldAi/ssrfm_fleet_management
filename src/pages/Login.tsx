@@ -20,6 +20,20 @@ const Login = () => {
   const navigate = useNavigate();
   const { setCurrentUser } = useRole();
 
+  // Get role-specific redirect path
+  const getRoleRedirectPath = (role: UserRole) => {
+    switch (role) {
+      case 'site_supervisor':
+        return '/supervisor-requests';
+      case 'inventory_manager':
+        return '/';
+      case 'company_owner':
+        return '/';
+      default:
+        return '/';
+    }
+  };
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const user = DEMO_USERS.find(u => u.email === email && u.password === password);
@@ -27,7 +41,7 @@ const Login = () => {
     if (user) {
       setCurrentUser({ id: '1', name: user.name, email: user.email, role: user.role, department: 'Demo Department' });
       toast({ title: "Login Successful", description: `Welcome back, ${user.name}!` });
-      navigate("/");
+      navigate(getRoleRedirectPath(user.role));
     } else {
       toast({ title: "Login Failed", description: "Invalid credentials", variant: "destructive" });
     }
@@ -36,7 +50,7 @@ const Login = () => {
   const handleDemoLogin = (user: typeof DEMO_USERS[0]) => {
     setCurrentUser({ id: '1', name: user.name, email: user.email, role: user.role, department: 'Demo Department' });
     toast({ title: "Demo Login", description: `Logged in as ${user.name}` });
-    navigate("/");
+    navigate(getRoleRedirectPath(user.role));
   };
 
   return (

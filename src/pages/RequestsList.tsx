@@ -189,11 +189,11 @@ const RequestsList = () => {
                       <h3 className="text-base sm:text-lg font-bold text-foreground">{request.id}</h3>
                       <div className="flex flex-wrap gap-2">
                         <span className={`${getStatusBadge(request.status)} text-xs`}>
-                          {request.status}
-                        </span>
+                        {request.status}
+                      </span>
                         <span className={`${getPriorityBadge(request.priority)} text-xs`}>
-                          {request.priority} Priority
-                        </span>
+                        {request.priority} Priority
+                      </span>
                       </div>
                     </div>
                     
@@ -241,9 +241,9 @@ const RequestsList = () => {
         ) : (
           <div className="overflow-x-auto">
             <div className="min-w-[800px]">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
                     <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Request ID</th>
                     <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Material</th>
                     <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Quantity</th>
@@ -252,47 +252,47 @@ const RequestsList = () => {
                     <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Status</th>
                     <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Date</th>
                     <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRequests.map((request) => (
-                    <tr key={request.id} className="border-b border-border hover:bg-[#E5E5E5] transition-colors duration-200">
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRequests.map((request) => (
+                  <tr key={request.id} className="border-b border-border hover:bg-[#E5E5E5] transition-colors duration-200">
                       <td className="py-2 sm:py-3 px-1 sm:px-2 font-medium text-foreground text-xs sm:text-sm">{request.id}</td>
                       <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground text-xs sm:text-sm truncate max-w-32">{request.material}</td>
                       <td className="py-2 sm:py-3 px-1 sm:px-2 font-semibold text-primary text-xs sm:text-sm">{request.quantity}</td>
                       <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground text-xs sm:text-sm truncate max-w-24">{request.machine}</td>
                       <td className="py-2 sm:py-3 px-1 sm:px-2">
                         <span className={`${getPriorityBadge(request.priority)} text-xs`}>
-                          {request.priority}
-                        </span>
-                      </td>
+                        {request.priority}
+                      </span>
+                    </td>
                       <td className="py-2 sm:py-3 px-1 sm:px-2">
                         <span className={`${getStatusBadge(request.status)} text-xs`}>
-                          {request.status}
-                        </span>
-                      </td>
+                        {request.status}
+                      </span>
+                    </td>
                       <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground text-xs sm:text-sm">{request.requestedDate}</td>
                       <td className="py-2 sm:py-3 px-1 sm:px-2">
-                        <div className="flex gap-1">
-                          {request.status === "Pending" && (
-                            <>
+                      <div className="flex gap-1">
+                        {request.status === "Pending" && (
+                          <>
                               <Button variant="ghost" size="sm" className="text-success hover:bg-secondary/30 h-7 w-7 sm:h-8 sm:w-8 p-0">
                                 <Check className="w-3 h-3 sm:w-4 sm:h-4" />
-                              </Button>
+                            </Button>
                               <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 h-7 w-7 sm:h-8 sm:w-8 p-0">
                                 <X className="w-3 h-3 sm:w-4 sm:h-4" />
-                              </Button>
-                            </>
-                          )}
+                            </Button>
+                          </>
+                        )}
                           <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
                             <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
             </div>
           </div>
         )}

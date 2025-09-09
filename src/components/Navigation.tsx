@@ -23,34 +23,33 @@ export const Navigation = () => {
 
   // Role-specific navigation items
   const getNavigationItems = () => {
-    const baseItems = [
+    const userRole = currentUser?.role;
+    
+    // Dashboard item - exclude for supervisor role
+    const baseItems = userRole !== "site_supervisor" ? [
       { 
         to: "/", 
         label: "Dashboard", 
         icon: Activity, 
         permission: null 
       },
-    ];
+    ] : [];
 
-    const roleSpecificItems = {
+    const roleSpecificItems: Record<string, any[]> = {
       "site_supervisor": [
-        { to: "/material-request", label: "Request Materials", icon: Plus, permission: "request:create" },
         { to: "/supervisor-requests", label: "My Requests", icon: List, permission: "request:view_own" },
-        { to: "/materials-inventory", label: "Inventory", icon: Package, permission: "material:view" },
+        { to: "/materials-inventory", label: "Stock Register", icon: Package, permission: "material:view" },
       ],
       "inventory_manager": [
         { to: "/requests-list", label: "All Requests", icon: List, permission: "request:view_all" },
-        { to: "/materials-inventory", label: "Inventory", icon: Package, permission: "material:view" },
-        { to: "/material-request", label: "Request Materials", icon: Plus, permission: "request:create" },
+        { to: "/materials-inventory", label: "Stock Register", icon: Package, permission: "material:view" },
       ],
       "company_owner": [
         { to: "/approval-center", label: "Approval Center", icon: Shield, permission: "request:approve_unlimited" },
-        { to: "/stock-management", label: "Stock Management", icon: Database, permission: "stock:manage" },
-        { to: "/materials-inventory", label: "Inventory", icon: Package, permission: "material:view" },
+        { to: "/materials-inventory", label: "Stock Register", icon: Package, permission: "material:view" },
       ]
     };
 
-    const userRole = currentUser?.role;
     if (!userRole) return baseItems;
 
     const roleItems = roleSpecificItems[userRole] || [];
@@ -72,22 +71,25 @@ export const Navigation = () => {
   const dropdownItems = navItems.slice(visibleItemsCount);
 
   return (
-    <nav className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[95%] max-w-7xl">
-      <div className="rounded-2xl shadow-lg shadow-black/5 border border-gray-300/50" style={{ backgroundColor: '#e5e5e5' }}>
-        <div className="flex items-center justify-between h-16 px-4 sm:px-6">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
           {/* Company Logo & Name */}
-          <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
-              <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          <div className="flex items-center space-x-3 flex-shrink-0">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/25">
+              <Building2 className="w-6 h-6 text-white" />
             </div>
-            <div className="min-w-0">
-              <h1 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 truncate">SSRFM Industries</h1>
-              <p className="text-xs text-gray-500 hidden lg:block">Smart Supply & Resource Management</p>
+            <div className="hidden sm:block">
+              <h1 className="text-xl font-bold text-gray-900">SSRFM Industries</h1>
+              <p className="text-xs text-gray-500 -mt-1">Smart Supply & Resource Management</p>
+            </div>
+            <div className="sm:hidden">
+              <h1 className="text-lg font-bold text-gray-900">SSRFM</h1>
             </div>
           </div>
 
-          {/* Navigation Links - Desktop & Tablet */}
-          <div className="hidden md:flex items-center space-x-1 flex-1 justify-center">
+          {/* Navigation Links - Desktop */}
+          <div className="hidden lg:flex items-center space-x-1">
             {visibleItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -96,17 +98,17 @@ export const Navigation = () => {
                   to={item.to}
                   end={item.to === "/"}
                   className={({ isActive }) =>
-                    `flex items-center space-x-1 lg:space-x-2 px-3 lg:px-4 py-2 rounded-xl font-medium transition-all duration-200 whitespace-nowrap ${
+                    `group flex items-center space-x-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 relative overflow-hidden ${
                       isActive
-                        ? "bg-blue-600 text-white shadow-md shadow-blue-600/25"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-200"
+                        ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
+                        : "text-gray-600 hover:text-blue-600 hover:bg-blue-50"
                     }`
                   }
                 >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  <div className="text-left">
-                    <div className="text-sm font-semibold">{item.label}</div>
-                  </div>
+                  <Icon className="w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-110" />
+                  <span className="text-sm font-semibold">{item.label}</span>
+                  {/* Hover effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-blue-600/5 to-blue-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </NavLink>
               );
             })}
@@ -116,11 +118,11 @@ export const Navigation = () => {
               <div className="relative">
                 <button 
                   onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                  className="flex items-center space-x-1 px-3 py-2 rounded-xl font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-200 transition-all duration-200"
+                  className="group flex items-center space-x-2 px-4 py-2.5 rounded-xl font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
                 >
-                  <Settings className="w-4 h-4" />
+                  <Settings className="w-4 h-4 transition-transform group-hover:rotate-90" />
                   <span className="text-sm font-semibold">More</span>
-                  <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isMoreMenuOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-3 h-3 transition-all duration-200 ${isMoreMenuOpen ? 'rotate-180 text-blue-600' : 'group-hover:text-blue-600'}`} />
                 </button>
                 
                 {isMoreMenuOpen && (
@@ -129,8 +131,9 @@ export const Navigation = () => {
                       className="fixed inset-0 z-10" 
                       onClick={() => setIsMoreMenuOpen(false)}
                     />
-                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 z-20">
-                      <div className="p-2">
+                    <div className="absolute right-0 top-full mt-3 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 z-20 overflow-hidden">
+                      <div className="p-3">
+                        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">Additional Menu</div>
                         {dropdownItems.map((item) => {
                           const Icon = item.icon;
                           return (
@@ -139,15 +142,15 @@ export const Navigation = () => {
                               to={item.to}
                               onClick={() => setIsMoreMenuOpen(false)}
                               className={({ isActive }) =>
-                                `flex items-center space-x-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${
+                                `group flex items-center space-x-3 px-3 py-3 rounded-xl font-medium transition-all duration-200 ${
                                   isActive
-                                    ? "bg-blue-600 text-white"
-                                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                                    ? "bg-blue-600 text-white shadow-md"
+                                    : "text-gray-600 hover:text-blue-600 hover:bg-blue-50"
                                 }`
                               }
                             >
-                              <Icon className="w-4 h-4" />
-                              <span className="text-sm">{item.label}</span>
+                              <Icon className="w-5 h-5 transition-transform group-hover:scale-110" />
+                              <span className="text-sm font-medium">{item.label}</span>
                             </NavLink>
                           );
                         })}
@@ -160,23 +163,26 @@ export const Navigation = () => {
           </div>
 
           {/* Right Side - Role Switcher and Logout */}
-          <div className="hidden md:flex items-center space-x-2 lg:space-x-3 flex-shrink-0">
+          <div className="flex items-center space-x-3">
+            <div className="hidden md:block">
             <RoleSwitcher />
+            </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="gap-2 border-gray-300 hover:bg-gray-200 text-sm px-3"
+              className="group gap-2 border-gray-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 text-sm px-3 py-2 transition-all duration-200"
             >
-              <LogOut className="w-4 h-4" />
-              <span>Logout</span>
+              <LogOut className="w-4 h-4 transition-transform group-hover:scale-110" />
+              <span className="hidden sm:inline">Logout</span>
             </Button>
           </div>
         </div>
 
         {/* Mobile Navigation */}
-        <div className="md:hidden border-t border-border bg-secondary/50">
-          <div className="px-4 py-3 space-y-2">
+        <div className="lg:hidden border-t border-gray-100">
+          <div className="px-4 py-4">
+            <div className="grid grid-cols-2 gap-3 mb-4">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -185,32 +191,33 @@ export const Navigation = () => {
                   to={item.to}
                   end={item.to === "/"}
                   className={({ isActive }) =>
-                    `flex items-center space-x-3 px-3 py-2 rounded-lg font-medium transition-colors ${
+                      `group flex flex-col items-center space-y-2 p-3 rounded-2xl font-medium transition-all duration-200 ${
                       isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
+                          : "text-gray-600 hover:text-blue-600 hover:bg-blue-50"
                     }`
                   }
                 >
-                  <Icon className="w-5 h-5" />
-                  <div>
-                    <div className="text-sm font-medium">{item.label}</div>
-                  </div>
+                    <Icon className="w-6 h-6 transition-transform group-hover:scale-110" />
+                    <span className="text-xs font-semibold text-center">{item.label}</span>
                 </NavLink>
               );
             })}
+            </div>
             
-            <div className="pt-3 border-t border-gray-300/50">
+            <div className="pt-4 border-t border-gray-100">
               <div className="flex items-center justify-between">
+                <div className="md:hidden">
                 <RoleSwitcher />
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleLogout}
-                  className="gap-2"
+                  className="group gap-2 border-gray-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
                 >
-                  <LogOut className="w-4 h-4" />
-                  Logout
+                  <LogOut className="w-4 h-4 transition-transform group-hover:scale-110" />
+                  <span>Logout</span>
                 </Button>
               </div>
             </div>

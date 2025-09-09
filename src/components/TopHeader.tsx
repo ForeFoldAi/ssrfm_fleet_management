@@ -59,7 +59,7 @@ export const TopHeader = () => {
 
             {/* Mobile Role Switcher - Compact */}
             <div className="sm:hidden">
-              <RoleSwitcher />
+            <RoleSwitcher />
             </div>
 
             {/* Logout Button */}

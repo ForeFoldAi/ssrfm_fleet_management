@@ -32,13 +32,7 @@ export const Header = () => {
   // Role-specific navigation items
   const getNavigationItems = () => {
     const baseItems = [
-      { 
-        to: "/", 
-        label: "Dashboard", 
-        icon: Package,
-        description: "Overview",
-        permission: null // Always available
-      }
+     
     ];
 
     const roleSpecificItems = {

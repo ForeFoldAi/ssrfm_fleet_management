@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { RoleProvider, useRole } from "./contexts/RoleContext";
+import { StockProvider } from "./contexts/StockContext";
 import { Layout } from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import MaterialsInventory from "./pages/MaterialsInventory";
@@ -13,6 +14,7 @@ import ApprovalCenter from "./pages/ApprovalCenter";
 import StockManagement from "./pages/StockManagement";
 import SupervisorRequests from "./pages/SupervisorRequests";
 import GenerateReport from "./pages/GenerateReport";
+import AddStock from "./pages/AddStock";
 import Analytics from "./pages/Analytics";
 import StrategicAnalytics from "./pages/StrategicAnalytics";
 import FinancialDashboard from "./pages/FinancialDashboard";
@@ -31,24 +33,53 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
+// Role-based Home Redirect Component
+const RoleBasedHome = () => {
+  const { currentUser } = useRole();
+  
+  if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Redirect supervisors to their requests page
+  if (currentUser.role === 'site_supervisor') {
+    return <Navigate to="/supervisor-requests" replace />;
+  }
+
+  // Other roles go to dashboard
+  return <Dashboard />;
+};
+
 const AppRoutes = () => {
-  const { isAuthenticated } = useRole();
+  const { isAuthenticated, currentUser } = useRole();
+
+  // Handle login redirect based on role
+  const getLoginRedirect = () => {
+    if (!currentUser) return "/";
+    
+    if (currentUser.role === 'site_supervisor') {
+      return "/supervisor-requests";
+    }
+    
+    return "/";
+  };
 
   return (
     <Routes>
-      <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/" replace />} />
+      <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to={getLoginRedirect()} replace />} />
       <Route path="/" element={
         <ProtectedRoute>
           <Layout />
         </ProtectedRoute>
       }>
-                              <Route index element={<Dashboard />} />
+        <Route index element={<RoleBasedHome />} />
         <Route path="materials-inventory" element={<MaterialsInventory />} />
         <Route path="material-request" element={<MaterialRequest />} />
         <Route path="requests-list" element={<RequestsList />} />
         <Route path="approval-center" element={<ApprovalCenter />} />
         <Route path="stock-management" element={<StockManagement />} />
         <Route path="supervisor-requests" element={<SupervisorRequests />} />
+        <Route path="add-stock" element={<AddStock />} />
         <Route path="generate-report" element={<GenerateReport />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="strategic-analytics" element={<StrategicAnalytics />} />
@@ -74,13 +105,15 @@ const AppRoutes = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <RoleProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </TooltipProvider>
+      <StockProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </StockProvider>
     </RoleProvider>
   </QueryClientProvider>
 );

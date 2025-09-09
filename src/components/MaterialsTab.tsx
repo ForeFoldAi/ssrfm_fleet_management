@@ -2,12 +2,14 @@ import { useState } from "react";
 import { Plus, Search, List, Table, Edit, Eye, Package } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { AddMaterialForm } from "./AddMaterialForm";
 
 export const MaterialsTab = () => {
-  const [viewMode, setViewMode] = useState<"table" | "list">("list");
+  const [viewMode, setViewMode] = useState<"table" | "list">("table");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
 
-  const materials = [
+  const [materials, setMaterials] = useState([
     {
       id: 1,
       name: "Steel Rods (20mm)",
@@ -58,7 +60,11 @@ export const MaterialsTab = () => {
       minStock: 30,
       status: "Low Stock"
     }
-  ];
+  ]);
+
+  const handleAddMaterial = (materialData: any) => {
+    setMaterials(prev => [...prev, materialData]);
+  };
 
   const filteredMaterials = materials.filter(material =>
     material.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -93,7 +99,10 @@ export const MaterialsTab = () => {
           </div>
         </div>
         
-        <Button className="btn-primary w-full sm:w-auto text-sm sm:text-base">
+        <Button 
+          className="btn-primary w-full sm:w-auto text-sm sm:text-base"
+          onClick={() => setIsAddMaterialOpen(true)}
+        >
           <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
           Add New Material
         </Button>
@@ -185,9 +194,9 @@ export const MaterialsTab = () => {
       ) : (
         <div className="card-friendly overflow-x-auto">
           <div className="p-3 sm:p-6 min-w-[800px]">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border">
                   <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Material</th>
                   <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Specifications</th>
                   <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Current Stock</th>
@@ -195,48 +204,48 @@ export const MaterialsTab = () => {
                   <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Status</th>
                   <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Supplier</th>
                   <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredMaterials.map((material) => (
-                  <tr key={material.id} className="border-b border-border hover:bg-secondary/30 transition-colors duration-200">
+              </tr>
+            </thead>
+            <tbody>
+              {filteredMaterials.map((material) => (
+                <tr key={material.id} className="border-b border-border hover:bg-secondary/30 transition-colors duration-200">
                     <td className="py-2 sm:py-3 px-1 sm:px-2">
                       <div className="flex items-center gap-2 sm:gap-3">
                         <div className="w-6 h-6 sm:w-8 sm:h-8 bg-primary/10 rounded-lg flex items-center justify-center">
                           <Package className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                        </div>
-                        <span className="font-semibold text-foreground text-xs sm:text-sm">{material.name}</span>
                       </div>
-                    </td>
+                        <span className="font-semibold text-foreground text-xs sm:text-sm">{material.name}</span>
+                    </div>
+                  </td>
                     <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground max-w-xs truncate text-xs sm:text-sm">
-                      {material.specifications}
-                    </td>
+                    {material.specifications}
+                  </td>
                     <td className="py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">
-                      {material.currentStock} {material.unit}
-                    </td>
+                    {material.currentStock} {material.unit}
+                  </td>
                     <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground text-xs sm:text-sm">
-                      {material.minStock} {material.unit}
-                    </td>
+                    {material.minStock} {material.unit}
+                  </td>
                     <td className="py-2 sm:py-3 px-1 sm:px-2">
                       <span className={`${getStatusBadge(material.status)} text-xs`}>
-                        {material.status}
-                      </span>
-                    </td>
+                      {material.status}
+                    </span>
+                  </td>
                     <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground text-xs sm:text-sm truncate max-w-32">{material.maker}</td>
                     <td className="py-2 sm:py-3 px-1 sm:px-2">
-                      <div className="flex gap-1">
+                    <div className="flex gap-1">
                         <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
                           <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </Button>
+                      </Button>
                         <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
                           <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           </div>
         </div>
       )}
@@ -251,12 +260,22 @@ export const MaterialsTab = () => {
           <p className="text-sm sm:text-base text-muted-foreground mb-4">
             {searchQuery ? "Try adjusting your search terms" : "Start by adding your first material"}
           </p>
-          <Button className="btn-primary text-sm sm:text-base">
+          <Button 
+            className="btn-primary text-sm sm:text-base"
+            onClick={() => setIsAddMaterialOpen(true)}
+          >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Add First Material
           </Button>
         </div>
       )}
+
+      {/* Add Material Form */}
+      <AddMaterialForm
+        isOpen={isAddMaterialOpen}
+        onClose={() => setIsAddMaterialOpen(false)}
+        onSubmit={handleAddMaterial}
+      />
     </div>
   );
 };

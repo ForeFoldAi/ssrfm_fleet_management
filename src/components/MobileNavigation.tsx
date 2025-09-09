@@ -32,23 +32,20 @@ export const MobileNavigation = () => {
 
   // Get role-specific navigation items
   const getNavigationItems = () => {
-    const baseItems = [
+    const userRole = currentUser?.role;
+    
+    // Dashboard item - exclude for supervisor role
+    const baseItems = userRole !== "site_supervisor" ? [
       { 
         to: "/", 
         label: "Home", 
         icon: Home,
         permission: null
       }
-    ];
+    ] : [];
 
     const roleSpecificItems = {
       site_supervisor: [
-        { 
-          to: "/material-request", 
-          label: "Request", 
-          icon: Plus,
-          permission: "request:create"
-        },
         { 
           to: "/my-requests", 
           label: "My Requests", 
@@ -71,16 +68,11 @@ export const MobileNavigation = () => {
         },
         { 
           to: "/materials", 
-          label: "Materials", 
+          label: "Stock Register", 
           icon: Package,
           permission: "material:view"
         },
-        { 
-          to: "/material-request", 
-          label: "New Request", 
-          icon: Plus,
-          permission: "request:create"
-        }
+        
       ],
       company_owner: [
         { 
@@ -89,15 +81,10 @@ export const MobileNavigation = () => {
           icon: CheckCircle,
           permission: "request:approve_unlimited"
         },
-        { 
-          to: "/stock", 
-          label: "Stock", 
-          icon: BarChart3,
-          permission: "material:view"
-        },
+        
         { 
           to: "/inventory", 
-          label: "Inventory", 
+          label: "Stock Register", 
           icon: Package,
           permission: "material:view"
         }
@@ -124,7 +111,6 @@ export const MobileNavigation = () => {
       ]
     };
 
-    const userRole = currentUser?.role;
     if (!userRole) return baseItems;
 
     const roleItems = roleSpecificItems[userRole] || [];

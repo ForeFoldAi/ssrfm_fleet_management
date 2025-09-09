@@ -309,12 +309,12 @@ const CompanyOwnerDashboard = () => {
                     <span className="font-medium text-foreground text-sm sm:text-base truncate">{request.item}</span>
                     <div className="flex flex-wrap gap-2">
                       <Badge className={`${getPriorityColor(request.priority)} text-xs`}>
-                        {request.priority}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {request.value}
-                      </Badge>
-                    </div>
+                      {request.priority}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {request.value}
+                    </Badge>
+                  </div>
                   </div>
                   <div className="text-xs sm:text-sm text-muted-foreground mb-2">
                     {request.department} • Requested by {request.requestedBy} • {request.date}

@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Clock, CheckCircle, XCircle, Eye, FileText, Plus, AlertTriangle, User, Calendar, Package, Truck, CheckSquare } from "lucide-react";
+import { Clock, CheckCircle, XCircle, Eye, FileText, Plus, AlertTriangle, User, Calendar, Package, Truck, CheckSquare, List, Table as TableIcon, ChevronRight, ChevronDown, MoreVertical } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Link } from "react-router-dom";
 import { useRole } from "../contexts/RoleContext";
 
@@ -14,6 +15,8 @@ const SupervisorRequests = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
+  const [viewMode, setViewMode] = useState<"list" | "table">("table");
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // SSRFM Status workflow: Pending Approval → Approved → Ordered → Issued → Completed
   const allRequests = [
@@ -205,6 +208,16 @@ const SupervisorRequests = () => {
     }
   };
 
+  const toggleRowExpansion = (requestId: string) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(requestId)) {
+      newExpandedRows.delete(requestId);
+    } else {
+      newExpandedRows.add(requestId);
+    }
+    setExpandedRows(newExpandedRows);
+  };
+
   const filteredRequests = allRequests.filter(request => {
     const matchesSearch = request.materialName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          request.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -230,20 +243,20 @@ const SupervisorRequests = () => {
       <div className="my-3">
         {/* Desktop Progress Bar */}
         <div className="hidden sm:flex items-center space-x-2">
-          {stages.map((stageName, index) => (
-            <div key={index} className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                index < stage ? getProgressColor(index + 1) : 'bg-gray-300'
-              }`}>
-                {index + 1}
-              </div>
-              {index < stages.length - 1 && (
-                <div className={`w-12 h-1 mx-2 ${
-                  index < stage - 1 ? getProgressColor(index + 1) : 'bg-gray-300'
-                }`} />
-              )}
+        {stages.map((stageName, index) => (
+          <div key={index} className="flex items-center">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+              index < stage ? getProgressColor(index + 1) : 'bg-gray-300'
+            }`}>
+              {index + 1}
             </div>
-          ))}
+            {index < stages.length - 1 && (
+              <div className={`w-12 h-1 mx-2 ${
+                index < stage - 1 ? getProgressColor(index + 1) : 'bg-gray-300'
+              }`} />
+            )}
+          </div>
+        ))}
         </div>
 
         {/* Mobile Progress Bar - Vertical */}
@@ -269,6 +282,336 @@ const SupervisorRequests = () => {
     );
   };
 
+  // Enhanced List View Component - Table-like format with expandable details
+  const ListView = ({ requests }: { requests: any[] }) => (
+    <Card>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12"></TableHead>
+                <TableHead className="min-w-[200px]">REQUEST</TableHead>
+                <TableHead className="min-w-[120px]">CONTACT</TableHead>
+                <TableHead className="min-w-[120px]">COMPANY</TableHead>
+                <TableHead className="min-w-[100px]">STATUS</TableHead>
+                <TableHead className="min-w-[140px]">SUBMITTED DATE</TableHead>
+                <TableHead className="min-w-[140px]">LAST UPDATED</TableHead>
+                <TableHead className="min-w-[140px]">NEXT ACTION DATE</TableHead>
+                <TableHead className="min-w-[100px]">PRIORITY</TableHead>
+                <TableHead className="min-w-[100px]">ACTIONS</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {requests.map((request) => (
+                <>
+                  <TableRow key={request.id} className="hover:bg-muted/50">
+                    <TableCell>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
+                        onClick={() => toggleRowExpansion(request.id)}
+                      >
+                        {expandedRows.has(request.id) ? (
+                          <ChevronDown className="w-4 h-4" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-semibold text-sm">{request.materialName}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {request.materialPurpose}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {request.machineName}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{request.requestedBy}</div>
+                      <div className="text-xs text-muted-foreground">{request.id}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{request.maker}</div>
+                      <div className="text-xs text-muted-foreground">Supplier</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(request.status)} variant="secondary">
+                        <span className="flex items-center gap-1">
+                          {getStatusIcon(request.status)}
+                          <span className="text-xs">{request.currentStage}</span>
+                        </span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{request.date}</div>
+                      <div className="text-xs text-muted-foreground">Submitted</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {request.approvedDate || request.orderedDate || request.issuedDate || request.completedDate || request.rejectedDate || 'N/A'}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {request.approvedBy || request.rejectedBy || 'N/A'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className={`text-sm px-2 py-1 rounded ${
+                        request.status === 'pending_approval' ? 'bg-yellow-100 text-yellow-800' :
+                        request.status === 'approved' ? 'bg-blue-100 text-blue-800' :
+                        request.status === 'ordered' ? 'bg-purple-100 text-purple-800' :
+                        request.status === 'issued' ? 'bg-orange-100 text-orange-800' :
+                        request.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {request.expectedDelivery || request.issuedDate || request.completedDate || 'N/A'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getPriorityColor(request.priority)} variant="outline">
+                        {request.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                  
+                  {/* Expanded Detail Row */}
+                  {expandedRows.has(request.id) && (
+                    <TableRow>
+                      <TableCell colSpan={10} className="p-0">
+                        <div className="bg-muted/30 p-6 border-t">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Left Column - Request Details */}
+                            <div className="space-y-4">
+                              <div>
+                                <h3 className="font-semibold text-lg mb-3">Request Details</h3>
+                                <div className="space-y-3">
+                                  <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                      <span className="font-medium text-muted-foreground">Request ID:</span>
+                                      <div className="font-medium">{request.id}</div>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-muted-foreground">Quantity:</span>
+                                      <div className="font-medium">{request.quantity}</div>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-muted-foreground">Value:</span>
+                                      <div className="font-medium">{request.value}</div>
+                                    </div>
+                                    <div>
+                                      <span className="font-medium text-muted-foreground">Machine ID:</span>
+                                      <div className="font-medium">{request.machineId}</div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div>
+                                    <span className="font-medium text-muted-foreground">Specifications:</span>
+                                    <div className="text-sm mt-1 p-3 bg-background rounded border">
+                                      {request.specifications}
+                                    </div>
+                                  </div>
+                                  
+                                  <div>
+                                    <span className="font-medium text-muted-foreground">Purpose:</span>
+                                    <div className="text-sm mt-1">{request.materialPurpose}</div>
+                                  </div>
+                                  
+                                  {request.additionalNotes && (
+                                    <div>
+                                      <span className="font-medium text-muted-foreground">Additional Notes:</span>
+                                      <div className="text-sm mt-1 p-3 bg-background rounded border">
+                                        {request.additionalNotes}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Right Column - Status & Progress */}
+                            <div className="space-y-4">
+                              <div>
+                                <h3 className="font-semibold text-lg mb-3">Status & Progress</h3>
+                                
+                                {/* Progress Bar */}
+                                <ProgressBar stage={request.progressStage} />
+                                
+                                {/* Status Information */}
+                                <div className="space-y-3">
+                                  <div className="p-3 bg-background rounded border">
+                                    <div className="text-sm font-medium mb-2">Current Status</div>
+                                    <div className="text-sm text-muted-foreground">{request.statusDescription}</div>
+                                  </div>
+                                  
+                                  {/* Status-specific information */}
+                                  {request.status === 'approved' && (
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                      <div className="text-sm">
+                                        <strong className="text-blue-800">Approved:</strong> {request.approvedBy} on {request.approvedDate}
+                                      </div>
+                                      <div className="text-xs text-blue-600 mt-1">Ready for procurement</div>
+                                    </div>
+                                  )}
+
+                                  {request.status === 'ordered' && (
+                                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                                      <div className="text-sm space-y-1">
+                                        <div><strong className="text-purple-800">Ordered:</strong> {request.orderedDate}</div>
+                                        <div><strong className="text-purple-800">Supplier:</strong> {request.supplierName}</div>
+                                        <div><strong className="text-purple-800">Expected Delivery:</strong> {request.expectedDelivery}</div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {request.status === 'issued' && (
+                                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                                      <div className="text-sm space-y-1">
+                                        <div><strong className="text-orange-800">Issued:</strong> {request.issuedDate}</div>
+                                        <div><strong className="text-orange-800">Received By:</strong> {request.receivedBy}</div>
+                                        <div><strong className="text-orange-800">Delivered:</strong> {request.deliveredDate}</div>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {request.status === 'completed' && (
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                      <div className="text-sm space-y-1">
+                                        <div><strong className="text-blue-800">Completed:</strong> {request.completedDate}</div>
+                                        <div><strong className="text-blue-800">Received By:</strong> {request.receivedBy}</div>
+                                        {request.completionNotes && (
+                                          <div><strong className="text-blue-800">Notes:</strong> {request.completionNotes}</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {request.status === 'rejected' && (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                      <div className="flex items-start gap-2">
+                                        <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                        <div className="min-w-0">
+                                          <strong className="text-red-800 text-sm">Rejected:</strong>
+                                          <p className="text-red-700 text-sm mt-1 break-words">{request.reason}</p>
+                                          <p className="text-red-600 text-xs mt-2">
+                                            Rejected by {request.rejectedBy} on {request.rejectedDate}
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Action Buttons */}
+                          <div className="flex gap-3 pt-4 border-t mt-6">
+                            <Button variant="outline" className="gap-2">
+                              <Eye className="w-4 h-4" />
+                              View Full Details
+                            </Button>
+                            {request.status === 'rejected' && (
+                              <Button variant="outline" className="gap-2">
+                                <Plus className="w-4 h-4" />
+                                Resubmit Request
+                              </Button>
+                            )}
+                            {(request.status === 'ordered' || request.status === 'issued' || request.status === 'completed') && (
+                              <Button variant="outline" className="gap-2">
+                                <FileText className="w-4 h-4" />
+                                Track Status
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  // Compact Table View Component
+  const TableView = ({ requests }: { requests: any[] }) => (
+    <Card>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[120px]">Request ID</TableHead>
+                <TableHead className="min-w-[150px]">Material</TableHead>
+                <TableHead className="min-w-[100px]">Quantity</TableHead>
+                <TableHead className="min-w-[100px]">Value</TableHead>
+                <TableHead className="min-w-[100px]">Priority</TableHead>
+                <TableHead className="min-w-[100px]">Status</TableHead>
+                <TableHead className="min-w-[100px]">Date</TableHead>
+                <TableHead className="min-w-[100px]">Machine</TableHead>
+                <TableHead className="min-w-[120px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {requests.map((request) => (
+                <TableRow key={request.id}>
+                  <TableCell className="font-medium">{request.id}</TableCell>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">{request.materialName}</div>
+                      <div className="text-xs text-muted-foreground">{request.maker}</div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm">{request.quantity}</TableCell>
+                  <TableCell className="text-sm font-medium">{request.value}</TableCell>
+                  <TableCell>
+                    <Badge className={getPriorityColor(request.priority)} variant="secondary">
+                      {request.priority}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getStatusColor(request.status)}>
+                      <span className="flex items-center gap-1">
+                        {getStatusIcon(request.status)}
+                        <span className="text-xs">{request.currentStage}</span>
+                      </span>
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">{request.date}</TableCell>
+                  <TableCell className="text-sm">{request.machineName}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                        <Eye className="w-3 h-3" />
+                      </Button>
+                      {request.status === 'rejected' && (
+                        <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
       {/* Header */}
@@ -276,78 +619,6 @@ const SupervisorRequests = () => {
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-2">
           My Requests
         </h1>
-        <p className="text-base sm:text-lg text-muted-foreground">
-          Track all your material requisition requests and their status - SSRFM
-        </p>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-        <Card className="card-friendly">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div className="mb-2 sm:mb-0">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Pending</p>
-                <p className="text-lg sm:text-2xl font-bold text-blue-600">{pendingRequests.length}</p>
-              </div>
-              <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="card-friendly">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div className="mb-2 sm:mb-0">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Approved</p>
-                <p className="text-lg sm:text-2xl font-bold text-blue-600">
-                  {filteredRequests.filter(r => r.status === 'approved').length}
-                </p>
-              </div>
-              <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="card-friendly">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div className="mb-2 sm:mb-0">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Ordered</p>
-                <p className="text-lg sm:text-2xl font-bold text-purple-600">
-                  {filteredRequests.filter(r => r.status === 'ordered').length}
-                </p>
-              </div>
-              <Package className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="card-friendly">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div className="mb-2 sm:mb-0">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Issued</p>
-                <p className="text-lg sm:text-2xl font-bold text-orange-600">
-                  {filteredRequests.filter(r => r.status === 'issued').length}
-                </p>
-              </div>
-              <Truck className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="card-friendly col-span-2 sm:col-span-1">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div className="mb-2 sm:mb-0">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total Value</p>
-                <p className="text-lg sm:text-2xl font-bold text-blue-600">
-                  ₹{(filteredRequests.reduce((sum, req) => 
-                    sum + parseInt(req.value.replace('₹', '').replace(',', '')), 0
-                  ) / 1000).toFixed(0)}K
-                </p>
-              </div>
-              <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Filters and New Request Button */}
@@ -364,42 +635,56 @@ const SupervisorRequests = () => {
                 />
               </div>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger className="w-full sm:w-48 h-10 sm:h-auto">
-                    <SelectValue placeholder="Filter by Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending_approval">Pending Approval</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="ordered">Ordered</SelectItem>
-                    <SelectItem value="issued">Issued</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={filterPriority} onValueChange={setFilterPriority}>
-                  <SelectTrigger className="w-full sm:w-32 h-10 sm:h-auto">
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Priorities</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button asChild className="gap-2 w-full sm:w-auto sm:self-start h-10 sm:h-auto">
+                  <SelectValue placeholder="Filter by Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending_approval">Pending Approval</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="ordered">Ordered</SelectItem>
+                  <SelectItem value="issued">Issued</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button asChild className="gap-2 w-full sm:w-auto sm:self-start h-10 sm:h-auto">
               <Link to="/material-request">
                 <Plus className="w-4 h-4" />
-                New Requisition
+                New Request
               </Link>
             </Button>
+            </div>
+            </div>
+            
           </div>
         </CardContent>
       </Card>
+
+      {/* View Toggle */}
+      <div className="flex justify-between items-center">
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === "list" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("list")}
+            className="flex items-center gap-2"
+          >
+            <List className="w-4 h-4" />
+            <span className="hidden sm:inline">List</span>
+          </Button>
+          <Button
+            variant={viewMode === "table" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("table")}
+            className="flex items-center gap-2"
+          >
+            <TableIcon className="w-4 h-4" />
+            <span className="hidden sm:inline">Table</span>
+          </Button>
+        </div>
+      </div>
 
       {/* Tabs */}
       <Tabs defaultValue="all" className="w-full">
@@ -440,299 +725,42 @@ const SupervisorRequests = () => {
 
         {/* All Requests Tab */}
         <TabsContent value="all" className="space-y-3 sm:space-y-4">
-          {filteredRequests.map((request) => (
-            <Card key={request.id} className="card-friendly">
-              <CardContent className="p-4 sm:p-6">
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex-1">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
-                        <h3 className="text-base sm:text-lg font-semibold text-foreground">{request.materialName}</h3>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge className={getPriorityColor(request.priority)} variant="secondary">
-                            {request.priority}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs sm:text-sm">
-                            {request.value}
-                          </Badge>
-                          <Badge className={getStatusColor(request.status)}>
-                            <span className="flex items-center gap-1">
-                              {getStatusIcon(request.status)}
-                              <span className="text-xs sm:text-sm">{request.currentStage}</span>
-                            </span>
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="space-y-2 text-xs sm:text-sm text-muted-foreground mb-3">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                          Submitted: {request.date}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-                          Request ID: {request.id}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Package className="w-3 h-3 sm:w-4 sm:h-4" />
-                          Maker: {request.maker}
-                        </div>
-                      </div>
-                      <div className="text-xs sm:text-sm text-muted-foreground mb-3 space-y-1">
-                        <div><strong>Quantity:</strong> {request.quantity}</div>
-                        <div><strong>Machine:</strong> {request.machineName}</div>
-                        <div><strong>Status:</strong> {request.statusDescription}</div>
-                      </div>
-                      <div className="text-xs sm:text-sm text-muted-foreground mb-3">
-                        <strong>Purpose:</strong> {request.materialPurpose}
-                      </div>
-                      {request.specifications && (
-                        <div className="text-xs sm:text-sm text-muted-foreground mb-3">
-                          <strong>Specifications:</strong> {request.specifications}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <ProgressBar stage={request.progressStage} />
-
-                  {/* Additional Status Info */}
-                  {request.status === 'approved' && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <div className="text-xs sm:text-sm">
-                        <strong className="text-blue-800">Approved:</strong> {request.approvedBy} on {request.approvedDate}
-                      </div>
-                      <div className="text-xs text-blue-600 mt-1">Ready for procurement</div>
-                    </div>
-                  )}
-
-                  {request.status === 'ordered' && (
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                      <div className="text-xs sm:text-sm space-y-1">
-                        <div><strong className="text-purple-800">Ordered:</strong> {request.orderedDate}</div>
-                        <div><strong className="text-purple-800">Supplier:</strong> {request.supplierName}</div>
-                        <div><strong className="text-purple-800">Expected Delivery:</strong> {request.expectedDelivery}</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {request.status === 'issued' && (
-                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                      <div className="text-xs sm:text-sm space-y-1">
-                        <div><strong className="text-orange-800">Issued:</strong> {request.issuedDate}</div>
-                        <div><strong className="text-orange-800">Received By:</strong> {request.receivedBy}</div>
-                        <div><strong className="text-orange-800">Delivered:</strong> {request.deliveredDate}</div>
-                      </div>
-                    </div>
-                  )}
-
-                  {request.status === 'completed' && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <div className="text-xs sm:text-sm space-y-1">
-                        <div><strong className="text-blue-800">Completed:</strong> {request.completedDate}</div>
-                        <div><strong className="text-blue-800">Received By:</strong> {request.receivedBy}</div>
-                        {request.completionNotes && (
-                          <div><strong className="text-blue-800">Notes:</strong> {request.completionNotes}</div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {request.status === 'rejected' && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                      <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <strong className="text-red-800 text-xs sm:text-sm">Rejected:</strong>
-                          <p className="text-red-700 text-xs sm:text-sm mt-1 break-words">{request.reason}</p>
-                          <p className="text-red-600 text-xs mt-2">
-                            Rejected by {request.rejectedBy} on {request.rejectedDate}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t">
-                    <Button variant="outline" className="gap-2 text-xs sm:text-sm h-9 sm:h-auto">
-                      <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                      View Details
-                    </Button>
-                    {request.status === 'rejected' && (
-                      <Button variant="outline" className="gap-2 text-xs sm:text-sm h-9 sm:h-auto">
-                        <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                        Resubmit Request
-                      </Button>
-                    )}
-                    {(request.status === 'ordered' || request.status === 'issued' || request.status === 'completed') && (
-                      <Button variant="outline" className="gap-2 text-xs sm:text-sm h-9 sm:h-auto">
-                        <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-                        Track Status
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {viewMode === "table" ? (
+            <TableView requests={filteredRequests} />
+          ) : (
+            <ListView requests={filteredRequests} />
+          )}
         </TabsContent>
 
         {/* Pending Tab */}
         <TabsContent value="pending" className="space-y-3 sm:space-y-4">
-          {pendingRequests.map((request) => (
-            <Card key={request.id} className="card-friendly border-blue-200">
-              <CardContent className="p-4 sm:p-6">
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex-1">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
-                        <h3 className="text-base sm:text-lg font-semibold text-foreground">{request.materialName}</h3>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge className={getPriorityColor(request.priority)}>
-                            {request.priority}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs sm:text-sm">
-                            {request.value}
-                          </Badge>
-                          <Badge className={getStatusColor(request.status)}>
-                            <span className="flex items-center gap-1">
-                              {getStatusIcon(request.status)}
-                              <span className="text-xs sm:text-sm">{request.currentStage}</span>
-                            </span>
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="text-xs sm:text-sm text-muted-foreground mb-3 space-y-1">
-                        <div><strong>Status:</strong> {request.statusDescription}</div>
-                        <div><strong>Purpose:</strong> {request.materialPurpose}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <ProgressBar stage={request.progressStage} />
-
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t">
-                    <Button variant="outline" className="gap-2 text-xs sm:text-sm h-9 sm:h-auto">
-                      <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                      View Details
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {viewMode === "table" ? (
+            <TableView requests={pendingRequests} />
+          ) : (
+            <ListView requests={pendingRequests} />
+          )}
         </TabsContent>
 
         {/* In Progress Tab */}
         <TabsContent value="approved" className="space-y-3 sm:space-y-4">
-          {approvedRequests.map((request) => (
-            <Card key={request.id} className="card-friendly border-blue-200">
-              <CardContent className="p-4 sm:p-6">
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex-1">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
-                        <h3 className="text-base sm:text-lg font-semibold text-foreground">{request.materialName}</h3>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge className={getPriorityColor(request.priority)}>
-                            {request.priority}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs sm:text-sm">
-                            {request.value}
-                          </Badge>
-                          <Badge className={getStatusColor(request.status)}>
-                            <span className="flex items-center gap-1">
-                              {getStatusIcon(request.status)}
-                              <span className="text-xs sm:text-sm">{request.currentStage}</span>
-                            </span>
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <ProgressBar stage={request.progressStage} />
-
-                  {request.status === 'ordered' && (
-                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                      <div className="text-xs sm:text-sm">
-                        <strong className="text-purple-800">Expected Delivery:</strong> {request.expectedDelivery}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t">
-                    <Button variant="outline" className="gap-2 text-xs sm:text-sm h-9 sm:h-auto">
-                      <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                      View Details
-                    </Button>
-                    <Button variant="outline" className="gap-2 text-xs sm:text-sm h-9 sm:h-auto">
-                      <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-                      Track Status
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {viewMode === "table" ? (
+            <TableView requests={approvedRequests} />
+          ) : (
+            <ListView requests={approvedRequests} />
+          )}
         </TabsContent>
 
         {/* Rejected Tab */}
         <TabsContent value="rejected" className="space-y-3 sm:space-y-4">
-          {rejectedRequests.map((request) => (
-            <Card key={request.id} className="card-friendly border-red-200">
-              <CardContent className="p-4 sm:p-6">
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex-1">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
-                        <h3 className="text-base sm:text-lg font-semibold text-foreground">{request.materialName}</h3>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge className={getPriorityColor(request.priority)}>
-                            {request.priority}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs sm:text-sm">
-                            {request.value}
-                          </Badge>
-                          <Badge variant="destructive">
-                            Rejected
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <strong className="text-red-800 text-xs sm:text-sm">Rejection Reason:</strong>
-                        <p className="text-red-700 text-xs sm:text-sm mt-1 break-words">{request.reason}</p>
-                        <p className="text-red-600 text-xs mt-2">
-                          Rejected by {request.rejectedBy} on {request.rejectedDate}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t">
-                    <Button variant="outline" className="gap-2 text-xs sm:text-sm h-9 sm:h-auto">
-                      <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                      View Details
-                    </Button>
-                    <Button className="gap-2 text-xs sm:text-sm h-9 sm:h-auto">
-                      <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                      Resubmit Request
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {viewMode === "table" ? (
+            <TableView requests={rejectedRequests} />
+          ) : (
+            <ListView requests={rejectedRequests} />
+          )}
         </TabsContent>
       </Tabs>
     </div>
   );
 };
 
-export default SupervisorRequests; 
+export default SupervisorRequests;

@@ -15,7 +15,7 @@ interface RoleContextType {
   currentUser: User | null;
   setCurrentUser: (user: User | null) => void;
   hasPermission: (permission: string) => boolean;
-  switchRole: (role: UserRole) => void;
+  switchRole: (role: UserRole, navigate?: (path: string) => void) => void;
   isAuthenticated: boolean;
   logout: () => void;
 }
@@ -50,36 +50,49 @@ const DEMO_USERS: Record<UserRole, User> = {
   company_owner: {
     id: '3',
     name: 'Robert Williams',
-    email: 'robert.williams@ssrfm.com', 
+    email: 'robert.williams@ssrfm.com',
     role: 'company_owner',
-    department: 'Executive Office'
+    department: 'Executive Management'
   }
 };
 
+// Role-based permissions
 const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   site_supervisor: [
     'request:create',
     'request:view_own',
+    'request:edit_own',
+    'request:cancel_own',
     'material:view',
-    'machine:view_assigned',
-    'notification:receive'
+    'machine:view',
+    'report:view_own'
   ],
   inventory_manager: [
     'request:create',
-    'request:view_all', 
-    'request:approve',
+    'request:view_all',
+    'request:edit_all',
+    'request:approve_limited',
+    'request:cancel_own',
     'material:create',
     'material:edit',
     'material:view',
-    'stock:manage',
+    'machine:create',
+    'machine:edit',
+    'machine:view',
+    'user:create',
+    'user:edit',
+    'audit:view',
     'report:generate',
-    'supplier:manage'
+    'stock:manage',
+    'inventory:manage'
   ],
   company_owner: [
     'request:create',
     'request:view_all',
+    'request:edit_all',
     'request:approve_unlimited',
     'request:emergency_override',
+    'request:cancel_own',
     'material:create',
     'material:edit', 
     'material:delete',
@@ -103,8 +116,22 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
   ]
 };
 
+// Get role-specific redirect path
+const getRoleRedirectPath = (role: UserRole) => {
+  switch (role) {
+    case 'site_supervisor':
+      return '/supervisor-requests';
+    case 'inventory_manager':
+      return '/';
+    case 'company_owner':
+      return '/';
+    default:
+      return '/';
+  }
+};
+
 export const RoleProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Start with no user (not authenticated)
+  // Start with no user - login required
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const hasPermission = (permission: string): boolean => {
@@ -112,8 +139,13 @@ export const RoleProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return ROLE_PERMISSIONS[currentUser.role].includes(permission);
   };
 
-  const switchRole = (role: UserRole) => {
+  const switchRole = (role: UserRole, navigate?: (path: string) => void) => {
     setCurrentUser(DEMO_USERS[role]);
+    
+    // Navigate to role-specific page if navigate function is provided
+    if (navigate) {
+      navigate(getRoleRedirectPath(role));
+    }
   };
 
   const logout = () => {
@@ -137,3 +169,6 @@ export const RoleProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     </RoleContext.Provider>
   );
 };
+
+// Export the redirect path function for use in other components
+export { getRoleRedirectPath };
