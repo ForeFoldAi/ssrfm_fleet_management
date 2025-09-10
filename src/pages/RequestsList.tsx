@@ -61,7 +61,7 @@ const RequestsList = () => {
     }
   ];
 
-  const statusFilters = ["All", "Pending", "Approved", "Rejected", "In Progress"];
+  const statusFilters = ["All", "Pending Approval", "Approved", "Ordered", "Issued", "Completed", "Rejected"];
 
   const filteredRequests = requests.filter(request => {
     const matchesSearch = request.material.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -73,9 +73,11 @@ const RequestsList = () => {
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      "Pending": "badge-status bg-warning/10 text-warning ring-1 ring-warning/20",
+      "Pending Approval": "badge-status bg-warning/10 text-warning ring-1 ring-warning/20",
       "Approved": "badge-status bg-success/10 text-success ring-1 ring-success/20",
-      "In Progress": "badge-status bg-primary/10 text-primary ring-1 ring-primary/20",
+      "Ordered": "badge-status bg-blue/10 text-blue ring-1 ring-blue/20",
+      "Issued": "badge-status bg-purple/10 text-purple ring-1 ring-purple/20",
+      "Completed": "badge-status bg-green/10 text-green ring-1 ring-green/20",
       "Rejected": "badge-status bg-destructive/10 text-destructive ring-1 ring-destructive/20"
     };
     return badges[status as keyof typeof badges] || "badge-status bg-muted text-muted-foreground";

@@ -84,7 +84,7 @@ export const MaterialsTab = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header with Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-xl flex items-center justify-center">
             <Package className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
@@ -98,6 +98,40 @@ export const MaterialsTab = () => {
             </p>
           </div>
         </div>
+
+        {/* Search and Controls - Now beside the header */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search materials..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 input-friendly h-10 w-64"
+            />
+          </div>
+          
+          <div className="flex rounded-xl border border-border overflow-hidden bg-secondary w-fit">
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className="rounded-none px-3 sm:px-4"
+            >
+              <List className="w-4 h-4" />
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              className="rounded-none px-3 sm:px-4"
+            >
+              <Table className="w-4 h-4" />
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
+            </Button>
+          </div>
+        </div>
         
         <Button 
           className="btn-primary w-full sm:w-auto text-sm sm:text-base"
@@ -106,40 +140,6 @@ export const MaterialsTab = () => {
           <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
           Add New Material
         </Button>
-      </div>
-
-      {/* Search and Controls */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 sm:items-center justify-between">
-        <div className="relative flex-1 sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input
-            placeholder="Search materials..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 input-friendly h-10 sm:h-auto"
-          />
-        </div>
-        
-        <div className="flex rounded-xl border border-border overflow-hidden bg-secondary w-fit">
-          <Button
-            variant={viewMode === "list" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-            className="rounded-none px-3 sm:px-4"
-          >
-            <List className="w-4 h-4" />
-            <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
-          </Button>
-          <Button
-            variant={viewMode === "table" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("table")}
-            className="rounded-none px-3 sm:px-4"
-          >
-            <Table className="w-4 h-4" />
-            <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
-          </Button>
-        </div>
       </div>
 
       {/* Content */}

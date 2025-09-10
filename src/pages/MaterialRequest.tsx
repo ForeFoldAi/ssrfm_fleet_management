@@ -1,154 +1,191 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Camera, Upload, X, Eye, User, Settings, MapPin, Package } from "lucide-react";
+import { FileText, Camera, Upload, X, Eye, User, Settings, MapPin, Package, Plus, Trash2, Building2, List, Table as TableIcon, ArrowLeft } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Separator } from "../components/ui/separator";
+import { Badge } from "../components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { toast } from "../hooks/use-toast";
 import { useRole } from "../contexts/RoleContext";
+
+interface RequestItem {
+  id: string;
+  srNo: number;
+  productName: string;
+  make: string;
+  machineName: string;
+  specifications: string;
+  oldStock: number;
+  reqQuantity: string;
+  unit: string;
+  image?: File | null;
+  imagePreview?: string | null;
+}
 
 const MaterialRequest = () => {
   const { currentUser } = useRole();
   const navigate = useNavigate();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [viewMode, setViewMode] = useState<"table" | "list">("table");
   
-  // Image upload refs and states
-  const [oldMaterialPreview, setOldMaterialPreview] = useState<string | null>(null);
-  const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
-  const [machineProofPreview, setMachineProofPreview] = useState<string | null>(null);
-  const oldMaterialInputRef = useRef<HTMLInputElement>(null);
-  const oldMaterialCameraRef = useRef<HTMLInputElement>(null);
-  const signatureInputRef = useRef<HTMLInputElement>(null);
-  const signatureCameraRef = useRef<HTMLInputElement>(null);
-  const machineProofInputRef = useRef<HTMLInputElement>(null);
-  const machineProofCameraRef = useRef<HTMLInputElement>(null);
-
-  // Form data state
-  const [formData, setFormData] = useState({
-    materialName: "",
-    specifications: "",
-    maker: "",
-    quantity: "",
-    unit: "",
-    materialPurpose: "",
-    priority: "",
-    machineId: "",
-    machineName: "",
-    additionalNotes: "",
-    requestedBy: currentUser?.name || "",
-    requestedDate: new Date().toISOString().split('T')[0]
+  // Form header data
+  const [headerData, setHeaderData] = useState({
+    docNo: `SSRFM/MNTI/R-${String(Date.now()).slice(-4)}`,
+    date: new Date().toISOString().split('T')[0],
+    revisionStatus: "0",
+    issueNo: "1",
+    page: "1 OF 1",
+    reqFormNo: `SSRFM/MNT/REQ.-${String(Date.now()).slice(-4)}`,
+    indFormNo: `SSRFM/MNT/IND.-${String(Date.now()).slice(-4)}`,
+    reqSrNo: `SSRFM/MNT/REQ.-${String(Date.now()).slice(-4)}`,
+    indSrNo: `SSRFM/MNT/IND.-${String(Date.now()).slice(-4)}`
   });
 
-  // SSRFM specific materials for Roller Flour Mills
-  const materials = [
-    { id: "bearings", name: "Bearings", unit: "pieces", category: "Mechanical Components" },
-    { id: "belts", name: "Belts", unit: "pieces", category: "Mechanical Components" },
-    { id: "fevicol", name: "Fevicol (Adhesive)", unit: "bottles", category: "Adhesives & Sealants" },
-    { id: "motor-oil", name: "Motor Oil", unit: "liters", category: "Lubricants" },
-    { id: "grinding-stones", name: "Grinding Stones", unit: "pieces", category: "Processing Equipment" },
-    { id: "flour-sieves", name: "Flour Sieves", unit: "pieces", category: "Processing Equipment" },
-    { id: "conveyor-belts", name: "Conveyor Belts", unit: "meters", category: "Mechanical Components" },
-    { id: "electrical-wires", name: "Electrical Wires", unit: "meters", category: "Electrical" },
-    { id: "switches", name: "Electrical Switches", unit: "pieces", category: "Electrical" },
-    { id: "safety-equipment", name: "Safety Equipment", unit: "sets", category: "Safety" }
+  // Request items (multiple items support)
+  const [requestItems, setRequestItems] = useState<RequestItem[]>([
+    {
+      id: "1",
+      srNo: 1,
+      productName: "",
+      make: "",
+      machineName: "",
+      specifications: "",
+      oldStock: 0,
+      reqQuantity: "",
+      unit: "",
+      image: null,
+      imagePreview: null
+    }
+  ]);
+
+  // Available materials matching the physical form
+  const availableMaterials = [
+    {
+      name: "FEVICOL",
+      make: "MARINE",
+      specifications: "SH adhesive",
+      unit: "kg",
+      category: "Adhesives"
+    },
+    {
+      name: "COPPER WIRE BRUSH",
+      make: "INDUSTRIAL",
+      specifications: "0.01 mm thickness of wire",
+      unit: "pieces",
+      category: "Tools"
+    },
+    {
+      name: "DHOLLAK BALL",
+      make: "INDUSTRIAL",
+      specifications: "PVC transparent",
+      unit: "pieces",
+      category: "Components"
+    },
+    {
+      name: "TRIANGLE BRUSH",
+      make: "INDUSTRIAL",
+      specifications: "Cleaning brush",
+      unit: "pieces",
+      category: "Tools"
+    },
+    {
+      name: "GUM TAP",
+      make: "INDUSTRIAL",
+      specifications: "1 inch width",
+      unit: "pieces",
+      category: "Adhesives"
+    },
+    {
+      name: "BEARINGS (SKF 6205-2RS)",
+      make: "SKF",
+      specifications: "Deep Grove Ball Bearing, Inner: 25mm, Outer: 52mm",
+      unit: "pieces",
+      category: "Mechanical Components"
+    },
+    {
+      name: "MOTOR OIL (SAE 10W-30)",
+      make: "CASTROL",
+      specifications: "Industrial grade lubricant for machinery",
+      unit: "liters",
+      category: "Lubricants"
+    },
+    {
+      name: "CONVEYOR BELTS",
+      make: "CONTINENTAL",
+      specifications: "Rubber belt, 600mm width, food grade",
+      unit: "meters",
+      category: "Mechanical Components"
+    }
   ];
 
-  const priorities = [
-    { value: "High", label: "🔴 High Priority", description: "Urgent - Production stopped" },
-    { value: "Medium", label: "🟡 Medium Priority", description: "Important - Plan ahead" },
-    { value: "Low", label: "🟢 Low Priority", description: "Normal - When available" }
-  ];
-
-  // SSRFM Machines - Flour Mill specific
+  // Machines for the supervisor
   const machines = [
-    {
-      id: "flour-mill-01",
-      name: "Main Flour Mill #01",
-      type: "Roller Flour Mill",
-      location: "Production Floor A",
-      status: "Active",
-      specifications: "Primary wheat grinding mill, 500kg/hour capacity"
-    },
-    {
-      id: "flour-mill-02", 
-      name: "Secondary Mill #02",
-      type: "Roller Flour Mill",
-      location: "Production Floor A",
-      status: "Active",
-      specifications: "Secondary grinding mill, 300kg/hour capacity"
-    },
-    {
-      id: "sifter-01",
-      name: "Flour Sifter #01",
-      type: "Rotary Sifter",
-      location: "Processing Line B",
-      status: "Active", 
-      specifications: "Multi-grade flour separation, 400kg/hour"
-    },
-    {
-      id: "conveyor-01",
-      name: "Main Conveyor #01",
-      type: "Belt Conveyor",
-      location: "Transport Line",
-      status: "Active",
-      specifications: "Primary material transport, 50m length"
-    },
-    {
-      id: "packaging-01",
-      name: "Packaging Unit #01",
-      type: "Auto Packaging Machine",
-      location: "Packaging Floor",
-      status: "Active",
-      specifications: "Automated flour packaging, 200 bags/hour"
-    },
-    {
-      id: "cleaning-01",
-      name: "Wheat Cleaner #01",
-      type: "Grain Cleaning Machine",
-      location: "Pre-processing Area",
-      status: "Active",
-      specifications: "Wheat cleaning and stone removal"
-    }
+    "PLANSHIFTER",
+    "MAIN FLOUR MILL #01",
+    "SECONDARY MILL #02", 
+    "FLOUR SIFTER #01",
+    "MAIN CONVEYOR #01",
+    "PACKAGING UNIT #01",
+    "WHEAT CLEANER #01"
   ];
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
+  const handleItemChange = (itemId: string, field: keyof RequestItem, value: any) => {
+    setRequestItems(prev => prev.map(item => 
+      item.id === itemId ? { ...item, [field]: value } : item
+    ));
+  };
+
+  const handleMaterialSelect = (itemId: string, materialName: string) => {
+    const material = availableMaterials.find(m => m.name === materialName);
+    if (material) {
+      setRequestItems(prev => prev.map(item => 
+        item.id === itemId ? {
+          ...item,
+          productName: material.name,
+          make: material.make,
+          specifications: material.specifications,
+          unit: material.unit
+        } : item
+      ));
     }
   };
 
-  const handleMaterialChange = (materialId: string) => {
-    const selectedMaterial = materials.find(m => m.id === materialId);
-    if (selectedMaterial) {
-      setFormData(prev => ({
-        ...prev,
-        materialName: selectedMaterial.name,
-        unit: selectedMaterial.unit
-      }));
+  const addNewItem = () => {
+    const newItem: RequestItem = {
+      id: String(Date.now()),
+      srNo: requestItems.length + 1,
+      productName: "",
+      make: "",
+      machineName: "",
+      specifications: "",
+      oldStock: 0,
+      reqQuantity: "",
+      unit: "",
+      image: null,
+      imagePreview: null
+    };
+    setRequestItems(prev => [...prev, newItem]);
+  };
+
+  const removeItem = (itemId: string) => {
+    if (requestItems.length > 1) {
+      setRequestItems(prev => prev.filter(item => item.id !== itemId));
+      // Update serial numbers
+      setRequestItems(prev => prev.map((item, index) => ({
+        ...item,
+        srNo: index + 1
+      })));
     }
   };
 
-  const handleMachineChange = (machineId: string) => {
-    const selectedMachine = machines.find(m => m.id === machineId);
-    if (selectedMachine) {
-      setFormData(prev => ({
-        ...prev,
-        machineId: machineId,
-        machineName: selectedMachine.name
-      }));
-    }
-  };
-
-  // Image upload handlers
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'oldMaterial' | 'signature' | 'machineProof') => {
+  const handleImageUpload = (itemId: string, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validate file size (max 5MB)
+      // Check file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",
@@ -158,66 +195,53 @@ const MaterialRequest = () => {
         return;
       }
 
-      // Validate file type
+      // Check file type
       if (!file.type.startsWith('image/')) {
         toast({
           title: "Invalid file type",
-          description: "Please select an image file.",
+          description: "Please select a valid image file.",
           variant: "destructive",
         });
         return;
       }
 
-      handleFileUpload(file, type);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setRequestItems(prev => prev.map(item => 
+          item.id === itemId ? {
+            ...item,
+            image: file,
+            imagePreview: result
+          } : item
+        ));
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleFileUpload = (file: File, type: 'oldMaterial' | 'signature' | 'machineProof') => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      if (type === 'oldMaterial') {
-        setOldMaterialPreview(result);
-      } else if (type === 'signature') {
-        setSignaturePreview(result);
-      } else if (type === 'machineProof') {
-        setMachineProofPreview(result);
-      }
-      
-      toast({
-        title: "Image uploaded successfully",
-        description: `${type === 'oldMaterial' ? 'Old material' : type === 'signature' ? 'Signature' : 'Machine proof'} image has been attached.`,
-      });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const removeImage = (type: 'oldMaterial' | 'signature' | 'machineProof') => {
-    if (type === 'oldMaterial') {
-      setOldMaterialPreview(null);
-      if (oldMaterialInputRef.current) oldMaterialInputRef.current.value = '';
-      if (oldMaterialCameraRef.current) oldMaterialCameraRef.current.value = '';
-    } else if (type === 'signature') {
-      setSignaturePreview(null);
-      if (signatureInputRef.current) signatureInputRef.current.value = '';
-      if (signatureCameraRef.current) signatureCameraRef.current.value = '';
-    } else if (type === 'machineProof') {
-      setMachineProofPreview(null);
-      if (machineProofInputRef.current) machineProofInputRef.current.value = '';
-      if (machineProofCameraRef.current) machineProofCameraRef.current.value = '';
-    }
+  const removeImage = (itemId: string) => {
+    setRequestItems(prev => prev.map(item => 
+      item.id === itemId ? {
+        ...item,
+        image: null,
+        imagePreview: null
+      } : item
+    ));
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.materialName) newErrors.materialName = "Material name is required";
-    if (!formData.specifications) newErrors.specifications = "Specifications are required";
-    if (!formData.maker) newErrors.maker = "Maker/Brand is required";
-    if (!formData.quantity) newErrors.quantity = "Quantity is required";
-    if (!formData.materialPurpose) newErrors.materialPurpose = "Material purpose is required";
-    if (!formData.priority) newErrors.priority = "Priority is required";
-    if (!formData.machineId) newErrors.machineId = "Machine selection is required";
+    
+    requestItems.forEach((item, index) => {
+      if (!item.productName.trim()) newErrors[`productName_${item.id}`] = `Product name is required for item ${index + 1}`;
+      if (!item.make.trim()) newErrors[`make_${item.id}`] = `Make is required for item ${index + 1}`;
+      if (!item.machineName.trim()) newErrors[`machineName_${item.id}`] = `Machine name is required for item ${index + 1}`;
+      if (!item.reqQuantity.trim()) newErrors[`reqQuantity_${item.id}`] = `Required quantity is required for item ${index + 1}`;
+      
+      const qty = Number(item.reqQuantity);
+      if (qty <= 0) newErrors[`reqQuantity_${item.id}`] = `Quantity must be greater than 0 for item ${index + 1}`;
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -237,475 +261,467 @@ const MaterialRequest = () => {
 
     // Here you would typically send the data to your backend
     toast({
-      title: "Request Submitted Successfully!",
-      description: `Your material request for ${formData.materialName} has been submitted for approval.`,
+      title: "Requisition Submitted Successfully!",
+      description: `Your material request with ${requestItems.length} items has been submitted for approval.`,
     });
 
     // Navigate to requests page
-    navigate('/my-requests');
+    navigate('/supervisor-requests');
   };
 
-  return (
-    <div className="max-w-4xl mx-auto space-y-4 md:space-y-6">
-      {/* Header */}
-      <div className="text-center md:text-left">
-        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-2 flex items-center gap-3">
-          <FileText className="w-8 h-8 text-primary" />
-          Requisition cum Indent Form
-        </h1>
-        <p className="text-lg text-muted-foreground">
-          SSRFM - Material Request for Production Operations
-        </p>
-      </div>
+  const TableView = () => (
+    <Card>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50">
+                <TableHead className="border border-gray-300 font-semibold">SR.NO.</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">PRODUCT NAME</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">MAKE</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">MACHINE NAME</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">SPECIFICATIONS</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">OLD STOCK</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">REQ. QUANTITY</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">IMAGE</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">ACTIONS</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {requestItems.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell className="border border-gray-300 text-center font-semibold">
+                    {item.srNo}
+                  </TableCell>
+                  <TableCell className="border border-gray-300">
+                    <Select value={item.productName} onValueChange={(value) => handleMaterialSelect(item.id, value)}>
+                      <SelectTrigger className="border-0 p-0 h-auto">
+                        <SelectValue placeholder="Select Product" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableMaterials.map((material) => (
+                          <SelectItem key={material.name} value={material.name}>
+                            <div className="flex flex-col">
+                              <div className="font-semibold">{material.name}</div>
+                              <div className="text-sm text-muted-foreground">{material.category}</div>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors[`productName_${item.id}`] && (
+                      <p className="text-destructive text-xs mt-1">{errors[`productName_${item.id}`]}</p>
+                    )}
+                  </TableCell>
+                  <TableCell className="border border-gray-300">
+                    <Input
+                      value={item.make}
+                      onChange={(e) => handleItemChange(item.id, "make", e.target.value)}
+                      placeholder="Make/Brand"
+                      className="border-0 p-0 h-auto"
+                    />
+                    {errors[`make_${item.id}`] && (
+                      <p className="text-destructive text-xs mt-1">{errors[`make_${item.id}`]}</p>
+                    )}
+                  </TableCell>
+                  <TableCell className="border border-gray-300">
+                    <Select value={item.machineName} onValueChange={(value) => handleItemChange(item.id, "machineName", value)}>
+                      <SelectTrigger className="border-0 p-0 h-auto">
+                        <SelectValue placeholder="Select Machine" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {machines.map((machine) => (
+                          <SelectItem key={machine} value={machine}>
+                            {machine}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors[`machineName_${item.id}`] && (
+                      <p className="text-destructive text-xs mt-1">{errors[`machineName_${item.id}`]}</p>
+                    )}
+                  </TableCell>
+                  <TableCell className="border border-gray-300">
+                    <Textarea
+                      value={item.specifications}
+                      onChange={(e) => handleItemChange(item.id, "specifications", e.target.value)}
+                      placeholder="Specifications"
+                      className="border-0 p-0 h-auto resize-none"
+                      rows={2}
+                    />
+                  </TableCell>
+                  <TableCell className="border border-gray-300 text-center">
+                    <Input
+                      type="number"
+                      value={item.oldStock}
+                      onChange={(e) => handleItemChange(item.id, "oldStock", Number(e.target.value))}
+                      className="border-0 p-0 h-auto text-center w-20"
+                    />
+                  </TableCell>
+                  <TableCell className="border border-gray-300">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={item.reqQuantity}
+                        onChange={(e) => handleItemChange(item.id, "reqQuantity", e.target.value)}
+                        placeholder="Qty"
+                        className="border-0 p-0 h-auto w-16 text-center"
+                        min="1"
+                      />
+                      <span className="text-sm text-gray-600">{item.unit}</span>
+                    </div>
+                    {errors[`reqQuantity_${item.id}`] && (
+                      <p className="text-destructive text-xs mt-1">{errors[`reqQuantity_${item.id}`]}</p>
+                    )}
+                  </TableCell>
+                  <TableCell className="border border-gray-300">
+                    {item.imagePreview ? (
+                      <div className="relative">
+                        <img 
+                          src={item.imagePreview} 
+                          alt="Product" 
+                          className="w-20 h-20 object-cover rounded border"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => removeImage(item.id)}
+                          className="absolute -top-2 -right-2 w-5 h-5 p-0 rounded-full"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = (e) => handleImageUpload(item.id, e as any);
+                            input.click();
+                          }}
+                          className="gap-1 text-xs"
+                        >
+                          <Upload className="w-3 h-3" />
+                          Upload
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.capture = 'environment';
+                            input.onchange = (e) => handleImageUpload(item.id, e as any);
+                            input.click();
+                          }}
+                          className="gap-1 text-xs"
+                        >
+                          <Camera className="w-3 h-3" />
+                          Camera
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="border border-gray-300">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeItem(item.id)}
+                      disabled={requestItems.length === 1}
+                      className="gap-1 text-xs"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Material Details Section */}
-        <Card className="card-friendly">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-primary" />
-              Material Details
-            </CardTitle>
+  const ListView = () => (
+    <div className="space-y-4">
+      {requestItems.map((item) => (
+        <Card key={item.id}>
+          <CardHeader className="pb-3">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg">Item #{item.srNo}</CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => removeItem(item.id)}
+                disabled={requestItems.length === 1}
+                className="gap-1"
+              >
+                <Trash2 className="w-4 h-4" />
+                Remove
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="material">Name of Material *</Label>
-                <Select value={formData.materialName} onValueChange={handleMaterialChange}>
-                  <SelectTrigger className={errors.materialName ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select material needed" />
+                <Label>Product Name *</Label>
+                <Select value={item.productName} onValueChange={(value) => handleMaterialSelect(item.id, value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Product" />
                   </SelectTrigger>
                   <SelectContent>
-                    {materials.map((material) => (
-                      <SelectItem key={material.id} value={material.id}>
+                    {availableMaterials.map((material) => (
+                      <SelectItem key={material.name} value={material.name}>
                         <div className="flex flex-col">
-                          <span>{material.name}</span>
-                          <span className="text-xs text-muted-foreground">{material.category}</span>
+                          <div className="font-semibold">{material.name}</div>
+                          <div className="text-sm text-muted-foreground">{material.category}</div>
                         </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.materialName && <p className="text-sm text-red-500">{errors.materialName}</p>}
+                {errors[`productName_${item.id}`] && (
+                  <p className="text-destructive text-sm">{errors[`productName_${item.id}`]}</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="specifications">Specifications *</Label>
+                <Label>Make/Brand *</Label>
                 <Input
-                  id="specifications"
-                  value={formData.specifications}
-                  onChange={(e) => handleInputChange("specifications", e.target.value)}
-                  placeholder="Technical specifications, size, grade..."
-                  className={errors.specifications ? "border-red-500" : ""}
+                  value={item.make}
+                  onChange={(e) => handleItemChange(item.id, "make", e.target.value)}
+                  placeholder="Enter make or brand"
                 />
-                {errors.specifications && <p className="text-sm text-red-500">{errors.specifications}</p>}
+                {errors[`make_${item.id}`] && (
+                  <p className="text-destructive text-sm">{errors[`make_${item.id}`]}</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="maker">Maker/Brand *</Label>
-                <Input
-                  id="maker"
-                  value={formData.maker}
-                  onChange={(e) => handleInputChange("maker", e.target.value)}
-                  placeholder="Manufacturer or brand name"
-                  className={errors.maker ? "border-red-500" : ""}
-                />
-                {errors.maker && <p className="text-sm text-red-500">{errors.maker}</p>}
+                <Label>Machine Name *</Label>
+                <Select value={item.machineName} onValueChange={(value) => handleItemChange(item.id, "machineName", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Machine" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {machines.map((machine) => (
+                      <SelectItem key={machine} value={machine}>
+                        {machine}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors[`machineName_${item.id}`] && (
+                  <p className="text-destructive text-sm">{errors[`machineName_${item.id}`]}</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity *</Label>
-                <div className="flex gap-2">
+                <Label>Required Quantity *</Label>
+                <div className="flex items-center gap-2">
                   <Input
-                    id="quantity"
                     type="number"
-                    value={formData.quantity}
-                    onChange={(e) => handleInputChange("quantity", e.target.value)}
-                    placeholder="0"
-                    className={`flex-1 ${errors.quantity ? "border-red-500" : ""}`}
+                    value={item.reqQuantity}
+                    onChange={(e) => handleItemChange(item.id, "reqQuantity", e.target.value)}
+                    placeholder="Enter quantity"
+                    min="1"
+                    className="flex-1"
                   />
-                  <Input
-                    value={formData.unit}
-                    readOnly
-                    className="w-24 bg-secondary text-center"
-                    placeholder="Unit"
-                  />
+                  <span className="text-sm text-gray-600 min-w-0">{item.unit || "unit"}</span>
                 </div>
-                {errors.quantity && <p className="text-sm text-red-500">{errors.quantity}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="materialPurpose">Material Purpose *</Label>
-                <Input
-                  id="materialPurpose"
-                  value={formData.materialPurpose}
-                  onChange={(e) => handleInputChange("materialPurpose", e.target.value)}
-                  placeholder="What will this material be used for?"
-                  className={errors.materialPurpose ? "border-red-500" : ""}
-                />
-                {errors.materialPurpose && <p className="text-sm text-red-500">{errors.materialPurpose}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority *</Label>
-                <Select value={formData.priority} onValueChange={(value) => handleInputChange("priority", value)}>
-                  <SelectTrigger className={errors.priority ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select priority level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {priorities.map((priority) => (
-                      <SelectItem key={priority.value} value={priority.value}>
-                        <div className="flex flex-col">
-                          <span>{priority.label}</span>
-                          <span className="text-xs text-muted-foreground">{priority.description}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.priority && <p className="text-sm text-red-500">{errors.priority}</p>}
+                {errors[`reqQuantity_${item.id}`] && (
+                  <p className="text-destructive text-sm">{errors[`reqQuantity_${item.id}`]}</p>
+                )}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="additionalNotes">Additional Notes</Label>
+              <Label>Specifications</Label>
               <Textarea
-                id="additionalNotes"
-                value={formData.additionalNotes}
-                onChange={(e) => handleInputChange("additionalNotes", e.target.value)}
-                placeholder="Any additional information or special requirements..."
+                value={item.specifications}
+                onChange={(e) => handleItemChange(item.id, "specifications", e.target.value)}
+                placeholder="Enter detailed specifications"
                 className="min-h-[80px]"
               />
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Machine Selection Section */}
-        <Card className="card-friendly">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-primary" />
-              Machine Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="machine">For Machine Name *</Label>
-              <Select value={formData.machineId} onValueChange={handleMachineChange}>
-                <SelectTrigger className={errors.machineId ? "border-red-500" : ""}>
-                  <SelectValue placeholder="Select the machine that needs this material" />
-                </SelectTrigger>
-                <SelectContent>
-                  {machines.map((machine) => (
-                    <SelectItem key={machine.id} value={machine.id}>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{machine.name}</span>
-                        <span className="text-sm text-muted-foreground">{machine.type} - {machine.location}</span>
-                        <span className="text-xs text-muted-foreground">{machine.specifications}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.machineId && <p className="text-sm text-red-500">{errors.machineId}</p>}
+              <Label>Old Stock</Label>
+              <Input
+                type="number"
+                value={item.oldStock}
+                onChange={(e) => handleItemChange(item.id, "oldStock", Number(e.target.value))}
+                placeholder="Current stock quantity"
+                min="0"
+              />
             </div>
 
-            {formData.machineId && (
-              <div className="p-4 bg-secondary/50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Selected Machine Details:</span>
+            <div className="space-y-2">
+              <Label>Product Image</Label>
+              {item.imagePreview ? (
+                <div className="relative inline-block">
+                  <img 
+                    src={item.imagePreview} 
+                    alt="Product" 
+                    className="w-32 h-32 object-cover rounded border"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removeImage(item.id)}
+                    className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
                 </div>
-                {(() => {
-                  const selectedMachine = machines.find(m => m.id === formData.machineId);
-                  return selectedMachine ? (
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p><strong>Name:</strong> {selectedMachine.name}</p>
-                      <p><strong>Type:</strong> {selectedMachine.type}</p>
-                      <p><strong>Location:</strong> {selectedMachine.location}</p>
-                      <p><strong>Specifications:</strong> {selectedMachine.specifications}</p>
-                      <p><strong>Status:</strong> <span className="text-blue-600">{selectedMachine.status}</span></p>
-                    </div>
-                  ) : null;
-                })()}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Request Information Section */}
-        <Card className="card-friendly">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
-              Request Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="requestedBy">Requested By</Label>
-                <Input
-                  id="requestedBy"
-                  value={formData.requestedBy}
-                  onChange={(e) => handleInputChange("requestedBy", e.target.value)}
-                  className="bg-secondary"
-                  readOnly
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="requestedDate">Requested Date</Label>
-                <Input
-                  id="requestedDate"
-                  type="date"
-                  value={formData.requestedDate}
-                  onChange={(e) => handleInputChange("requestedDate", e.target.value)}
-                  className="bg-secondary"
-                  readOnly
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Image Upload Section */}
-        <Card className="card-friendly">
-          <CardHeader>
-            <CardTitle>Supporting Documents</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Old Material Image */}
-            <div className="space-y-3">
-              <Label className="text-base font-medium">Old Material Image</Label>
-              <p className="text-sm text-muted-foreground">Upload an image of the old/damaged material that needs replacement</p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => oldMaterialCameraRef.current?.click()}
-                  className="gap-2"
-                >
-                  <Camera className="w-4 h-4" />
-                  Take Photo
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => oldMaterialInputRef.current?.click()}
-                  className="gap-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  Upload Image
-                </Button>
-              </div>
-              {oldMaterialPreview && (
-                <Card className="p-4">
-                  <CardContent className="p-0">
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={oldMaterialPreview}
-                        alt="Old Material"
-                        className="w-20 h-20 object-cover rounded-lg border"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Old Material Image</p>
-                        <p className="text-xs text-muted-foreground">Image attached successfully</p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeImage('oldMaterial')}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            <Separator />
-
-            {/* Machine Condition Proof */}
-            <div className="space-y-3">
-              <Label className="text-base font-medium">Machine Condition Proof</Label>
-              <p className="text-sm text-muted-foreground">Upload an image showing the machine condition or location where material is needed</p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => machineProofCameraRef.current?.click()}
-                  className="gap-2"
-                >
-                  <Camera className="w-4 h-4" />
-                  Take Photo
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => machineProofInputRef.current?.click()}
-                  className="gap-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  Upload Image
-                </Button>
-              </div>
-              {machineProofPreview && (
-                <Card className="p-4">
-                  <CardContent className="p-0">
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={machineProofPreview}
-                        alt="Machine Condition"
-                        className="w-20 h-20 object-cover rounded-lg border"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Machine Condition Proof</p>
-                        <p className="text-xs text-muted-foreground">Image attached successfully</p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeImage('machineProof')}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            <Separator />
-
-            {/* Requestor Signature */}
-            <div className="space-y-3">
-              <Label className="text-base font-medium">Requestor Signature</Label>
-              <p className="text-sm text-muted-foreground">Upload your signature or a photo of your signed approval</p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => signatureCameraRef.current?.click()}
-                  className="gap-2"
-                >
-                  <Camera className="w-4 h-4" />
-                  Take Photo
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => signatureInputRef.current?.click()}
-                  className="gap-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  Upload Image
-                </Button>
-              </div>
-              {signaturePreview && (
-                <Card className="p-4">
-                  <CardContent className="p-0">
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={signaturePreview}
-                        alt="Requestor Signature"
-                        className="w-20 h-20 object-cover rounded-lg border"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Requestor Signature</p>
-                        <p className="text-xs text-muted-foreground">Signature attached successfully</p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeImage('signature')}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*';
+                      input.onchange = (e) => handleImageUpload(item.id, e as any);
+                      input.click();
+                    }}
+                    className="gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Upload Image
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = 'image/*';
+                      input.capture = 'environment';
+                      input.onchange = (e) => handleImageUpload(item.id, e as any);
+                      input.click();
+                    }}
+                    className="gap-2"
+                  >
+                    <Camera className="w-4 h-4" />
+                    Take Photo
+                  </Button>
+                </div>
               )}
             </div>
           </CardContent>
         </Card>
+      ))}
+    </div>
+  );
 
-        {/* Submit Section */}
-        <Card className="card-friendly">
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-              <div className="text-sm text-muted-foreground">
-                <p>Please review all information before submitting.</p>
-                <p>Your request will be sent to management for approval.</p>
-              </div>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-                  Cancel
-                </Button>
-                <Button type="submit" className="gap-2">
-                  <FileText className="w-4 h-4" />
-                  Submit Request
-                </Button>
-              </div>
+  return (
+    <div className="max-w-7xl mx-auto space-y-4 md:space-y-6 p-4">
+      {/* Back Button */}
+      <div className="flex items-center gap-4">
+        <Button
+          variant="outline"
+          onClick={() => navigate(-1)}
+          className="gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </Button>
+      </div>
+
+      {/* Company Header */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Building2 className="w-6 h-6 text-blue-600" />
+            <div>
+              <h1 className="text-2xl font-bold text-blue-800">SREE SAI ROLLER FLOUR MILLS PVT LTD</h1>
+              <p className="text-lg text-blue-600">REQUISITION FORM & INDENT FORM FOR REQUESTING MATERIAL OR NEW PURCHASE</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          
+          {/* Document Information */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm bg-white p-4 rounded border">
+            <div>
+              <span className="font-semibold">DOC.NO.:</span>
+              <div className="font-mono">{headerData.docNo}</div>
+            </div>
+            <div>
+              <span className="font-semibold">DATE:</span>
+              <div>{new Date(headerData.date).toLocaleDateString()}</div>
+            </div>
+            <div>
+              <span className="font-semibold">REVISION STATUS:</span>
+              <div>{headerData.revisionStatus}</div>
+            </div>
+            <div>
+              <span className="font-semibold">ISSUE NO.:</span>
+              <div>{headerData.issueNo}</div>
+            </div>
+            <div>
+              <span className="font-semibold">PAGE:</span>
+              <div>{headerData.page}</div>
+            </div>
+            <div>
+              <span className="font-semibold">SR.NO. FOR REQ.FORM:</span>
+              <div className="font-mono text-xs">{headerData.reqFormNo}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Hidden file inputs */}
-        <input
-          type="file"
-          ref={oldMaterialInputRef}
-          className="hidden"
-          accept="image/*"
-          onChange={(e) => handleImageUpload(e, 'oldMaterial')}
-        />
-        <input
-          type="file"
-          ref={oldMaterialCameraRef}
-          className="hidden"
-          accept="image/*"
-          capture="environment"
-          onChange={(e) => handleImageUpload(e, 'oldMaterial')}
-        />
-        <input
-          type="file"
-          ref={signatureInputRef}
-          className="hidden"
-          accept="image/*"
-          onChange={(e) => handleImageUpload(e, 'signature')}
-        />
-        <input
-          type="file"
-          ref={signatureCameraRef}
-          className="hidden"
-          accept="image/*"
-          capture="environment"
-          onChange={(e) => handleImageUpload(e, 'signature')}
-        />
-        <input
-          type="file"
-          ref={machineProofInputRef}
-          className="hidden"
-          accept="image/*"
-          onChange={(e) => handleImageUpload(e, 'machineProof')}
-        />
-        <input
-          type="file"
-          ref={machineProofCameraRef}
-          className="hidden"
-          accept="image/*"
-          capture="environment"
-          onChange={(e) => handleImageUpload(e, 'machineProof')}
-        />
+      {/* View Toggle and Add Item */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === "list" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("list")}
+            className="flex items-center gap-2"
+          >
+            <List className="w-4 h-4" />
+            List View
+          </Button>
+          <Button
+            variant={viewMode === "table" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("table")}
+            className="flex items-center gap-2"
+          >
+            <TableIcon className="w-4 h-4" />
+            Table View
+          </Button>
+        </div>
+
+        <Button onClick={addNewItem} className="gap-2">
+          <Plus className="w-4 h-4" />
+          Add New Item
+        </Button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Items Section */}
+        {viewMode === "table" ? <TableView /> : <ListView />}
+
+        {/* Submit Button */}
+        <div className="flex justify-center pt-6">
+          <Button type="submit" size="lg" className="min-w-48 gap-2">
+            <FileText className="w-5 h-5" />
+            Submit Requisition Request
+          </Button>
+        </div>
       </form>
     </div>
   );

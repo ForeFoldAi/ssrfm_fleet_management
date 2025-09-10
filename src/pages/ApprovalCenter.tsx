@@ -276,7 +276,7 @@ const ApprovalCenter = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="owner-approval" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto p-1 sm:p-2 bg-secondary rounded-xl">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 h-auto p-1 sm:p-2 bg-secondary rounded-xl">
           <TabsTrigger 
             value="owner-approval" 
             className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -290,13 +290,6 @@ const ApprovalCenter = () => {
           >
             <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="truncate">Approved ({approvedRequests.length})</span>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="rejected" 
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-          >
-            <XCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="truncate">Rejected ({rejectedRequests.length})</span>
           </TabsTrigger>
         </TabsList>
 
@@ -476,66 +469,7 @@ const ApprovalCenter = () => {
           ))}
         </TabsContent>
 
-        {/* Rejected Tab */}
-        <TabsContent value="rejected" className="space-y-3 sm:space-y-4">
-          {rejectedRequests.map((request) => (
-            <Card key={request.id} className="card-friendly border-red-200">
-              <CardContent className="p-4 sm:p-6">
-                <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
-                        <h3 className="text-base sm:text-lg font-semibold text-foreground truncate">{request.material}</h3>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="destructive" className="text-xs">
-                            Rejected at {request.rejectedAt.replace('_', ' ')}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {request.value}
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground mb-3">
-                        <div className="flex items-center gap-1">
-                          <User className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                          <span className="truncate">{request.requestedBy} ({request.role})</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                          Rejected: {request.rejectedDate}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <strong className="text-red-800 text-xs sm:text-sm">Rejection Reason:</strong>
-                        <p className="text-red-700 text-xs sm:text-sm mt-1 break-words">{request.reason}</p>
-                        <p className="text-red-600 text-xs mt-2">
-                          Rejected by {request.rejectedBy} on {request.rejectedDate}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t">
-                    <Button variant="outline" className="gap-2 w-full sm:w-auto text-xs sm:text-sm">
-                      <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                      View Original Request
-                    </Button>
-                    <Button variant="outline" className="gap-2 w-full sm:w-auto text-xs sm:text-sm">
-                      <User className="w-3 h-3 sm:w-4 sm:h-4" />
-                      Contact Supervisor
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </TabsContent>
       </Tabs>
     </div>
   );

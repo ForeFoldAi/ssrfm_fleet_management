@@ -1,0 +1,461 @@
+import { useState } from "react";
+import { Package, Save, X, User, Calendar, CheckCircle, AlertCircle } from "lucide-react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Badge } from "./ui/badge";
+import { toast } from "../hooks/use-toast";
+import { useRole } from "../contexts/RoleContext";
+
+interface MaterialIssueFormProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (issueData: any) => void;
+}
+
+export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFormProps) => {
+  const { currentUser } = useRole();
+  const [formData, setFormData] = useState({
+    materialId: "",
+    materialName: "",
+    specifications: "",
+    unit: "",
+    requestedQuantity: "",
+    availableStock: 0,
+    issuedQuantity: "",
+    machineId: "",
+    machineName: "",
+    purpose: "",
+    recipientName: "",
+    recipientId: "",
+    department: "",
+    notes: "",
+    issuedBy: currentUser?.name || "",
+    issuedDate: new Date().toISOString().split('T')[0]
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
+
+  // Available materials with current stock
+  const availableMaterials = [
+    {
+      id: "MAT-001",
+      name: "Bearings (SKF 6205-2RS)",
+      specifications: "Deep Grove Ball Bearing, Inner: 25mm, Outer: 52mm",
+      unit: "pieces",
+      currentStock: 24,
+      location: "Parts Storage A-1"
+    },
+    {
+      id: "MAT-002",
+      name: "Motor Oil (SAE 10W-30)",
+      specifications: "Industrial grade lubricant for machinery",
+      unit: "liters",
+      currentStock: 65,
+      location: "Chemical Storage B-1"
+    },
+    {
+      id: "MAT-003",
+      name: "Conveyor Belts",
+      specifications: "Rubber belt, 600mm width, food grade",
+      unit: "meters",
+      currentStock: 45,
+      location: "Equipment Storage C-1"
+    },
+    {
+      id: "MAT-004",
+      name: "Grinding Stones",
+      specifications: "Natural stone for wheat grinding, 750mm diameter",
+      unit: "pieces",
+      currentStock: 8,
+      location: "Processing Equipment Store"
+    },
+    {
+      id: "MAT-005",
+      name: "Electrical Wires",
+      specifications: "Copper wire, 2.5mm², 240V rated",
+      unit: "meters",
+      currentStock: 150,
+      location: "Electrical Store"
+    }
+  ];
+
+  // Machines for the supervisor
+  const machines = [
+    {
+      id: "MACHINE-001",
+      name: "Main Flour Mill #01",
+      type: "Roller Flour Mill",
+      location: "Production Floor A"
+    },
+    {
+      id: "MACHINE-002",
+      name: "Secondary Mill #02",
+      type: "Roller Flour Mill",
+      location: "Production Floor A"
+    },
+    {
+      id: "MACHINE-003",
+      name: "Flour Sifter #01",
+      type: "Rotary Sifter",
+      location: "Processing Line B"
+    },
+    {
+      id: "MACHINE-004",
+      name: "Main Conveyor #01",
+      type: "Belt Conveyor",
+      location: "Transport Line"
+    }
+  ];
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const handleMaterialSelect = (materialId: string) => {
+    const material = availableMaterials.find(m => m.id === materialId);
+    if (material) {
+      setSelectedMaterial(material);
+      setFormData(prev => ({
+        ...prev,
+        materialId: material.id,
+        materialName: material.name,
+        specifications: material.specifications,
+        unit: material.unit,
+        availableStock: material.currentStock
+      }));
+    }
+  };
+
+  const handleMachineSelect = (machineId: string) => {
+    const machine = machines.find(m => m.id === machineId);
+    if (machine) {
+      setFormData(prev => ({
+        ...prev,
+        machineId: machine.id,
+        machineName: machine.name
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.materialId) newErrors.materialId = "Please select a material";
+    if (!formData.issuedQuantity.trim()) newErrors.issuedQuantity = "Please enter issued quantity";
+    if (!formData.machineId) newErrors.machineId = "Please select a machine";
+    if (!formData.purpose.trim()) newErrors.purpose = "Please enter purpose";
+    if (!formData.recipientName.trim()) newErrors.recipientName = "Please enter recipient name";
+    if (!formData.recipientId.trim()) newErrors.recipientId = "Please enter recipient ID";
+    
+    // Check if issued quantity is valid
+    const issuedQty = Number(formData.issuedQuantity);
+    if (issuedQty <= 0) {
+      newErrors.issuedQuantity = "Issued quantity must be greater than 0";
+    } else if (issuedQty > formData.availableStock) {
+      newErrors.issuedQuantity = `Cannot issue more than available stock (${formData.availableStock})`;
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    const issueData = {
+      ...formData,
+      id: `ISS-${Date.now()}`,
+      status: "issued",
+      type: "material_issue",
+      timestamp: new Date().toISOString(),
+      remainingStock: formData.availableStock - Number(formData.issuedQuantity)
+    };
+    
+    onSubmit(issueData);
+    
+    toast({
+      title: "Material Issued Successfully",
+      description: `${formData.issuedQuantity} ${formData.unit} of ${formData.materialName} issued to ${formData.recipientName}`,
+    });
+    
+    // Reset form
+    setFormData({
+      materialId: "",
+      materialName: "",
+      specifications: "",
+      unit: "",
+      requestedQuantity: "",
+      availableStock: 0,
+      issuedQuantity: "",
+      machineId: "",
+      machineName: "",
+      purpose: "",
+      recipientName: "",
+      recipientId: "",
+      department: "",
+      notes: "",
+      issuedBy: currentUser?.name || "",
+      issuedDate: new Date().toISOString().split('T')[0]
+    });
+    setSelectedMaterial(null);
+    setErrors({});
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <Package className="w-5 h-5 text-green-600" />
+            </div>
+            Material Issue Form
+            <Badge variant="secondary" className="ml-auto">Direct Issue - No Approval Required</Badge>
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Material Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                Material Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="materialId">Select Material *</Label>
+                  <Select value={formData.materialId} onValueChange={handleMaterialSelect}>
+                    <SelectTrigger className="input-friendly">
+                      <SelectValue placeholder="Choose material from available stock" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableMaterials.map((material) => (
+                        <SelectItem key={material.id} value={material.id}>
+                          <div className="flex flex-col">
+                            <div className="font-semibold">{material.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              Stock: {material.currentStock} {material.unit} • {material.location}
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.materialId && <p className="text-destructive text-sm">{errors.materialId}</p>}
+                </div>
+
+                {selectedMaterial && (
+                  <div className="space-y-2">
+                    <Label>Available Stock</Label>
+                    <div className="flex items-center gap-2">
+                      <div className="input-friendly bg-green-50 text-center py-3 font-semibold text-green-700 flex-1">
+                        {selectedMaterial.currentStock} {selectedMaterial.unit}
+                      </div>
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {selectedMaterial && (
+                <div className="space-y-2">
+                  <Label>Specifications</Label>
+                  <div className="input-friendly bg-secondary p-3 text-sm">
+                    {selectedMaterial.specifications}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="issuedQuantity">Quantity to Issue *</Label>
+                  <Input
+                    id="issuedQuantity"
+                    type="number"
+                    placeholder="Enter quantity"
+                    min="1"
+                    max={formData.availableStock}
+                    value={formData.issuedQuantity}
+                    onChange={(e) => handleInputChange("issuedQuantity", e.target.value)}
+                    className="input-friendly"
+                  />
+                  {errors.issuedQuantity && <p className="text-destructive text-sm">{errors.issuedQuantity}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Unit</Label>
+                  <div className="input-friendly bg-secondary text-center py-3 font-semibold">
+                    {formData.unit || "Select material first"}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Machine & Purpose */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Usage Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="machineId">Machine/Equipment *</Label>
+                <Select value={formData.machineId} onValueChange={handleMachineSelect}>
+                  <SelectTrigger className="input-friendly">
+                    <SelectValue placeholder="Select machine or equipment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {machines.map((machine) => (
+                      <SelectItem key={machine.id} value={machine.id}>
+                        <div className="flex flex-col">
+                          <div className="font-semibold">{machine.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {machine.type} • {machine.location}
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.machineId && <p className="text-destructive text-sm">{errors.machineId}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="purpose">Purpose of Issue *</Label>
+                <Textarea
+                  id="purpose"
+                  placeholder="Describe why this material is needed (e.g., routine maintenance, replacement, repair, etc.)"
+                  value={formData.purpose}
+                  onChange={(e) => handleInputChange("purpose", e.target.value)}
+                  className="input-friendly min-h-[100px]"
+                />
+                {errors.purpose && <p className="text-destructive text-sm">{errors.purpose}</p>}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recipient Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Recipient Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="recipientName">Recipient Name *</Label>
+                  <Input
+                    id="recipientName"
+                    placeholder="Name of person receiving material"
+                    value={formData.recipientName}
+                    onChange={(e) => handleInputChange("recipientName", e.target.value)}
+                    className="input-friendly"
+                  />
+                  {errors.recipientName && <p className="text-destructive text-sm">{errors.recipientName}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="recipientId">Recipient ID/Badge *</Label>
+                  <Input
+                    id="recipientId"
+                    placeholder="Employee ID or badge number"
+                    value={formData.recipientId}
+                    onChange={(e) => handleInputChange("recipientId", e.target.value)}
+                    className="input-friendly"
+                  />
+                  {errors.recipientId && <p className="text-destructive text-sm">{errors.recipientId}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department</Label>
+                  <Input
+                    id="department"
+                    placeholder="Department or section"
+                    value={formData.department}
+                    onChange={(e) => handleInputChange("department", e.target.value)}
+                    className="input-friendly"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Issue Date</Label>
+                  <div className="input-friendly bg-secondary text-center py-3 font-semibold">
+                    {new Date(formData.issuedDate).toLocaleDateString()}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Additional Notes</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Any additional notes or special instructions"
+                  value={formData.notes}
+                  onChange={(e) => handleInputChange("notes", e.target.value)}
+                  className="input-friendly min-h-[80px]"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Summary */}
+          {selectedMaterial && formData.issuedQuantity && (
+            <Card className="bg-green-50 border-green-200">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <h3 className="font-semibold text-green-800">Issue Summary</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Material:</span>
+                    <div className="font-semibold">{formData.materialName}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Quantity:</span>
+                    <div className="font-semibold">{formData.issuedQuantity} {formData.unit}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Remaining Stock:</span>
+                    <div className="font-semibold">
+                      {formData.availableStock - Number(formData.issuedQuantity || 0)} {formData.unit}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Form Actions */}
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              <X className="w-4 h-4 mr-2" />
+              Cancel
+            </Button>
+            <Button type="submit" className="bg-green-600 hover:bg-green-700">
+              <Save className="w-4 h-4 mr-2" />
+              Issue Material
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}; 

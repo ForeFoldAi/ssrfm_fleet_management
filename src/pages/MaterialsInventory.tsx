@@ -14,12 +14,10 @@ const MaterialsInventory = () => {
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
       {/* Header */}
       <div className="text-center sm:text-left">
-        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-2">
+        <h6 className="text-sm sm:text-1xl md:text-2xl lg:text-3xl font-bold text-foreground mb-1">
           Materials & Equipment Inventory
-        </h1>
-        <p className="text-base sm:text-lg text-muted-foreground">
-          Manage your materials stock and track equipment status
-        </p>
+        </h6>
+       
       </div>
 
       {/* Tabs */}
