@@ -49,7 +49,6 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
     purpose: "",
     notes: "",
     requestedBy: currentUser?.name || "",
-    department: currentUser?.department || ""
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -281,7 +280,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
       purpose: "",
       notes: "",
       requestedBy: currentUser?.name || "",
-      department: currentUser?.department || ""
+      
     });
     setSelectedMaterial(null);
     setErrors({});
@@ -574,12 +573,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                     {formData.requestedBy}
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Department</Label>
-                  <div className="input-friendly bg-secondary text-center py-2 font-semibold text-xs">
-                    {formData.department}
-                  </div>
-                </div>
+               
                 <div className="space-y-1">
                   <Label className="text-xs">Date</Label>
                   <div className="input-friendly bg-secondary text-center py-2 font-semibold text-xs">

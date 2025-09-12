@@ -39,11 +39,7 @@ export const RequestForm = ({ formData, onUpdate, onNext }: RequestFormProps) =>
     { id: "safety-equipment", name: "Safety Equipment", unit: "sets", category: "Safety" }
   ];
 
-  const priorities = [
-    { value: "High", label: "🔴 High Priority", description: "Urgent - Production stopped" },
-    { value: "Medium", label: "🟡 Medium Priority", description: "Important - Plan ahead" },
-    { value: "Low", label: "🟢 Low Priority", description: "Normal - When available" }
-  ];
+  
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'oldMaterial' | 'signature') => {
     const file = event.target.files?.[0];
@@ -286,27 +282,7 @@ export const RequestForm = ({ formData, onUpdate, onNext }: RequestFormProps) =>
         </div>
 
         {/* Priority */}
-        <div className="space-y-2">
-          <Label className="text-lg font-semibold">Priority Level *</Label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {priorities.map((priority) => (
-              <button
-                key={priority.value}
-                type="button"
-                onClick={() => onUpdate({ priority: priority.value })}
-                className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${
-                  formData.priority === priority.value
-                    ? "border-primary bg-primary/10 shadow-md"
-                    : "border-border hover:border-primary/50 hover:bg-secondary/30"
-                }`}
-              >
-                <div className="font-semibold text-foreground mb-1">{priority.label}</div>
-                <div className="text-sm text-muted-foreground">{priority.description}</div>
-              </button>
-            ))}
-          </div>
-          {errors.priority && <p className="text-destructive text-sm">{errors.priority}</p>}
-        </div>
+        
 
         {/* Material Purpose */}
         <div className="space-y-2">

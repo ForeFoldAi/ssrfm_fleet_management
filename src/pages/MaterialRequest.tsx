@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Camera, Upload, X, Eye, User, Settings, MapPin, Package, Plus, Trash2, Building2, List, Table as TableIcon, ArrowLeft, Phone, Mail, Calendar, DollarSign } from "lucide-react";
+import { FileText, Camera, Upload, X, Eye, User, Settings, MapPin, Package, Plus, Trash2, Building2, List, Table as TableIcon, ArrowLeft, Phone, Mail, Calendar, IndianRupee } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { toast } from "../hooks/use-toast";
 import { useRole } from "../contexts/RoleContext";
 
@@ -17,13 +18,7 @@ interface VendorQuotation {
   vendorName: string;
   contactPerson: string;
   phone: string;
-  email: string;
   quotedPrice: string;
-  currency: string;
-  deliveryTime: string;
-  warranty: string;
-  paymentTerms: string;
-  validityPeriod: string;
   notes: string;
   quotationFile?: File | null;
 }
@@ -32,7 +27,6 @@ interface RequestItem {
   id: string;
   srNo: number;
   productName: string;
-  make: string;
   machineName: string;
   specifications: string;
   oldStock: number;
@@ -48,6 +42,19 @@ const MaterialRequest = () => {
   const navigate = useNavigate();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [viewMode, setViewMode] = useState<"table" | "list">("table");
+  const [isVendorFormOpen, setIsVendorFormOpen] = useState(false);
+  const [isViewQuotationsOpen, setIsViewQuotationsOpen] = useState(false);
+  const [currentItemId, setCurrentItemId] = useState<string>("");
+  const [currentQuotations, setCurrentQuotations] = useState<VendorQuotation[]>([]);
+  const [vendorFormData, setVendorFormData] = useState<VendorQuotation>({
+    id: "",
+    vendorName: "",
+    contactPerson: "",
+    phone: "",
+    quotedPrice: "",
+    notes: "",
+    quotationFile: null
+  });
   
   // Form header data
   const [headerData, setHeaderData] = useState({
@@ -68,7 +75,6 @@ const MaterialRequest = () => {
       id: "1",
       srNo: 1,
       productName: "",
-      make: "",
       machineName: "",
       specifications: "",
       oldStock: 0,
@@ -84,76 +90,77 @@ const MaterialRequest = () => {
   const availableMaterials = [
     {
       name: "FEVICOL",
-      make: "MARINE",
       specifications: "SH adhesive",
       unit: "kg",
       category: "Adhesives"
     },
     {
       name: "COPPER WIRE BRUSH",
-      make: "INDUSTRIAL",
       specifications: "0.01 mm thickness of wire",
       unit: "pieces",
       category: "Tools"
     },
     {
       name: "DHOLLAK BALL",
-      make: "INDUSTRIAL",
       specifications: "PVC transparent",
       unit: "pieces",
       category: "Components"
     },
     {
       name: "TRIANGLE BRUSH",
-      make: "INDUSTRIAL",
       specifications: "Cleaning brush",
       unit: "pieces",
       category: "Tools"
     },
     {
-      name: "GUM TAP",
-      make: "INDUSTRIAL",
-      specifications: "1 inch width",
+      name: "GUM TAPE",
+      specifications: "1 inch width adhesive tape",
       unit: "pieces",
-      category: "Adhesives"
+      category: "Office Supplies"
     },
     {
       name: "BEARINGS (SKF 6205-2RS)",
-      make: "SKF",
       specifications: "Deep Grove Ball Bearing, Inner: 25mm, Outer: 52mm",
       unit: "pieces",
-      category: "Mechanical Components"
+      category: "Parts"
     },
     {
       name: "MOTOR OIL (SAE 10W-30)",
-      make: "CASTROL",
       specifications: "Industrial grade lubricant for machinery",
       unit: "liters",
       category: "Lubricants"
     },
     {
       name: "CONVEYOR BELTS",
-      make: "CONTINENTAL",
       specifications: "Rubber belt, 600mm width, food grade",
       unit: "meters",
-      category: "Mechanical Components"
+      category: "Equipment"
     }
   ];
 
   // Machines for the supervisor
   const machines = [
-    "PLANSHIFTER",
+    "BLENDER",
     "MAIN FLOUR MILL #01",
     "SECONDARY MILL #02", 
     "FLOUR SIFTER #01",
-    "MAIN CONVEYOR #01",
-    "PACKAGING UNIT #01",
-    "WHEAT CLEANER #01"
+    "MAIN CONVEYOR #01"
   ];
 
-  const handleItemChange = (itemId: string, field: keyof RequestItem, value: any) => {
+  const handleItemChange = (itemId: string, field: string, value: string) => {
     setRequestItems(prev => prev.map(item => 
       item.id === itemId ? { ...item, [field]: value } : item
+    ));
+    
+    // Clear error for this field
+    if (errors[`${field}_${itemId}`]) {
+      setErrors(prev => ({ ...prev, [`${field}_${itemId}`]: "" }));
+    }
+  };
+
+  const handleFileChange = (itemId: string, field: string, file: File) => {
+    setRequestItems(prev => prev.map(item => 
+      item.id === itemId ? { ...item, [field]: file } : item
     ));
   };
 
@@ -164,7 +171,6 @@ const MaterialRequest = () => {
         item.id === itemId ? {
           ...item,
           productName: material.name,
-          make: material.make,
           specifications: material.specifications,
           unit: material.unit
         } : item
@@ -177,7 +183,6 @@ const MaterialRequest = () => {
       id: String(Date.now()),
       srNo: requestItems.length + 1,
       productName: "",
-      make: "",
       machineName: "",
       specifications: "",
       oldStock: 0,
@@ -193,136 +198,73 @@ const MaterialRequest = () => {
   const removeItem = (itemId: string) => {
     if (requestItems.length > 1) {
       setRequestItems(prev => prev.filter(item => item.id !== itemId));
-      // Update serial numbers
-      setRequestItems(prev => prev.map((item, index) => ({
-        ...item,
-        srNo: index + 1
-      })));
     }
   };
 
-  const handleImageUpload = (itemId: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "Please select an image smaller than 5MB.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Check file type
-      if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Invalid file type",
-          description: "Please select a valid image file.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setRequestItems(prev => prev.map(item => 
-          item.id === itemId ? {
-            ...item,
-            image: file,
-            imagePreview: result
-          } : item
-        ));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Vendor quotation management functions
-  const addVendorQuotation = (itemId: string) => {
-    const item = requestItems.find(item => item.id === itemId);
-    if (item && item.vendorQuotations.length >= 4) {
-      toast({
-        title: "Maximum quotations reached",
-        description: "You can add up to 4 vendor quotations per item.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const newQuotation: VendorQuotation = {
-      id: `quote_${Date.now()}`,
+  const openVendorForm = (itemId: string) => {
+    setCurrentItemId(itemId);
+    setVendorFormData({
+      id: "",
       vendorName: "",
       contactPerson: "",
       phone: "",
-      email: "",
       quotedPrice: "",
-      currency: "INR",
-      deliveryTime: "",
-      warranty: "",
-      paymentTerms: "",
-      validityPeriod: "",
       notes: "",
       quotationFile: null
-    };
+    });
+    setIsVendorFormOpen(true);
+  };
 
-    setRequestItems(prev => prev.map(item => 
-      item.id === itemId ? {
-        ...item,
-        vendorQuotations: [...item.vendorQuotations, newQuotation]
-      } : item
-    ));
+  const viewVendorQuotations = (itemId: string) => {
+    const item = requestItems.find(item => item.id === itemId);
+    if (item) {
+      setCurrentQuotations(item.vendorQuotations);
+      setCurrentItemId(itemId);
+      setIsViewQuotationsOpen(true);
+    }
+  };
+
+  const handleVendorFormChange = (field: string, value: string) => {
+    setVendorFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleVendorFileChange = (file: File) => {
+    setVendorFormData(prev => ({ ...prev, quotationFile: file }));
+  };
+
+  const addVendorQuotation = () => {
+    const currentItem = requestItems.find(item => item.id === currentItemId);
+    if (currentItem && currentItem.vendorQuotations.length < 4) {
+      const newQuotation: VendorQuotation = {
+        ...vendorFormData,
+        id: String(Date.now())
+      };
+      
+      setRequestItems(prev => prev.map(item => 
+        item.id === currentItemId 
+          ? { ...item, vendorQuotations: [...item.vendorQuotations, newQuotation] }
+          : item
+      ));
+      
+      setIsVendorFormOpen(false);
+      toast({
+        title: "Vendor Quotation Added",
+        description: `Quotation from ${vendorFormData.vendorName} added successfully`,
+      });
+    } else if (currentItem && currentItem.vendorQuotations.length >= 4) {
+      toast({
+        title: "Maximum Quotations Reached",
+        description: "You can only add up to 4 vendor quotations per item",
+        variant: "destructive"
+      });
+    }
   };
 
   const removeVendorQuotation = (itemId: string, quotationId: string) => {
     setRequestItems(prev => prev.map(item => 
-      item.id === itemId ? {
-        ...item,
-        vendorQuotations: item.vendorQuotations.filter(q => q.id !== quotationId)
-      } : item
-    ));
-  };
-
-  const handleQuotationChange = (itemId: string, quotationId: string, field: keyof VendorQuotation, value: any) => {
-    setRequestItems(prev => prev.map(item => 
-      item.id === itemId ? {
-        ...item,
-        vendorQuotations: item.vendorQuotations.map(q => 
-          q.id === quotationId ? { ...q, [field]: value } : q
-        )
-      } : item
-    ));
-  };
-
-  const handleQuotationFileUpload = (itemId: string, quotationId: string, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Check file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "Please select a file smaller than 10MB.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      handleQuotationChange(itemId, quotationId, 'quotationFile', file);
-      toast({
-        title: "File uploaded",
-        description: `${file.name} has been attached to the quotation.`,
-      });
-    }
-  };
-
-  const removeImage = (itemId: string) => {
-    setRequestItems(prev => prev.map(item => 
-      item.id === itemId ? {
-        ...item,
-        image: null,
-        imagePreview: null
-      } : item
+      item.id === itemId 
+        ? { ...item, vendorQuotations: item.vendorQuotations.filter(q => q.id !== quotationId) }
+        : item
     ));
   };
 
@@ -331,7 +273,6 @@ const MaterialRequest = () => {
     
     requestItems.forEach((item, index) => {
       if (!item.productName.trim()) newErrors[`productName_${item.id}`] = `Product name is required for item ${index + 1}`;
-      if (!item.make.trim()) newErrors[`make_${item.id}`] = `Make is required for item ${index + 1}`;
       if (!item.machineName.trim()) newErrors[`machineName_${item.id}`] = `Machine name is required for item ${index + 1}`;
       if (!item.reqQuantity.trim()) newErrors[`reqQuantity_${item.id}`] = `Required quantity is required for item ${index + 1}`;
       
@@ -348,21 +289,63 @@ const MaterialRequest = () => {
     
     if (!validateForm()) {
       toast({
-        title: "Please fill in all required fields",
-        description: "Check the form for missing information.",
-        variant: "destructive",
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
       });
       return;
     }
 
-    // Here you would typically send the data to your backend
+    // Generate document numbers
+    const timestamp = Date.now();
+    const docNo = `SSRFM/MNTI/R-${String(timestamp).slice(-4)}`;
+    const reqFormNo = `SSRFM/MNT/REQ.-${String(timestamp).slice(-4)}`;
+    const indFormNo = `SSRFM/MNT/IND.-${String(timestamp).slice(-4)}`;
+    const reqSrNo = `SSRFM/MNT/REQ.-${String(timestamp).slice(-4)}`;
+    const indSrNo = `SSRFM/MNT/IND.-${String(timestamp).slice(-4)}`;
+    
+    const requestData = {
+      id: `REQ-${timestamp}`,
+      status: "pending_approval",
+      type: "material_request",
+      timestamp: new Date().toISOString(),
+      headerData: {
+        ...headerData,
+        docNo,
+        reqFormNo,
+        indFormNo,
+        reqSrNo,
+        indSrNo
+      },
+      items: requestItems.map(item => ({
+        ...item,
+        reqQuantity: Number(item.reqQuantity)
+      })),
+      requestedBy: currentUser?.name || "",
+      department: currentUser?.department || ""
+    };
+    
     toast({
-      title: "Requisition Submitted Successfully!",
-      description: `Your material request with ${requestItems.length} items has been submitted for approval.`,
+      title: "Material Request Submitted",
+      description: `${requestItems.length} item(s) submitted successfully`,
     });
-
-    // Navigate to requests page
-    navigate('/supervisor-requests');
+    
+    // Reset form
+    setRequestItems([{
+      id: "1",
+      srNo: 1,
+      productName: "",
+      machineName: "",
+      specifications: "",
+      oldStock: 0,
+      reqQuantity: "",
+      unit: "",
+      image: null,
+      imagePreview: null,
+      vendorQuotations: []
+    }]);
+    setErrors({});
+    navigate("/supervisor-requests");
   };
 
   const TableView = () => (
@@ -374,13 +357,12 @@ const MaterialRequest = () => {
               <TableRow className="bg-gray-50">
                 <TableHead className="border border-gray-300 font-semibold">SR.NO.</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">PRODUCT NAME</TableHead>
-                <TableHead className="border border-gray-300 font-semibold">MAKE</TableHead>
-                <TableHead className="border border-gray-300 font-semibold">MACHINE NAME</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">SPECIFICATIONS</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">OLD STOCK</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">REQ. QUANTITY</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">IMAGE</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">VENDOR QUOTATIONS</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">MACHINE NAME</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">ACTIONS</TableHead>
               </TableRow>
             </TableHeader>
@@ -412,14 +394,109 @@ const MaterialRequest = () => {
                   </TableCell>
                   <TableCell className="border border-gray-300">
                     <Input
-                      value={item.make}
-                      onChange={(e) => handleItemChange(item.id, "make", e.target.value)}
-                      placeholder="Make/Brand"
+                      value={item.specifications}
+                      onChange={(e) => handleItemChange(item.id, "specifications", e.target.value)}
+                      placeholder="Specifications"
                       className="border-0 p-0 h-auto"
                     />
-                    {errors[`make_${item.id}`] && (
-                      <p className="text-destructive text-xs mt-1">{errors[`make_${item.id}`]}</p>
+                  </TableCell>
+                  <TableCell className="border border-gray-300 text-center">
+                    <Input
+                      type="number"
+                      value={item.oldStock}
+                      onChange={(e) => handleItemChange(item.id, "oldStock", e.target.value)}
+                      placeholder="0"
+                      min="0"
+                      className="border-0 p-0 h-auto w-20 text-center"
+                    />
+                  </TableCell>
+                  <TableCell className="border border-gray-300">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={item.reqQuantity}
+                        onChange={(e) => handleItemChange(item.id, "reqQuantity", e.target.value)}
+                        placeholder="Qty"
+                        min="0"
+                        className="border-0 p-0 h-auto w-20"
+                      />
+                      <span className="text-sm text-gray-600">{item.unit}</span>
+                    </div>
+                    {errors[`reqQuantity_${item.id}`] && (
+                      <p className="text-destructive text-xs mt-1">{errors[`reqQuantity_${item.id}`]}</p>
                     )}
+                  </TableCell>
+                  <TableCell className="border border-gray-300">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                              handleItemChange(item.id, "imagePreview", e.target?.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                            handleFileChange(item.id, "image", file);
+                          }
+                        }}
+                        className="hidden"
+                        id={`image-${item.id}`}
+                      />
+                      <Label htmlFor={`image-${item.id}`} className="cursor-pointer">
+                        <Camera className="w-4 h-4" />
+                      </Label>
+                      {item.imagePreview && (
+                        <div className="w-8 h-8 rounded border overflow-hidden">
+                          <img src={item.imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="border border-gray-300">
+                    <div className="space-y-1">
+                      <div className="flex gap-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 flex-1"
+                          onClick={() => openVendorForm(item.id)}
+                          disabled={item.vendorQuotations.length >= 4}
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          Add ({item.vendorQuotations.length}/4)
+                        </Button>
+                        {item.vendorQuotations.length > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => viewVendorQuotations(item.id)}
+                          >
+                            <Eye className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                      {item.vendorQuotations.length > 0 && (
+                        <div className="space-y-1">
+                          {item.vendorQuotations.map((quotation) => (
+                            <div key={quotation.id} className="flex items-center gap-1 text-xs">
+                              <span className="truncate flex-1">{quotation.vendorName}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeVendorQuotation(item.id, quotation.id)}
+                                className="h-4 w-4 p-0"
+                              >
+                                <X className="w-2 h-2" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="border border-gray-300">
                     <Select value={item.machineName} onValueChange={(value) => handleItemChange(item.id, "machineName", value)}>
@@ -439,162 +516,12 @@ const MaterialRequest = () => {
                     )}
                   </TableCell>
                   <TableCell className="border border-gray-300">
-                    <Textarea
-                      value={item.specifications}
-                      onChange={(e) => handleItemChange(item.id, "specifications", e.target.value)}
-                      placeholder="Specifications"
-                      className="border-0 p-0 h-auto resize-none"
-                      rows={2}
-                    />
-                  </TableCell>
-                  <TableCell className="border border-gray-300 text-center">
-                    <Input
-                      type="number"
-                      value={item.oldStock}
-                      onChange={(e) => handleItemChange(item.id, "oldStock", Number(e.target.value))}
-                      className="border-0 p-0 h-auto text-center w-20"
-                    />
-                  </TableCell>
-                  <TableCell className="border border-gray-300">
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        value={item.reqQuantity}
-                        onChange={(e) => handleItemChange(item.id, "reqQuantity", e.target.value)}
-                        placeholder="Qty"
-                        className="border-0 p-0 h-auto w-16 text-center"
-                        min="1"
-                      />
-                      <span className="text-sm text-gray-600">{item.unit}</span>
-                    </div>
-                    {errors[`reqQuantity_${item.id}`] && (
-                      <p className="text-destructive text-xs mt-1">{errors[`reqQuantity_${item.id}`]}</p>
-                    )}
-                  </TableCell>
-                  <TableCell className="border border-gray-300">
-                    {item.imagePreview ? (
-                      <div className="relative">
-                        <img 
-                          src={item.imagePreview} 
-                          alt="Product" 
-                          className="w-20 h-20 object-cover rounded border"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => removeImage(item.id)}
-                          className="absolute -top-2 -right-2 w-5 h-5 p-0 rounded-full"
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const input = document.createElement('input');
-                            input.type = 'file';
-                            input.accept = 'image/*';
-                            input.onchange = (e) => handleImageUpload(item.id, e as any);
-                            input.click();
-                          }}
-                          className="gap-1 text-xs"
-                        >
-                          <Upload className="w-3 h-3" />
-                          Upload
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const input = document.createElement('input');
-                            input.type = 'file';
-                            input.accept = 'image/*';
-                            input.capture = 'environment';
-                            input.onchange = (e) => handleImageUpload(item.id, e as any);
-                            input.click();
-                          }}
-                          className="gap-1 text-xs"
-                        >
-                          <Camera className="w-3 h-3" />
-                          Camera
-                        </Button>
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="border border-gray-300 p-2">
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-semibold">Quotations ({item.vendorQuotations.length}/4)</span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addVendorQuotation(item.id)}
-                          disabled={item.vendorQuotations.length >= 4}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                      </div>
-                      {item.vendorQuotations.length === 0 ? (
-                        <div className="text-xs text-muted-foreground text-center py-2">
-                          No quotations
-                        </div>
-                      ) : (
-                                                 <div className="space-y-1 max-h-32 overflow-y-auto">
-                           {item.vendorQuotations.map((quotation, index) => (
-                             <div key={quotation.id} className="bg-blue-50 border border-blue-200 rounded p-2 text-xs">
-                               <div className="flex justify-between items-start">
-                                 <div className="flex-1 min-w-0 cursor-pointer" title="Click to edit quotation details">
-                                   <div className="font-semibold text-blue-800 truncate">
-                                     {quotation.vendorName || `Vendor ${index + 1}`}
-                                   </div>
-                                   <div className="text-blue-600 flex items-center gap-1">
-                                     <DollarSign className="w-3 h-3" />
-                                     {quotation.currency} {quotation.quotedPrice || '0'}
-                                   </div>
-                                   {quotation.deliveryTime && (
-                                     <div className="text-muted-foreground flex items-center gap-1">
-                                       <Calendar className="w-3 h-3" />
-                                       {quotation.deliveryTime}
-                                     </div>
-                                   )}
-                                   <div className="text-xs text-blue-500 mt-1">
-                                     💡 Switch to List View for detailed editing
-                                   </div>
-                                 </div>
-                                 <div className="flex gap-1">
-                                   <Button
-                                     type="button"
-                                     variant="ghost"
-                                     size="sm"
-                                     onClick={() => removeVendorQuotation(item.id, quotation.id)}
-                                     className="h-4 w-4 p-0 hover:bg-red-100"
-                                   >
-                                     <X className="w-3 h-3 text-red-500" />
-                                   </Button>
-                                 </div>
-                               </div>
-                             </div>
-                           ))}
-                         </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="border border-gray-300">
                     <Button
-                      type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => removeItem(item.id)}
                       disabled={requestItems.length === 1}
-                      className="gap-1 text-xs"
+                      className="h-8 w-8 p-0"
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>
@@ -611,558 +538,177 @@ const MaterialRequest = () => {
   const ListView = () => (
     <div className="space-y-4">
       {requestItems.map((item) => (
-        <Card key={item.id}>
-          <CardHeader className="pb-3">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg">Item #{item.srNo}</CardTitle>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => removeItem(item.id)}
-                disabled={requestItems.length === 1}
-                className="gap-1"
-              >
-                <Trash2 className="w-4 h-4" />
-                Remove
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Product Name *</Label>
-                <Select value={item.productName} onValueChange={(value) => handleMaterialSelect(item.id, value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableMaterials.map((material) => (
-                      <SelectItem key={material.name} value={material.name}>
-                        <div className="flex flex-col">
-                          <div className="font-semibold">{material.name}</div>
-                          <div className="text-sm text-muted-foreground">{material.category}</div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors[`productName_${item.id}`] && (
-                  <p className="text-destructive text-sm">{errors[`productName_${item.id}`]}</p>
-                )}
-              </div>
+        <Card key={item.id} className="card-friendly">
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Product Name *</Label>
+                  <Select value={item.productName} onValueChange={(value) => handleMaterialSelect(item.id, value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableMaterials.map((material) => (
+                        <SelectItem key={material.name} value={material.name}>
+                          <div className="flex flex-col">
+                            <div className="font-semibold">{material.name}</div>
+                            <div className="text-sm text-muted-foreground">{material.category}</div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors[`productName_${item.id}`] && (
+                    <p className="text-destructive text-sm">{errors[`productName_${item.id}`]}</p>
+                  )}
+                </div>
 
-              <div className="space-y-2">
-                <Label>Make/Brand *</Label>
-                <Input
-                  value={item.make}
-                  onChange={(e) => handleItemChange(item.id, "make", e.target.value)}
-                  placeholder="Enter make or brand"
-                />
-                {errors[`make_${item.id}`] && (
-                  <p className="text-destructive text-sm">{errors[`make_${item.id}`]}</p>
-                )}
-              </div>
+                <div className="space-y-2">
+                  <Label>Machine Name *</Label>
+                  <Select value={item.machineName} onValueChange={(value) => handleItemChange(item.id, "machineName", value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Machine" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {machines.map((machine) => (
+                        <SelectItem key={machine} value={machine}>
+                          {machine}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors[`machineName_${item.id}`] && (
+                    <p className="text-destructive text-sm">{errors[`machineName_${item.id}`]}</p>
+                  )}
+                </div>
 
-              <div className="space-y-2">
-                <Label>Machine Name *</Label>
-                <Select value={item.machineName} onValueChange={(value) => handleItemChange(item.id, "machineName", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Machine" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {machines.map((machine) => (
-                      <SelectItem key={machine} value={machine}>
-                        {machine}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors[`machineName_${item.id}`] && (
-                  <p className="text-destructive text-sm">{errors[`machineName_${item.id}`]}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Required Quantity *</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    value={item.reqQuantity}
-                    onChange={(e) => handleItemChange(item.id, "reqQuantity", e.target.value)}
-                    placeholder="Enter quantity"
-                    min="1"
-                    className="flex-1"
+                <div className="space-y-2">
+                  <Label>Specifications</Label>
+                  <Textarea
+                    value={item.specifications}
+                    onChange={(e) => handleItemChange(item.id, "specifications", e.target.value)}
+                    placeholder="Enter detailed specifications"
+                    className="min-h-[80px]"
                   />
-                  <span className="text-sm text-gray-600 min-w-0">{item.unit || "unit"}</span>
                 </div>
-                {errors[`reqQuantity_${item.id}`] && (
-                  <p className="text-destructive text-sm">{errors[`reqQuantity_${item.id}`]}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Specifications</Label>
-              <Textarea
-                value={item.specifications}
-                onChange={(e) => handleItemChange(item.id, "specifications", e.target.value)}
-                placeholder="Enter detailed specifications"
-                className="min-h-[80px]"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Old Stock</Label>
-              <Input
-                type="number"
-                value={item.oldStock}
-                onChange={(e) => handleItemChange(item.id, "oldStock", Number(e.target.value))}
-                placeholder="Current stock quantity"
-                min="0"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Product Image</Label>
-              {item.imagePreview ? (
-                <div className="relative inline-block">
-                  <img 
-                    src={item.imagePreview} 
-                    alt="Product" 
-                    className="w-32 h-32 object-cover rounded border"
-                  />
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => removeImage(item.id)}
-                    className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = 'image/*';
-                      input.onchange = (e) => handleImageUpload(item.id, e as any);
-                      input.click();
-                    }}
-                    className="gap-2"
-                  >
-                    <Upload className="w-4 h-4" />
-                    Upload Image
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = 'image/*';
-                      input.capture = 'environment';
-                      input.onchange = (e) => handleImageUpload(item.id, e as any);
-                      input.click();
-                    }}
-                    className="gap-2"
-                  >
-                    <Camera className="w-4 h-4" />
-                    Take Photo
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Vendor Quotations Section */}
-            <div className="space-y-4 border-t pt-4">
-              <div className="flex justify-between items-center">
-                <Label className="text-base font-semibold">Vendor Quotations (Optional)</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addVendorQuotation(item.id)}
-                  disabled={item.vendorQuotations.length >= 4}
-                  className="gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Quotation ({item.vendorQuotations.length}/4)
-                </Button>
               </div>
 
-              {item.vendorQuotations.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground bg-muted/30 rounded-lg border-2 border-dashed">
-                  <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>No vendor quotations added yet</p>
-                  <p className="text-sm">Add up to 4 quotations to compare prices</p>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Old Stock</Label>
+                    <Input
+                      type="number"
+                      value={item.oldStock}
+                      onChange={(e) => handleItemChange(item.id, "oldStock", e.target.value)}
+                      placeholder="0"
+                      min="0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Required Quantity *</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={item.reqQuantity}
+                        onChange={(e) => handleItemChange(item.id, "reqQuantity", e.target.value)}
+                        placeholder="Enter quantity"
+                        min="0"
+                      />
+                      <span className="text-sm text-muted-foreground">{item.unit}</span>
+                    </div>
+                    {errors[`reqQuantity_${item.id}`] && (
+                      <p className="text-destructive text-sm">{errors[`reqQuantity_${item.id}`]}</p>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {item.vendorQuotations.map((quotation, index) => (
-                    <Card key={quotation.id} className="border-blue-200 bg-blue-50/30">
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-sm font-medium text-blue-800">
-                            Quotation #{index + 1}
-                          </CardTitle>
+
+                <div className="space-y-2">
+                  <Label>Image</Label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (e) => {
+                            handleItemChange(item.id, "imagePreview", e.target?.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                          handleFileChange(item.id, "image", file);
+                        }
+                      }}
+                      className="flex-1"
+                    />
+                    {item.imagePreview && (
+                      <div className="w-16 h-16 rounded border overflow-hidden">
+                        <img src={item.imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Vendor Quotations ({item.vendorQuotations.length}/4)</Label>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => openVendorForm(item.id)}
+                      disabled={item.vendorQuotations.length >= 4}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Vendor Quotation
+                    </Button>
+                    {item.vendorQuotations.length > 0 && (
+                      <Button
+                        variant="outline"
+                        onClick={() => viewVendorQuotations(item.id)}
+                        className="px-3"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {item.vendorQuotations.length > 0 && (
+                    <div className="space-y-2">
+                      {item.vendorQuotations.map((quotation) => (
+                        <div key={quotation.id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                          <div>
+                            <div className="font-medium text-sm">{quotation.vendorName}</div>
+                            <div className="text-xs text-muted-foreground">{quotation.quotedPrice}</div>
+                          </div>
                           <Button
-                            type="button"
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
                             onClick={() => removeVendorQuotation(item.id, quotation.id)}
-                            className="h-8 w-8 p-0 border-red-200 hover:bg-red-50"
+                            className="h-6 w-6 p-0"
                           >
-                            <X className="w-4 h-4 text-red-500" />
+                            <X className="w-3 h-3" />
                           </Button>
                         </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-sm">Vendor Name *</Label>
-                            <Input
-                              value={quotation.vendorName}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'vendorName', e.target.value)}
-                              placeholder="Enter vendor company name"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Contact Person</Label>
-                            <Input
-                              value={quotation.contactPerson}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'contactPerson', e.target.value)}
-                              placeholder="Enter contact person name"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Phone</Label>
-                            <Input
-                              value={quotation.phone}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'phone', e.target.value)}
-                              placeholder="Enter phone number"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Email</Label>
-                            <Input
-                              type="email"
-                              value={quotation.email}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'email', e.target.value)}
-                              placeholder="Enter email address"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Quoted Price *</Label>
-                            <div className="flex gap-2">
-                              <Select
-                                value={quotation.currency}
-                                onValueChange={(value) => handleQuotationChange(item.id, quotation.id, 'currency', value)}
-                              >
-                                <SelectTrigger className="w-20 h-9">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="INR">₹</SelectItem>
-                                  <SelectItem value="USD">$</SelectItem>
-                                  <SelectItem value="EUR">€</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Input
-                                type="number"
-                                value={quotation.quotedPrice}
-                                onChange={(e) => handleQuotationChange(item.id, quotation.id, 'quotedPrice', e.target.value)}
-                                placeholder="Enter price"
-                                className="flex-1 h-9"
-                                step="0.01"
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Delivery Time</Label>
-                            <Input
-                              value={quotation.deliveryTime}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'deliveryTime', e.target.value)}
-                              placeholder="e.g., 2-3 weeks"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Warranty</Label>
-                            <Input
-                              value={quotation.warranty}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'warranty', e.target.value)}
-                              placeholder="e.g., 1 year"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Payment Terms</Label>
-                            <Input
-                              value={quotation.paymentTerms}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'paymentTerms', e.target.value)}
-                              placeholder="e.g., 30% advance, 70% on delivery"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Validity Period</Label>
-                            <Input
-                              value={quotation.validityPeriod}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'validityPeriod', e.target.value)}
-                              placeholder="e.g., 30 days"
-                              className="h-9"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label className="text-sm">Additional Notes</Label>
-                          <Textarea
-                            value={quotation.notes}
-                            onChange={(e) => handleQuotationChange(item.id, quotation.id, 'notes', e.target.value)}
-                            placeholder="Any additional terms, conditions, or notes"
-                            className="min-h-[60px] resize-none"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm">Quotation Document</Label>
-                          <div className="flex gap-2 items-center">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const input = document.createElement('input');
-                                input.type = 'file';
-                                input.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png';
-                                input.onchange = (e) => handleQuotationFileUpload(item.id, quotation.id, e as any);
-                                input.click();
-                              }}
-                              className="gap-2"
-                            >
-                              <Upload className="w-4 h-4" />
-                              Upload Document
-                            </Button>
-                            {quotation.quotationFile && (
-                              <Badge variant="secondary" className="gap-1">
-                                <FileText className="w-3 h-3" />
-                                {quotation.quotationFile.name}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Vendor Quotations Section */}
-            <div className="space-y-4 border-t pt-4">
-              <div className="flex justify-between items-center">
-                <Label className="text-base font-semibold">Vendor Quotations (Optional)</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => addVendorQuotation(item.id)}
-                  disabled={item.vendorQuotations.length >= 4}
-                  className="gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Quotation ({item.vendorQuotations.length}/4)
-                </Button>
+                {requestItems.length > 1 && (
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeItem(item.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Remove Item
+                    </Button>
+                  </div>
+                )}
               </div>
-
-              {item.vendorQuotations.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground bg-muted/30 rounded-lg border-2 border-dashed">
-                  <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>No vendor quotations added yet</p>
-                  <p className="text-sm">Add up to 4 quotations to compare prices</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {item.vendorQuotations.map((quotation, index) => (
-                    <Card key={quotation.id} className="border-blue-200 bg-blue-50/30">
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-sm font-medium text-blue-800">
-                            Quotation #{index + 1}
-                          </CardTitle>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => removeVendorQuotation(item.id, quotation.id)}
-                            className="h-8 w-8 p-0 border-red-200 hover:bg-red-50"
-                          >
-                            <X className="w-4 h-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-sm">Vendor Name *</Label>
-                            <Input
-                              value={quotation.vendorName}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'vendorName', e.target.value)}
-                              placeholder="Enter vendor company name"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Contact Person</Label>
-                            <Input
-                              value={quotation.contactPerson}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'contactPerson', e.target.value)}
-                              placeholder="Enter contact person name"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Phone</Label>
-                            <Input
-                              value={quotation.phone}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'phone', e.target.value)}
-                              placeholder="Enter phone number"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Email</Label>
-                            <Input
-                              type="email"
-                              value={quotation.email}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'email', e.target.value)}
-                              placeholder="Enter email address"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Quoted Price *</Label>
-                            <div className="flex gap-2">
-                              <Select
-                                value={quotation.currency}
-                                onValueChange={(value) => handleQuotationChange(item.id, quotation.id, 'currency', value)}
-                              >
-                                <SelectTrigger className="w-20 h-9">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="INR">₹</SelectItem>
-                                  <SelectItem value="USD">$</SelectItem>
-                                  <SelectItem value="EUR">€</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Input
-                                type="number"
-                                value={quotation.quotedPrice}
-                                onChange={(e) => handleQuotationChange(item.id, quotation.id, 'quotedPrice', e.target.value)}
-                                placeholder="Enter price"
-                                className="flex-1 h-9"
-                                step="0.01"
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Delivery Time</Label>
-                            <Input
-                              value={quotation.deliveryTime}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'deliveryTime', e.target.value)}
-                              placeholder="e.g., 2-3 weeks"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Warranty</Label>
-                            <Input
-                              value={quotation.warranty}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'warranty', e.target.value)}
-                              placeholder="e.g., 1 year"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Payment Terms</Label>
-                            <Input
-                              value={quotation.paymentTerms}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'paymentTerms', e.target.value)}
-                              placeholder="e.g., 30% advance, 70% on delivery"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm">Validity Period</Label>
-                            <Input
-                              value={quotation.validityPeriod}
-                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'validityPeriod', e.target.value)}
-                              placeholder="e.g., 30 days"
-                              className="h-9"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label className="text-sm">Additional Notes</Label>
-                          <Textarea
-                            value={quotation.notes}
-                            onChange={(e) => handleQuotationChange(item.id, quotation.id, 'notes', e.target.value)}
-                            placeholder="Any additional terms, conditions, or notes"
-                            className="min-h-[60px] resize-none"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-sm">Quotation Document</Label>
-                          <div className="flex gap-2 items-center">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const input = document.createElement('input');
-                                input.type = 'file';
-                                input.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png';
-                                input.onchange = (e) => handleQuotationFileUpload(item.id, quotation.id, e as any);
-                                input.click();
-                              }}
-                              className="gap-2"
-                            >
-                              <Upload className="w-4 h-4" />
-                              Upload Document
-                            </Button>
-                            {quotation.quotationFile && (
-                              <Badge variant="secondary" className="gap-1">
-                                <FileText className="w-3 h-3" />
-                                {quotation.quotationFile.name}
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -1171,101 +717,300 @@ const MaterialRequest = () => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4 md:space-y-6 p-4">
-      {/* Back Button */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="outline"
-          onClick={() => navigate(-1)}
-          className="gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </Button>
-      </div>
-
-      {/* Company Header */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Building2 className="w-6 h-6 text-blue-600" />
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={() => navigate(-1)} className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold text-blue-800">SREE SAI ROLLER FLOUR MILLS PVT LTD</h1>
-              <p className="text-lg text-blue-600">REQUISITION FORM & INDENT FORM FOR REQUESTING MATERIAL OR NEW PURCHASE</p>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                INDENT FORM
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Material Request Form
+              </p>
             </div>
           </div>
-          
-          {/* Document Information */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm bg-white p-4 rounded border">
-            <div>
-              <span className="font-semibold">DOC.NO.:</span>
-              <div className="font-mono">{headerData.docNo}</div>
-            </div>
-            <div>
-              <span className="font-semibold">DATE:</span>
-              <div>{new Date(headerData.date).toLocaleDateString()}</div>
-            </div>
-            <div>
-              <span className="font-semibold">REVISION STATUS:</span>
-              <div>{headerData.revisionStatus}</div>
-            </div>
-            <div>
-              <span className="font-semibold">ISSUE NO.:</span>
-              <div>{headerData.issueNo}</div>
-            </div>
-            <div>
-              <span className="font-semibold">PAGE:</span>
-              <div>{headerData.page}</div>
-            </div>
-            <div>
-              <span className="font-semibold">SR.NO. FOR REQ.FORM:</span>
-              <div className="font-mono text-xs">{headerData.reqFormNo}</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* View Toggle and Add Item */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex gap-2">
+        </div>
+        
+        {/* List/Table Toggle */}
+        <div className="flex rounded-xl border border-blue-200 overflow-hidden bg-blue-50/50 w-fit shadow-sm">
           <Button
-            variant={viewMode === "list" ? "default" : "outline"}
+            variant={viewMode === "list" ? "default" : "ghost"}
             size="sm"
             onClick={() => setViewMode("list")}
-            className="flex items-center gap-2"
+            className={`rounded-none px-3 sm:px-4 ${
+              viewMode === "list" 
+                ? "bg-blue-600 text-white hover:bg-blue-700" 
+                : "text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+            }`}
           >
             <List className="w-4 h-4" />
-            List View
+            <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
           </Button>
           <Button
-            variant={viewMode === "table" ? "default" : "outline"}
+            variant={viewMode === "table" ? "default" : "ghost"}
             size="sm"
             onClick={() => setViewMode("table")}
-            className="flex items-center gap-2"
+            className={`rounded-none px-3 sm:px-4 ${
+              viewMode === "table" 
+                ? "bg-blue-600 text-white hover:bg-blue-700" 
+                : "text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+            }`}
           >
             <TableIcon className="w-4 h-4" />
-            Table View
+            <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
+          </Button>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        {/* Company Header */}
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Building2 className="w-6 h-6 text-blue-600" />
+              <div>
+                <h1 className="text-2xl font-bold text-blue-800">SREE SAI ROLLER FLOUR MILLS PVT LTD</h1>
+                <p className="text-lg text-blue-600">MATERIAL INDENT FORM</p>
+              </div>
+            </div>
+            
+            {/* Document Information */}
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm bg-white p-4 rounded border">
+              <div>
+                <span className="font-semibold">DATE:</span>
+                <div>{new Date(headerData.date).toLocaleDateString()}</div>
+              </div>
+              <div>
+                <span className="font-semibold">DOC. NO.:</span>
+                <div className="font-mono text-xs">{headerData.docNo}</div>
+              </div>
+              <div>
+                <span className="font-semibold">REVISION STATUS:</span>
+                <div>{headerData.revisionStatus}</div>
+              </div>
+              <div>
+                <span className="font-semibold">ISSUE NO.:</span>
+                <div>{headerData.issueNo}</div>
+              </div>
+              <div>
+                <span className="font-semibold">PAGE:</span>
+                <div>{headerData.page}</div>
+              </div>
+              <div>
+                <span className="font-semibold">REQ. FORM NO.:</span>
+                <div className="font-mono text-xs">{headerData.reqFormNo}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Add Item Button */}
+        <div className="flex justify-end">
+          <Button type="button" onClick={addNewItem} className="gap-2">
+            <Plus className="w-4 h-4" />
+            Add New Item
           </Button>
         </div>
 
-        <Button onClick={addNewItem} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Add New Item
-        </Button>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Items Section */}
         {viewMode === "table" ? <TableView /> : <ListView />}
 
-        {/* Submit Button */}
-        <div className="flex justify-center pt-6">
+        {/* Form Actions */}
+        <div className="flex justify-center gap-4 pt-6">
           <Button type="submit" size="lg" className="min-w-48 gap-2">
             <FileText className="w-5 h-5" />
-            Submit Requisition Request
+            Submit Indent Form
+          </Button>
+          <Button type="button" variant="outline" onClick={() => navigate(-1)} className="gap-2">
+            <X className="w-4 h-4" />
+            Cancel
           </Button>
         </div>
       </form>
+
+      {/* Vendor Quotation Form Dialog */}
+      <Dialog open={isVendorFormOpen} onOpenChange={setIsVendorFormOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IndianRupee className="w-5 h-5 text-green-600" />
+              Add Vendor Quotation
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="vendorName">Vendor Name *</Label>
+                <Input
+                  id="vendorName"
+                  value={vendorFormData.vendorName}
+                  onChange={(e) => handleVendorFormChange("vendorName", e.target.value)}
+                  placeholder="Enter vendor name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contactPerson">Contact Person *</Label>
+                <Input
+                  id="contactPerson"
+                  value={vendorFormData.contactPerson}
+                  onChange={(e) => handleVendorFormChange("contactPerson", e.target.value)}
+                  placeholder="Enter contact person"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone *</Label>
+                <Input
+                  id="phone"
+                  value={vendorFormData.phone}
+                  onChange={(e) => handleVendorFormChange("phone", e.target.value)}
+                  placeholder="Enter phone number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="quotedPrice">Quoted Price *</Label>
+                <Input
+                  id="quotedPrice"
+                  value={vendorFormData.quotedPrice}
+                  onChange={(e) => handleVendorFormChange("quotedPrice", e.target.value)}
+                  placeholder="Enter quoted price"
+                />
+              </div>
+              
+            </div>
+
+
+            
+
+            <div className="space-y-2">
+              <Label htmlFor="quotationFile">Quotation File</Label>
+              <Input
+                id="quotationFile"
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleVendorFileChange(file);
+                  }
+                }}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={vendorFormData.notes}
+                onChange={(e) => handleVendorFormChange("notes", e.target.value)}
+                placeholder="Additional notes or comments"
+                className="min-h-[80px]"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="outline" onClick={() => setIsVendorFormOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={addVendorQuotation}>
+              Add Quotation
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Vendor Quotations Dialog */}
+      <Dialog open={isViewQuotationsOpen} onOpenChange={setIsViewQuotationsOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5 text-blue-600" />
+              Vendor Quotations
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {currentQuotations.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {currentQuotations.map((quotation, index) => (
+                  <Card key={quotation.id} className="border border-gray-200">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">{quotation.vendorName}</CardTitle>
+                        <Badge variant="secondary">Quotation #{index + 1}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="font-medium text-muted-foreground">Contact Person:</span>
+                          <div className="font-medium">{quotation.contactPerson}</div>
+                        </div>
+                        <div>
+                          <span className="font-medium text-muted-foreground">Phone:</span>
+                          <div className="font-medium">{quotation.phone}</div>
+                        </div>
+                        <div>
+                          <span className="font-medium text-muted-foreground">Price:</span>
+                          <div className="font-medium text-green-600">{quotation.quotedPrice}</div>
+                        </div>
+                      </div>
+                      
+                      {quotation.notes && (
+                        <div>
+                          <span className="font-medium text-muted-foreground text-sm">Notes:</span>
+                          <div className="text-sm mt-1 p-2 bg-gray-50 rounded border">
+                            {quotation.notes}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {quotation.quotationFile && (
+                        <div>
+                          <span className="font-medium text-muted-foreground text-sm">Quotation File:</span>
+                          <div className="text-sm mt-1 p-2 bg-blue-50 rounded border border-blue-200">
+                            <div className="flex items-center gap-2">
+                              <FileText className="w-4 h-4 text-blue-600" />
+                              <span className="font-medium">{quotation.quotationFile.name}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">No Quotations</h3>
+                <p className="text-muted-foreground">
+                  No vendor quotations have been added for this item yet.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <Button variant="outline" onClick={() => setIsViewQuotationsOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -729,7 +729,6 @@ const SupervisorRequests = () => {
                 <TableHead className="min-w-[140px]">SUBMITTED DATE</TableHead>
                 <TableHead className="min-w-[140px]">LAST UPDATED</TableHead>
                 <TableHead className="min-w-[140px]">NEXT ACTION DATE</TableHead>
-                <TableHead className="min-w-[100px]">PRIORITY</TableHead>
                 <TableHead className="min-w-[100px]">ACTIONS</TableHead>
               </TableRow>
             </TableHeader>
@@ -803,11 +802,6 @@ const SupervisorRequests = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={getPriorityColor(request.priority)} variant="outline">
-                        {request.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
@@ -817,7 +811,7 @@ const SupervisorRequests = () => {
                   {/* Expanded Detail Row */}
                   {expandedRows.has(request.id) && (
                     <TableRow>
-                      <TableCell colSpan={10} className="p-0">
+                      <TableCell colSpan={9} className="p-0">
                         <div className="bg-muted/30 p-6 border-t">
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Left Column - Request Details */}
@@ -988,7 +982,6 @@ const SupervisorRequests = () => {
                 <TableHead className="min-w-[150px]">Material</TableHead>
                 <TableHead className="min-w-[100px]">Quantity</TableHead>
                 <TableHead className="min-w-[100px]">Value</TableHead>
-                <TableHead className="min-w-[100px]">Priority</TableHead>
                 <TableHead className="min-w-[100px]">Status</TableHead>
                 <TableHead className="min-w-[100px]">Date</TableHead>
                 <TableHead className="min-w-[100px]">Machine</TableHead>
@@ -1007,11 +1000,6 @@ const SupervisorRequests = () => {
                   </TableCell>
                   <TableCell className="text-sm">{request.quantity}</TableCell>
                   <TableCell className="text-sm font-medium">{request.value}</TableCell>
-                  <TableCell>
-                    <Badge className={getPriorityColor(request.priority)} variant="secondary">
-                      {request.priority}
-                    </Badge>
-                  </TableCell>
                   <TableCell>
                     <Badge className={getStatusColor(request.status)}>
                       <span className="flex items-center gap-1">
