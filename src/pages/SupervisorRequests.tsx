@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clock, CheckCircle, XCircle, Eye, FileText, Plus, AlertTriangle, User, Calendar, Package, Truck, CheckSquare, List, Table as TableIcon, ChevronRight, ChevronDown, MoreVertical, Send } from "lucide-react";
+import { Clock, CheckCircle, XCircle, Eye, FileText, Plus, AlertTriangle, User, Calendar, Package, Truck, CheckSquare, List, Table as TableIcon, ChevronRight, ChevronDown, MoreVertical, Send, Search } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -1047,26 +1047,69 @@ const SupervisorRequests = () => {
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
       {/* Header with Search and Actions */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
-            My Requests
-          </h1>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <List className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                Outstanding Materials
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Track and manage your material requests
+              </p>
+            </div>
+          </div>
+          
+          {/* List/Table Toggle - Now beside the heading */}
+          <div className="flex rounded-xl border border-blue-200 overflow-hidden bg-blue-50/50 w-fit shadow-sm">
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className={`rounded-none px-3 sm:px-4 ${
+                viewMode === "list" 
+                  ? "bg-blue-600 text-white hover:bg-blue-700" 
+                  : "text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+              }`}
+            >
+              <List className="w-4 h-4" />
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              className={`rounded-none px-3 sm:px-4 ${
+                viewMode === "table" 
+                  ? "bg-blue-600 text-white hover:bg-blue-700" 
+                  : "text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+              }`}
+            >
+              <TableIcon className="w-4 h-4" />
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
+            </Button>
+          </div>
         </div>
         
         <div className="flex flex-col sm:flex-row gap-3 lg:flex-1 lg:max-w-4xl lg:justify-end">
           {/* Search Bar */}
           <div className="flex-1 lg:max-w-md">
-            <Input
-              placeholder="Search by material, request ID, or maker..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full"
-            />
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-400 w-4 h-4" />
+              <Input
+                placeholder="Search by material, request ID, or maker..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 border-blue-200 focus:border-blue-500 focus:ring-blue-500/20"
+              />
+            </div>
           </div>
           
           {/* Status Filter */}
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-full sm:w-48">
+            <SelectTrigger className="w-full sm:w-48 border-blue-200 focus:border-blue-500 focus:ring-blue-500/20">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
@@ -1082,68 +1125,22 @@ const SupervisorRequests = () => {
           
           {/* Action Buttons */}
           <div className="flex gap-2">
-            <Button 
-              onClick={() => setIsIssueFormOpen(true)}
-              className="gap-2"
-            >
-              <Package className="w-4 h-4" />
-              <span className="hidden sm:inline">Issue Material</span>
-              <span className="sm:hidden">Issue</span>
-            </Button>
-            <Button asChild variant="outline" className="gap-2">
+            
+            <Button asChild className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200">
               <Link to="/material-request">
                 <Send className="w-4 h-4" />
-                <span className="hidden sm:inline">Order Request</span>
-                <span className="sm:hidden">Order</span>
+                <span className="hidden sm:inline">INDENT FORM</span>
+                <span className="sm:hidden">INDENT FORM</span>
               </Link>
             </Button>
           </div>
         </div>
       </div>
 
-      {/* View Toggle */}
-      <div className="flex justify-between items-center">
-        <div className="flex gap-2">
-          <Button
-            variant={viewMode === "list" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-            className="flex items-center gap-2"
-          >
-            <List className="w-4 h-4" />
-            <span className="hidden sm:inline">List</span>
-          </Button>
-          <Button
-            variant={viewMode === "table" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("table")}
-            className="flex items-center gap-2"
-          >
-            <TableIcon className="w-4 h-4" />
-            <span className="hidden sm:inline">Table</span>
-          </Button>
-        </div>
-      </div>
-
       {/* Tabs */}
-      <Tabs defaultValue="issued" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-auto p-1 sm:p-2 bg-secondary rounded-xl">
-          <TabsTrigger 
-            value="issued" 
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-          >
-            <CheckSquare className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="sm:hidden">Issued</span>
-            <span className="hidden sm:inline">Material Issues</span> ({issuedMaterials.length})
-          </TabsTrigger>
-          <TabsTrigger 
-            value="order-status" 
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-          >
-            <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="sm:hidden">Orders</span>
-            <span className="hidden sm:inline">Order Request Status</span> ({filteredRequests.length})
-          </TabsTrigger>
+      <Tabs defaultValue="order-status" className="w-full">
+        <TabsList className="grid w-full grid-cols-1 h-auto p-1 sm:p-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-sm">
+           
         </TabsList>
 
         {/* All Requests Tab */}
@@ -1152,295 +1149,6 @@ const SupervisorRequests = () => {
             <TableView requests={filteredRequests} />
           ) : (
             <ListView requests={filteredRequests} />
-          )}
-        </TabsContent>
-
-        {/* Material Issues Tab */}
-        <TabsContent value="issued" className="space-y-3 sm:space-y-4">
-          {issuedMaterials.length > 0 ? (
-            viewMode === "table" ? (
-              // Table View for Material Issues
-              <Card>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="min-w-[120px]">Issue ID</TableHead>
-                          <TableHead className="min-w-[150px]">Material</TableHead>
-                          <TableHead className="min-w-[100px]">Stock Info</TableHead>
-                          <TableHead className="min-w-[120px]">Recipient</TableHead>
-                          <TableHead className="min-w-[120px]">Issuing Person</TableHead>
-                          <TableHead className="min-w-[100px]">Department</TableHead>
-                          <TableHead className="min-w-[100px]">Date</TableHead>
-                          <TableHead className="min-w-[80px]">Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {issuedMaterials.map((issue) => (
-                          <TableRow key={issue.id}>
-                            <TableCell className="font-medium">
-                              <div>
-                                <div>{issue.id}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  Form: {issue.materialIssueFormSrNo}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <div className="font-medium capitalize">{issue.materialName}</div>
-                                <div className="text-xs text-muted-foreground truncate max-w-40">{issue.specifications}</div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              <div className="space-y-1">
-                                <div className="text-xs">
-                                  <span className="text-muted-foreground">Existing:</span> {issue.existingStock} {issue.unit}
-                                </div>
-                                <div className="text-xs font-medium">
-                                  <span className="text-muted-foreground">Issued:</span> {issue.issuedQuantity} {issue.unit}
-                                </div>
-                                <div className="text-xs">
-                                  <span className="text-muted-foreground">After:</span> {issue.stockAfterIssue} {issue.unit}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <div className="font-medium">{issue.recipientName}</div>
-                                <div className="text-xs text-muted-foreground">{issue.recipientDesignation}</div>
-                                <div className="text-xs text-muted-foreground">{issue.recipientId}</div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <div className="font-medium">{issue.issuingPersonName}</div>
-                                <div className="text-xs text-muted-foreground">{issue.issuingPersonDesignation}</div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm">{issue.department}</TableCell>
-                            <TableCell className="text-sm">{new Date(issue.issuedDate).toLocaleDateString()}</TableCell>
-                            <TableCell>
-                              <Badge className="bg-green-100 text-green-800 border-green-200">
-                                <CheckSquare className="w-3 h-3 mr-1" />
-                                Issued
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              // List View for Material Issues - Matching Order Request Status ListView style
-              <Card>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-12"></TableHead>
-                          <TableHead className="min-w-[200px]">MATERIAL ISSUE</TableHead>
-                          <TableHead className="min-w-[120px]">RECIPIENT</TableHead>
-                          <TableHead className="min-w-[120px]">ISSUING PERSON</TableHead>
-                          <TableHead className="min-w-[100px]">STATUS</TableHead>
-                          <TableHead className="min-w-[140px]">ISSUED DATE</TableHead>
-                          <TableHead className="min-w-[140px]">STOCK INFO</TableHead>
-                          <TableHead className="min-w-[100px]">DEPARTMENT</TableHead>
-                          <TableHead className="min-w-[100px]">ACTIONS</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {issuedMaterials.map((issue) => (
-                          <>
-                            <TableRow key={issue.id} className="hover:bg-muted/50">
-                              <TableCell>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => toggleRowExpansion(issue.id)}
-                                >
-                                  {expandedRows.has(issue.id) ? (
-                                    <ChevronDown className="w-4 h-4" />
-                                  ) : (
-                                    <ChevronRight className="w-4 h-4" />
-                                  )}
-                                </Button>
-                              </TableCell>
-                              <TableCell>
-                                <div>
-                                  <div className="font-semibold text-sm capitalize">{issue.materialName}</div>
-                                  <div className="text-xs text-muted-foreground mt-1">
-                                    {issue.purpose}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {issue.machineName}
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm">{issue.recipientName}</div>
-                                <div className="text-xs text-muted-foreground">{issue.recipientId}</div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm">{issue.issuingPersonName}</div>
-                                <div className="text-xs text-muted-foreground">{issue.issuingPersonDesignation}</div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge className="bg-green-100 text-green-800 border-green-200" variant="secondary">
-                                  <span className="flex items-center gap-1">
-                                    <CheckSquare className="w-3 h-3" />
-                                    <span className="text-xs">Issued</span>
-                                  </span>
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm">{new Date(issue.issuedDate).toLocaleDateString()}</div>
-                                <div className="text-xs text-muted-foreground">Completed</div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm px-2 py-1 rounded bg-blue-100 text-blue-800">
-                                  {issue.issuedQuantity} {issue.unit} issued
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline">
-                                  {issue.department}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                            
-                            {/* Expanded Detail Row */}
-                            {expandedRows.has(issue.id) && (
-                              <TableRow>
-                                <TableCell colSpan={9} className="p-0">
-                                  <div className="bg-muted/30 p-6 border-t">
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                      {/* Left Column - Issue Details */}
-                                      <div className="space-y-4">
-                                        <div>
-                                          <h3 className="font-semibold text-lg mb-3">Issue Details</h3>
-                                          <div className="space-y-3">
-                                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                              <div>
-                                                <span className="font-medium text-muted-foreground">Issue ID:</span>
-                                                <div className="font-medium">{issue.id}</div>
-                                              </div>
-                                              <div>
-                                                <span className="font-medium text-muted-foreground">Form Number:</span>
-                                                <div className="font-medium">{issue.materialIssueFormSrNo}</div>
-                                              </div>
-                                              <div>
-                                                <span className="font-medium text-muted-foreground">Existing Stock:</span>
-                                                <div className="font-medium">{issue.existingStock} {issue.unit}</div>
-                                              </div>
-                                              <div>
-                                                <span className="font-medium text-muted-foreground">Stock After Issue:</span>
-                                                <div className="font-medium">{issue.stockAfterIssue} {issue.unit}</div>
-                                              </div>
-                                            </div>
-                                            
-                                            <div>
-                                              <span className="font-medium text-muted-foreground">Specifications:</span>
-                                              <div className="text-sm mt-1 p-3 bg-background rounded border">
-                                                {issue.specifications}
-                                              </div>
-                                            </div>
-                                            
-                                            <div>
-                                              <span className="font-medium text-muted-foreground">Purpose:</span>
-                                              <div className="text-sm mt-1">{issue.purpose}</div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                      
-                                      {/* Right Column - Personnel & Status */}
-                                      <div className="space-y-4">
-                                        <div>
-                                          <h3 className="font-semibold text-lg mb-3">Personnel & Status</h3>
-                                          
-                                          {/* Status Information */}
-                                          <div className="space-y-3">
-                                            <div className="p-3 bg-background rounded border">
-                                              <div className="text-sm font-medium mb-2">Current Status</div>
-                                              <div className="text-sm text-muted-foreground">Material successfully issued and delivered</div>
-                                            </div>
-                                            
-                                            {/* Issuing Person Info */}
-                                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                              <div className="text-sm">
-                                                <strong className="text-green-800">Issued By:</strong> {issue.issuingPersonName}
-                                              </div>
-                                              <div className="text-xs text-green-600 mt-1">{issue.issuingPersonDesignation}</div>
-                                            </div>
-
-                                            {/* Recipient Info */}
-                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                              <div className="text-sm space-y-1">
-                                                <div><strong className="text-blue-800">Received By:</strong> {issue.recipientName}</div>
-                                                <div><strong className="text-blue-800">Designation:</strong> {issue.recipientDesignation}</div>
-                                                <div><strong className="text-blue-800">Employee ID:</strong> {issue.recipientId}</div>
-                                              </div>
-                                            </div>
-
-                                            {/* Stock Information */}
-                                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                                              <div className="text-sm space-y-1">
-                                                <div><strong className="text-orange-800">Quantity Issued:</strong> {issue.issuedQuantity} {issue.unit}</div>
-                                                <div><strong className="text-orange-800">Department:</strong> {issue.department}</div>
-                                                <div><strong className="text-orange-800">Machine:</strong> {issue.machineName}</div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    
-                                    {/* Action Buttons */}
-                                    <div className="flex gap-3 pt-4 border-t mt-6">
-                                      <Button variant="outline" className="gap-2">
-                                        <Eye className="w-4 h-4" />
-                                        View Issue Form
-                                      </Button>
-                                      <Button variant="outline" className="gap-2">
-                                        <FileText className="w-4 h-4" />
-                                        Print Receipt
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          ) : (
-            <Card className="card-friendly p-8 text-center">
-              <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No Materials Issued</h3>
-              <p className="text-muted-foreground mb-4">
-                You haven't issued any materials yet. Issue materials directly when stock is available.
-              </p>
-              <Button onClick={() => setIsIssueFormOpen(true)}>
-                <Package className="w-4 h-4 mr-2" />
-                Issue Material
-              </Button>
-            </Card>
           )}
         </TabsContent>
 

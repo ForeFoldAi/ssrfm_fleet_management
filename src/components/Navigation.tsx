@@ -1,16 +1,27 @@
 import { NavLink } from "react-router-dom";
-import { Package, FileText, Plus, List, Users, Settings, Shield, Database, Activity, LogOut, Building2, ChevronDown } from "lucide-react";
+import { Package, FileText, Plus, List, Users, Settings, Shield, Database, Activity, LogOut, Building2, ChevronDown, Menu, X } from "lucide-react";
 import { useRole } from "../contexts/RoleContext";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router-dom";
 import { toast } from "../hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export const Navigation = () => {
   const { currentUser, hasPermission, logout } = useRole();
   const navigate = useNavigate();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // Handle scroll effect for navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -37,7 +48,7 @@ export const Navigation = () => {
 
     const roleSpecificItems: Record<string, any[]> = {
       "site_supervisor": [
-        { to: "/supervisor-requests", label: "My Requests", icon: List, permission: "request:view_own" },
+        { to: "/supervisor-requests", label: "Outstanding Materials ", icon: List, permission: "request:view_own" },
         { to: "/materials-inventory", label: "Stock Register", icon: Package, permission: "material:view" },
       ],
       "inventory_manager": [
@@ -62,8 +73,8 @@ export const Navigation = () => {
   
   // Determine how many items to show based on screen size
   const getVisibleItemsCount = () => {
-    if (navItems.length <= 5) return navItems.length;
-    return 5; // Show first 5 items on desktop, rest in dropdown
+    if (navItems.length <= 4) return navItems.length;
+    return 4; // Show first 4 items on desktop, rest in dropdown
   };
 
   const visibleItemsCount = getVisibleItemsCount();
@@ -71,25 +82,33 @@ export const Navigation = () => {
   const dropdownItems = navItems.slice(visibleItemsCount);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200/80">
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      scrolled 
+        ? 'bg-gradient-to-r from-blue-900 to-indigo-900 backdrop-blur-lg border-b border-blue-800/60 shadow-lg shadow-black/20' 
+        : 'bg-gradient-to-r from-blue-800 to-indigo-800 backdrop-blur-md border-b border-blue-700/40'
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Company Logo & Name */}
           <div className="flex items-center space-x-3 flex-shrink-0">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/25">
-              <Building2 className="w-6 h-6 text-white" />
+            <div className="w-11 h-11 bg-gradient-to-br from-blue-300 via-blue-400 to-indigo-400 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 ring-1 ring-white/20">
+              <Building2 className="w-6 h-6 text-white drop-shadow-sm" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-xl font-bold text-gray-900">SSRFM Industries</h1>
-              <p className="text-xs text-gray-500 -mt-1">Smart Supply & Resource Management</p>
+              <h1 className="text-xl font-bold text-white">
+                SSRFM Industries
+              </h1>
+              <p className="text-xs text-blue-200 -mt-1 font-medium">Smart Supply & Resource Management</p>
             </div>
             <div className="sm:hidden">
-              <h1 className="text-lg font-bold text-gray-900">SSRFM</h1>
+              <h1 className="text-lg font-bold text-white">
+                SSRFM
+              </h1>
             </div>
           </div>
 
-          {/* Navigation Links - Desktop */}
-          <div className="hidden lg:flex items-center space-x-1">
+          {/* Navigation Links - Desktop - Moved to right side */}
+          <div className="hidden lg:flex items-center space-x-1 ml-auto mr-4">
             {visibleItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -98,17 +117,17 @@ export const Navigation = () => {
                   to={item.to}
                   end={item.to === "/"}
                   className={({ isActive }) =>
-                    `group flex items-center space-x-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 relative overflow-hidden ${
+                    `group relative flex items-center space-x-2 px-4 py-2.5 rounded-2xl font-medium transition-all duration-300 ${
                       isActive
-                        ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
-                        : "text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+                        ? "bg-white/20 text-white shadow-lg shadow-blue-500/25 ring-1 ring-blue-300/20"
+                        : "text-blue-100 hover:text-white hover:bg-white/10 hover:shadow-sm"
                     }`
                   }
                 >
-                  <Icon className="w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-110" />
+                  <Icon className="w-4 h-4 flex-shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:rotate-1" />
                   <span className="text-sm font-semibold">{item.label}</span>
-                  {/* Hover effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-blue-600/5 to-blue-600/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  {/* Animated underline */}
+                  <div className="absolute bottom-0 left-1/2 h-0.5 w-0 bg-white transition-all duration-300 group-hover:w-8 group-hover:-translate-x-1/2" />
                 </NavLink>
               );
             })}
@@ -118,11 +137,14 @@ export const Navigation = () => {
               <div className="relative">
                 <button 
                   onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                  className="group flex items-center space-x-2 px-4 py-2.5 rounded-xl font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200"
+                  className="group relative flex items-center space-x-2 px-4 py-2.5 rounded-2xl font-medium text-blue-100 hover:text-white hover:bg-white/10 transition-all duration-300"
                 >
-                  <Settings className="w-4 h-4 transition-transform group-hover:rotate-90" />
+                  <Settings className="w-4 h-4 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
                   <span className="text-sm font-semibold">More</span>
-                  <ChevronDown className={`w-3 h-3 transition-all duration-200 ${isMoreMenuOpen ? 'rotate-180 text-blue-600' : 'group-hover:text-blue-600'}`} />
+                  <ChevronDown className={`w-3 h-3 transition-all duration-300 ${
+                    isMoreMenuOpen ? 'rotate-180 text-white' : 'group-hover:text-white group-hover:translate-y-0.5'
+                  }`} />
+                  <div className="absolute bottom-0 left-1/2 h-0.5 w-0 bg-white transition-all duration-300 group-hover:w-8 group-hover:-translate-x-1/2" />
                 </button>
                 
                 {isMoreMenuOpen && (
@@ -131,29 +153,33 @@ export const Navigation = () => {
                       className="fixed inset-0 z-10" 
                       onClick={() => setIsMoreMenuOpen(false)}
                     />
-                    <div className="absolute right-0 top-full mt-3 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 z-20 overflow-hidden">
-                      <div className="p-3">
-                        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-3">Additional Menu</div>
-                        {dropdownItems.map((item) => {
-                          const Icon = item.icon;
-                          return (
-                            <NavLink
-                              key={item.to}
-                              to={item.to}
-                              onClick={() => setIsMoreMenuOpen(false)}
-                              className={({ isActive }) =>
-                                `group flex items-center space-x-3 px-3 py-3 rounded-xl font-medium transition-all duration-200 ${
-                                  isActive
-                                    ? "bg-blue-600 text-white shadow-md"
-                                    : "text-gray-600 hover:text-blue-600 hover:bg-blue-50"
-                                }`
-                              }
-                            >
-                              <Icon className="w-5 h-5 transition-transform group-hover:scale-110" />
-                              <span className="text-sm font-medium">{item.label}</span>
-                            </NavLink>
-                          );
-                        })}
+                    <div className="absolute right-0 top-full mt-3 w-72 bg-gradient-to-b from-blue-900 to-indigo-900 backdrop-blur-lg rounded-3xl shadow-xl border border-blue-700/60 z-20 overflow-hidden ring-1 ring-white/10">
+                      <div className="p-4">
+                        <div className="text-xs font-bold text-blue-300 uppercase tracking-wider mb-3 px-3">
+                          Additional Menu
+                        </div>
+                        <div className="space-y-1">
+                          {dropdownItems.map((item) => {
+                            const Icon = item.icon;
+                            return (
+                              <NavLink
+                                key={item.to}
+                                to={item.to}
+                                onClick={() => setIsMoreMenuOpen(false)}
+                                className={({ isActive }) =>
+                                  `group flex items-center space-x-3 px-4 py-3 rounded-2xl font-medium transition-all duration-300 ${
+                                    isActive
+                                      ? "bg-white/20 text-white shadow-lg shadow-blue-500/25"
+                                      : "text-blue-100 hover:text-white hover:bg-white/10"
+                                  }`
+                                }
+                              >
+                                <Icon className="w-5 h-5 transition-all duration-300 group-hover:scale-110 group-hover:rotate-2" />
+                                <span className="text-sm font-semibold">{item.label}</span>
+                              </NavLink>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   </>
@@ -162,61 +188,94 @@ export const Navigation = () => {
             )}
           </div>
 
-          {/* Right Side - Role Switcher and Logout */}
+          {/* Right Side - User Actions */}
           <div className="flex items-center space-x-3">
+            {/* Notifications Bell - Desktop only */}
+          
+
+            {/* Role Switcher */}
             <div className="hidden md:block">
-            <RoleSwitcher />
+              <RoleSwitcher />
             </div>
+
+            {/* User Profile Icon - Desktop (without name) */}
+           
+
+            {/* Logout Button */}
             <Button
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="group gap-2 border-gray-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 text-sm px-3 py-2 transition-all duration-200"
+              className="group gap-2 border-blue-600 hover:border-red-300 hover:bg-red-400/20 hover:text-white text-white bg-white/10 text-sm px-4 py-2 rounded-2xl transition-all duration-300 font-semibold"
             >
-              <LogOut className="w-4 h-4 transition-transform group-hover:scale-110" />
-              <span className="hidden sm:inline">Logout</span>
+              <LogOut className="w-4 h-4 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-12" />
+             
             </Button>
+
+            {/* Mobile Menu Toggle */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 text-blue-100 hover:text-white transition-all duration-300 flex items-center justify-center group"
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-5 h-5 transition-all duration-300 group-hover:rotate-90" />
+              ) : (
+                <Menu className="w-5 h-5 transition-all duration-300 group-hover:scale-110" />
+              )}
+            </button>
           </div>
         </div>
 
         {/* Mobile Navigation */}
-        <div className="lg:hidden border-t border-gray-100">
-          <div className="px-4 py-4">
+        <div className={`lg:hidden transition-all duration-300 ${
+          isMobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
+        }`}>
+          <div className="px-4 py-4 border-t border-blue-700/60">
+            {/* User Profile - Mobile (without name) */}
+            <div className="flex items-center space-x-3 p-4 mb-4 bg-gradient-to-r from-blue-700/30 to-indigo-700/30 rounded-2xl">
+             
+              <div className="md:hidden">
+                <RoleSwitcher />
+              </div>
+            </div>
+
+            {/* Mobile Navigation Items */}
             <div className="grid grid-cols-2 gap-3 mb-4">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.to === "/"}
-                  className={({ isActive }) =>
-                      `group flex flex-col items-center space-y-2 p-3 rounded-2xl font-medium transition-all duration-200 ${
-                      isActive
-                          ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
-                          : "text-gray-600 hover:text-blue-600 hover:bg-blue-50"
-                    }`
-                  }
-                >
-                    <Icon className="w-6 h-6 transition-transform group-hover:scale-110" />
-                    <span className="text-xs font-semibold text-center">{item.label}</span>
-                </NavLink>
-              );
-            })}
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === "/"}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `group flex flex-col items-center space-y-2 p-4 rounded-2xl font-medium transition-all duration-300 ${
+                        isActive
+                          ? "bg-white/20 text-white shadow-lg shadow-blue-500/25"
+                          : "text-blue-100 hover:text-white hover:bg-white/10 bg-blue-900/30"
+                      }`
+                    }
+                  >
+                    <Icon className="w-6 h-6 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3" />
+                    <span className="text-xs font-bold text-center">{item.label}</span>
+                  </NavLink>
+                );
+              })}
             </div>
             
-            <div className="pt-4 border-t border-gray-100">
+            {/* Mobile Actions */}
+            <div className="pt-4 border-t border-blue-700/60">
               <div className="flex items-center justify-between">
-                <div className="md:hidden">
-                <RoleSwitcher />
-                </div>
+               
+                
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleLogout}
-                  className="group gap-2 border-gray-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+                  className="group gap-2 border-blue-600 hover:border-red-300 hover:bg-red-400/20 hover:text-white text-white bg-white/10 transition-all duration-300 rounded-2xl font-semibold px-6"
                 >
-                  <LogOut className="w-4 h-4 transition-transform group-hover:scale-110" />
+                  <LogOut className="w-4 h-4 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-12" />
                   <span>Logout</span>
                 </Button>
               </div>

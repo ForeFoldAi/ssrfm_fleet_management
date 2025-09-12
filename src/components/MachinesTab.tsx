@@ -98,39 +98,39 @@ export const MachinesTab = () => {
             </p>
           </div>
         </div>
-
+        
         {/* Search and Controls - Now beside the header */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              placeholder="Search machines..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Search machines..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 input-friendly h-10 w-64"
-            />
-          </div>
-          
-          <div className="flex rounded-xl border border-border overflow-hidden bg-secondary w-fit">
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-              className="rounded-none px-3 sm:px-4"
-            >
-              <List className="w-4 h-4" />
-              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
-            </Button>
-            <Button
-              variant={viewMode === "table" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("table")}
-              className="rounded-none px-3 sm:px-4"
-            >
-              <Table className="w-4 h-4" />
-              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
-            </Button>
-          </div>
+          />
+        </div>
+        
+        <div className="flex rounded-xl border border-border overflow-hidden bg-secondary w-fit">
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("list")}
+            className="rounded-none px-3 sm:px-4"
+          >
+            <List className="w-4 h-4" />
+            <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
+          </Button>
+          <Button
+            variant={viewMode === "table" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("table")}
+            className="rounded-none px-3 sm:px-4"
+          >
+            <Table className="w-4 h-4" />
+            <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
+          </Button>
+        </div>
         </div>
         
         <Button 

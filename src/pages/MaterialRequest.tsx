@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Camera, Upload, X, Eye, User, Settings, MapPin, Package, Plus, Trash2, Building2, List, Table as TableIcon, ArrowLeft } from "lucide-react";
+import { FileText, Camera, Upload, X, Eye, User, Settings, MapPin, Package, Plus, Trash2, Building2, List, Table as TableIcon, ArrowLeft, Phone, Mail, Calendar, DollarSign } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -11,6 +11,22 @@ import { Badge } from "../components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { toast } from "../hooks/use-toast";
 import { useRole } from "../contexts/RoleContext";
+
+interface VendorQuotation {
+  id: string;
+  vendorName: string;
+  contactPerson: string;
+  phone: string;
+  email: string;
+  quotedPrice: string;
+  currency: string;
+  deliveryTime: string;
+  warranty: string;
+  paymentTerms: string;
+  validityPeriod: string;
+  notes: string;
+  quotationFile?: File | null;
+}
 
 interface RequestItem {
   id: string;
@@ -24,6 +40,7 @@ interface RequestItem {
   unit: string;
   image?: File | null;
   imagePreview?: string | null;
+  vendorQuotations: VendorQuotation[];
 }
 
 const MaterialRequest = () => {
@@ -58,7 +75,8 @@ const MaterialRequest = () => {
       reqQuantity: "",
       unit: "",
       image: null,
-      imagePreview: null
+      imagePreview: null,
+      vendorQuotations: []
     }
   ]);
 
@@ -166,7 +184,8 @@ const MaterialRequest = () => {
       reqQuantity: "",
       unit: "",
       image: null,
-      imagePreview: null
+      imagePreview: null,
+      vendorQuotations: []
     };
     setRequestItems(prev => [...prev, newItem]);
   };
@@ -217,6 +236,83 @@ const MaterialRequest = () => {
         ));
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Vendor quotation management functions
+  const addVendorQuotation = (itemId: string) => {
+    const item = requestItems.find(item => item.id === itemId);
+    if (item && item.vendorQuotations.length >= 4) {
+      toast({
+        title: "Maximum quotations reached",
+        description: "You can add up to 4 vendor quotations per item.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newQuotation: VendorQuotation = {
+      id: `quote_${Date.now()}`,
+      vendorName: "",
+      contactPerson: "",
+      phone: "",
+      email: "",
+      quotedPrice: "",
+      currency: "INR",
+      deliveryTime: "",
+      warranty: "",
+      paymentTerms: "",
+      validityPeriod: "",
+      notes: "",
+      quotationFile: null
+    };
+
+    setRequestItems(prev => prev.map(item => 
+      item.id === itemId ? {
+        ...item,
+        vendorQuotations: [...item.vendorQuotations, newQuotation]
+      } : item
+    ));
+  };
+
+  const removeVendorQuotation = (itemId: string, quotationId: string) => {
+    setRequestItems(prev => prev.map(item => 
+      item.id === itemId ? {
+        ...item,
+        vendorQuotations: item.vendorQuotations.filter(q => q.id !== quotationId)
+      } : item
+    ));
+  };
+
+  const handleQuotationChange = (itemId: string, quotationId: string, field: keyof VendorQuotation, value: any) => {
+    setRequestItems(prev => prev.map(item => 
+      item.id === itemId ? {
+        ...item,
+        vendorQuotations: item.vendorQuotations.map(q => 
+          q.id === quotationId ? { ...q, [field]: value } : q
+        )
+      } : item
+    ));
+  };
+
+  const handleQuotationFileUpload = (itemId: string, quotationId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select a file smaller than 10MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      handleQuotationChange(itemId, quotationId, 'quotationFile', file);
+      toast({
+        title: "File uploaded",
+        description: `${file.name} has been attached to the quotation.`,
+      });
     }
   };
 
@@ -284,6 +380,7 @@ const MaterialRequest = () => {
                 <TableHead className="border border-gray-300 font-semibold">OLD STOCK</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">REQ. QUANTITY</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">IMAGE</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">VENDOR QUOTATIONS</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">ACTIONS</TableHead>
               </TableRow>
             </TableHeader>
@@ -429,6 +526,66 @@ const MaterialRequest = () => {
                         </Button>
                       </div>
                     )}
+                  </TableCell>
+                  <TableCell className="border border-gray-300 p-2">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-semibold">Quotations ({item.vendorQuotations.length}/4)</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addVendorQuotation(item.id)}
+                          disabled={item.vendorQuotations.length >= 4}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      </div>
+                      {item.vendorQuotations.length === 0 ? (
+                        <div className="text-xs text-muted-foreground text-center py-2">
+                          No quotations
+                        </div>
+                      ) : (
+                                                 <div className="space-y-1 max-h-32 overflow-y-auto">
+                           {item.vendorQuotations.map((quotation, index) => (
+                             <div key={quotation.id} className="bg-blue-50 border border-blue-200 rounded p-2 text-xs">
+                               <div className="flex justify-between items-start">
+                                 <div className="flex-1 min-w-0 cursor-pointer" title="Click to edit quotation details">
+                                   <div className="font-semibold text-blue-800 truncate">
+                                     {quotation.vendorName || `Vendor ${index + 1}`}
+                                   </div>
+                                   <div className="text-blue-600 flex items-center gap-1">
+                                     <DollarSign className="w-3 h-3" />
+                                     {quotation.currency} {quotation.quotedPrice || '0'}
+                                   </div>
+                                   {quotation.deliveryTime && (
+                                     <div className="text-muted-foreground flex items-center gap-1">
+                                       <Calendar className="w-3 h-3" />
+                                       {quotation.deliveryTime}
+                                     </div>
+                                   )}
+                                   <div className="text-xs text-blue-500 mt-1">
+                                     💡 Switch to List View for detailed editing
+                                   </div>
+                                 </div>
+                                 <div className="flex gap-1">
+                                   <Button
+                                     type="button"
+                                     variant="ghost"
+                                     size="sm"
+                                     onClick={() => removeVendorQuotation(item.id, quotation.id)}
+                                     className="h-4 w-4 p-0 hover:bg-red-100"
+                                   >
+                                     <X className="w-3 h-3 text-red-500" />
+                                   </Button>
+                                 </div>
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="border border-gray-300">
                     <Button
@@ -618,6 +775,392 @@ const MaterialRequest = () => {
                     <Camera className="w-4 h-4" />
                     Take Photo
                   </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Vendor Quotations Section */}
+            <div className="space-y-4 border-t pt-4">
+              <div className="flex justify-between items-center">
+                <Label className="text-base font-semibold">Vendor Quotations (Optional)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addVendorQuotation(item.id)}
+                  disabled={item.vendorQuotations.length >= 4}
+                  className="gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Quotation ({item.vendorQuotations.length}/4)
+                </Button>
+              </div>
+
+              {item.vendorQuotations.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground bg-muted/30 rounded-lg border-2 border-dashed">
+                  <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>No vendor quotations added yet</p>
+                  <p className="text-sm">Add up to 4 quotations to compare prices</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {item.vendorQuotations.map((quotation, index) => (
+                    <Card key={quotation.id} className="border-blue-200 bg-blue-50/30">
+                      <CardHeader className="pb-3">
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-sm font-medium text-blue-800">
+                            Quotation #{index + 1}
+                          </CardTitle>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeVendorQuotation(item.id, quotation.id)}
+                            className="h-8 w-8 p-0 border-red-200 hover:bg-red-50"
+                          >
+                            <X className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm">Vendor Name *</Label>
+                            <Input
+                              value={quotation.vendorName}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'vendorName', e.target.value)}
+                              placeholder="Enter vendor company name"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Contact Person</Label>
+                            <Input
+                              value={quotation.contactPerson}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'contactPerson', e.target.value)}
+                              placeholder="Enter contact person name"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Phone</Label>
+                            <Input
+                              value={quotation.phone}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'phone', e.target.value)}
+                              placeholder="Enter phone number"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Email</Label>
+                            <Input
+                              type="email"
+                              value={quotation.email}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'email', e.target.value)}
+                              placeholder="Enter email address"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Quoted Price *</Label>
+                            <div className="flex gap-2">
+                              <Select
+                                value={quotation.currency}
+                                onValueChange={(value) => handleQuotationChange(item.id, quotation.id, 'currency', value)}
+                              >
+                                <SelectTrigger className="w-20 h-9">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="INR">₹</SelectItem>
+                                  <SelectItem value="USD">$</SelectItem>
+                                  <SelectItem value="EUR">€</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                type="number"
+                                value={quotation.quotedPrice}
+                                onChange={(e) => handleQuotationChange(item.id, quotation.id, 'quotedPrice', e.target.value)}
+                                placeholder="Enter price"
+                                className="flex-1 h-9"
+                                step="0.01"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Delivery Time</Label>
+                            <Input
+                              value={quotation.deliveryTime}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'deliveryTime', e.target.value)}
+                              placeholder="e.g., 2-3 weeks"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Warranty</Label>
+                            <Input
+                              value={quotation.warranty}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'warranty', e.target.value)}
+                              placeholder="e.g., 1 year"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Payment Terms</Label>
+                            <Input
+                              value={quotation.paymentTerms}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'paymentTerms', e.target.value)}
+                              placeholder="e.g., 30% advance, 70% on delivery"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Validity Period</Label>
+                            <Input
+                              value={quotation.validityPeriod}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'validityPeriod', e.target.value)}
+                              placeholder="e.g., 30 days"
+                              className="h-9"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label className="text-sm">Additional Notes</Label>
+                          <Textarea
+                            value={quotation.notes}
+                            onChange={(e) => handleQuotationChange(item.id, quotation.id, 'notes', e.target.value)}
+                            placeholder="Any additional terms, conditions, or notes"
+                            className="min-h-[60px] resize-none"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm">Quotation Document</Label>
+                          <div className="flex gap-2 items-center">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const input = document.createElement('input');
+                                input.type = 'file';
+                                input.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png';
+                                input.onchange = (e) => handleQuotationFileUpload(item.id, quotation.id, e as any);
+                                input.click();
+                              }}
+                              className="gap-2"
+                            >
+                              <Upload className="w-4 h-4" />
+                              Upload Document
+                            </Button>
+                            {quotation.quotationFile && (
+                              <Badge variant="secondary" className="gap-1">
+                                <FileText className="w-3 h-3" />
+                                {quotation.quotationFile.name}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Vendor Quotations Section */}
+            <div className="space-y-4 border-t pt-4">
+              <div className="flex justify-between items-center">
+                <Label className="text-base font-semibold">Vendor Quotations (Optional)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addVendorQuotation(item.id)}
+                  disabled={item.vendorQuotations.length >= 4}
+                  className="gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Quotation ({item.vendorQuotations.length}/4)
+                </Button>
+              </div>
+
+              {item.vendorQuotations.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground bg-muted/30 rounded-lg border-2 border-dashed">
+                  <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>No vendor quotations added yet</p>
+                  <p className="text-sm">Add up to 4 quotations to compare prices</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {item.vendorQuotations.map((quotation, index) => (
+                    <Card key={quotation.id} className="border-blue-200 bg-blue-50/30">
+                      <CardHeader className="pb-3">
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-sm font-medium text-blue-800">
+                            Quotation #{index + 1}
+                          </CardTitle>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeVendorQuotation(item.id, quotation.id)}
+                            className="h-8 w-8 p-0 border-red-200 hover:bg-red-50"
+                          >
+                            <X className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm">Vendor Name *</Label>
+                            <Input
+                              value={quotation.vendorName}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'vendorName', e.target.value)}
+                              placeholder="Enter vendor company name"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Contact Person</Label>
+                            <Input
+                              value={quotation.contactPerson}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'contactPerson', e.target.value)}
+                              placeholder="Enter contact person name"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Phone</Label>
+                            <Input
+                              value={quotation.phone}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'phone', e.target.value)}
+                              placeholder="Enter phone number"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Email</Label>
+                            <Input
+                              type="email"
+                              value={quotation.email}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'email', e.target.value)}
+                              placeholder="Enter email address"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Quoted Price *</Label>
+                            <div className="flex gap-2">
+                              <Select
+                                value={quotation.currency}
+                                onValueChange={(value) => handleQuotationChange(item.id, quotation.id, 'currency', value)}
+                              >
+                                <SelectTrigger className="w-20 h-9">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="INR">₹</SelectItem>
+                                  <SelectItem value="USD">$</SelectItem>
+                                  <SelectItem value="EUR">€</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                type="number"
+                                value={quotation.quotedPrice}
+                                onChange={(e) => handleQuotationChange(item.id, quotation.id, 'quotedPrice', e.target.value)}
+                                placeholder="Enter price"
+                                className="flex-1 h-9"
+                                step="0.01"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Delivery Time</Label>
+                            <Input
+                              value={quotation.deliveryTime}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'deliveryTime', e.target.value)}
+                              placeholder="e.g., 2-3 weeks"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Warranty</Label>
+                            <Input
+                              value={quotation.warranty}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'warranty', e.target.value)}
+                              placeholder="e.g., 1 year"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Payment Terms</Label>
+                            <Input
+                              value={quotation.paymentTerms}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'paymentTerms', e.target.value)}
+                              placeholder="e.g., 30% advance, 70% on delivery"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-sm">Validity Period</Label>
+                            <Input
+                              value={quotation.validityPeriod}
+                              onChange={(e) => handleQuotationChange(item.id, quotation.id, 'validityPeriod', e.target.value)}
+                              placeholder="e.g., 30 days"
+                              className="h-9"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label className="text-sm">Additional Notes</Label>
+                          <Textarea
+                            value={quotation.notes}
+                            onChange={(e) => handleQuotationChange(item.id, quotation.id, 'notes', e.target.value)}
+                            placeholder="Any additional terms, conditions, or notes"
+                            className="min-h-[60px] resize-none"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm">Quotation Document</Label>
+                          <div className="flex gap-2 items-center">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const input = document.createElement('input');
+                                input.type = 'file';
+                                input.accept = '.pdf,.doc,.docx,.jpg,.jpeg,.png';
+                                input.onchange = (e) => handleQuotationFileUpload(item.id, quotation.id, e as any);
+                                input.click();
+                              }}
+                              className="gap-2"
+                            >
+                              <Upload className="w-4 h-4" />
+                              Upload Document
+                            </Button>
+                            {quotation.quotationFile && (
+                              <Badge variant="secondary" className="gap-1">
+                                <FileText className="w-3 h-3" />
+                                {quotation.quotationFile.name}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               )}
             </div>

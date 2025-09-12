@@ -290,37 +290,37 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-5 h-5 text-blue-600" />
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-4">
+        <DialogHeader className="pb-3">
+          <DialogTitle className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <div className="text-lg font-bold">MATERIAL ISSUE FORM</div>
-              <div className="text-sm text-muted-foreground">AGAINST REQUISITION AND INDENT FORM</div>
+              <div className="text-base font-bold">MATERIAL ISSUE FORM</div>
+              <div className="text-xs text-muted-foreground">AGAINST REQUISITION AND INDENT FORM</div>
             </div>
-            <Badge variant="secondary" className="ml-auto">SSRFM Industries</Badge>
+            <Badge variant="secondary" className="ml-auto text-xs">SSRFM Industries</Badge>
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
-          {/* Company Header - Matching MaterialRequest Style */}
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Company Header - Compact */}
           <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Building2 className="w-6 h-6 text-blue-600" />
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Building2 className="w-5 h-5 text-blue-600" />
                 <div>
-                  <h1 className="text-2xl font-bold text-blue-800">SREE SAI ROLLER FLOUR MILLS PVT LTD</h1>
-                  <p className="text-lg text-blue-600">MATERIAL ISSUE FORM AGAINST REQUISITION AND INDENT FORM</p>
+                  <h1 className="text-lg font-bold text-blue-800">SREE SAI ROLLER FLOUR MILLS PVT LTD</h1>
+                  <p className="text-sm text-blue-600">MATERIAL ISSUE FORM AGAINST REQUISITION AND INDENT FORM</p>
                 </div>
               </div>
               
-              {/* Document Information - Matching MaterialRequest Grid Layout */}
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm bg-white p-4 rounded border">
+              {/* Document Information - Compact Grid */}
+              <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-xs bg-white p-3 rounded border">
                 <div>
                   <span className="font-semibold">DATE:</span>
-                  <div>{new Date(formData.date).toLocaleDateString()}</div>
+                  <div className="text-xs">{new Date(formData.date).toLocaleDateString()}</div>
                 </div>
                 <div>
                   <span className="font-semibold">MATERIAL ISSUE FORM SR.N.:</span>
@@ -336,17 +336,17 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                 </div>
                 <div>
                   <span className="font-semibold">REVISION STATUS:</span>
-                  <div>0</div>
+                  <div className="text-xs">0</div>
                 </div>
                 <div>
                   <span className="font-semibold">PAGE:</span>
-                  <div>1 OF 1</div>
+                  <div className="text-xs">1 OF 1</div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Add Item Button - Matching MaterialRequest Style */}
+          {/* Add Item Button - Compact */}
           <div className="flex justify-end">
             <Button 
               type="button"
@@ -361,35 +361,36 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                 };
                 setFormData(prev => ({ ...prev, items: [...prev.items, newItem] }));
               }}
-              className="gap-2"
+              className="gap-1 h-8 text-xs"
+              size="sm"
             >
-              <Plus className="w-4 h-4" />
-              Add New Item
+              <Plus className="w-3 h-3" />
+              Add Item
             </Button>
           </div>
 
-          {/* Material Items Table - Matching MaterialRequest Table Style */}
+          {/* Material Items Table - Compact */}
           <Card>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
-                      <TableHead className="border border-gray-300 font-semibold">SR.NO.</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold">NAME OF THE MATERIAL</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold">EXISTING STOCK</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold">ISSUED QTY</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold">STOCK AFTER ISSUE</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold">ACTIONS</TableHead>
+                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">SR.NO.</TableHead>
+                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">NAME OF THE MATERIAL</TableHead>
+                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">EXISTING STOCK</TableHead>
+                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">ISSUED QTY</TableHead>
+                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">STOCK AFTER ISSUE</TableHead>
+                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">ACTIONS</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {formData.items.map((item, index) => (
                       <TableRow key={index}>
-                        <TableCell className="border border-gray-300 text-center font-semibold">
+                        <TableCell className="border border-gray-300 text-center font-semibold text-xs px-2 py-1">
                           {item.srNo}
                         </TableCell>
-                        <TableCell className="border border-gray-300">
+                        <TableCell className="border border-gray-300 px-2 py-1">
                           <Select 
                             value={item.nameOfMaterial} 
                             onValueChange={(value) => {
@@ -407,15 +408,15 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                               }
                             }}
                           >
-                            <SelectTrigger className="border-0 p-0 h-auto">
+                            <SelectTrigger className="border-0 p-0 h-auto text-xs">
                               <SelectValue placeholder="Select Material" />
                             </SelectTrigger>
                             <SelectContent>
                               {availableMaterials.map((material) => (
                                 <SelectItem key={material.id} value={material.name}>
                                   <div className="flex flex-col">
-                                    <div className="font-semibold">{material.name}</div>
-                                    <div className="text-sm text-muted-foreground">
+                                    <div className="font-semibold text-xs">{material.name}</div>
+                                    <div className="text-xs text-muted-foreground">
                                       Stock: {material.currentStock} {material.unit} • {material.make}
                                     </div>
                                   </div>
@@ -427,13 +428,13 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                             <p className="text-destructive text-xs mt-1">{errors[`nameOfMaterial_${index}`]}</p>
                           )}
                         </TableCell>
-                        <TableCell className="border border-gray-300 text-center">
-                          <div className="font-semibold">
+                        <TableCell className="border border-gray-300 text-center px-2 py-1">
+                          <div className="font-semibold text-xs">
                             {item.existingStock} {item.unit}
                           </div>
                         </TableCell>
-                        <TableCell className="border border-gray-300 text-center">
-                          <div className="flex items-center gap-2">
+                        <TableCell className="border border-gray-300 text-center px-2 py-1">
+                          <div className="flex items-center gap-1">
                             <Input
                               type="number"
                               value={item.issuedQty}
@@ -450,33 +451,32 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                               placeholder="Qty"
                               min="0"
                               max={item.existingStock}
-                              className="border-0 p-0 h-auto w-16 text-center"
+                              className="border-0 p-0 h-auto w-12 text-center text-xs"
                             />
-                            <span className="text-sm text-gray-600">{item.unit}</span>
+                            <span className="text-xs text-gray-600">{item.unit}</span>
                           </div>
                           {errors[`issuedQty_${index}`] && (
                             <p className="text-destructive text-xs mt-1">{errors[`issuedQty_${index}`]}</p>
                           )}
                         </TableCell>
-                        <TableCell className="border border-gray-300 text-center">
-                          <div className="font-semibold">
+                        <TableCell className="border border-gray-300 text-center px-2 py-1">
+                          <div className="font-semibold text-xs">
                             {item.stockAfterIssue} {item.unit}
                           </div>
                         </TableCell>
-                        <TableCell className="border border-gray-300">
+                        <TableCell className="border border-gray-300 px-2 py-1">
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              // Add functionality to remove item if multiple items exist
                               if (formData.items.length > 1) {
                                 const newItems = formData.items.filter((_, i) => i !== index);
                                 setFormData(prev => ({ ...prev, items: newItems }));
                               }
                             }}
                             disabled={formData.items.length === 1}
-                            className="gap-1 text-xs"
+                            className="gap-1 text-xs h-6 w-6 p-0"
                           >
                             <Trash2 className="w-3 h-3" />
                           </Button>
@@ -487,108 +487,102 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                 </Table>
               </div>
 
-              {/* Signature Section - Matching Physical Form */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+              {/* Signature Section - Compact */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4">
                 {/* Issuing Person */}
                 <div className="border border-gray-300">
-                  <div className="bg-gray-50 border-b border-gray-300 p-3">
-                    <div className="font-semibold text-center">ISSUING PERSON NAME</div>
-                    <div className="text-center">DESIGNATION</div>
+                  <div className="bg-gray-50 border-b border-gray-300 p-2">
+                    <div className="font-semibold text-center text-xs">ISSUING PERSON NAME</div>
+                    <div className="text-center text-xs">DESIGNATION</div>
                   </div>
-                  <div className="p-4 space-y-3">
+                  <div className="p-3 space-y-2">
                     <Input
                       value={formData.issuingPersonName}
                       onChange={(e) => handleInputChange("issuingPersonName", e.target.value)}
                       placeholder="Issuing Person Name"
-                      className="text-center font-semibold"
+                      className="text-center font-semibold text-xs h-8"
                     />
                     <Input
                       value={formData.issuingPersonDesignation}
                       onChange={(e) => handleInputChange("issuingPersonDesignation", e.target.value)}
                       placeholder="Designation"
-                      className="text-center"
+                      className="text-center text-xs h-8"
                     />
-                    <div className="border-t border-gray-300 pt-3">
-                      <div className="text-center font-semibold">SIGNATURE & DATE</div>
-                      <div className="h-16 border border-gray-200 rounded mt-2 bg-gray-50"></div>
-                    </div>
+                    
                   </div>
                 </div>
 
                 {/* Receiver */}
                 <div className="border border-gray-300">
-                  <div className="bg-gray-50 border-b border-gray-300 p-3">
-                    <div className="font-semibold text-center">RECEIVER NAME</div>
-                    <div className="text-center">DESIGNATION</div>
+                  <div className="bg-gray-50 border-b border-gray-300 p-2">
+                    <div className="font-semibold text-center text-xs">RECEIVER NAME</div>
+                    <div className="text-center text-xs">DESIGNATION</div>
                   </div>
-                  <div className="p-4 space-y-3">
+                  <div className="p-3 space-y-2">
                     <Input
                       value={formData.receiverName}
                       onChange={(e) => handleInputChange("receiverName", e.target.value)}
                       placeholder="Receiver Name"
-                      className="text-center font-semibold"
+                      className="text-center font-semibold text-xs h-8"
                     />
                     <Input
                       value={formData.receiverDesignation}
                       onChange={(e) => handleInputChange("receiverDesignation", e.target.value)}
                       placeholder="Designation"
-                      className="text-center"
+                      className="text-center text-xs h-8"
                     />
-                    <div className="border-t border-gray-300 pt-3">
-                      <div className="text-center font-semibold">SIGNATURE & DATE</div>
-                      <div className="h-16 border border-gray-200 rounded mt-2 bg-gray-50"></div>
-                    </div>
+                   
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Additional Information */}
+          {/* Additional Information - Compact */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Additional Information</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Additional Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="purpose">Purpose of Issue *</Label>
+            <CardContent className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="purpose" className="text-xs">Purpose of Issue *</Label>
                 <Textarea
                   id="purpose"
-                  placeholder="Describe the purpose for this material issue (e.g., laboratory work, maintenance, repair, etc.)"
+                  placeholder="Describe the purpose for this material issue"
                   value={formData.purpose}
                   onChange={(e) => handleInputChange("purpose", e.target.value)}
-                  className="input-friendly min-h-[100px]"
+                  className="input-friendly min-h-[60px] text-xs"
                 />
-                {errors.purpose && <p className="text-destructive text-sm">{errors.purpose}</p>}
+                {errors.purpose && <p className="text-destructive text-xs">{errors.purpose}</p>}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="notes">Additional Notes</Label>
+              <div className="space-y-1">
+                <Label htmlFor="notes" className="text-xs">Additional Notes</Label>
                 <Textarea
                   id="notes"
                   placeholder="Any additional notes or special instructions"
                   value={formData.notes}
                   onChange={(e) => handleInputChange("notes", e.target.value)}
-                  className="input-friendly min-h-[80px]"
+                  className="input-friendly min-h-[50px] text-xs"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Requested By</Label>
-                  <div className="input-friendly bg-secondary text-center py-3 font-semibold">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Requested By</Label>
+                  <div className="input-friendly bg-secondary text-center py-2 font-semibold text-xs">
                     {formData.requestedBy}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Department</Label>
-                  <div className="input-friendly bg-secondary text-center py-3 font-semibold">
+                <div className="space-y-1">
+                  <Label className="text-xs">Department</Label>
+                  <div className="input-friendly bg-secondary text-center py-2 font-semibold text-xs">
                     {formData.department}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Date</Label>
-                  <div className="input-friendly bg-secondary text-center py-3 font-semibold">
+                <div className="space-y-1">
+                  <Label className="text-xs">Date</Label>
+                  <div className="input-friendly bg-secondary text-center py-2 font-semibold text-xs">
                     {new Date(formData.date).toLocaleDateString()}
                   </div>
                 </div>
@@ -596,16 +590,13 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
             </CardContent>
           </Card>
 
-          {/* Form Actions - Matching MaterialRequest Style */}
-          <div className="flex justify-center pt-6">
-            <Button type="submit" size="lg" className="min-w-48 gap-2">
-              <FileText className="w-5 h-5" />
-              Submit Material Issue Form
+          {/* Form Actions - Compact */}
+          <div className="flex justify-center gap-3 pt-3">
+            <Button type="submit" size="sm" className="gap-2">
+              <FileText className="w-4 h-4" />
+              Submit Form
             </Button>
-          </div>
-          
-          <div className="flex justify-center pt-2">
-            <Button type="button" variant="outline" onClick={onClose} className="gap-2">
+            <Button type="button" variant="outline" onClick={onClose} className="gap-2" size="sm">
               <X className="w-4 h-4" />
               Cancel
             </Button>
