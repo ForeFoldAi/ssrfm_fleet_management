@@ -120,15 +120,15 @@ export const Navigation = () => {
                   className={({ isActive }) =>
                     `group relative flex items-center space-x-2 px-4 py-2.5 rounded-2xl font-medium transition-all duration-300 ${
                       isActive
-                        ? "bg-white/20 text-white shadow-lg shadow-blue-500/25 ring-1 ring-blue-300/20"
-                        : "text-warning-foreground hover:text-white hover:bg-white/10 hover:shadow-sm"
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/50 ring-1 ring-primary/30"
+                        : "text-sidebar-foreground hover:text-primary-foreground hover:bg-primary/90 hover:shadow-sm"
                     }`
                   }
                 >
                   <Icon className="w-4 h-4 flex-shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:rotate-1" />
                   <span className="text-sm font-semibold">{item.label}</span>
                   {/* Animated underline */}
-                  <div className="absolute bottom-0 left-1/2 h-0.5 w-0 bg-white transition-all duration-300 group-hover:w-8 group-hover:-translate-x-1/2" />
+                  <div className="absolute bottom-0 left-1/2 h-0.5 w-0 bg-primary transition-all duration-300 group-hover:w-8 group-hover:-translate-x-1/2" />
                 </NavLink>
               );
             })}
@@ -138,14 +138,14 @@ export const Navigation = () => {
               <div className="relative">
                 <button 
                   onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                  className="group relative flex items-center space-x-2 px-4 py-2.5 rounded-2xl font-medium text-warning-foreground hover:text-white hover:bg-white/10 transition-all duration-300"
+                  className="group relative flex items-center space-x-2 px-4 py-2.5 rounded-2xl font-medium text-sidebar-foreground hover:text-primary-foreground hover:bg-primary/90 transition-all duration-300"
                 >
                   <Settings className="w-4 h-4 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
                   <span className="text-sm font-semibold">More</span>
                   <ChevronDown className={`w-3 h-3 transition-all duration-300 ${
-                    isMoreMenuOpen ? 'rotate-180 text-white' : 'group-hover:text-white group-hover:translate-y-0.5'
+                    isMoreMenuOpen ? 'rotate-180 text-primary-foreground' : 'group-hover:text-primary-foreground group-hover:translate-y-0.5'
                   }`} />
-                  <div className="absolute bottom-0 left-1/2 h-0.5 w-0 bg-white transition-all duration-300 group-hover:w-8 group-hover:-translate-x-1/2" />
+                  <div className="absolute bottom-0 left-1/2 h-0.5 w-0 bg-primary transition-all duration-300 group-hover:w-8 group-hover:-translate-x-1/2" />
                 </button>
                 
                 {isMoreMenuOpen && (
@@ -154,7 +154,7 @@ export const Navigation = () => {
                       className="fixed inset-0 z-10" 
                       onClick={() => setIsMoreMenuOpen(false)}
                     />
-                    <div className="absolute right-0 top-full mt-3 w-72 bg-gradient-to-b from-foreground to-foreground backdrop-blur-lg rounded-3xl shadow-xl border border-primary/60 z-20 overflow-hidden ring-1 ring-white/10">
+                    <div className="absolute right-0 top-full mt-3 w-72 bg-sidebar backdrop-blur-lg rounded-3xl shadow-xl border border-primary/60 z-20 overflow-hidden ring-1 ring-primary/10">
                       <div className="p-4">
                         <div className="text-xs font-bold text-warning uppercase tracking-wider mb-3 px-3">
                           Additional Menu
@@ -170,8 +170,8 @@ export const Navigation = () => {
                                 className={({ isActive }) =>
                                   `group flex items-center space-x-3 px-4 py-3 rounded-2xl font-medium transition-all duration-300 ${
                                     isActive
-                                      ? "bg-white/20 text-white shadow-lg shadow-blue-500/25"
-                                      : "text-warning-foreground hover:text-white hover:bg-white/10"
+                                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                                      : "text-sidebar-foreground hover:text-primary-foreground hover:bg-primary/90"
                                   }`
                                 }
                               >
@@ -201,7 +201,7 @@ export const Navigation = () => {
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="group gap-2 border-primary hover:border-red-300 hover:bg-red-400/20 hover:text-white text-white bg-white/10 text-sm px-4 py-2 rounded-2xl transition-all duration-300 font-semibold"
+              className="group gap-2 border-primary hover:border-primary hover:bg-primary/20 hover:text-primary-foreground text-sidebar-foreground bg-sidebar-accent text-sm px-4 py-2 rounded-2xl transition-all duration-300 font-semibold"
             >
               <LogOut className="w-4 h-4 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-12" />
             </Button>
@@ -209,7 +209,7 @@ export const Navigation = () => {
             {/* Mobile Menu Toggle */}
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 text-warning-foreground hover:text-white transition-all duration-300 flex items-center justify-center group"
+              className="lg:hidden w-10 h-10 rounded-2xl bg-sidebar-accent hover:bg-primary/20 text-sidebar-foreground hover:text-primary-foreground transition-all duration-300 flex items-center justify-center group"
             >
               {isMobileMenuOpen ? (
                 <X className="w-5 h-5 transition-all duration-300 group-hover:rotate-90" />
@@ -226,7 +226,7 @@ export const Navigation = () => {
         }`}>
           <div className="px-4 py-4 border-t border-primary/60">
             {/* User Profile - Mobile (without name) */}
-            <div className="flex items-center space-x-3 p-4 mb-4 bg-gradient-to-r from-blue-700/30 to-indigo-700/30 rounded-2xl">
+            <div className="flex items-center space-x-3 p-4 mb-4 bg-gradient-to-r from-primary/30 to-secondary/30 rounded-2xl">
               <div className="md:hidden">
                 <RoleSwitcher />
               </div>
@@ -245,8 +245,8 @@ export const Navigation = () => {
                     className={({ isActive }) =>
                       `group flex flex-col items-center space-y-2 p-4 rounded-2xl font-medium transition-all duration-300 ${
                         isActive
-                          ? "bg-white/20 text-white shadow-lg shadow-blue-500/25"
-                          : "text-warning-foreground hover:text-white hover:bg-white/10 bg-primary/30"
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                          : "text-sidebar-foreground hover:text-primary-foreground hover:bg-primary/90 bg-secondary/30"
                       }`
                     }
                   >
@@ -264,7 +264,7 @@ export const Navigation = () => {
                   variant="outline"
                   size="sm"
                   onClick={handleLogout}
-                  className="group gap-2 border-primary hover:border-red-300 hover:bg-red-400/20 hover:text-white text-white bg-white/10 transition-all duration-300 rounded-2xl font-semibold px-6"
+                  className="group gap-2 border-primary hover:border-primary hover:bg-primary/20 hover:text-primary-foreground text-sidebar-foreground bg-sidebar-accent transition-all duration-300 rounded-2xl font-semibold px-6"
                 >
                   <LogOut className="w-4 h-4 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-12" />
                   <span>Logout</span>

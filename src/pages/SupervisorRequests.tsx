@@ -1457,7 +1457,7 @@ const SupervisorRequests = () => {
           {/* Action Buttons */}
           <div className="flex gap-2">
             
-            <Button asChild className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200">
+            <Button asChild className="btn-primary w-full sm:w-auto text-sm sm:text-base" size="sm">
               <Link to="/material-request">
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline">INDENT FORM</span>

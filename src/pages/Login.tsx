@@ -37,7 +37,7 @@ const Login = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const user = DEMO_USERS.find(u => u.email === email && u.password === password);
-    
+
     if (user) {
       setCurrentUser({ id: '1', name: user.name, email: user.email, role: user.role, department: 'Demo Department' });
       toast({ title: "Login Successful", description: `Welcome back, ${user.name}!` });
@@ -58,9 +58,13 @@ const Login = () => {
       <div className="w-full max-w-4xl grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2 lg:gap-8">
         <Card className="w-full max-w-sm md:max-w-md mx-auto">
           <CardHeader className="text-center">
-            <div className="w-12 h-12 bg-gradient-hero rounded-xl flex items-center justify-center mx-auto mb-4">
-              <Package className="w-7 h-7 text-white" />
-            </div>
+            <div className="w-20 h-20 flex items-center justify-center mx-auto mb-4">
+  <img 
+    src="/logo.png" 
+    alt="Company Logo" 
+    className="w-18 h-18 object-contain"
+  />
+</div>
             <CardTitle className="text-2xl font-bold">Welcome to SSRFM</CardTitle>
             <CardDescription>Sign in to access the Materials Management System</CardDescription>
           </CardHeader>

@@ -181,19 +181,19 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
 
     const getStatusBadge = (status: string) => {
         const statusConfig = {
-            'pending_approval': { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-            'approved': { color: 'bg-secondary/20 text-foreground', icon: CheckCircle },
-            'ordered': { color: 'bg-purple-100 text-purple-800', icon: Package },
-            'partially_received': { color: 'bg-orange-100 text-accent-foreground', icon: Truck },
-            'material_received': { color: 'bg-primary/10 text-primary', icon: CheckCircle },
-            'reverted': { color: 'bg-red-100 text-red-800', icon: XCircle }
+            'pending_approval': { color: 'bg-warning/20 text-warning-foreground border-warning/30', icon: Clock },
+            'approved': { color: 'bg-secondary/20 text-foreground border-secondary/30', icon: CheckCircle },
+            'ordered': { color: 'bg-accent/20 text-accent-foreground border-accent/30', icon: Package },
+            'partially_received': { color: 'bg-secondary/30 text-foreground border-secondary/40', icon: Truck },
+            'material_received': { color: 'bg-primary/20 text-primary border-primary/30', icon: CheckCircle },
+            'reverted': { color: 'bg-destructive/20 text-destructive border-destructive/30', icon: XCircle }
         };
 
         const config = statusConfig[status as keyof typeof statusConfig] || statusConfig['pending_approval'];
         const Icon = config.icon;
 
         return (
-            <Badge className={`${config.color} flex items-center gap-1`}>
+            <Badge className={`${config.color} border flex items-center gap-1`}>
                 <Icon className="w-3 h-3" />
                 {status.replace('_', ' ').toUpperCase()}
             </Badge>
@@ -240,7 +240,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <Button
                                         onClick={handleOwnerApproval}
-                                        className="bg-primary hover:bg-primary-hover text-white"
+                                        className="bg-primary hover:bg-primary-hover text-primary-foreground"
                                     >
                                         <CheckCircle className="w-4 h-4 mr-2" />
                                         Approve Request
@@ -255,7 +255,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                                 </div>
 
                                 {action === 'revert' && (
-                                    <div className="space-y-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                    <div className="space-y-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
                                         <Label htmlFor="revert-reason">Reason for Reverting *</Label>
                                         <Textarea
                                             id="revert-reason"
@@ -290,20 +290,20 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                     {canUpdateToOrdered && (
                         <Card>
                             <CardHeader className="pb-3">
-                                <CardTitle className="text-lg text-purple-600">Supervisor Actions</CardTitle>
+                                <CardTitle className="text-lg text-accent">Supervisor Actions</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                                    <div className="text-sm text-purple-800 mb-3">
+                                <div className="p-4 bg-accent/10 border border-accent/20 rounded-lg">
+                                    <div className="text-sm text-accent-foreground mb-3">
                                         <strong>Request Approved by Owner</strong>
                                     </div>
-                                    <div className="text-sm text-purple-700 mb-4">
+                                    <div className="text-sm text-muted-foreground mb-4">
                                         The request has been approved by the Owner. You can now update the status to "Ordered" 
                                         once you have placed the order with the supplier.
                                     </div>
                                     <Button
                                         onClick={handleUpdateToOrdered}
-                                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                                        className="bg-accent hover:bg-accent/90 text-accent-foreground"
                                     >
                                         <Package className="w-4 h-4 mr-2" />
                                         Update to Ordered
@@ -417,7 +417,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
 
                                 <Button
                                     onClick={handleReceivedUpdate}
-                                    className="w-full bg-primary hover:bg-primary-hover text-white"
+                                    className="w-full bg-primary hover:bg-primary-hover text-primary-foreground"
                                 >
                                     <Package className="w-4 h-4 mr-2" />
                                     Update Receipt Status
@@ -460,17 +460,17 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
 
                     {/* Warning for Reverted Status */}
                     {request.status === 'reverted' && (
-                        <Card className="border-red-200 bg-red-50">
+                        <Card className="border-destructive/20 bg-destructive/10">
                             <CardContent className="p-4">
                                 <div className="flex items-start gap-3">
-                                    <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+                                    <AlertTriangle className="w-5 h-5 text-destructive mt-0.5" />
                                     <div className="flex-1">
-                                        <div className="font-medium text-red-800">Request Reverted</div>
-                                        <div className="text-sm text-red-700 mt-1">
+                                        <div className="font-medium text-destructive">Request Reverted</div>
+                                        <div className="text-sm text-muted-foreground mt-1">
                                             This request has been reverted by the Owner. The indent form must be resubmitted with corrections.
                                         </div>
                                         {request.revertReason && (
-                                            <div className="text-sm text-red-700 mt-2 p-2 bg-red-100 rounded">
+                                            <div className="text-sm text-destructive mt-2 p-2 bg-destructive/20 rounded">
                                                 <strong>Reason:</strong> {request.revertReason}
                                             </div>
                                         )}
@@ -478,7 +478,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                                             <div className="mt-3">
                                                 <Button
                                                     onClick={onClose}
-                                                    className="bg-primary hover:bg-primary-hover text-white"
+                                                    className="bg-primary hover:bg-primary-hover text-primary-foreground"
                                                     size="sm"
                                                 >
                                                     <FileText className="w-4 h-4 mr-2" />

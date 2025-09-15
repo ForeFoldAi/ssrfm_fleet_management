@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Shield, CheckCircle, XCircle, Clock, FileText, AlertTriangle, User, Calendar, IndianRupee, Eye, List, Table as TableIcon, RotateCcw, History } from "lucide-react";
+import { Shield, CheckCircle, XCircle, Clock, FileText, AlertTriangle, User, Calendar, IndianRupee, List, Table as TableIcon, RotateCcw, History, Eye,  } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -254,7 +254,7 @@ const ApprovalCenter = () => {
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-purple-50">
+              <TableRow className="bg-secondary/30">
                 <TableHead className="font-semibold text-xs w-20">REQUEST ID</TableHead>
                 <TableHead className="font-semibold text-xs w-32">MATERIAL</TableHead>
                 <TableHead className="font-semibold text-xs w-24">REQUESTED BY</TableHead>
@@ -333,13 +333,17 @@ const ApprovalCenter = () => {
                         <RotateCcw className="w-3 h-3 mr-1" />
                         Revert
                       </Button>
-                      <Button
+                     <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 w-7 p-0"
+                        onClick={() => handleOwnerReject(request.id)}
+                        className="h-7 text-xs px-2 text-orange-600 border-orange-200 hover:border-orange-300"
                       >
-                        <Eye className="w-3 h-3" />
+                        <Eye className="w-3 h-3 mr-1" />
+                        View
                       </Button>
+
+
                     </div>
                   </TableCell>
                 </TableRow>
@@ -355,7 +359,7 @@ const ApprovalCenter = () => {
   const OwnerApprovalListView = () => (
     <div className="space-y-3">
       {filteredOwnerRequests.map((request) => (
-        <Card key={request.id} className="card-friendly border-purple-200">
+        <Card key={request.id} className="card-friendly border-primary/20">
           <CardContent className="p-4">
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
@@ -423,10 +427,18 @@ const ApprovalCenter = () => {
                   <RotateCcw className="w-3 h-3" />
                   Revert
                 </Button>
-                <Button variant="outline" className="gap-1 text-xs h-8">
+
+
+                <Button
+                  variant="outline"
+
+                  className="gap-1 text-xs h-8 text-orange-600 border-orange-200 hover:border-orange-300"
+                >
                   <Eye className="w-3 h-3" />
                   View
                 </Button>
+
+
               </div>
             </div>
           </CardContent>
@@ -438,32 +450,57 @@ const ApprovalCenter = () => {
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
-
             <div>
-
               <h6 className="text-sm sm:text-1xl md:text-2xl lg:text-3xl font-bold text-foreground mb-1">
                 Approval Center
               </h6>
-
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex-1">
-          <Input
-            placeholder="Search by material, requester, or request ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
-          />
+        {/* Search Bar and View Toggle Controls */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          {/* Search Bar */}
+          <div className="flex-1 max-w-md min-w-[250px]">
+            <Input
+              placeholder="Search by material, requester, or request ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
+          {/* View Mode Toggle */}
+          <div className="flex rounded-xl border border-primary/20 overflow-hidden bg-secondary/30 w-fit shadow-sm">
+            <Button
+              variant={ownerViewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setOwnerViewMode("list")}
+              className={`rounded-none px-3 sm:px-4 ${ownerViewMode === "list"
+                ? "bg-primary text-primary-foreground hover:bg-primary-hover"
+                : "text-primary hover:text-primary-hover hover:bg-secondary/50"
+                }`}
+            >
+              <List className="w-4 h-4" />
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
+            </Button>
+            <Button
+              variant={ownerViewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setOwnerViewMode("table")}
+              className={`rounded-none px-3 sm:px-4 ${ownerViewMode === "table"
+                ? "bg-primary text-primary-foreground hover:bg-primary-hover"
+                : "text-primary hover:text-primary-hover hover:bg-secondary/50"
+                }`}
+            >
+              <TableIcon className="w-4 h-4" />
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
+            </Button>
+          </div>
         </div>
-
       </div>
 
       <Tabs defaultValue="owner-approval" className="w-full">
@@ -471,40 +508,6 @@ const ApprovalCenter = () => {
 
         {/* Owner Approval Tab */}
         <TabsContent value="owner-approval" className="space-y-3 sm:space-y-4">
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4 mb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-
-
-              {/* View Mode Toggle */}
-              <div className="flex rounded-xl border border-purple-200 overflow-hidden bg-purple-50/50 w-fit shadow-sm">
-                <Button
-                  variant={ownerViewMode === "list" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setOwnerViewMode("list")}
-                  className={`rounded-none px-3 sm:px-4 ${ownerViewMode === "list"
-                      ? "bg-purple-600 text-white hover:bg-purple-700"
-                      : "text-purple-600 hover:text-purple-700 hover:bg-purple-100"
-                    }`}
-                >
-                  <List className="w-4 h-4" />
-                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
-                </Button>
-                <Button
-                  variant={ownerViewMode === "table" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setOwnerViewMode("table")}
-                  className={`rounded-none px-3 sm:px-4 ${ownerViewMode === "table"
-                      ? "bg-purple-600 text-white hover:bg-purple-700"
-                      : "text-purple-600 hover:text-purple-700 hover:bg-purple-100"
-                    }`}
-                >
-                  <TableIcon className="w-4 h-4" />
-                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-
           {/* Render based on view mode */}
           {ownerViewMode === "list" ? <OwnerApprovalListView /> : <OwnerApprovalTableView />}
         </TabsContent>
