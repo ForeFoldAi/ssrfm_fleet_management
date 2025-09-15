@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { RoleProvider, useRole } from "./contexts/RoleContext";
 import { StockProvider } from "./contexts/StockContext";
+import { SidebarProvider } from "./contexts/SidebarContext";
 import { Layout } from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import MaterialsInventory from "./pages/MaterialsInventory";
@@ -21,7 +22,7 @@ import FinancialDashboard from "./pages/FinancialDashboard";
 import OrganizationalManagement from "./pages/OrganizationalManagement";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
-import WorkflowDemoPage from "./pages/WorkflowDemoPage";
+
 
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -88,7 +89,7 @@ const AppRoutes = () => {
         <Route path="organizational-management" element={<OrganizationalManagement />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
-        <Route path="workflow-demo" element={<WorkflowDemoPage />} />
+       
         
         {/* Legacy routes for backwards compatibility */}
         <Route path="materials" element={<MaterialsInventory />} />
@@ -108,13 +109,15 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <RoleProvider>
       <StockProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </TooltipProvider>
+        <SidebarProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </TooltipProvider>
+        </SidebarProvider>
       </StockProvider>
     </RoleProvider>
   </QueryClientProvider>
