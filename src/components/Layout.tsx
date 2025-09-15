@@ -27,7 +27,7 @@ export const Layout = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Desktop Header */}
-      <div className="hidden md:block">
+      <div className="hidden md:block ">
         <TopHeaderSimple />
       </div>
       
@@ -67,7 +67,7 @@ export const Layout = () => {
       <main className={`pt-20 md:pt-24 px-6 pb-24 md:pb-8 transition-all duration-300 ${
         isExpanded ? 'md:pl-72' : 'md:pl-24'
       }`}>
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w mx-auto">
           <Outlet />
         </div>
       </main>

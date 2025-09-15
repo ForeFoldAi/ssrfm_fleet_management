@@ -73,11 +73,12 @@ export default {
 				}
 			},
 			borderRadius: {
-				lg: 'var(--radius)',
-				md: 'calc(var(--radius) - 2px)',
-				sm: 'calc(var(--radius) - 4px)',
-				xl: 'calc(var(--radius) + 4px)',
-				'2xl': 'calc(var(--radius) + 8px)'
+				lg: '10px',
+				md: '8px',
+				sm: '6px',
+				xl: '12px',
+				'2xl': '16px',
+				'3xl': '20px'
 			},
 			boxShadow: {
 				'friendly-sm': 'var(--shadow-sm)',

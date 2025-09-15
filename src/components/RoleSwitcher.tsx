@@ -46,10 +46,10 @@ export const RoleSwitcher = () => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="gap-2 rounded-[20px]">
-          <div className={`w-6 h-6 ${currentConfig.color} rounded-[20px] flex items-center justify-center`}>
-            <CurrentIcon className="w-4 h-4 text-white" />
+      <DropdownMenuTrigger asChild className="hover:bg-none border-none outline-none" >
+        <Button variant="outline" className="gap-2 rounded-[10px] bg-none border-none hover:bg-white outline-none focus:outline-none ">
+          <div className={`w-6 h-6 ${currentConfig.color} rounded-[10px] flex items-center justify-center hover:bg-none`}>
+            <CurrentIcon className="w-4 h-4 " />
           </div>
           <div className="text-left">
             <div className="text-sm font-medium">{currentUser.name}</div>
@@ -58,7 +58,7 @@ export const RoleSwitcher = () => {
           <ChevronDown className="w-4 h-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64 rounded-[20px]">
+      <DropdownMenuContent align="end" className="w-64 rounded-[10px]">
         <DropdownMenuLabel>Account Menu</DropdownMenuLabel>
         <DropdownMenuSeparator />
         
