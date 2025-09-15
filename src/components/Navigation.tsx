@@ -1,3 +1,4 @@
+import logo from "/logo.png";
 import { NavLink } from "react-router-dom";
 import { Package, FileText, Plus, List, Users, Settings, Shield, Database, Activity, LogOut, Building2, ChevronDown, Menu, X } from "lucide-react";
 import { useRole } from "../contexts/RoleContext";
@@ -84,25 +85,25 @@ export const Navigation = () => {
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
       scrolled 
-        ? 'bg-gradient-to-r from-blue-900 to-indigo-900 backdrop-blur-lg border-b border-blue-800/60 shadow-lg shadow-black/20' 
-        : 'bg-gradient-to-r from-blue-800 to-indigo-800 backdrop-blur-md border-b border-blue-700/40'
+        ? 'bg-gradient-to-r from-foreground to-foreground backdrop-blur-lg border-b border-primary/60 shadow-lg shadow-black/20' 
+        : 'bg-gradient-to-r from-foreground to-foreground backdrop-blur-md border-b border-primary/40'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Company Logo & Name */}
           <div className="flex items-center space-x-3 flex-shrink-0">
-            <div className="w-11 h-11 bg-gradient-to-br from-blue-300 via-blue-400 to-indigo-400 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 ring-1 ring-white/20">
-              <Building2 className="w-6 h-6 text-white drop-shadow-sm" />
-            </div>
+            <img src={logo} alt="Minar Logo" className="w-11 h-11 object-contain" />
+            
             <div className="hidden sm:block">
               <h1 className="text-xl font-bold text-white">
-                SSRFM Industries
+              SSRFM Industries
               </h1>
-              <p className="text-xs text-blue-200 -mt-1 font-medium">Smart Supply & Resource Management</p>
+              <p className="text-xs text-warning -mt-1 font-medium">Smart Supply & Resource Management</p>
             </div>
+            
             <div className="sm:hidden">
               <h1 className="text-lg font-bold text-white">
-                SSRFM
+                Minar
               </h1>
             </div>
           </div>
@@ -120,7 +121,7 @@ export const Navigation = () => {
                     `group relative flex items-center space-x-2 px-4 py-2.5 rounded-2xl font-medium transition-all duration-300 ${
                       isActive
                         ? "bg-white/20 text-white shadow-lg shadow-blue-500/25 ring-1 ring-blue-300/20"
-                        : "text-blue-100 hover:text-white hover:bg-white/10 hover:shadow-sm"
+                        : "text-warning-foreground hover:text-white hover:bg-white/10 hover:shadow-sm"
                     }`
                   }
                 >
@@ -137,7 +138,7 @@ export const Navigation = () => {
               <div className="relative">
                 <button 
                   onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-                  className="group relative flex items-center space-x-2 px-4 py-2.5 rounded-2xl font-medium text-blue-100 hover:text-white hover:bg-white/10 transition-all duration-300"
+                  className="group relative flex items-center space-x-2 px-4 py-2.5 rounded-2xl font-medium text-warning-foreground hover:text-white hover:bg-white/10 transition-all duration-300"
                 >
                   <Settings className="w-4 h-4 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
                   <span className="text-sm font-semibold">More</span>
@@ -153,9 +154,9 @@ export const Navigation = () => {
                       className="fixed inset-0 z-10" 
                       onClick={() => setIsMoreMenuOpen(false)}
                     />
-                    <div className="absolute right-0 top-full mt-3 w-72 bg-gradient-to-b from-blue-900 to-indigo-900 backdrop-blur-lg rounded-3xl shadow-xl border border-blue-700/60 z-20 overflow-hidden ring-1 ring-white/10">
+                    <div className="absolute right-0 top-full mt-3 w-72 bg-gradient-to-b from-foreground to-foreground backdrop-blur-lg rounded-3xl shadow-xl border border-primary/60 z-20 overflow-hidden ring-1 ring-white/10">
                       <div className="p-4">
-                        <div className="text-xs font-bold text-blue-300 uppercase tracking-wider mb-3 px-3">
+                        <div className="text-xs font-bold text-warning uppercase tracking-wider mb-3 px-3">
                           Additional Menu
                         </div>
                         <div className="space-y-1">
@@ -170,7 +171,7 @@ export const Navigation = () => {
                                   `group flex items-center space-x-3 px-4 py-3 rounded-2xl font-medium transition-all duration-300 ${
                                     isActive
                                       ? "bg-white/20 text-white shadow-lg shadow-blue-500/25"
-                                      : "text-blue-100 hover:text-white hover:bg-white/10"
+                                      : "text-warning-foreground hover:text-white hover:bg-white/10"
                                   }`
                                 }
                               >
@@ -190,32 +191,25 @@ export const Navigation = () => {
 
           {/* Right Side - User Actions */}
           <div className="flex items-center space-x-3">
-            {/* Notifications Bell - Desktop only */}
-          
-
             {/* Role Switcher */}
             <div className="hidden md:block">
               <RoleSwitcher />
             </div>
-
-            {/* User Profile Icon - Desktop (without name) */}
-           
 
             {/* Logout Button */}
             <Button
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="group gap-2 border-blue-600 hover:border-red-300 hover:bg-red-400/20 hover:text-white text-white bg-white/10 text-sm px-4 py-2 rounded-2xl transition-all duration-300 font-semibold"
+              className="group gap-2 border-primary hover:border-red-300 hover:bg-red-400/20 hover:text-white text-white bg-white/10 text-sm px-4 py-2 rounded-2xl transition-all duration-300 font-semibold"
             >
               <LogOut className="w-4 h-4 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-12" />
-             
             </Button>
 
             {/* Mobile Menu Toggle */}
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 text-blue-100 hover:text-white transition-all duration-300 flex items-center justify-center group"
+              className="lg:hidden w-10 h-10 rounded-2xl bg-white/10 hover:bg-white/20 text-warning-foreground hover:text-white transition-all duration-300 flex items-center justify-center group"
             >
               {isMobileMenuOpen ? (
                 <X className="w-5 h-5 transition-all duration-300 group-hover:rotate-90" />
@@ -230,10 +224,9 @@ export const Navigation = () => {
         <div className={`lg:hidden transition-all duration-300 ${
           isMobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
         }`}>
-          <div className="px-4 py-4 border-t border-blue-700/60">
+          <div className="px-4 py-4 border-t border-primary/60">
             {/* User Profile - Mobile (without name) */}
             <div className="flex items-center space-x-3 p-4 mb-4 bg-gradient-to-r from-blue-700/30 to-indigo-700/30 rounded-2xl">
-             
               <div className="md:hidden">
                 <RoleSwitcher />
               </div>
@@ -253,7 +246,7 @@ export const Navigation = () => {
                       `group flex flex-col items-center space-y-2 p-4 rounded-2xl font-medium transition-all duration-300 ${
                         isActive
                           ? "bg-white/20 text-white shadow-lg shadow-blue-500/25"
-                          : "text-blue-100 hover:text-white hover:bg-white/10 bg-blue-900/30"
+                          : "text-warning-foreground hover:text-white hover:bg-white/10 bg-primary/30"
                       }`
                     }
                   >
@@ -265,15 +258,13 @@ export const Navigation = () => {
             </div>
             
             {/* Mobile Actions */}
-            <div className="pt-4 border-t border-blue-700/60">
+            <div className="pt-4 border-t border-primary/60">
               <div className="flex items-center justify-between">
-               
-                
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleLogout}
-                  className="group gap-2 border-blue-600 hover:border-red-300 hover:bg-red-400/20 hover:text-white text-white bg-white/10 transition-all duration-300 rounded-2xl font-semibold px-6"
+                  className="group gap-2 border-primary hover:border-red-300 hover:bg-red-400/20 hover:text-white text-white bg-white/10 transition-all duration-300 rounded-2xl font-semibold px-6"
                 >
                   <LogOut className="w-4 h-4 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-12" />
                   <span>Logout</span>

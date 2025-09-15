@@ -1,3 +1,4 @@
+import logo from "/logo.png";
 import { useRole } from "../contexts/RoleContext";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { Button } from "./ui/button";
@@ -27,7 +28,7 @@ export const TopHeader = () => {
           {/* Company Branding */}
           <div className="flex items-center space-x-2 sm:space-x-3">
             <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              <img src={logo} alt="Minar Logo" className="w-4 h-4 sm:w-5 sm:h-5 object-contain" />
             </div>
             <div>
               <h1 className="text-base sm:text-lg font-bold text-gray-900">IMMs</h1>

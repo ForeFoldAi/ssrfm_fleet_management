@@ -182,10 +182,10 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
     const getStatusBadge = (status: string) => {
         const statusConfig = {
             'pending_approval': { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-            'approved': { color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+            'approved': { color: 'bg-secondary/20 text-foreground', icon: CheckCircle },
             'ordered': { color: 'bg-purple-100 text-purple-800', icon: Package },
-            'partially_received': { color: 'bg-orange-100 text-orange-800', icon: Truck },
-            'material_received': { color: 'bg-green-100 text-green-800', icon: CheckCircle },
+            'partially_received': { color: 'bg-orange-100 text-accent-foreground', icon: Truck },
+            'material_received': { color: 'bg-primary/10 text-primary', icon: CheckCircle },
             'reverted': { color: 'bg-red-100 text-red-800', icon: XCircle }
         };
 
@@ -234,13 +234,13 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                     {canApprove && request.status === 'pending_approval' && (
                         <Card>
                             <CardHeader className="pb-3">
-                                <CardTitle className="text-lg text-blue-600">Owner Actions</CardTitle>
+                                <CardTitle className="text-lg text-foreground">Owner Actions</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <Button
                                         onClick={handleOwnerApproval}
-                                        className="bg-green-600 hover:bg-green-700 text-white"
+                                        className="bg-primary hover:bg-primary-hover text-white"
                                     >
                                         <CheckCircle className="w-4 h-4 mr-2" />
                                         Approve Request
@@ -317,7 +317,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                     {canUpdateReceived && (
                         <Card>
                             <CardHeader className="pb-3">
-                                <CardTitle className="text-lg text-green-600">Update Material Receipt</CardTitle>
+                                <CardTitle className="text-lg text-primary/80">Update Material Receipt</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -417,7 +417,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
 
                                 <Button
                                     onClick={handleReceivedUpdate}
-                                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                                    className="w-full bg-primary hover:bg-primary-hover text-white"
                                 >
                                     <Package className="w-4 h-4 mr-2" />
                                     Update Receipt Status
@@ -478,7 +478,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                                             <div className="mt-3">
                                                 <Button
                                                     onClick={onClose}
-                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                    className="bg-primary hover:bg-primary-hover text-white"
                                                     size="sm"
                                                 >
                                                     <FileText className="w-4 h-4 mr-2" />

@@ -384,8 +384,8 @@ export const RequestForm = ({ formData, onUpdate, onNext }: RequestFormProps) =>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <Eye className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-600">Old material image uploaded</span>
+                      <Eye className="w-4 h-4 text-foreground" />
+                      <span className="text-sm font-medium text-foreground">Old material image uploaded</span>
                     </div>
                     <p className="text-sm text-muted-foreground truncate">
                       {formData.oldMaterialImageName || "old-material.jpg"}
@@ -484,8 +484,8 @@ export const RequestForm = ({ formData, onUpdate, onNext }: RequestFormProps) =>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <Eye className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-600">Signature uploaded</span>
+                      <Eye className="w-4 h-4 text-foreground" />
+                      <span className="text-sm font-medium text-foreground">Signature uploaded</span>
                     </div>
                     <p className="text-sm text-muted-foreground truncate">
                       {formData.requestorSignatureImageName || "signature.jpg"}

@@ -97,34 +97,34 @@ export const ReceivedForm = ({ request, isOpen, onClose, onSubmit }: ReceivedFor
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-green-600" />
+            <Package className="w-5 h-5 text-primary/80" />
             Material Received Form - {request?.id}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Request Summary */}
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-secondary/10 border-secondary">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-blue-800">Request Summary</CardTitle>
+              <CardTitle className="text-lg text-foreground">Request Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-blue-700">Material:</span>
-                  <div className="text-blue-900">{request?.materialName}</div>
+                  <span className="font-medium text-foreground">Material:</span>
+                  <div className="text-foreground">{request?.materialName}</div>
                 </div>
                 <div>
-                  <span className="font-medium text-blue-700">Requested Quantity:</span>
-                  <div className="text-blue-900">{request?.quantity}</div>
+                  <span className="font-medium text-foreground">Requested Quantity:</span>
+                  <div className="text-foreground">{request?.quantity}</div>
                 </div>
                 <div>
-                  <span className="font-medium text-blue-700">Estimated Value:</span>
-                  <div className="text-blue-900">{request?.value}</div>
+                  <span className="font-medium text-foreground">Estimated Value:</span>
+                  <div className="text-foreground">{request?.value}</div>
                 </div>
                 <div>
-                  <span className="font-medium text-blue-700">Supplier:</span>
-                  <div className="text-blue-900">{request?.maker}</div>
+                  <span className="font-medium text-foreground">Supplier:</span>
+                  <div className="text-foreground">{request?.maker}</div>
                 </div>
               </div>
             </CardContent>
@@ -220,7 +220,7 @@ export const ReceivedForm = ({ request, isOpen, onClose, onSubmit }: ReceivedFor
                     <SelectContent>
                       <SelectItem value="passed">
                         <div className="flex items-center gap-2">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <CheckCircle className="w-4 h-4 text-primary/80" />
                           Passed
                         </div>
                       </SelectItem>
@@ -272,7 +272,7 @@ export const ReceivedForm = ({ request, isOpen, onClose, onSubmit }: ReceivedFor
                   <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="w-4 h-4 text-orange-600 mt-0.5" />
-                      <div className="text-sm text-orange-800">
+                      <div className="text-sm text-accent-foreground">
                         <strong>Partial Receipt:</strong> This will be marked as "Partially Received". 
                         You can update the receipt again when more materials arrive.
                       </div>
@@ -285,19 +285,19 @@ export const ReceivedForm = ({ request, isOpen, onClose, onSubmit }: ReceivedFor
 
           {/* Summary */}
           {isQuantityValid && (
-            <Card className={`${isPartialReceipt || isPartialByQuantity ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'}`}>
+            <Card className={`${isPartialReceipt || isPartialByQuantity ? 'bg-accent/10 border-accent/20' : 'bg-primary/5 border-primary/20'}`}>
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   {isPartialReceipt || isPartialByQuantity ? (
                     <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
                   ) : (
-                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                    <CheckCircle className="w-5 h-5 text-primary/80 mt-0.5" />
                   )}
                   <div>
-                    <div className={`font-medium ${isPartialReceipt || isPartialByQuantity ? 'text-orange-800' : 'text-green-800'}`}>
+                    <div className={`font-medium ${isPartialReceipt || isPartialByQuantity ? 'text-accent-foreground' : 'text-primary'}`}>
                       {isPartialReceipt || isPartialByQuantity ? 'Partial Receipt Summary' : 'Complete Receipt Summary'}
                     </div>
-                    <div className={`text-sm mt-1 ${isPartialReceipt || isPartialByQuantity ? 'text-orange-700' : 'text-green-700'}`}>
+                    <div className={`text-sm mt-1 ${isPartialReceipt || isPartialByQuantity ? 'text-accent-foreground' : 'text-primary/90'}`}>
                       <div>Received: {receivedQuantity} of {originalQuantity} units</div>
                       <div>Total Cost: ₹{formData.purchasedPrice}</div>
                       <div>Supplier: {formData.purchasedFrom}</div>
@@ -313,7 +313,7 @@ export const ReceivedForm = ({ request, isOpen, onClose, onSubmit }: ReceivedFor
           <div className="flex justify-center gap-3 pt-4">
             <Button 
               type="submit" 
-              className={`${isPartialReceipt || isPartialByQuantity ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white`}
+              className={`${isPartialReceipt || isPartialByQuantity ? 'bg-accent hover:bg-accent/90' : 'bg-primary hover:bg-primary-hover'} text-white`}
             >
               <Save className="w-4 h-4 mr-2" />
               {isPartialReceipt || isPartialByQuantity ? 'Record Partial Receipt' : 'Record Complete Receipt'}

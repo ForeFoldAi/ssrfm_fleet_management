@@ -148,8 +148,8 @@ const CompanyOwnerDashboard = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'excellent': return 'bg-blue-500 text-white';
-      case 'good': return 'bg-blue-500 text-white';
+      case 'excellent': return 'bg-secondary/100 text-white';
+      case 'good': return 'bg-secondary/100 text-white';
       case 'normal': return 'bg-yellow-500 text-white';
       case 'warning': return 'bg-orange-500 text-white';
       case 'critical': return 'bg-red-500 text-white';
@@ -159,8 +159,8 @@ const CompanyOwnerDashboard = () => {
 
   const getAnalyticsStatusColor = (status: string) => {
     switch (status) {
-      case 'positive': return 'text-blue-600 bg-blue-50';
-      case 'good': return 'text-blue-600 bg-blue-50';
+      case 'positive': return 'text-foreground bg-secondary/10';
+      case 'good': return 'text-foreground bg-secondary/10';
       case 'normal': return 'text-yellow-600 bg-yellow-50';
       case 'negative': return 'text-red-600 bg-red-50';
       default: return 'text-gray-600 bg-gray-50';
@@ -171,7 +171,7 @@ const CompanyOwnerDashboard = () => {
     switch (priority) {
       case 'high': return 'bg-red-500 text-white';
       case 'medium': return 'bg-yellow-500 text-white';
-      case 'low': return 'bg-blue-500 text-white';
+      case 'low': return 'bg-secondary/100 text-white';
       default: return 'bg-secondary text-secondary-foreground';
     }
   };
@@ -227,7 +227,7 @@ const CompanyOwnerDashboard = () => {
         <Card className="lg:col-span-2 card-friendly">
           <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0 pb-4">
             <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+              <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />
               <span className="text-sm sm:text-base">Department Performance & Budget Utilization</span>
             </CardTitle>
             <Button variant="outline" size="sm" className="w-full sm:w-auto text-xs sm:text-sm" asChild>
@@ -250,7 +250,7 @@ const CompanyOwnerDashboard = () => {
                     </div>
                   </div>
                   <div className="text-left sm:text-right">
-                    <div className="text-sm font-medium text-blue-600">{dept.savings}</div>
+                    <div className="text-sm font-medium text-foreground">{dept.savings}</div>
                     <div className="text-xs text-muted-foreground">vs budget</div>
                   </div>
                 </div>
@@ -348,18 +348,18 @@ const CompanyOwnerDashboard = () => {
       <Card className="card-friendly">
         <CardHeader className="pb-4">
           <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
-            <Target className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+            <Target className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />
             Company-Wide Key Performance Indicators
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6">
             <div className="text-center p-3 sm:p-4 border rounded-lg">
-              <div className="text-xl sm:text-2xl font-bold text-blue-600">15.3%</div>
+              <div className="text-xl sm:text-2xl font-bold text-foreground">15.3%</div>
               <div className="text-xs sm:text-sm text-muted-foreground">Net Profit Margin</div>
             </div>
             <div className="text-center p-3 sm:p-4 border rounded-lg">
-              <div className="text-xl sm:text-2xl font-bold text-blue-600">87.4%</div>
+              <div className="text-xl sm:text-2xl font-bold text-foreground">87.4%</div>
               <div className="text-xs sm:text-sm text-muted-foreground">Overall Equipment Effectiveness</div>
             </div>
             <div className="text-center p-3 sm:p-4 border rounded-lg">

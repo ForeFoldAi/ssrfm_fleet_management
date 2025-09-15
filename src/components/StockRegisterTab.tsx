@@ -105,7 +105,7 @@ const StockRegisterTab = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "good": return "bg-green-100 text-green-800 border-green-200";
+      case "good": return "bg-primary/10 text-primary border-primary/20";
       case "low": return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "critical": return "bg-red-100 text-red-800 border-red-200";
       default: return "bg-gray-100 text-gray-800 border-gray-200";
@@ -145,7 +145,7 @@ const StockRegisterTab = () => {
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
           <Button
             onClick={() => navigate('/add-stock')}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-primary hover:bg-primary-hover text-white"
             size="sm"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -407,7 +407,7 @@ const StockRegisterTab = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5 text-green-600" />
+              <Plus className="w-5 h-5 text-primary/80" />
               Add Stock - {selectedItem?.name}
             </DialogTitle>
           </DialogHeader>
@@ -416,7 +416,7 @@ const StockRegisterTab = () => {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="font-medium">Current Stock:</span>
-                  <div className="text-lg font-semibold text-blue-600">
+                  <div className="text-lg font-semibold text-foreground">
                     {selectedItem?.currentStock} {selectedItem?.unit}
                   </div>
                 </div>
@@ -456,15 +456,15 @@ const StockRegisterTab = () => {
             </div>
 
             {addQuantity && parseInt(addQuantity) > 0 && (
-              <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+              <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg">
                 <div className="text-sm">
-                  <div className="font-medium text-green-800">After adding stock:</div>
-                  <div className="text-green-700">
+                  <div className="font-medium text-primary">After adding stock:</div>
+                  <div className="text-primary/90">
                     New Stock: <span className="font-semibold">
                       {(selectedItem?.currentStock || 0) + parseInt(addQuantity)} {selectedItem?.unit}
                     </span>
                   </div>
-                  <div className="text-green-700">
+                  <div className="text-primary/90">
                     New Value: <span className="font-semibold">
                       ₹{((selectedItem?.currentStock || 0) + parseInt(addQuantity)) * (selectedItem?.unitPrice || 0)}
                     </span>
@@ -474,7 +474,7 @@ const StockRegisterTab = () => {
             )}
             
             <div className="flex gap-3 pt-2">
-              <Button onClick={handleAddStock} className="flex-1 bg-green-600 hover:bg-green-700">
+              <Button onClick={handleAddStock} className="flex-1 bg-primary hover:bg-primary-hover">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Stock
               </Button>
@@ -500,7 +500,7 @@ const StockRegisterTab = () => {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <span className="font-medium">Available Stock:</span>
-                  <div className="text-lg font-semibold text-blue-600">
+                  <div className="text-lg font-semibold text-foreground">
                     {selectedItem?.currentStock} {selectedItem?.unit}
                   </div>
                 </div>
@@ -544,13 +544,13 @@ const StockRegisterTab = () => {
               <div className={`border p-3 rounded-lg ${
                 parseInt(requestQuantity) > (selectedItem?.currentStock || 0)
                   ? 'bg-red-50 border-red-200'
-                  : 'bg-orange-50 border-orange-200'
+                  : 'bg-accent/10 border-accent/20'
               }`}>
                 <div className="text-sm">
                   <div className={`font-medium ${
                     parseInt(requestQuantity) > (selectedItem?.currentStock || 0)
                       ? 'text-red-800'
-                      : 'text-orange-800'
+                      : 'text-accent-foreground'
                   }`}>
                     {parseInt(requestQuantity) > (selectedItem?.currentStock || 0)
                       ? 'Insufficient Stock!'
@@ -559,12 +559,12 @@ const StockRegisterTab = () => {
                   </div>
                   {parseInt(requestQuantity) <= (selectedItem?.currentStock || 0) && (
                     <>
-                      <div className="text-orange-700">
+                      <div className="text-accent-foreground">
                         Remaining Stock: <span className="font-semibold">
                           {(selectedItem?.currentStock || 0) - parseInt(requestQuantity)} {selectedItem?.unit}
                         </span>
                       </div>
-                      <div className="text-orange-700">
+                      <div className="text-accent-foreground">
                         Status: <span className="font-semibold">
                           {getStockStatus((selectedItem?.currentStock || 0) - parseInt(requestQuantity), selectedItem?.minStock || 0)}
                         </span>
@@ -578,7 +578,7 @@ const StockRegisterTab = () => {
             <div className="flex gap-3 pt-2">
               <Button 
                 onClick={handleRequestStock} 
-                className="flex-1 bg-orange-600 hover:bg-orange-700"
+                className="flex-1 bg-accent hover:bg-accent/90"
                 disabled={!requestQuantity || parseInt(requestQuantity) > (selectedItem?.currentStock || 0)}
               >
                 <Minus className="w-4 h-4 mr-2" />
@@ -597,7 +597,7 @@ const StockRegisterTab = () => {
         <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <History className="w-5 h-5 text-blue-600" />
+              <History className="w-5 h-5 text-foreground" />
               Transaction History - {selectedItem?.name}
             </DialogTitle>
           </DialogHeader>
@@ -607,13 +607,13 @@ const StockRegisterTab = () => {
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
                   <span className="font-medium">Current Stock:</span>
-                  <div className="text-lg font-semibold text-blue-600">
+                  <div className="text-lg font-semibold text-foreground">
                     {selectedItem?.currentStock} {selectedItem?.unit}
                   </div>
                 </div>
                 <div>
                   <span className="font-medium">Total Value:</span>
-                  <div className="text-lg font-semibold text-green-600">
+                  <div className="text-lg font-semibold text-primary/80">
                     ₹{selectedItem?.totalValue.toLocaleString()}
                   </div>
                 </div>
@@ -654,9 +654,9 @@ const StockRegisterTab = () => {
                     {selectedItem?.transactions?.map((transaction, index) => (
                       <TableRow key={index} className={
                         transaction.type === 'stock_in' 
-                          ? 'bg-green-50/50' 
+                          ? 'bg-primary/5' 
                           : transaction.type === 'issued_request'
-                          ? 'bg-blue-50/50'
+                          ? 'bg-secondary/10/50'
                           : 'bg-orange-50/50'
                       }>
                         <TableCell className="text-sm">{transaction.date}</TableCell>
@@ -664,10 +664,10 @@ const StockRegisterTab = () => {
                         <TableCell>
                           <Badge variant="outline" className={`text-xs ${
                             transaction.type === 'stock_in' 
-                              ? 'bg-green-100 text-green-800' 
+                              ? 'bg-primary/10 text-primary' 
                               : transaction.type === 'issued_request'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-orange-100 text-orange-800'
+                              ? 'bg-secondary/20 text-foreground'
+                              : 'bg-orange-100 text-accent-foreground'
                           }`}>
                             {transaction.type === 'stock_in' ? 'Stock In' : 
                              transaction.type === 'issued_request' ? 'Issue' : 'Request'}
@@ -681,7 +681,7 @@ const StockRegisterTab = () => {
                           {transaction.type !== 'stock_in' ? `${transaction.quantity} ${selectedItem?.unit}` : '-'}
                         </TableCell>
                         <TableCell className="text-sm">
-                          <span className={transaction.type === 'stock_in' ? 'text-green-600 font-medium' : ''}>
+                          <span className={transaction.type === 'stock_in' ? 'text-primary/80 font-medium' : ''}>
                             {transaction.quantity} {selectedItem?.unit}
                           </span>
                         </TableCell>

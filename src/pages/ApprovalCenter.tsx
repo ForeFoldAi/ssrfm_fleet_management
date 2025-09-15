@@ -185,7 +185,7 @@ const ApprovalCenter = () => {
       id: "REQ-2024-190",
       material: "Advanced Testing Equipment",
       quantity: "1 set",
-      requestedBy: "Carol Williams", 
+      requestedBy: "Carol Williams",
       department: "Quality Control",
       value: "₹35,200",
       date: "2024-01-15",
@@ -217,8 +217,8 @@ const ApprovalCenter = () => {
   // Filter functions
   const filteredOwnerRequests = pendingOwnerApproval.filter(request => {
     const matchesSearch = request.material.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.requestedBy.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.id.toLowerCase().includes(searchTerm.toLowerCase());
+      request.requestedBy.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      request.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = filterDepartment === "all" || request.department === filterDepartment;
     return matchesSearch && matchesDepartment;
   });
@@ -277,10 +277,10 @@ const ApprovalCenter = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleViewHistory(request.material)}
-                        className="h-6 w-6 p-0 hover:bg-blue-100"
+                        className="h-6 w-6 p-0 hover:bg-secondary/20"
                         title="View Purchase History"
                       >
-                        <History className="w-3 h-3 text-blue-600" />
+                        <History className="w-3 h-3 text-foreground" />
                       </Button>
                     </div>
                   </TableCell>
@@ -289,7 +289,7 @@ const ApprovalCenter = () => {
                     <div className="text-xs text-muted-foreground">{request.department}</div>
                   </TableCell>
                   <TableCell className="text-xs">{request.quantity}</TableCell>
-                  <TableCell className="text-xs font-medium text-green-600">{request.value}</TableCell>
+                  <TableCell className="text-xs font-medium text-primary/80">{request.value}</TableCell>
                   <TableCell className="text-xs">{request.date}</TableCell>
                   <TableCell className="text-xs">{request.machine}</TableCell>
                   <TableCell>
@@ -316,7 +316,7 @@ const ApprovalCenter = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-1">
-                      <Button 
+                      <Button
                         size="sm"
                         onClick={() => handleOwnerApprove(request.id)}
                         className="h-7 text-xs px-2"
@@ -324,7 +324,7 @@ const ApprovalCenter = () => {
                         <CheckCircle className="w-3 h-3 mr-1" />
                         Approve
                       </Button>
-                      <Button 
+                      <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleOwnerReject(request.id)}
@@ -333,7 +333,7 @@ const ApprovalCenter = () => {
                         <RotateCcw className="w-3 h-3 mr-1" />
                         Revert
                       </Button>
-                      <Button 
+                      <Button
                         variant="outline"
                         size="sm"
                         className="h-7 w-7 p-0"
@@ -367,10 +367,10 @@ const ApprovalCenter = () => {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleViewHistory(request.material)}
-                        className="h-6 w-6 p-0 hover:bg-blue-100"
+                        className="h-6 w-6 p-0 hover:bg-secondary/20"
                         title="View Purchase History"
                       >
-                        <History className="w-3 h-3 text-blue-600" />
+                        <History className="w-3 h-3 text-foreground" />
                       </Button>
                     </div>
                     <Badge variant="outline" className="text-xs">
@@ -408,15 +408,15 @@ const ApprovalCenter = () => {
               </div>
 
               <div className="flex gap-2 pt-2 border-t">
-                <Button 
+                <Button
                   onClick={() => handleOwnerApprove(request.id)}
                   className="gap-1 text-xs h-8"
                 >
                   <CheckCircle className="w-3 h-3" />
                   Approve
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => handleOwnerReject(request.id)}
                   className="gap-1 text-xs h-8 text-orange-600 border-orange-200 hover:border-orange-300"
                 >
@@ -441,16 +441,13 @@ const ApprovalCenter = () => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </div>
+
             <div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                Owner Approval Center
-        </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Approve material requests and manage procurement workflow
-        </p>
+
+              <h6 className="text-sm sm:text-1xl md:text-2xl lg:text-3xl font-bold text-foreground mb-1">
+                Approval Center
+              </h6>
+
             </div>
           </div>
         </div>
@@ -458,108 +455,60 @@ const ApprovalCenter = () => {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <Input
+        <div className="flex-1">
+          <Input
             placeholder="Search by material, requester, or request ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full"
-              />
-            </div>
-              
-            </div>
+          />
+        </div>
+
+      </div>
 
       <Tabs defaultValue="owner-approval" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger 
-            value="owner-approval" 
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-          >
-            <Shield className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="truncate">Owner Approval ({filteredOwnerRequests.length})</span>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="approved" 
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-          >
-            <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="truncate">Approved</span>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="ordered" 
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-          >
-            <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="truncate">Ordered</span>
-          </TabsTrigger>
-        </TabsList>
+
 
         {/* Owner Approval Tab */}
         <TabsContent value="owner-approval" className="space-y-3 sm:space-y-4">
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4 mb-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                <h3 className="font-semibold text-purple-900 mb-2 text-sm sm:text-base">Owner Approval</h3>
-                <p className="text-xs sm:text-sm text-purple-800">Review and approve material requests with vendor quotations.</p>
-                  </div>
+
 
               {/* View Mode Toggle */}
               <div className="flex rounded-xl border border-purple-200 overflow-hidden bg-purple-50/50 w-fit shadow-sm">
-                    <Button 
+                <Button
                   variant={ownerViewMode === "list" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setOwnerViewMode("list")}
-                  className={`rounded-none px-3 sm:px-4 ${
-                    ownerViewMode === "list" 
-                      ? "bg-purple-600 text-white hover:bg-purple-700" 
+                  className={`rounded-none px-3 sm:px-4 ${ownerViewMode === "list"
+                      ? "bg-purple-600 text-white hover:bg-purple-700"
                       : "text-purple-600 hover:text-purple-700 hover:bg-purple-100"
-                  }`}
+                    }`}
                 >
                   <List className="w-4 h-4" />
                   <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
-                    </Button>
-                    <Button 
+                </Button>
+                <Button
                   variant={ownerViewMode === "table" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setOwnerViewMode("table")}
-                  className={`rounded-none px-3 sm:px-4 ${
-                    ownerViewMode === "table" 
-                      ? "bg-purple-600 text-white hover:bg-purple-700" 
+                  className={`rounded-none px-3 sm:px-4 ${ownerViewMode === "table"
+                      ? "bg-purple-600 text-white hover:bg-purple-700"
                       : "text-purple-600 hover:text-purple-700 hover:bg-purple-100"
-                  }`}
+                    }`}
                 >
                   <TableIcon className="w-4 h-4" />
                   <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
-                    </Button>
-                  </div>
-                </div>
+                </Button>
+              </div>
+            </div>
           </div>
-          
+
           {/* Render based on view mode */}
           {ownerViewMode === "list" ? <OwnerApprovalListView /> : <OwnerApprovalTableView />}
         </TabsContent>
 
-        {/* Approved Tab */}
-        <TabsContent value="approved" className="space-y-3 sm:space-y-4">
-          <div className="text-center py-8">
-            <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">Approved Requests</h3>
-            <p className="text-muted-foreground">
-              Requests that have been approved and are ready for ordering.
-            </p>
-          </div>
-        </TabsContent>
-
-        {/* Ordered Tab */}
-        <TabsContent value="ordered" className="space-y-3 sm:space-y-4">
-          <div className="text-center py-8">
-            <FileText className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">Ordered Items</h3>
-            <p className="text-muted-foreground">
-              Items that have been ordered and are in procurement process.
-            </p>
-          </div>
-        </TabsContent>
       </Tabs>
 
       {/* Purchase History Dialog */}
@@ -567,12 +516,12 @@ const ApprovalCenter = () => {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <History className="w-5 h-5 text-blue-600" />
+              <History className="w-5 h-5 text-foreground" />
               Purchase History - {currentMaterialName}
             </DialogTitle>
           </DialogHeader>
-          
-                <div className="space-y-4">
+
+          <div className="space-y-4">
             {currentMaterialHistory.length > 0 ? (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
@@ -587,18 +536,18 @@ const ApprovalCenter = () => {
                             <div className="text-sm">
                               <span className="font-medium text-muted-foreground">Purchase ID:</span>
                               <div className="font-medium">{record.id}</div>
-                        </div>
+                            </div>
                             <div className="text-sm">
                               <span className="font-medium text-muted-foreground">Date:</span>
                               <div className="font-medium">{record.date}</div>
-                      </div>
+                            </div>
                             <div className="text-sm">
                               <span className="font-medium text-muted-foreground">Quantity:</span>
                               <div className="font-medium">{record.quantity}</div>
-                    </div>
-                  </div>
+                            </div>
+                          </div>
 
-                  <div className="space-y-2">
+                          <div className="space-y-2">
                             <div className="text-sm">
                               <span className="font-medium text-muted-foreground">Vendor:</span>
                               <div className="font-medium">{record.vendor}</div>
@@ -606,25 +555,25 @@ const ApprovalCenter = () => {
                             <div className="text-sm">
                               <span className="font-medium text-muted-foreground">Contact:</span>
                               <div className="font-medium">{record.vendorContact}</div>
-                    </div>
+                            </div>
                             <div className="text-sm">
                               <span className="font-medium text-muted-foreground">Status:</span>
                               <Badge variant="outline" className="text-xs">
                                 {record.orderStatus}
                               </Badge>
-                    </div>
-                  </div>
+                            </div>
+                          </div>
 
                           <div className="space-y-2">
                             <div className="text-sm">
                               <span className="font-medium text-muted-foreground">Price:</span>
-                              <div className="font-medium text-green-600 text-lg">{record.price}</div>
+                              <div className="font-medium text-primary/80 text-lg">{record.price}</div>
                             </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               </div>
             ) : (

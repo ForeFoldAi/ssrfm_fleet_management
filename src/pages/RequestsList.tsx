@@ -258,7 +258,7 @@ const RequestsList = () => {
               </thead>
               <tbody>
                 {filteredRequests.map((request) => (
-                  <tr key={request.id} className="border-b border-border hover:bg-[#E5E5E5] transition-colors duration-200">
+                  <tr key={request.id} className="border-b border-border hover:bg-accent/20 transition-colors duration-200">
                       <td className="py-2 sm:py-3 px-1 sm:px-2 font-medium text-foreground text-xs sm:text-sm">{request.id}</td>
                       <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground text-xs sm:text-sm truncate max-w-32">{request.material}</td>
                       <td className="py-2 sm:py-3 px-1 sm:px-2 font-semibold text-primary text-xs sm:text-sm">{request.quantity}</td>

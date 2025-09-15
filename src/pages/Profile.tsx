@@ -27,7 +27,7 @@ const Profile = () => {
   const roleConfig = {
     site_supervisor: {
       label: "Site Supervisor",
-      color: "bg-blue-500",
+      color: "bg-secondary/100",
       description: "Operations & Requests Management"
     },
     inventory_manager: {
@@ -268,10 +268,10 @@ const Profile = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Requests Submitted</p>
-                <p className="text-2xl font-bold text-blue-600">24</p>
+                <p className="text-2xl font-bold text-foreground">24</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-secondary/20 rounded-lg flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-foreground" />
               </div>
             </div>
           </CardContent>
@@ -282,10 +282,10 @@ const Profile = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Approved Requests</p>
-                <p className="text-2xl font-bold text-blue-600">22</p>
+                <p className="text-2xl font-bold text-foreground">22</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-blue-600" />
+              <div className="w-12 h-12 bg-secondary/20 rounded-lg flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-foreground" />
               </div>
             </div>
           </CardContent>

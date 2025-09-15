@@ -24,7 +24,7 @@ const AddStock = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "good": return "bg-green-100 text-green-800 border-green-200";
+      case "good": return "bg-primary/10 text-primary border-primary/20";
       case "low": return "bg-yellow-100 text-yellow-800 border-yellow-200";
       case "critical": return "bg-red-100 text-red-800 border-red-200";
       default: return "bg-gray-100 text-gray-800 border-gray-200";
@@ -122,7 +122,7 @@ const AddStock = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5 text-green-600" />
+              <Plus className="w-5 h-5 text-primary/80" />
               Stock Addition Form
             </CardTitle>
           </CardHeader>
@@ -213,7 +213,7 @@ const AddStock = () => {
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full bg-primary hover:bg-primary-hover"
                 disabled={!selectedItem || !quantity || parseInt(quantity) <= 0 || isSubmitting}
               >
                 {isSubmitting ? (
@@ -234,7 +234,7 @@ const AddStock = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Package className="w-5 h-5 text-blue-600" />
+                <Package className="w-5 h-5 text-foreground" />
                 Item Overview & Preview
               </CardTitle>
             </CardHeader>
@@ -263,12 +263,12 @@ const AddStock = () => {
               </div>
 
               {/* Current Stock Status */}
-              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                <h4 className="font-semibold text-blue-800 mb-2">Current Stock Status</h4>
+              <div className="bg-secondary/10 border border-secondary p-4 rounded-lg">
+                <h4 className="font-semibold text-foreground mb-2">Current Stock Status</h4>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="font-medium">Current Stock:</span>
-                    <div className="text-lg font-semibold text-blue-600">
+                    <div className="text-lg font-semibold text-foreground">
                       {selectedItem.currentStock} {selectedItem.unit}
                     </div>
                   </div>
@@ -294,12 +294,12 @@ const AddStock = () => {
 
               {/* Preview After Adding */}
               {quantity && parseInt(quantity) > 0 && (
-                <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-                  <h4 className="font-semibold text-green-800 mb-2">After Adding Stock</h4>
+                <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg">
+                  <h4 className="font-semibold text-primary mb-2">After Adding Stock</h4>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <span className="font-medium">New Stock:</span>
-                      <div className="text-lg font-semibold text-green-600">
+                      <div className="text-lg font-semibold text-primary/80">
                         {selectedItem.currentStock + parseInt(quantity)} {selectedItem.unit}
                       </div>
                     </div>
@@ -316,11 +316,11 @@ const AddStock = () => {
                     </div>
                     <div>
                       <span className="font-medium">Added Quantity:</span>
-                      <div className="text-green-700 font-semibold">+{quantity} {selectedItem.unit}</div>
+                      <div className="text-primary/90 font-semibold">+{quantity} {selectedItem.unit}</div>
                     </div>
                     <div>
                       <span className="font-medium">New Total Value:</span>
-                      <div className="text-green-700 font-semibold">
+                      <div className="text-primary/90 font-semibold">
                         ₹{((selectedItem.currentStock + parseInt(quantity)) * selectedItem.unitPrice).toLocaleString()}
                       </div>
                     </div>
@@ -341,8 +341,8 @@ const AddStock = () => {
                   )}
                   
                   {selectedItem.status === 'critical' && (
-                    <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
-                      <div className="flex items-center gap-2 text-blue-800">
+                    <div className="bg-secondary/10 border border-secondary p-3 rounded-lg">
+                      <div className="flex items-center gap-2 text-foreground">
                         <CheckCircle className="w-4 h-4" />
                         <span className="font-medium text-sm">Great! This will improve the stock status</span>
                       </div>

@@ -68,10 +68,10 @@ export const WorkflowDemo = () => {
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       'pending_approval': { color: 'bg-yellow-100 text-yellow-800', icon: Clock, text: 'Pending Approval' },
-      'approved': { color: 'bg-blue-100 text-blue-800', icon: CheckCircle, text: 'Approved' },
+      'approved': { color: 'bg-secondary/20 text-foreground', icon: CheckCircle, text: 'Approved' },
       'ordered': { color: 'bg-purple-100 text-purple-800', icon: Package, text: 'Ordered' },
-      'partially_received': { color: 'bg-orange-100 text-orange-800', icon: Truck, text: 'Partially Received' },
-      'material_received': { color: 'bg-green-100 text-green-800', icon: CheckCircle, text: 'Material Received' },
+      'partially_received': { color: 'bg-orange-100 text-accent-foreground', icon: Truck, text: 'Partially Received' },
+      'material_received': { color: 'bg-primary/10 text-primary', icon: CheckCircle, text: 'Material Received' },
       'reverted': { color: 'bg-red-100 text-red-800', icon: XCircle, text: 'Reverted' }
     };
 
@@ -104,8 +104,8 @@ export const WorkflowDemo = () => {
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
             isActive 
               ? isCurrent 
-                ? 'bg-blue-600 text-white' 
-                : 'bg-green-600 text-white'
+                ? 'bg-primary text-white' 
+                : 'bg-primary text-white'
               : 'bg-gray-200 text-gray-600'
           }`}>
             {step.stage}
@@ -114,7 +114,7 @@ export const WorkflowDemo = () => {
             {step.label}
           </div>
           {index < steps.length - 1 && (
-            <div className={`w-8 h-0.5 mx-2 ${isActive ? 'bg-green-600' : 'bg-gray-200'}`} />
+            <div className={`w-8 h-0.5 mx-2 ${isActive ? 'bg-primary' : 'bg-gray-200'}`} />
           )}
         </div>
       );
@@ -126,7 +126,7 @@ export const WorkflowDemo = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-600" />
+            <FileText className="w-5 h-5 text-foreground" />
             Material Request Workflow Demo
           </CardTitle>
         </CardHeader>
@@ -177,7 +177,7 @@ export const WorkflowDemo = () => {
               <div className="space-y-2">
                 {demoRequest.statusHistory.map((history: any, index: number) => (
                   <div key={index} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                    <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         {getStatusBadge(history.status)}
@@ -197,9 +197,9 @@ export const WorkflowDemo = () => {
           )}
 
           {/* Workflow Instructions */}
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h4 className="font-medium text-blue-800 mb-2">Workflow Instructions</h4>
-            <div className="text-sm text-blue-700 space-y-1">
+          <div className="p-4 bg-secondary/10 border border-secondary rounded-lg">
+            <h4 className="font-medium text-foreground mb-2">Workflow Instructions</h4>
+            <div className="text-sm text-foreground space-y-1">
               <p><strong>Owner:</strong> Can approve or revert requests in "Pending Approval" status</p>
               <p><strong>Supervisor (after approval):</strong> Updates status from "Approved" to "Ordered"</p>
               <p><strong>Supervisor (after ordering):</strong> Updates material receipt details for "Ordered" requests</p>

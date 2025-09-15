@@ -274,8 +274,8 @@ const StockManagement = () => {
     switch (status) {
       case 'critical': return 'bg-red-500 text-white';
       case 'low': return 'bg-yellow-500 text-white';
-      case 'good': return 'bg-blue-500 text-white';
-      case 'overstocked': return 'bg-blue-500 text-white';
+      case 'good': return 'bg-secondary/100 text-white';
+      case 'overstocked': return 'bg-secondary/100 text-white';
       default: return 'bg-secondary text-secondary-foreground';
     }
   };
@@ -291,7 +291,7 @@ const StockManagement = () => {
   };
 
   const getTypeColor = (type: string) => {
-    return type === 'received' ? 'bg-blue-500 text-white' : 'bg-blue-500 text-white';
+    return type === 'received' ? 'bg-secondary/100 text-white' : 'bg-secondary/100 text-white';
   };
 
   const getTypeIcon = (type: string) => {
@@ -371,9 +371,9 @@ const StockManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Stock Items</p>
-                <p className="text-2xl font-bold text-blue-600">{stockSummary.totalItems}</p>
+                <p className="text-2xl font-bold text-foreground">{stockSummary.totalItems}</p>
               </div>
-              <Package className="w-8 h-8 text-blue-600" />
+              <Package className="w-8 h-8 text-foreground" />
             </div>
           </CardContent>
         </Card>
@@ -382,9 +382,9 @@ const StockManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Stock Value</p>
-                <p className="text-2xl font-bold text-blue-600">₹{(stockSummary.totalValue / 1000).toFixed(0)}K</p>
+                <p className="text-2xl font-bold text-foreground">₹{(stockSummary.totalValue / 1000).toFixed(0)}K</p>
               </div>
-              <TrendingUp className="w-8 h-8 text-blue-600" />
+              <TrendingUp className="w-8 h-8 text-foreground" />
             </div>
           </CardContent>
         </Card>
@@ -537,10 +537,10 @@ const StockManagement = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="font-semibold text-blue-600">{item.unitPrice}</div>
+                          <div className="font-semibold text-foreground">{item.unitPrice}</div>
                         </TableCell>
                         <TableCell>
-                          <div className="font-semibold text-blue-600">{item.totalValue}</div>
+                          <div className="font-semibold text-foreground">{item.totalValue}</div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm max-w-32 truncate" title={item.location}>
@@ -583,9 +583,9 @@ const StockManagement = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Total Received</p>
-                    <p className="text-2xl font-bold text-blue-600">{transactionSummary.totalReceived}</p>
+                    <p className="text-2xl font-bold text-foreground">{transactionSummary.totalReceived}</p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-blue-600" />
+                  <TrendingUp className="w-8 h-8 text-foreground" />
                 </div>
               </CardContent>
             </Card>
@@ -594,9 +594,9 @@ const StockManagement = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Total Issued</p>
-                    <p className="text-2xl font-bold text-blue-600">{transactionSummary.totalIssued}</p>
+                    <p className="text-2xl font-bold text-foreground">{transactionSummary.totalIssued}</p>
                   </div>
-                  <TrendingDown className="w-8 h-8 text-blue-600" />
+                  <TrendingDown className="w-8 h-8 text-foreground" />
                 </div>
               </CardContent>
             </Card>
@@ -616,9 +616,9 @@ const StockManagement = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Transaction Value</p>
-                    <p className="text-2xl font-bold text-blue-600">₹{(transactionSummary.totalTransactionValue / 1000).toFixed(0)}K</p>
+                    <p className="text-2xl font-bold text-foreground">₹{(transactionSummary.totalTransactionValue / 1000).toFixed(0)}K</p>
                   </div>
-                  <FileText className="w-8 h-8 text-blue-600" />
+                  <FileText className="w-8 h-8 text-foreground" />
                 </div>
               </CardContent>
             </Card>
@@ -787,15 +787,15 @@ const StockManagement = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="font-semibold text-blue-600">{transaction.rate}</div>
+                          <div className="font-semibold text-foreground">{transaction.rate}</div>
                         </TableCell>
                         <TableCell>
-                          <div className="font-semibold text-blue-600">{transaction.amount}</div>
+                          <div className="font-semibold text-foreground">{transaction.amount}</div>
                         </TableCell>
                         <TableCell>
                           <div className="text-center">
                             {transaction.receiptQuantity > 0 ? (
-                              <span className="font-semibold text-blue-600">
+                              <span className="font-semibold text-foreground">
                                 +{transaction.receiptQuantity} {transaction.unit}
                               </span>
                             ) : (

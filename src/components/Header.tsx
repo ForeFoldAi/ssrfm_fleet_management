@@ -1,3 +1,4 @@
+import logo from "/logo.png";
 import { NavLink } from "react-router-dom";
 import { Package, FileText, Plus, List, Users, Settings, Shield, Database, Activity, LogOut, Building2 } from "lucide-react";
 import { useRole } from "../contexts/RoleContext";
@@ -171,7 +172,7 @@ export const Header = () => {
           {/* Company Logo and Name */}
           <div className="flex items-center space-x-2 sm:space-x-3">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center shadow-md">
-              <Building2 className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+              <img src={logo} alt="Minar Logo" className="w-4 h-4 sm:w-6 sm:h-6 object-contain" />
             </div>
             <div>
               <h1 className="text-lg sm:text-xl font-bold text-gray-900">SSRFM Industries</h1>
@@ -191,7 +192,7 @@ export const Header = () => {
                   className={({ isActive }) =>
                     `flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                       isActive
-                        ? "bg-blue-50 text-blue-700 border border-blue-200"
+                        ? "bg-secondary/10 text-foreground border border-secondary"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`
                   }

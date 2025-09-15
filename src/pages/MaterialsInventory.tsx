@@ -29,7 +29,7 @@ const MaterialsInventory = () => {
           >
             <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="flex flex-col sm:flex-row sm:items-center sm:gap-1">
-              <span>Material Issues</span>
+              <span>Issues Material</span>
             </span>
           </TabsTrigger>
           <TabsTrigger 
@@ -38,7 +38,7 @@ const MaterialsInventory = () => {
           >
             <Package className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="flex flex-col sm:flex-row sm:items-center sm:gap-1">
-              <span>Materials</span>
+              <span>Outstanding Materials</span>
             </span>
           </TabsTrigger>
           <TabsTrigger 

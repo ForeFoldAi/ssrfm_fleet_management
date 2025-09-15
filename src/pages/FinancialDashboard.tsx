@@ -98,7 +98,7 @@ const FinancialDashboard = () => {
     const colors = {
       success: "bg-success/10 text-success border-success/20",
       primary: "bg-primary/10 text-primary border-primary/20",
-      info: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      info: "bg-secondary/100/10 text-primary border-primary/20",
       warning: "bg-warning/10 text-warning border-warning/20"
     };
     return colors[color as keyof typeof colors] || colors.primary;
@@ -110,11 +110,11 @@ const FinancialDashboard = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "excellent": return "bg-blue-500 text-white";
-      case "good": return "bg-blue-500 text-white";
+      case "excellent": return "bg-secondary/100 text-white";
+      case "good": return "bg-secondary/100 text-white";
       case "fair": return "bg-yellow-500 text-white";
       case "poor": return "bg-red-500 text-white";
-      case "under": return "text-blue-600";
+      case "under": return "text-foreground";
       case "over": return "text-red-600";
       default: return "bg-gray-500 text-white";
     }
@@ -231,7 +231,7 @@ const FinancialDashboard = () => {
                   </div>
                   <div className="w-full bg-secondary rounded-full h-2">
                     <div 
-                      className={`h-2 rounded-full ${expense.status === 'under' ? 'bg-blue-500' : 'bg-red-500'}`}
+                      className={`h-2 rounded-full ${expense.status === 'under' ? 'bg-secondary/100' : 'bg-red-500'}`}
                       style={{ width: `${expense.percentage}%` }}
                     ></div>
                   </div>
@@ -254,7 +254,7 @@ const FinancialDashboard = () => {
           <div className="space-y-4">
             <div className="flex gap-4 text-sm">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-secondary/100 rounded-full"></div>
                 <span>Revenue</span>
               </div>
               <div className="flex items-center gap-2">
@@ -262,7 +262,7 @@ const FinancialDashboard = () => {
                 <span>Expenses</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-secondary/100 rounded-full"></div>
                 <span>Profit</span>
               </div>
             </div>
@@ -274,7 +274,7 @@ const FinancialDashboard = () => {
                   <div className="flex-1 flex items-center gap-2">
                     <div className="flex-1 bg-secondary rounded-full h-2 relative">
                       <div 
-                        className="bg-blue-500 h-2 rounded-full" 
+                        className="bg-secondary/100 h-2 rounded-full" 
                         style={{ width: `${(data.revenue / 10) * 100}%` }}
                       ></div>
                     </div>
@@ -292,7 +292,7 @@ const FinancialDashboard = () => {
                   <div className="flex-1 flex items-center gap-2">
                     <div className="flex-1 bg-secondary rounded-full h-2 relative">
                       <div 
-                        className="bg-blue-500 h-2 rounded-full" 
+                        className="bg-secondary/100 h-2 rounded-full" 
                         style={{ width: `${(data.profit / 5) * 100}%` }}
                       ></div>
                     </div>
@@ -331,7 +331,7 @@ const FinancialDashboard = () => {
                     <div 
                       className={`h-2 rounded-full ${
                         budget.utilization > 95 ? 'bg-red-500' :
-                        budget.utilization > 85 ? 'bg-yellow-500' : 'bg-blue-500'
+                        budget.utilization > 85 ? 'bg-yellow-500' : 'bg-secondary/100'
                       }`}
                       style={{ width: `${budget.utilization}%` }}
                     ></div>
@@ -387,7 +387,7 @@ const FinancialDashboard = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Inflow:</span>
-                    <span className="font-medium text-blue-600">{flow.inflow}</span>
+                    <span className="font-medium text-foreground">{flow.inflow}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Outflow:</span>
@@ -395,7 +395,7 @@ const FinancialDashboard = () => {
                   </div>
                   <div className="flex justify-between border-t pt-2">
                     <span className="font-medium">Net:</span>
-                    <span className={`font-bold ${flow.net.startsWith('+') ? 'text-blue-600' : 'text-red-600'}`}>
+                    <span className={`font-bold ${flow.net.startsWith('+') ? 'text-foreground' : 'text-red-600'}`}>
                       {flow.net}
                     </span>
                   </div>

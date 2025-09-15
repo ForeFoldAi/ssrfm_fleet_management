@@ -62,7 +62,7 @@ const OrganizationalManagement = () => {
     const colors = {
       success: "bg-success/10 text-success border-success/20",
       primary: "bg-primary/10 text-primary border-primary/20",
-      info: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      info: "bg-secondary/100/10 text-primary border-primary/20",
       warning: "bg-warning/10 text-warning border-warning/20"
     };
     return colors[color as keyof typeof colors] || colors.primary;
@@ -157,7 +157,7 @@ const OrganizationalManagement = () => {
                         <span className="font-medium">{dept.satisfaction}%</span>
                         <div className="w-16 bg-secondary rounded-full h-1.5">
                           <div 
-                            className="bg-blue-500 h-1.5 rounded-full" 
+                            className="bg-secondary/100 h-1.5 rounded-full" 
                             style={{ width: `${dept.satisfaction}%` }}
                           ></div>
                         </div>
@@ -168,14 +168,14 @@ const OrganizationalManagement = () => {
                         <span className="font-medium">{dept.productivity}%</span>
                         <div className="w-16 bg-secondary rounded-full h-1.5">
                           <div 
-                            className="bg-blue-500 h-1.5 rounded-full" 
+                            className="bg-secondary/100 h-1.5 rounded-full" 
                             style={{ width: `${dept.productivity}%` }}
                           ></div>
                         </div>
                       </div>
                     </td>
                     <td className="py-3 px-2">
-                      <span className={`font-medium ${dept.turnover > 4 ? 'text-red-600' : dept.turnover > 2 ? 'text-yellow-600' : 'text-blue-600'}`}>
+                      <span className={`font-medium ${dept.turnover > 4 ? 'text-red-600' : dept.turnover > 2 ? 'text-yellow-600' : 'text-foreground'}`}>
                         {dept.turnover}%
                       </span>
                     </td>
@@ -197,12 +197,12 @@ const OrganizationalManagement = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+            <div className="p-4 rounded-lg bg-secondary/10 border border-secondary">
               <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="w-4 h-4 text-blue-600" />
-                <span className="font-semibold text-blue-800">Strengths</span>
+                <CheckCircle className="w-4 h-4 text-foreground" />
+                <span className="font-semibold text-foreground">Strengths</span>
               </div>
-              <p className="text-sm text-blue-700">High employee satisfaction (87.5%) and retention rate (94.2%). R&D department showing exceptional performance with 95% satisfaction.</p>
+              <p className="text-sm text-foreground">High employee satisfaction (87.5%) and retention rate (94.2%). R&D department showing exceptional performance with 95% satisfaction.</p>
             </div>
             
             <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
@@ -213,12 +213,12 @@ const OrganizationalManagement = () => {
               <p className="text-sm text-yellow-700">Maintenance department shows higher turnover (4.1%). Need to accelerate hiring for 12 open positions across departments.</p>
             </div>
             
-            <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+            <div className="p-4 rounded-lg bg-secondary/10 border border-secondary">
               <div className="flex items-center gap-2 mb-2">
-                <Target className="w-4 h-4 text-blue-600" />
-                <span className="font-semibold text-blue-800">Recommendations</span>
+                <Target className="w-4 h-4 text-foreground" />
+                <span className="font-semibold text-foreground">Recommendations</span>
               </div>
-              <p className="text-sm text-blue-700">Implement retention strategies for maintenance team. Expand leadership development program. Fast-track technical skills training.</p>
+              <p className="text-sm text-foreground">Implement retention strategies for maintenance team. Expand leadership development program. Fast-track technical skills training.</p>
             </div>
           </div>
         </CardContent>

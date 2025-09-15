@@ -45,11 +45,11 @@ const Analytics = () => {
   ];
 
   const categoryData = [
-    { name: "Raw Materials", value: 35, amount: "₹2.96M", color: "#3b82f6" },
-    { name: "Components", value: 25, amount: "₹2.12M", color: "#10b981" },
-    { name: "Consumables", value: 20, amount: "₹1.69M", color: "#f59e0b" },
-    { name: "Safety Equipment", value: 12, amount: "₹1.02M", color: "#ef4444" },
-    { name: "Tools & Hardware", value: 8, amount: "₹0.68M", color: "#8b5cf6" }
+    { name: "Raw Materials", value: 35, amount: "₹2.96M", color: "hsl(var(--primary))" },
+    { name: "Components", value: 25, amount: "₹2.12M", color: "hsl(var(--primary))" },
+    { name: "Consumables", value: 20, amount: "₹1.69M", color: "hsl(var(--warning))" },
+    { name: "Safety Equipment", value: 12, amount: "₹1.02M", color: "hsl(var(--destructive))" },
+    { name: "Tools & Hardware", value: 8, amount: "₹0.68M", color: "hsl(var(--accent))" }
   ];
 
   const monthlyTrends = [
@@ -81,7 +81,7 @@ const Analytics = () => {
     const colors = {
       success: "bg-success/10 text-success border-success/20",
       primary: "bg-primary/10 text-primary border-primary/20",
-      info: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      info: "bg-secondary/100/10 text-primary border-primary/20",
       warning: "bg-warning/10 text-warning border-warning/20"
     };
     return colors[color as keyof typeof colors] || colors.primary;

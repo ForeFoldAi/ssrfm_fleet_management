@@ -111,7 +111,7 @@ const InventoryManagerDashboard = () => {
     switch (priority) {
       case 'high': return 'bg-red-500 text-white';
       case 'medium': return 'bg-yellow-500 text-white';
-      case 'low': return 'bg-blue-500 text-white';
+      case 'low': return 'bg-secondary/100 text-white';
       default: return 'bg-secondary text-secondary-foreground';
     }
   };
@@ -120,7 +120,7 @@ const InventoryManagerDashboard = () => {
     switch (status) {
       case 'critical': return 'bg-red-500 text-white';
       case 'low': return 'bg-orange-500 text-white';
-      case 'sufficient': return 'bg-blue-500 text-white';
+      case 'sufficient': return 'bg-secondary/100 text-white';
       default: return 'bg-secondary text-secondary-foreground';
     }
   };

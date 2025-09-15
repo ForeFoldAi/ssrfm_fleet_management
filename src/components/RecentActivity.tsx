@@ -158,7 +158,7 @@ export const RecentActivity = () => {
             </thead>
             <tbody>
               {filteredActivities.map((activity) => (
-                <tr key={activity.id} className="border-b border-border hover:bg-[#E5E5E5] transition-colors duration-200">
+                <tr key={activity.id} className="border-b border-border hover:bg-accent/20 transition-colors duration-200">
                   <td className="py-3 px-2 font-medium text-foreground">{activity.type}</td>
                   <td className="py-3 px-2 text-muted-foreground">{activity.description}</td>
                   <td className="py-3 px-2">

@@ -1,3 +1,4 @@
+import logo from "/logo.png";
 import { useState } from "react";
 import { Package, Save, X, User, Calendar, CheckCircle, AlertCircle, FileText, Building2, Trash2, Plus } from "lucide-react";
 import { Button } from "./ui/button";
@@ -292,8 +293,8 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
       <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-4">
         <DialogHeader className="pb-3">
           <DialogTitle className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-4 h-4 text-blue-600" />
+            <div className="w-8 h-8 bg-secondary/20 rounded-lg flex items-center justify-center">
+              <FileText className="w-4 h-4 text-foreground" />
             </div>
             <div>
               <div className="text-base font-bold">MATERIAL ISSUE FORM</div>
@@ -305,13 +306,13 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
 
         <form onSubmit={handleSubmit} className="space-y-3">
           {/* Company Header - Compact */}
-          <Card className="bg-blue-50 border-blue-200">
+          <Card className="bg-secondary/10 border-secondary">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-3">
-                <Building2 className="w-5 h-5 text-blue-600" />
+                <img src={logo} alt="Minar Logo" className="w-5 h-5 object-contain" />
                 <div>
-                  <h1 className="text-lg font-bold text-blue-800">SREE SAI ROLLER FLOUR MILLS PVT LTD</h1>
-                  <p className="text-sm text-blue-600">MATERIAL ISSUE FORM AGAINST REQUISITION AND INDENT FORM</p>
+                  <h1 className="text-lg font-bold text-foreground">SREE SAI ROLLER FLOUR MILLS PVT LTD</h1>
+                  <p className="text-sm text-foreground">MATERIAL ISSUE FORM AGAINST REQUISITION AND INDENT FORM</p>
                 </div>
               </div>
               

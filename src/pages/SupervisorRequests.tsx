@@ -845,12 +845,12 @@ const SupervisorRequests = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending_approval': return 'bg-yellow-500 text-white';
-      case 'approved': return 'bg-blue-500 text-white';
+      case 'approved': return 'bg-secondary/100 text-white';
       case 'ordered': return 'bg-purple-500 text-white';
       case 'partially_received': return 'bg-orange-500 text-white';
-      case 'material_received': return 'bg-green-500 text-white';
+      case 'material_received': return 'bg-primary text-white';
       case 'issued': return 'bg-orange-500 text-white';
-      case 'completed': return 'bg-green-600 text-white';
+      case 'completed': return 'bg-primary text-white';
       case 'rejected': return 'bg-red-500 text-white';
       case 'reverted': return 'bg-red-600 text-white';
       default: return 'bg-secondary text-secondary-foreground';
@@ -861,18 +861,18 @@ const SupervisorRequests = () => {
     switch (priority) {
       case 'high': return 'bg-red-500 text-white';
       case 'medium': return 'bg-yellow-500 text-white';
-      case 'low': return 'bg-blue-500 text-white';
+      case 'low': return 'bg-secondary/100 text-white';
       default: return 'bg-secondary text-secondary-foreground';
     }
   };
 
   const getProgressColor = (stage: number) => {
     switch (stage) {
-      case 1: return 'bg-blue-500';
-      case 2: return 'bg-blue-500';
+      case 1: return 'bg-secondary/100';
+      case 2: return 'bg-secondary/100';
       case 3: return 'bg-purple-500';
       case 4: return 'bg-orange-500';
-      case 5: return 'bg-blue-600';
+      case 5: return 'bg-primary';
       default: return 'bg-gray-300';
     }
   };
@@ -1059,10 +1059,10 @@ const SupervisorRequests = () => {
                     <TableCell>
                       <div className={`text-sm px-2 py-1 rounded ${
                         request.status === 'pending_approval' ? 'bg-yellow-100 text-yellow-800' :
-                        request.status === 'approved' ? 'bg-blue-100 text-blue-800' :
+                        request.status === 'approved' ? 'bg-secondary/20 text-foreground' :
                         request.status === 'ordered' ? 'bg-purple-100 text-purple-800' :
-                        request.status === 'issued' ? 'bg-orange-100 text-orange-800' :
-                        request.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        request.status === 'issued' ? 'bg-orange-100 text-accent-foreground' :
+                        request.status === 'completed' ? 'bg-primary/10 text-primary' :
                         'bg-red-100 text-red-800'
                       }`}>
                         {request.expectedDelivery || request.issuedDate || request.completedDate || 'N/A'}
@@ -1146,11 +1146,11 @@ const SupervisorRequests = () => {
                                   
                                   {/* Status-specific information */}
                                   {request.status === 'approved' && (
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <div className="bg-secondary/10 border border-secondary rounded-lg p-3">
                                       <div className="text-sm">
-                                        <strong className="text-blue-800">Approved:</strong> {request.approvedBy} on {request.approvedDate}
+                                        <strong className="text-foreground">Approved:</strong> {request.approvedBy} on {request.approvedDate}
                                       </div>
-                                      <div className="text-xs text-blue-600 mt-1">Ready for procurement</div>
+                                      <div className="text-xs text-foreground mt-1">Ready for procurement</div>
                                     </div>
                                   )}
 
@@ -1167,23 +1167,23 @@ const SupervisorRequests = () => {
                                   {request.status === 'partially_received' && (
                                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                                       <div className="text-sm space-y-1">
-                                        <div><strong className="text-orange-800">Partially Received:</strong> {request.receivedDate}</div>
-                                        <div><strong className="text-orange-800">Received Quantity:</strong> {request.purchasedQuantity} of {request.quantity}</div>
-                                        <div><strong className="text-orange-800">Supplier:</strong> {request.purchasedFrom}</div>
-                                        <div><strong className="text-orange-800">Invoice:</strong> {request.invoiceNumber}</div>
-                                        {request.notes && <div><strong className="text-orange-800">Notes:</strong> {request.notes}</div>}
+                                        <div><strong className="text-accent-foreground">Partially Received:</strong> {request.receivedDate}</div>
+                                        <div><strong className="text-accent-foreground">Received Quantity:</strong> {request.purchasedQuantity} of {request.quantity}</div>
+                                        <div><strong className="text-accent-foreground">Supplier:</strong> {request.purchasedFrom}</div>
+                                        <div><strong className="text-accent-foreground">Invoice:</strong> {request.invoiceNumber}</div>
+                                        {request.notes && <div><strong className="text-accent-foreground">Notes:</strong> {request.notes}</div>}
                                       </div>
                                     </div>
                                   )}
 
                                   {request.status === 'material_received' && (
-                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
                                       <div className="text-sm space-y-1">
-                                        <div><strong className="text-green-800">Received:</strong> {request.receivedDate}</div>
-                                        <div><strong className="text-green-800">Quantity:</strong> {request.purchasedQuantity} {request.quantity.split(' ').slice(1).join(' ')}</div>
-                                        <div><strong className="text-green-800">Total Cost:</strong> ₹{request.purchasedPrice}</div>
-                                        <div><strong className="text-green-800">Supplier:</strong> {request.purchasedFrom}</div>
-                                        <div><strong className="text-green-800">Quality Check:</strong> {request.qualityCheck}</div>
+                                        <div><strong className="text-primary">Received:</strong> {request.receivedDate}</div>
+                                        <div><strong className="text-primary">Quantity:</strong> {request.purchasedQuantity} {request.quantity.split(' ').slice(1).join(' ')}</div>
+                                        <div><strong className="text-primary">Total Cost:</strong> ₹{request.purchasedPrice}</div>
+                                        <div><strong className="text-primary">Supplier:</strong> {request.purchasedFrom}</div>
+                                        <div><strong className="text-primary">Quality Check:</strong> {request.qualityCheck}</div>
                                       </div>
                                     </div>
                                   )}
@@ -1191,20 +1191,20 @@ const SupervisorRequests = () => {
                                   {request.status === 'issued' && (
                                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                                       <div className="text-sm space-y-1">
-                                        <div><strong className="text-orange-800">Issued:</strong> {request.issuedDate}</div>
-                                        <div><strong className="text-orange-800">Received By:</strong> {request.receivedBy}</div>
-                                        <div><strong className="text-orange-800">Delivered:</strong> {request.deliveredDate}</div>
+                                        <div><strong className="text-accent-foreground">Issued:</strong> {request.issuedDate}</div>
+                                        <div><strong className="text-accent-foreground">Received By:</strong> {request.receivedBy}</div>
+                                        <div><strong className="text-accent-foreground">Delivered:</strong> {request.deliveredDate}</div>
                                       </div>
                                     </div>
                                   )}
 
                                   {request.status === 'completed' && (
-                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <div className="bg-secondary/10 border border-secondary rounded-lg p-3">
                                       <div className="text-sm space-y-1">
-                                        <div><strong className="text-blue-800">Completed:</strong> {request.completedDate}</div>
-                                        <div><strong className="text-blue-800">Received By:</strong> {request.receivedBy}</div>
+                                        <div><strong className="text-foreground">Completed:</strong> {request.completedDate}</div>
+                                        <div><strong className="text-foreground">Received By:</strong> {request.receivedBy}</div>
                                         {request.completionNotes && (
-                                          <div><strong className="text-blue-800">Notes:</strong> {request.completionNotes}</div>
+                                          <div><strong className="text-foreground">Notes:</strong> {request.completionNotes}</div>
                                         )}
                                       </div>
                                     </div>
@@ -1381,29 +1381,25 @@ const SupervisorRequests = () => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-              <List className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </div>
+            
             <div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                Outstanding Materials
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Track and manage your material requests
-              </p>
+              
+              <h1 className="text-sm sm:text-1xl md:text-2xl lg:text-3xl font-bold text-foreground mb-1">
+              Outstanding Materials
+        </h1>
             </div>
           </div>
           
           {/* List/Table Toggle - Now beside the heading */}
-          <div className="flex rounded-xl border border-blue-200 overflow-hidden bg-blue-50/50 w-fit shadow-sm">
+          <div className="flex rounded-xl border border-secondary overflow-hidden bg-secondary/10/50 w-fit shadow-sm">
             <Button
               variant={viewMode === "list" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("list")}
               className={`rounded-none px-3 sm:px-4 ${
                 viewMode === "list" 
-                  ? "bg-blue-600 text-white hover:bg-blue-700" 
-                  : "text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                  ? "bg-primary text-white hover:bg-primary-hover" 
+                  : "text-foreground hover:text-foreground hover:bg-secondary/20"
               }`}
             >
               <List className="w-4 h-4" />
@@ -1415,8 +1411,8 @@ const SupervisorRequests = () => {
               onClick={() => setViewMode("table")}
               className={`rounded-none px-3 sm:px-4 ${
                 viewMode === "table" 
-                  ? "bg-blue-600 text-white hover:bg-blue-700" 
-                  : "text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                  ? "bg-primary text-white hover:bg-primary-hover" 
+                  : "text-foreground hover:text-foreground hover:bg-secondary/20"
               }`}
             >
               <TableIcon className="w-4 h-4" />
@@ -1429,19 +1425,19 @@ const SupervisorRequests = () => {
           {/* Search Bar */}
           <div className="flex-1 lg:max-w-md">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary/80 w-4 h-4" />
               <Input
                 placeholder="Search by material, request ID, or maker..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 border-blue-200 focus:border-blue-500 focus:ring-blue-500/20"
+                className="w-full pl-10 border-secondary focus:border-primary focus:ring-primary/20"
               />
             </div>
           </div>
           
           {/* Status Filter */}
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-full sm:w-48 border-blue-200 focus:border-blue-500 focus:ring-blue-500/20">
+            <SelectTrigger className="w-full sm:w-48 border-secondary focus:border-primary focus:ring-primary/20">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
@@ -1474,7 +1470,7 @@ const SupervisorRequests = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="order-status" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 h-auto p-1 sm:p-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-sm">
+        <TabsList className="grid w-full grid-cols-1 h-auto p-1 sm:p-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-secondary rounded-xl shadow-sm">
            
         </TabsList>
 

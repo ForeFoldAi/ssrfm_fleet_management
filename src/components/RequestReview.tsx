@@ -119,8 +119,8 @@ export const RequestReview = ({ formData, onBack }: RequestReviewProps) => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <Eye className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-600">Proof image attached</span>
+                        <Eye className="w-4 h-4 text-foreground" />
+                        <span className="text-sm font-medium text-foreground">Proof image attached</span>
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {formData.proofImageName || "material-proof.jpg"}
@@ -187,8 +187,8 @@ export const RequestReview = ({ formData, onBack }: RequestReviewProps) => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
-                          <Eye className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-600">Machine proof attached</span>
+                          <Eye className="w-4 h-4 text-foreground" />
+                          <span className="text-sm font-medium text-foreground">Machine proof attached</span>
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {formData.machineProofImageName || "machine-proof.jpg"}
@@ -207,16 +207,16 @@ export const RequestReview = ({ formData, onBack }: RequestReviewProps) => {
 
         {/* Proof Images Summary */}
         {(formData.proofImagePreview || formData.machineProofImagePreview) && (
-          <div className="card-friendly p-6 bg-blue-50/50 border-blue-200">
+          <div className="card-friendly p-6 bg-secondary/10 border-secondary">
             <div className="flex items-center gap-3 mb-4">
-              <ImageIcon className="w-6 h-6 text-blue-600" />
-              <h3 className="text-xl font-bold text-blue-900">Attached Evidence</h3>
+              <ImageIcon className="w-6 h-6 text-foreground" />
+              <h3 className="text-xl font-bold text-foreground">Attached Evidence</h3>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {formData.proofImagePreview && (
                 <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Package className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-secondary/20 rounded-lg flex items-center justify-center">
+                    <Package className="w-6 h-6 text-foreground" />
                   </div>
                   <div>
                     <p className="font-medium text-foreground">Material Proof</p>
@@ -226,8 +226,8 @@ export const RequestReview = ({ formData, onBack }: RequestReviewProps) => {
               )}
               {formData.machineProofImagePreview && (
                 <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Settings className="w-6 h-6 text-blue-600" />
+                  <div className="w-12 h-12 bg-secondary/20 rounded-lg flex items-center justify-center">
+                    <Settings className="w-6 h-6 text-foreground" />
                   </div>
                   <div>
                     <p className="font-medium text-foreground">Machine Proof</p>

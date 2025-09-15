@@ -741,15 +741,15 @@ const MaterialRequest = () => {
         </div>
         
         {/* List/Table Toggle */}
-        <div className="flex rounded-xl border border-blue-200 overflow-hidden bg-blue-50/50 w-fit shadow-sm">
+        <div className="flex rounded-xl border border-secondary overflow-hidden bg-secondary/10/50 w-fit shadow-sm">
           <Button
             variant={viewMode === "list" ? "default" : "ghost"}
             size="sm"
             onClick={() => setViewMode("list")}
             className={`rounded-none px-3 sm:px-4 ${
               viewMode === "list" 
-                ? "bg-blue-600 text-white hover:bg-blue-700" 
-                : "text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                ? "bg-primary text-white hover:bg-primary-hover" 
+                : "text-foreground hover:text-foreground hover:bg-secondary/20"
             }`}
           >
             <List className="w-4 h-4" />
@@ -761,8 +761,8 @@ const MaterialRequest = () => {
             onClick={() => setViewMode("table")}
             className={`rounded-none px-3 sm:px-4 ${
               viewMode === "table" 
-                ? "bg-blue-600 text-white hover:bg-blue-700" 
-                : "text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+                ? "bg-primary text-white hover:bg-primary-hover" 
+                : "text-foreground hover:text-foreground hover:bg-secondary/20"
             }`}
           >
             <TableIcon className="w-4 h-4" />
@@ -773,13 +773,13 @@ const MaterialRequest = () => {
 
       <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Company Header */}
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="bg-secondary/10 border-secondary">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3 mb-4">
-              <Building2 className="w-6 h-6 text-blue-600" />
+              <Building2 className="w-6 h-6 text-foreground" />
               <div>
-                <h1 className="text-2xl font-bold text-blue-800">SREE SAI ROLLER FLOUR MILLS PVT LTD</h1>
-                <p className="text-lg text-blue-600">MATERIAL INDENT FORM</p>
+                <h1 className="text-2xl font-bold text-foreground">SREE SAI ROLLER FLOUR MILLS PVT LTD</h1>
+                <p className="text-lg text-foreground">MATERIAL INDENT FORM</p>
               </div>
             </div>
             
@@ -842,7 +842,7 @@ const MaterialRequest = () => {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <IndianRupee className="w-5 h-5 text-green-600" />
+              <IndianRupee className="w-5 h-5 text-primary/80" />
               Add Vendor Quotation
             </DialogTitle>
           </DialogHeader>
@@ -937,7 +937,7 @@ const MaterialRequest = () => {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Eye className="w-5 h-5 text-blue-600" />
+              <Eye className="w-5 h-5 text-foreground" />
               Vendor Quotations
             </DialogTitle>
           </DialogHeader>
@@ -965,7 +965,7 @@ const MaterialRequest = () => {
                         </div>
                         <div>
                           <span className="font-medium text-muted-foreground">Price:</span>
-                          <div className="font-medium text-green-600">{quotation.quotedPrice}</div>
+                          <div className="font-medium text-primary/80">{quotation.quotedPrice}</div>
                         </div>
                       </div>
                       
@@ -981,9 +981,9 @@ const MaterialRequest = () => {
                       {quotation.quotationFile && (
                         <div>
                           <span className="font-medium text-muted-foreground text-sm">Quotation File:</span>
-                          <div className="text-sm mt-1 p-2 bg-blue-50 rounded border border-blue-200">
+                          <div className="text-sm mt-1 p-2 bg-secondary/10 rounded border border-secondary">
                             <div className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-blue-600" />
+                              <FileText className="w-4 h-4 text-foreground" />
                               <span className="font-medium">{quotation.quotationFile.name}</span>
                             </div>
                           </div>

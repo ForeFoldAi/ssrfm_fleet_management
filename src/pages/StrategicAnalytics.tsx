@@ -109,7 +109,7 @@ const StrategicAnalytics = () => {
     const colors = {
       success: "bg-success/10 text-success border-success/20",
       primary: "bg-primary/10 text-primary border-primary/20",
-      info: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      info: "bg-secondary/100/10 text-primary border-primary/20",
       warning: "bg-warning/10 text-warning border-warning/20"
     };
     return colors[color as keyof typeof colors] || colors.primary;
@@ -121,12 +121,12 @@ const StrategicAnalytics = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "excellent": return "bg-blue-500 text-white";
-      case "good": return "bg-blue-500 text-white";
+      case "excellent": return "bg-secondary/100 text-white";
+      case "good": return "bg-secondary/100 text-white";
       case "fair": return "bg-yellow-500 text-white";
       case "poor": return "bg-red-500 text-white";
-      case "on-track": return "bg-blue-500 text-white";
-      case "ahead": return "bg-blue-500 text-white";
+      case "on-track": return "bg-secondary/100 text-white";
+      case "ahead": return "bg-secondary/100 text-white";
       case "behind": return "bg-red-500 text-white";
       default: return "bg-gray-500 text-white";
     }
@@ -134,7 +134,7 @@ const StrategicAnalytics = () => {
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case "Low": return "text-blue-600";
+      case "Low": return "text-foreground";
       case "Medium": return "text-yellow-600";
       case "High": return "text-red-600";
       default: return "text-gray-600";
@@ -257,8 +257,8 @@ const StrategicAnalytics = () => {
                   <div className="w-full bg-secondary rounded-full h-2">
                     <div 
                       className={`h-2 rounded-full ${
-                        goal.status === 'ahead' ? 'bg-blue-500' :
-                        goal.status === 'on-track' ? 'bg-blue-500' : 'bg-red-500'
+                        goal.status === 'ahead' ? 'bg-secondary/100' :
+                        goal.status === 'on-track' ? 'bg-secondary/100' : 'bg-red-500'
                       }`}
                       style={{ width: `${goal.progress}%` }}
                     ></div>
@@ -336,12 +336,12 @@ const StrategicAnalytics = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+            <div className="p-4 rounded-lg bg-secondary/10 border border-secondary">
               <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="w-4 h-4 text-blue-600" />
-                <span className="font-semibold text-blue-800">Key Achievements</span>
+                <CheckCircle className="w-4 h-4 text-foreground" />
+                <span className="font-semibold text-foreground">Key Achievements</span>
               </div>
-              <p className="text-sm text-blue-700">Revenue growth exceeded targets by 4.2%. Digital transformation initiative ahead of schedule with 89% completion.</p>
+              <p className="text-sm text-foreground">Revenue growth exceeded targets by 4.2%. Digital transformation initiative ahead of schedule with 89% completion.</p>
             </div>
             
             <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
@@ -352,12 +352,12 @@ const StrategicAnalytics = () => {
               <p className="text-sm text-yellow-700">Sustainability initiative behind schedule. Maintenance department efficiency needs improvement. Monitor regulatory risk closely.</p>
             </div>
             
-            <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+            <div className="p-4 rounded-lg bg-secondary/10 border border-secondary">
               <div className="flex items-center gap-2 mb-2">
-                <Target className="w-4 h-4 text-blue-600" />
-                <span className="font-semibold text-blue-800">Strategic Recommendations</span>
+                <Target className="w-4 h-4 text-foreground" />
+                <span className="font-semibold text-foreground">Strategic Recommendations</span>
               </div>
-              <p className="text-sm text-blue-700">Accelerate market expansion to capture 20% market share. Invest in maintenance automation. Strengthen compliance framework.</p>
+              <p className="text-sm text-foreground">Accelerate market expansion to capture 20% market share. Invest in maintenance automation. Strengthen compliance framework.</p>
             </div>
           </div>
         </CardContent>

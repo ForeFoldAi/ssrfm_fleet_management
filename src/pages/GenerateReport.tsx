@@ -121,7 +121,7 @@ const GenerateReport = () => {
       primary: "bg-primary/10 text-primary border-primary/20",
       warning: "bg-warning/10 text-warning border-warning/20",
       success: "bg-success/10 text-success border-success/20",
-      info: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+      info: "bg-secondary/100/10 text-primary border-primary/20",
       secondary: "bg-secondary/10 text-secondary-foreground border-secondary/20",
       accent: "bg-purple-500/10 text-purple-500 border-purple-500/20"
     };

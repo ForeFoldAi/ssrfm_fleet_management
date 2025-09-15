@@ -91,7 +91,7 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Edit className="w-5 h-5 text-blue-600" />
+            <Edit className="w-5 h-5 text-foreground" />
             Resubmit Request - {request?.id}
           </DialogTitle>
         </DialogHeader>
@@ -252,9 +252,9 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
           </Card>
 
           {/* Resubmission Notes */}
-          <Card className="border-blue-200 bg-blue-50">
+          <Card className="border-secondary bg-secondary/10">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-blue-800">Resubmission Notes</CardTitle>
+              <CardTitle className="text-lg text-foreground">Resubmission Notes</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-2">
@@ -271,20 +271,20 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
                   <p className="text-red-500 text-sm">{errors.resubmissionNotes}</p>
                 )}
               </div>
-              <div className="text-sm text-blue-700">
+              <div className="text-sm text-foreground">
                 <strong>Note:</strong> Please be specific about how you have addressed each point raised in the revert reason.
               </div>
             </CardContent>
           </Card>
 
           {/* Summary */}
-          <Card className="bg-green-50 border-green-200">
+          <Card className="bg-primary/5 border-primary/20">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                <CheckCircle className="w-5 h-5 text-primary/80 mt-0.5" />
                 <div>
-                  <div className="font-medium text-green-800">Resubmission Summary</div>
-                  <div className="text-sm text-green-700 mt-1">
+                  <div className="font-medium text-primary">Resubmission Summary</div>
+                  <div className="text-sm text-primary/90 mt-1">
                     <div>Request ID: {request?.id}</div>
                     <div>Material: {formData.materialName}</div>
                     <div>Quantity: {formData.quantity}</div>
@@ -299,7 +299,7 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
 
           {/* Form Actions */}
           <div className="flex justify-center gap-3 pt-4">
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button type="submit" className="bg-primary hover:bg-primary-hover text-white">
               <Send className="w-4 h-4 mr-2" />
               Resubmit Request
             </Button>

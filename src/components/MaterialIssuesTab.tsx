@@ -247,7 +247,7 @@ export const MaterialIssuesTab = () => {
                         <TableCell className="text-sm">{issue.department}</TableCell>
                         <TableCell className="text-sm">{new Date(issue.issuedDate).toLocaleDateString()}</TableCell>
                         <TableCell>
-                          <Badge className="bg-green-100 text-green-800 border-green-200">
+                          <Badge className="bg-primary/10 text-primary border-primary/20">
                             <CheckSquare className="w-3 h-3 mr-1" />
                             Issued
                           </Badge>
@@ -316,7 +316,7 @@ export const MaterialIssuesTab = () => {
                             <div className="text-xs text-muted-foreground">{issue.issuingPersonDesignation}</div>
                           </TableCell>
                           <TableCell>
-                            <Badge className="bg-green-100 text-green-800 border-green-200" variant="secondary">
+                            <Badge className="bg-primary/10 text-primary border-primary/20" variant="secondary">
                               <span className="flex items-center gap-1">
                                 <CheckSquare className="w-3 h-3" />
                                 <span className="text-xs">Issued</span>
@@ -328,7 +328,7 @@ export const MaterialIssuesTab = () => {
                             <div className="text-xs text-muted-foreground">Completed</div>
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm px-2 py-1 rounded bg-blue-100 text-blue-800">
+                            <div className="text-sm px-2 py-1 rounded bg-secondary/20 text-foreground">
                               {issue.issuedQuantity} {issue.unit} issued
                             </div>
                           </TableCell>
@@ -402,28 +402,28 @@ export const MaterialIssuesTab = () => {
                                         </div>
                                         
                                         {/* Issuing Person Info */}
-                                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
                                           <div className="text-sm">
-                                            <strong className="text-green-800">Issued By:</strong> {issue.issuingPersonName}
+                                            <strong className="text-primary">Issued By:</strong> {issue.issuingPersonName}
                                           </div>
-                                          <div className="text-xs text-green-600 mt-1">{issue.issuingPersonDesignation}</div>
+                                          <div className="text-xs text-primary/80 mt-1">{issue.issuingPersonDesignation}</div>
                                         </div>
 
                                         {/* Recipient Info */}
-                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                        <div className="bg-secondary/10 border border-secondary rounded-lg p-3">
                                           <div className="text-sm space-y-1">
-                                            <div><strong className="text-blue-800">Received By:</strong> {issue.recipientName}</div>
-                                            <div><strong className="text-blue-800">Designation:</strong> {issue.recipientDesignation}</div>
-                                            <div><strong className="text-blue-800">Employee ID:</strong> {issue.recipientId}</div>
+                                            <div><strong className="text-foreground">Received By:</strong> {issue.recipientName}</div>
+                                            <div><strong className="text-foreground">Designation:</strong> {issue.recipientDesignation}</div>
+                                            <div><strong className="text-foreground">Employee ID:</strong> {issue.recipientId}</div>
                                           </div>
                                         </div>
 
                                         {/* Stock Information */}
                                         <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                                           <div className="text-sm space-y-1">
-                                            <div><strong className="text-orange-800">Quantity Issued:</strong> {issue.issuedQuantity} {issue.unit}</div>
-                                            <div><strong className="text-orange-800">Department:</strong> {issue.department}</div>
-                                            <div><strong className="text-orange-800">Machine:</strong> {issue.machineName}</div>
+                                            <div><strong className="text-accent-foreground">Quantity Issued:</strong> {issue.issuedQuantity} {issue.unit}</div>
+                                            <div><strong className="text-accent-foreground">Department:</strong> {issue.department}</div>
+                                            <div><strong className="text-accent-foreground">Machine:</strong> {issue.machineName}</div>
                                           </div>
                                         </div>
                                       </div>
