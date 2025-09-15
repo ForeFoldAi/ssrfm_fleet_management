@@ -1,0 +1,498 @@
+import { useState } from "react";
+import { CheckCircle, XCircle, Package, FileText, AlertTriangle, Clock, Truck } from "lucide-react";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { toast } from "../hooks/use-toast";
+import { useRole } from "../contexts/RoleContext";
+
+interface RequestStatusManagerProps {
+    request: any;
+    onStatusUpdate: (requestId: string, newStatus: string, updateData: any) => void;
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+interface ReceivedFormData {
+    purchasedPrice: string;
+    purchasedQuantity: string;
+    purchasedFrom: string;
+    receivedDate: string;
+    invoiceNumber: string;
+    qualityCheck: string;
+    notes: string;
+}
+
+export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose }: RequestStatusManagerProps) => {
+    const { currentUser } = useRole();
+    const [action, setAction] = useState<'approve' | 'revert' | 'update_received' | null>(null);
+    const [revertReason, setRevertReason] = useState("");
+    const [receivedForm, setReceivedForm] = useState<ReceivedFormData>({
+        purchasedPrice: "",
+        purchasedQuantity: "",
+        purchasedFrom: "",
+        receivedDate: new Date().toISOString().split('T')[0],
+        invoiceNumber: "",
+        qualityCheck: "passed",
+        notes: ""
+    });
+    const [isPartialReceipt, setIsPartialReceipt] = useState(false);
+
+    const canApprove = currentUser?.role === 'company_owner';
+    const canUpdateToOrdered = currentUser?.role === 'site_supervisor' && request.status === 'approved';
+    const canUpdateReceived = currentUser?.role === 'site_supervisor' &&
+        (request.status === 'ordered' || request.status === 'partially_received');
+
+    const handleOwnerApproval = () => {
+        if (!canApprove) return;
+
+        onStatusUpdate(request.id, 'approved', {
+            approvedBy: currentUser.name,
+            approvedDate: new Date().toISOString(),
+            statusDescription: "Approved by Owner - Ready for ordering",
+            currentStage: "Approved",
+            progressStage: 2
+        });
+
+        toast({
+            title: "Request Approved",
+            description: `Request ${request.id} has been approved. Supervisor can now update to Ordered status.`,
+        });
+
+        onClose();
+    };
+
+    const handleOwnerRevert = () => {
+        if (!canApprove || !revertReason.trim()) {
+            toast({
+                title: "Revert Reason Required",
+                description: "Please provide a reason for reverting this request.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        onStatusUpdate(request.id, 'reverted', {
+            revertedBy: currentUser.name,
+            revertedDate: new Date().toISOString(),
+            revertReason: revertReason,
+            statusDescription: `Reverted by Owner: ${revertReason}`,
+            currentStage: "Reverted - Resubmission Required",
+            progressStage: 0
+        });
+
+        toast({
+            title: "Request Reverted",
+            description: `Request ${request.id} has been reverted. Indent form must be resubmitted.`,
+            variant: "destructive"
+        });
+
+        setRevertReason("");
+        onClose();
+    };
+
+    const handleUpdateToOrdered = () => {
+        if (!canUpdateToOrdered) return;
+
+        onStatusUpdate(request.id, 'ordered', {
+            orderedBy: currentUser.name,
+            orderedDate: new Date().toISOString(),
+            statusDescription: "Order placed with supplier by Supervisor",
+            currentStage: "Ordered",
+            progressStage: 3
+        });
+
+        toast({
+            title: "Status Updated to Ordered",
+            description: `Request ${request.id} has been updated to Ordered status.`,
+        });
+
+        onClose();
+    };
+
+    const handleReceivedUpdate = () => {
+        if (!canUpdateReceived) return;
+
+        const requiredFields = ['purchasedPrice', 'purchasedQuantity', 'purchasedFrom'];
+        const missingFields = requiredFields.filter(field => !receivedForm[field as keyof ReceivedFormData].trim());
+
+        if (missingFields.length > 0) {
+            toast({
+                title: "Missing Information",
+                description: "Please fill in all required fields for the received form.",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        const originalQuantity = parseFloat(request.quantity.split(' ')[0]);
+        const receivedQuantity = parseFloat(receivedForm.purchasedQuantity);
+
+        let newStatus = 'material_received';
+        let statusDescription = 'Materials fully received and updated in inventory';
+        let currentStage = 'Material Received';
+        let progressStage = 5;
+
+        if (isPartialReceipt || receivedQuantity < originalQuantity) {
+            newStatus = 'partially_received';
+            statusDescription = `Partially received: ${receivedQuantity} of ${originalQuantity} units`;
+            currentStage = 'Partially Received';
+            progressStage = 4;
+        }
+
+        onStatusUpdate(request.id, newStatus, {
+            receivedBy: currentUser.name,
+            receivedDate: receivedForm.receivedDate,
+            receivedForm: receivedForm,
+            statusDescription: statusDescription,
+            currentStage: currentStage,
+            progressStage: progressStage,
+            purchasedPrice: parseFloat(receivedForm.purchasedPrice),
+            purchasedQuantity: receivedQuantity,
+            purchasedFrom: receivedForm.purchasedFrom,
+            invoiceNumber: receivedForm.invoiceNumber,
+            qualityCheck: receivedForm.qualityCheck,
+            notes: receivedForm.notes
+        });
+
+        toast({
+            title: isPartialReceipt ? "Partial Receipt Recorded" : "Materials Received",
+            description: `Request ${request.id} has been updated with receipt details.`,
+        });
+
+        // Reset form
+        setReceivedForm({
+            purchasedPrice: "",
+            purchasedQuantity: "",
+            purchasedFrom: "",
+            receivedDate: new Date().toISOString().split('T')[0],
+            invoiceNumber: "",
+            qualityCheck: "passed",
+            notes: ""
+        });
+        setIsPartialReceipt(false);
+        onClose();
+    };
+
+    const getStatusBadge = (status: string) => {
+        const statusConfig = {
+            'pending_approval': { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+            'approved': { color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+            'ordered': { color: 'bg-purple-100 text-purple-800', icon: Package },
+            'partially_received': { color: 'bg-orange-100 text-orange-800', icon: Truck },
+            'material_received': { color: 'bg-green-100 text-green-800', icon: CheckCircle },
+            'reverted': { color: 'bg-red-100 text-red-800', icon: XCircle }
+        };
+
+        const config = statusConfig[status as keyof typeof statusConfig] || statusConfig['pending_approval'];
+        const Icon = config.icon;
+
+        return (
+            <Badge className={`${config.color} flex items-center gap-1`}>
+                <Icon className="w-3 h-3" />
+                {status.replace('_', ' ').toUpperCase()}
+            </Badge>
+        );
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-primary" />
+                        Manage Request Status - {request.id}
+                    </DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-6">
+                    {/* Current Status */}
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-lg">Current Status</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="font-medium">{request.materialName}</div>
+                                    <div className="text-sm text-muted-foreground">Quantity: {request.quantity}</div>
+                                </div>
+                                {getStatusBadge(request.status)}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                                {request.statusDescription}
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Owner Actions */}
+                    {canApprove && request.status === 'pending_approval' && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-lg text-blue-600">Owner Actions</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <Button
+                                        onClick={handleOwnerApproval}
+                                        className="bg-green-600 hover:bg-green-700 text-white"
+                                    >
+                                        <CheckCircle className="w-4 h-4 mr-2" />
+                                        Approve Request
+                                    </Button>
+                                    <Button
+                                        onClick={() => setAction('revert')}
+                                        variant="destructive"
+                                    >
+                                        <XCircle className="w-4 h-4 mr-2" />
+                                        Revert Request
+                                    </Button>
+                                </div>
+
+                                {action === 'revert' && (
+                                    <div className="space-y-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                        <Label htmlFor="revert-reason">Reason for Reverting *</Label>
+                                        <Textarea
+                                            id="revert-reason"
+                                            placeholder="Explain why this request is being reverted..."
+                                            value={revertReason}
+                                            onChange={(e) => setRevertReason(e.target.value)}
+                                            rows={3}
+                                        />
+                                        <div className="flex gap-2">
+                                            <Button
+                                                onClick={handleOwnerRevert}
+                                                variant="destructive"
+                                                size="sm"
+                                            >
+                                                Confirm Revert
+                                            </Button>
+                                            <Button
+                                                onClick={() => setAction(null)}
+                                                variant="outline"
+                                                size="sm"
+                                            >
+                                                Cancel
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Supervisor Actions - Update to Ordered */}
+                    {canUpdateToOrdered && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-lg text-purple-600">Supervisor Actions</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                                    <div className="text-sm text-purple-800 mb-3">
+                                        <strong>Request Approved by Owner</strong>
+                                    </div>
+                                    <div className="text-sm text-purple-700 mb-4">
+                                        The request has been approved by the Owner. You can now update the status to "Ordered" 
+                                        once you have placed the order with the supplier.
+                                    </div>
+                                    <Button
+                                        onClick={handleUpdateToOrdered}
+                                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                                    >
+                                        <Package className="w-4 h-4 mr-2" />
+                                        Update to Ordered
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Supervisor Actions - Material Receipt */}
+                    {canUpdateReceived && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-lg text-green-600">Update Material Receipt</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="purchased-price">Purchased Price *</Label>
+                                        <Input
+                                            id="purchased-price"
+                                            type="number"
+                                            placeholder="Enter total price"
+                                            value={receivedForm.purchasedPrice}
+                                            onChange={(e) => setReceivedForm(prev => ({ ...prev, purchasedPrice: e.target.value }))}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="purchased-quantity">Purchased Quantity *</Label>
+                                        <Input
+                                            id="purchased-quantity"
+                                            type="number"
+                                            placeholder="Enter received quantity"
+                                            value={receivedForm.purchasedQuantity}
+                                            onChange={(e) => setReceivedForm(prev => ({ ...prev, purchasedQuantity: e.target.value }))}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="purchased-from">Purchased From *</Label>
+                                        <Input
+                                            id="purchased-from"
+                                            placeholder="Supplier/Vendor name"
+                                            value={receivedForm.purchasedFrom}
+                                            onChange={(e) => setReceivedForm(prev => ({ ...prev, purchasedFrom: e.target.value }))}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="received-date">Received Date</Label>
+                                        <Input
+                                            id="received-date"
+                                            type="date"
+                                            value={receivedForm.receivedDate}
+                                            onChange={(e) => setReceivedForm(prev => ({ ...prev, receivedDate: e.target.value }))}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="invoice-number">Invoice Number</Label>
+                                        <Input
+                                            id="invoice-number"
+                                            placeholder="Invoice/Bill number"
+                                            value={receivedForm.invoiceNumber}
+                                            onChange={(e) => setReceivedForm(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="quality-check">Quality Check</Label>
+                                        <Select
+                                            value={receivedForm.qualityCheck}
+                                            onValueChange={(value) => setReceivedForm(prev => ({ ...prev, qualityCheck: value }))}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="passed">Passed</SelectItem>
+                                                <SelectItem value="failed">Failed</SelectItem>
+                                                <SelectItem value="partial">Partial Pass</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="receipt-notes">Additional Notes</Label>
+                                    <Textarea
+                                        id="receipt-notes"
+                                        placeholder="Any additional notes about the received materials..."
+                                        value={receivedForm.notes}
+                                        onChange={(e) => setReceivedForm(prev => ({ ...prev, notes: e.target.value }))}
+                                        rows={3}
+                                    />
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        type="checkbox"
+                                        id="partial-receipt"
+                                        checked={isPartialReceipt}
+                                        onChange={(e) => setIsPartialReceipt(e.target.checked)}
+                                        className="rounded"
+                                    />
+                                    <Label htmlFor="partial-receipt" className="text-sm">
+                                        This is a partial receipt (more materials expected)
+                                    </Label>
+                                </div>
+
+                                <Button
+                                    onClick={handleReceivedUpdate}
+                                    className="w-full bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                    <Package className="w-4 h-4 mr-2" />
+                                    Update Receipt Status
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Status History */}
+                    {request.statusHistory && request.statusHistory.length > 0 && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-lg">Status History</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-3">
+                                    {request.statusHistory.map((history: any, index: number) => (
+                                        <div key={index} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                                            <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    {getStatusBadge(history.status)}
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {new Date(history.date).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                                <div className="text-sm">{history.description}</div>
+                                                {history.user && (
+                                                    <div className="text-xs text-muted-foreground mt-1">
+                                                        By: {history.user}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Warning for Reverted Status */}
+                    {request.status === 'reverted' && (
+                        <Card className="border-red-200 bg-red-50">
+                            <CardContent className="p-4">
+                                <div className="flex items-start gap-3">
+                                    <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+                                    <div className="flex-1">
+                                        <div className="font-medium text-red-800">Request Reverted</div>
+                                        <div className="text-sm text-red-700 mt-1">
+                                            This request has been reverted by the Owner. The indent form must be resubmitted with corrections.
+                                        </div>
+                                        {request.revertReason && (
+                                            <div className="text-sm text-red-700 mt-2 p-2 bg-red-100 rounded">
+                                                <strong>Reason:</strong> {request.revertReason}
+                                            </div>
+                                        )}
+                                        {currentUser?.role === 'site_supervisor' && (
+                                            <div className="mt-3">
+                                                <Button
+                                                    onClick={onClose}
+                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                    size="sm"
+                                                >
+                                                    <FileText className="w-4 h-4 mr-2" />
+                                                    Edit & Resubmit Form
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+};

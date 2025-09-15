@@ -10,6 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Link } from "react-router-dom";
 import { useRole } from "../contexts/RoleContext";
 import { MaterialIssueForm } from "../components/MaterialIssueForm";
+import { RequestStatusManager } from "../components/RequestStatusManager";
+import { ResubmitForm } from "../components/ResubmitForm";
+import { useRequestWorkflow } from "../hooks/useRequestWorkflow";
 
 const SupervisorRequests = () => {
   const { currentUser } = useRole();
@@ -19,6 +22,21 @@ const SupervisorRequests = () => {
   const [viewMode, setViewMode] = useState<"list" | "table">("table");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isIssueFormOpen, setIsIssueFormOpen] = useState(false);
+  const [selectedRequestForStatus, setSelectedRequestForStatus] = useState<any>(null);
+  const [isStatusManagerOpen, setIsStatusManagerOpen] = useState(false);
+  const [selectedRequestForResubmit, setSelectedRequestForResubmit] = useState<any>(null);
+  const [isResubmitFormOpen, setIsResubmitFormOpen] = useState(false);
+  
+  // Workflow management
+  const {
+    initializeRequest,
+    updateRequestStatus,
+    approveRequest,
+    revertRequest,
+    updateMaterialReceipt,
+    getRequestWorkflow,
+    canPerformAction
+  } = useRequestWorkflow();
   const [issuedMaterials, setIssuedMaterials] = useState<any[]>([
     // Recent Material Issues - Including items from physical form
     {
@@ -239,8 +257,49 @@ const SupervisorRequests = () => {
     }
   ]);
 
+  // Handle status updates
+  const handleStatusUpdate = (requestId: string, newStatus: string, updateData: any) => {
+    updateRequestStatus(requestId, newStatus, updateData, {
+      name: currentUser?.name || 'Unknown User',
+      role: currentUser?.role || 'unknown'
+    });
+    
+    // Update the local requests array
+    setAllRequests(prev => prev.map(req => {
+      if (req.id === requestId) {
+        return {
+          ...req,
+          status: newStatus,
+          statusDescription: updateData.statusDescription || req.statusDescription,
+          currentStage: updateData.currentStage || req.currentStage,
+          progressStage: updateData.progressStage || req.progressStage,
+          ...updateData
+        };
+      }
+      return req;
+    }));
+  };
+
+  const openStatusManager = (request: any) => {
+    setSelectedRequestForStatus(request);
+    setIsStatusManagerOpen(true);
+  };
+
+  const openResubmitForm = (request: any) => {
+    setSelectedRequestForResubmit(request);
+    setIsResubmitFormOpen(true);
+  };
+
+  const handleResubmitRequest = (updatedRequest: any) => {
+    setAllRequests(prev => prev.map(req => 
+      req.id === updatedRequest.id ? updatedRequest : req
+    ));
+    setIsResubmitFormOpen(false);
+    setSelectedRequestForResubmit(null);
+  };
+
   // SSRFM Status workflow: Pending Approval → Approved → Ordered → Issued → Completed
-  const allRequests = [
+  const [allRequests, setAllRequests] = useState([
     // Pending Approval Requests
     {
       id: "REQ-2024-301",
@@ -355,6 +414,134 @@ const SupervisorRequests = () => {
       department: "Facilities",
       environmentalImpact: "Improves air quality and worker safety",
       additionalNotes: "Current filters at 80% capacity. Replacement will ensure optimal air quality."
+    },
+
+    // Partially Received Requests
+    {
+      id: "REQ-2024-280",
+      materialName: "Steel Bolts",
+      specifications: "M12x50mm Hex Head Bolts, Grade 8.8, Zinc Plated",
+      maker: "Fastener Industries",
+      quantity: "100 pieces",
+      value: "₹2,500",
+      priority: "medium",
+      materialPurpose: "Assembly and maintenance work",
+      machineId: "MACHINE-005",
+      machineName: "Assembly Station #2",
+      date: "2024-01-12",
+      status: "partially_received",
+      statusDescription: "Partially received: 60 of 100 pieces delivered",
+      currentStage: "Partially Received",
+      progressStage: 4,
+      requestedBy: "John Martinez",
+      approvedBy: "Robert Williams",
+      approvedDate: "2024-01-13",
+      orderedDate: "2024-01-14",
+      receivedDate: "2024-01-18",
+      receivedBy: "John Martinez",
+      department: "Production",
+      purchasedPrice: 1500,
+      purchasedQuantity: 60,
+      purchasedFrom: "Fastener Industries Ltd",
+      invoiceNumber: "FI-2024-0156",
+      qualityCheck: "passed",
+      notes: "First batch received. Remaining 40 pieces expected by Jan 25th",
+      additionalNotes: "Partial delivery due to supplier stock shortage. Balance quantity confirmed for next week."
+    },
+    {
+      id: "REQ-2024-281",
+      materialName: "Electrical Cables",
+      specifications: "3 Core Copper Cable, 2.5mm², PVC Insulated, IS 694 Standard",
+      maker: "Havells",
+      quantity: "50 meters",
+      value: "₹3,200",
+      priority: "high",
+      materialPurpose: "Electrical panel rewiring project",
+      machineId: "ELECTRICAL-PANEL-02",
+      machineName: "Production Line 2 Control Panel",
+      date: "2024-01-11",
+      status: "partially_received",
+      statusDescription: "Partially received: 30 of 50 meters delivered",
+      currentStage: "Partially Received",
+      progressStage: 4,
+      requestedBy: "Mike Johnson",
+      approvedBy: "Robert Williams",
+      approvedDate: "2024-01-12",
+      orderedDate: "2024-01-13",
+      receivedDate: "2024-01-17",
+      receivedBy: "Mike Johnson",
+      department: "Electrical",
+      purchasedPrice: 1920,
+      purchasedQuantity: 30,
+      purchasedFrom: "Havells Electrical Supplies",
+      invoiceNumber: "HES-2024-0089",
+      qualityCheck: "passed",
+      notes: "Partial delivery received. Quality inspection passed. Remaining cable expected soon.",
+      additionalNotes: "Project can proceed with received quantity. Balance required for completion."
+    },
+
+    // Material Received (Complete) Requests
+    {
+      id: "REQ-2024-270",
+      materialName: "Industrial Lubricants",
+      specifications: "Multi-purpose Lithium Grease, High Temperature Grade, 400g Cartridges",
+      maker: "Mobil",
+      quantity: "20 cartridges",
+      value: "₹4,800",
+      priority: "medium",
+      materialPurpose: "Routine maintenance lubrication for all machinery",
+      machineId: "ALL-MACHINES",
+      machineName: "General Machinery Maintenance",
+      date: "2024-01-08",
+      status: "material_received",
+      statusDescription: "Materials completely received and stored in inventory",
+      currentStage: "Material Received",
+      progressStage: 5,
+      requestedBy: "Sarah Wilson",
+      approvedBy: "Robert Williams",
+      approvedDate: "2024-01-09",
+      orderedDate: "2024-01-10",
+      receivedDate: "2024-01-16",
+      receivedBy: "Sarah Wilson",
+      department: "Maintenance",
+      purchasedPrice: 4800,
+      purchasedQuantity: 20,
+      purchasedFrom: "Mobil Industrial Lubricants",
+      invoiceNumber: "MIL-2024-0234",
+      qualityCheck: "passed",
+      notes: "Complete order received. All cartridges in good condition. Stored in maintenance inventory.",
+      additionalNotes: "Monthly maintenance supply fully restocked. Quality certification received."
+    },
+    {
+      id: "REQ-2024-271",
+      materialName: "Safety Gloves",
+      specifications: "Cut Resistant Gloves, Level 5 Protection, Nitrile Coated Palm",
+      maker: "Ansell",
+      quantity: "50 pairs",
+      value: "₹7,500",
+      priority: "high",
+      materialPurpose: "Worker safety equipment replacement",
+      machineId: "GENERAL",
+      machineName: "General Safety Requirements",
+      date: "2024-01-07",
+      status: "material_received",
+      statusDescription: "Safety equipment completely received and distributed",
+      currentStage: "Material Received",
+      progressStage: 5,
+      requestedBy: "John Martinez",
+      approvedBy: "Robert Williams",
+      approvedDate: "2024-01-08",
+      orderedDate: "2024-01-09",
+      receivedDate: "2024-01-15",
+      receivedBy: "John Martinez",
+      department: "Safety",
+      purchasedPrice: 7500,
+      purchasedQuantity: 50,
+      purchasedFrom: "Ansell Safety Solutions",
+      invoiceNumber: "ASS-2024-0167",
+      qualityCheck: "passed",
+      notes: "Complete order received. All gloves meet safety standards. Distributed to production teams.",
+      additionalNotes: "Safety compliance maintained. All workers equipped with new protective gear."
     },
 
     // Ordered Requests
@@ -531,6 +718,77 @@ const SupervisorRequests = () => {
       additionalNotes: "Improved electrical safety and added monitoring capabilities. 20% efficiency gain achieved."
     },
 
+    // Reverted Requests
+    {
+      id: "REQ-2024-295",
+      materialName: "Industrial Pumps",
+      specifications: "Centrifugal Pump, 5HP, 3 Phase, Cast Iron Body, 2 inch inlet/outlet",
+      maker: "Kirloskar",
+      quantity: "2 pieces",
+      value: "₹45,000",
+      priority: "high",
+      materialPurpose: "Replace failed pumps in water circulation system",
+      machineId: "PUMP-SYSTEM-01",
+      machineName: "Water Circulation System",
+      date: "2024-01-16",
+      status: "reverted",
+      statusDescription: "Reverted by Owner - Specifications need clarification",
+      currentStage: "Reverted - Resubmission Required",
+      progressStage: 0,
+      requestedBy: "John Martinez",
+      department: "Maintenance",
+      revertedBy: "Robert Williams",
+      revertedDate: "2024-01-18",
+      revertReason: "Pump specifications are unclear. Please specify exact model number, flow rate (GPM), and head pressure requirements. Also provide justification for 5HP requirement vs existing 3HP pumps.",
+      additionalNotes: "Critical for production water supply. Current pumps showing signs of failure."
+    },
+    {
+      id: "REQ-2024-296",
+      materialName: "Electrical Transformers",
+      specifications: "Step-down Transformer, 440V to 220V, 10KVA, Oil Cooled",
+      maker: "Schneider Electric",
+      quantity: "1 piece",
+      value: "₹25,000",
+      priority: "medium",
+      materialPurpose: "Voltage regulation for new equipment installation",
+      machineId: "ELECTRICAL-PANEL-04",
+      machineName: "New Equipment Power Supply",
+      date: "2024-01-14",
+      status: "reverted",
+      statusDescription: "Reverted by Owner - Budget approval required",
+      currentStage: "Reverted - Resubmission Required",
+      progressStage: 0,
+      requestedBy: "Mike Johnson",
+      department: "Electrical",
+      revertedBy: "Robert Williams",
+      revertedDate: "2024-01-16",
+      revertReason: "Request exceeds department budget limit of ₹20,000. Please get budget approval from finance department or find alternative solution within budget. Also verify if existing transformers can be reconfigured.",
+      additionalNotes: "Required for new packaging line installation scheduled for next month."
+    },
+    {
+      id: "REQ-2024-297",
+      materialName: "Precision Measuring Tools",
+      specifications: "Digital Calipers 0-150mm, Micrometer Set 0-25mm, Dial Indicators",
+      maker: "Mitutoyo",
+      quantity: "1 set",
+      value: "₹18,500",
+      priority: "low",
+      materialPurpose: "Quality control and precision measurement in production",
+      machineId: "QC-STATION-01",
+      machineName: "Quality Control Station",
+      date: "2024-01-12",
+      status: "reverted",
+      statusDescription: "Reverted by Owner - Existing tools assessment needed",
+      currentStage: "Reverted - Resubmission Required",
+      progressStage: 0,
+      requestedBy: "Sarah Wilson",
+      department: "Quality Control",
+      revertedBy: "Robert Williams",
+      revertedDate: "2024-01-14",
+      revertReason: "Please conduct assessment of existing measuring tools first. Provide calibration reports and condition assessment. If existing tools can be repaired or recalibrated, that should be considered first before new purchase.",
+      additionalNotes: "Current tools showing accuracy issues during quality checks."
+    },
+
     // Rejected Requests
     {
       id: "REQ-2024-285",
@@ -582,16 +840,19 @@ const SupervisorRequests = () => {
       alternativeSuggestion: "Submit as part of annual facility improvement proposal",
       additionalNotes: "Consider energy-efficient lighting upgrades as part of comprehensive facility modernization plan."
     }
-  ];
+  ]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending_approval': return 'bg-blue-500 text-white';
+      case 'pending_approval': return 'bg-yellow-500 text-white';
       case 'approved': return 'bg-blue-500 text-white';
       case 'ordered': return 'bg-purple-500 text-white';
+      case 'partially_received': return 'bg-orange-500 text-white';
+      case 'material_received': return 'bg-green-500 text-white';
       case 'issued': return 'bg-orange-500 text-white';
-      case 'completed': return 'bg-blue-600 text-white';
+      case 'completed': return 'bg-green-600 text-white';
       case 'rejected': return 'bg-red-500 text-white';
+      case 'reverted': return 'bg-red-600 text-white';
       default: return 'bg-secondary text-secondary-foreground';
     }
   };
@@ -624,11 +885,17 @@ const SupervisorRequests = () => {
         return <CheckCircle className="w-4 h-4" />;
       case 'ordered':
         return <Package className="w-4 h-4" />;
+      case 'partially_received':
+        return <Truck className="w-4 h-4" />;
+      case 'material_received':
+        return <CheckSquare className="w-4 h-4" />;
       case 'issued':
         return <Truck className="w-4 h-4" />;
       case 'completed':
         return <CheckSquare className="w-4 h-4" />;
       case 'rejected':
+        return <XCircle className="w-4 h-4" />;
+      case 'reverted':
         return <XCircle className="w-4 h-4" />;
       default:
         return <AlertTriangle className="w-4 h-4" />;
@@ -667,9 +934,9 @@ const SupervisorRequests = () => {
   );
   const rejectedRequests = filteredRequests.filter(req => req.status === 'rejected');
 
-  // SSRFM Progress Bar: Submit → Approval → Ordered → Issued → Completed
+  // SSRFM Progress Bar: Submit → Approved → Ordered → Received → Complete
   const ProgressBar = ({ stage }: { stage: number }) => {
-    const stages = ['Submit', 'Approved', 'Ordered', 'Issued', 'Complete'];
+    const stages = ['Submit', 'Approved', 'Ordered', 'Received', 'Complete'];
     return (
       <div className="my-3">
         {/* Desktop Progress Bar */}
@@ -897,6 +1164,30 @@ const SupervisorRequests = () => {
                                     </div>
                                   )}
 
+                                  {request.status === 'partially_received' && (
+                                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                                      <div className="text-sm space-y-1">
+                                        <div><strong className="text-orange-800">Partially Received:</strong> {request.receivedDate}</div>
+                                        <div><strong className="text-orange-800">Received Quantity:</strong> {request.purchasedQuantity} of {request.quantity}</div>
+                                        <div><strong className="text-orange-800">Supplier:</strong> {request.purchasedFrom}</div>
+                                        <div><strong className="text-orange-800">Invoice:</strong> {request.invoiceNumber}</div>
+                                        {request.notes && <div><strong className="text-orange-800">Notes:</strong> {request.notes}</div>}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {request.status === 'material_received' && (
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                      <div className="text-sm space-y-1">
+                                        <div><strong className="text-green-800">Received:</strong> {request.receivedDate}</div>
+                                        <div><strong className="text-green-800">Quantity:</strong> {request.purchasedQuantity} {request.quantity.split(' ').slice(1).join(' ')}</div>
+                                        <div><strong className="text-green-800">Total Cost:</strong> ₹{request.purchasedPrice}</div>
+                                        <div><strong className="text-green-800">Supplier:</strong> {request.purchasedFrom}</div>
+                                        <div><strong className="text-green-800">Quality Check:</strong> {request.qualityCheck}</div>
+                                      </div>
+                                    </div>
+                                  )}
+
                                   {request.status === 'issued' && (
                                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                                       <div className="text-sm space-y-1">
@@ -933,6 +1224,24 @@ const SupervisorRequests = () => {
                                       </div>
                                     </div>
                                   )}
+
+                                  {request.status === 'reverted' && (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                      <div className="flex items-start gap-2">
+                                        <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                        <div className="min-w-0">
+                                          <strong className="text-red-800 text-sm">Reverted:</strong>
+                                          <p className="text-red-700 text-sm mt-1 break-words">{request.revertReason}</p>
+                                          <p className="text-red-600 text-xs mt-2">
+                                            Reverted by {request.revertedBy} on {request.revertedDate}
+                                          </p>
+                                          <p className="text-red-600 text-xs mt-1">
+                                            Indent form must be resubmitted with corrections.
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -944,10 +1253,27 @@ const SupervisorRequests = () => {
                               <Eye className="w-4 h-4" />
                               View Full Details
                             </Button>
-                            {request.status === 'rejected' && (
-                              <Button variant="outline" className="gap-2">
+                            
+                            {/* Status Management Button */}
+                            {(currentUser?.role === 'company_owner' || currentUser?.role === 'site_supervisor') && (
+                              <Button 
+                                variant="outline" 
+                                className="gap-2"
+                                onClick={() => openStatusManager(request)}
+                              >
+                                <CheckSquare className="w-4 h-4" />
+                                Manage Status
+                              </Button>
+                            )}
+                            
+                            {(request.status === 'rejected' || request.status === 'reverted') && (
+                              <Button 
+                                variant="outline" 
+                                className="gap-2"
+                                onClick={() => request.status === 'reverted' ? openResubmitForm(request) : null}
+                              >
                                 <Plus className="w-4 h-4" />
-                                Resubmit Request
+                                {request.status === 'reverted' ? 'Resubmit Indent Form' : 'Resubmit Request'}
                               </Button>
                             )}
                             {(request.status === 'ordered' || request.status === 'issued' || request.status === 'completed') && (
@@ -1015,8 +1341,26 @@ const SupervisorRequests = () => {
                       <Button variant="outline" size="sm" className="h-7 w-7 p-0">
                         <Eye className="w-3 h-3" />
                       </Button>
-                      {request.status === 'rejected' && (
-                        <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                      
+                      {/* Status Management Button */}
+                      {(currentUser?.role === 'company_owner' || currentUser?.role === 'site_supervisor') && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-7 w-7 p-0"
+                          onClick={() => openStatusManager(request)}
+                        >
+                          <CheckSquare className="w-3 h-3" />
+                        </Button>
+                      )}
+                      
+                      {(request.status === 'rejected' || request.status === 'reverted') && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-7 w-7 p-0"
+                          onClick={() => request.status === 'reverted' ? openResubmitForm(request) : null}
+                        >
                           <Plus className="w-3 h-3" />
                         </Button>
                       )}
@@ -1105,9 +1449,12 @@ const SupervisorRequests = () => {
               <SelectItem value="pending_approval">Pending Approval</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="ordered">Ordered</SelectItem>
+              <SelectItem value="partially_received">Partially Received</SelectItem>
+              <SelectItem value="material_received">Material Received</SelectItem>
               <SelectItem value="issued">Issued</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="reverted">Reverted</SelectItem>
             </SelectContent>
           </Select>
           
@@ -1173,6 +1520,32 @@ const SupervisorRequests = () => {
         onClose={() => setIsIssueFormOpen(false)}
         onSubmit={handleMaterialIssue}
       />
+
+      {/* Request Status Manager */}
+      {selectedRequestForStatus && (
+        <RequestStatusManager
+          request={selectedRequestForStatus}
+          onStatusUpdate={handleStatusUpdate}
+          isOpen={isStatusManagerOpen}
+          onClose={() => {
+            setIsStatusManagerOpen(false);
+            setSelectedRequestForStatus(null);
+          }}
+        />
+      )}
+
+      {/* Resubmit Form */}
+      {selectedRequestForResubmit && (
+        <ResubmitForm
+          request={selectedRequestForResubmit}
+          isOpen={isResubmitFormOpen}
+          onClose={() => {
+            setIsResubmitFormOpen(false);
+            setSelectedRequestForResubmit(null);
+          }}
+          onSubmit={handleResubmitRequest}
+        />
+      )}
     </div>
   );
 };

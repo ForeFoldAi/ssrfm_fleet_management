@@ -21,6 +21,7 @@ import FinancialDashboard from "./pages/FinancialDashboard";
 import OrganizationalManagement from "./pages/OrganizationalManagement";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
+import WorkflowDemoPage from "./pages/WorkflowDemoPage";
 
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -87,6 +88,7 @@ const AppRoutes = () => {
         <Route path="organizational-management" element={<OrganizationalManagement />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="workflow-demo" element={<WorkflowDemoPage />} />
         
         {/* Legacy routes for backwards compatibility */}
         <Route path="materials" element={<MaterialsInventory />} />

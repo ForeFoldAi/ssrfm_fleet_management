@@ -196,7 +196,7 @@ export const MaterialIssuesTab = () => {
                       <TableHead className="min-w-[100px]">Stock Info</TableHead>
                       <TableHead className="min-w-[120px]">Recipient</TableHead>
                       <TableHead className="min-w-[120px]">Issuing Person</TableHead>
-                      <TableHead className="min-w-[100px]">Department</TableHead>
+                     
                       <TableHead className="min-w-[100px]">Date</TableHead>
                       <TableHead className="min-w-[80px]">Status</TableHead>
                     </TableRow>
