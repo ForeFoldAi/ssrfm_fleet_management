@@ -65,7 +65,7 @@ export const RoleSwitcher = () => {
         <DropdownMenuItem asChild>
           <Link to="/profile" className="flex items-center gap-3 p-3 cursor-pointer rounded-[20px]">
             <div className="w-8 h-8 bg-secondary/100 rounded-[20px] flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
+              <User className="w-5 h-5 text-black" />
             </div>
             <div className="flex-1">
               <div className="font-medium">My Profile</div>
@@ -86,17 +86,7 @@ export const RoleSwitcher = () => {
           </Link>
         </DropdownMenuItem>
 
-        <DropdownMenuItem asChild>
-          <Link to="/notifications" className="flex items-center gap-3 p-3 cursor-pointer rounded-[20px]">
-            <div className="w-8 h-8 bg-secondary/100 rounded-[20px] flex items-center justify-center">
-              <Bell className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="font-medium">Notifications</div>
-              <div className="text-xs text-muted-foreground">Manage notifications</div>
-            </div>
-          </Link>
-        </DropdownMenuItem>
+      
 
         <DropdownMenuItem asChild>
           <Link to="/security" className="flex items-center gap-3 p-3 cursor-pointer rounded-[20px]">

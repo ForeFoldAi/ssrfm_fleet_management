@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Package, Save, X, Truck, AlertTriangle } from "lucide-react";
+import { Package, Save, X, Truck, AlertTriangle, Plus } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -19,8 +19,10 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
   const [formData, setFormData] = useState({
     name: "",
     category: "",
+    customCategory: "",
     specifications: "",
     unit: "",
+    customUnit: "",
     maker: "",
     supplier: "",
     supplierContact: "",
@@ -31,6 +33,7 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
     reorderLevel: "",
     leadTime: "",
     location: "",
+    customLocation: "",
     partNumber: "",
     description: "",
     notes: ""
@@ -92,6 +95,19 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
     }
   };
 
+  const handleSelectChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear custom field if not selecting "Other"/"other"
+    if (value !== "Other" && value !== "other") {
+      if (field === "category") setFormData(prev => ({ ...prev, customCategory: "" }));
+      if (field === "unit") setFormData(prev => ({ ...prev, customUnit: "" }));
+      if (field === "location") setFormData(prev => ({ ...prev, customLocation: "" }));
+    }
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: "" }));
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -99,8 +115,14 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
     
     if (!formData.name.trim()) newErrors.name = "Material name is required";
     if (!formData.category) newErrors.category = "Category is required";
+    if (formData.category === "Other" && !formData.customCategory.trim()) {
+      newErrors.customCategory = "Custom category is required";
+    }
     if (!formData.specifications.trim()) newErrors.specifications = "Specifications are required";
     if (!formData.unit) newErrors.unit = "Unit is required";
+    if (formData.unit === "other" && !formData.customUnit.trim()) {
+      newErrors.customUnit = "Custom unit is required";
+    }
     if (!formData.maker.trim()) newErrors.maker = "Maker/Brand is required";
     if (!formData.currentStock.trim()) newErrors.currentStock = "Current stock is required";
     if (!formData.minStock.trim()) newErrors.minStock = "Minimum stock level is required";
@@ -135,6 +157,9 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
       const materialData = {
         ...formData,
         id: Date.now(), // Generate a temporary ID
+        category: formData.category === "Other" ? formData.customCategory : formData.category,
+        unit: formData.unit === "other" ? formData.customUnit : formData.unit,
+        location: formData.location === "Other" ? formData.customLocation : formData.location,
         currentStock: currentStockNum,
         minStock: minStockNum,
         maxStock: formData.maxStock ? Number(formData.maxStock) : null,
@@ -155,8 +180,10 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
       setFormData({
         name: "",
         category: "",
+        customCategory: "",
         specifications: "",
         unit: "",
+        customUnit: "",
         maker: "",
         supplier: "",
         supplierContact: "",
@@ -167,6 +194,7 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
         reorderLevel: "",
         leadTime: "",
         location: "",
+        customLocation: "",
         partNumber: "",
         description: "",
         notes: ""
@@ -178,11 +206,11 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-              <Package className="w-5 h-5 text-primary" />
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="flex items-center gap-3 text-xl">
+            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+              <Plus className="w-6 h-6 text-primary" />
             </div>
             Add New Material
           </DialogTitle>
@@ -190,28 +218,32 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Basic Information</CardTitle>
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <Package className="w-5 h-5 text-primary" />
+                Basic Information
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-6">
+              {/* First Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Material Name *</Label>
+                  <Label htmlFor="name" className="text-sm font-medium">Material Name *</Label>
                   <Input
                     id="name"
                     placeholder="e.g., Steel Rods (20mm)"
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
-                    className="input-friendly"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
-                  {errors.name && <p className="text-destructive text-sm">{errors.name}</p>}
+                  {errors.name && <p className="text-destructive text-sm mt-1">{errors.name}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                    <SelectTrigger className="input-friendly">
+                  <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
+                  <Select value={formData.category} onValueChange={(value) => handleSelectChange("category", value)}>
+                    <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -220,13 +252,25 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.category && <p className="text-destructive text-sm">{errors.category}</p>}
+                  {formData.category === "Other" && (
+                    <Input
+                      placeholder="Enter custom category"
+                      value={formData.customCategory}
+                      onChange={(e) => handleInputChange("customCategory", e.target.value)}
+                      className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-2"
+                    />
+                  )}
+                  {errors.category && <p className="text-destructive text-sm mt-1">{errors.category}</p>}
+                  {errors.customCategory && <p className="text-destructive text-sm mt-1">{errors.customCategory}</p>}
                 </div>
+              </div>
 
+              {/* Second Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="unit">Unit *</Label>
-                  <Select value={formData.unit} onValueChange={(value) => handleInputChange("unit", value)}>
-                    <SelectTrigger className="input-friendly">
+                  <Label htmlFor="unit" className="text-sm font-medium">Unit *</Label>
+                  <Select value={formData.unit} onValueChange={(value) => handleSelectChange("unit", value)}>
+                    <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
                       <SelectValue placeholder="Select unit" />
                     </SelectTrigger>
                     <SelectContent>
@@ -235,50 +279,61 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.unit && <p className="text-destructive text-sm">{errors.unit}</p>}
+                  {formData.unit === "other" && (
+                    <Input
+                      placeholder="Enter custom unit"
+                      value={formData.customUnit}
+                      onChange={(e) => handleInputChange("customUnit", e.target.value)}
+                      className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-2"
+                    />
+                  )}
+                  {errors.unit && <p className="text-destructive text-sm mt-1">{errors.unit}</p>}
+                  {errors.customUnit && <p className="text-destructive text-sm mt-1">{errors.customUnit}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="maker">Maker/Brand *</Label>
+                  <Label htmlFor="maker" className="text-sm font-medium">Maker/Brand *</Label>
                   <Input
                     id="maker"
                     placeholder="e.g., SteelCorp Industries"
                     value={formData.maker}
                     onChange={(e) => handleInputChange("maker", e.target.value)}
-                    className="input-friendly"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
-                  {errors.maker && <p className="text-destructive text-sm">{errors.maker}</p>}
+                  {errors.maker && <p className="text-destructive text-sm mt-1">{errors.maker}</p>}
                 </div>
               </div>
 
+              {/* Specifications */}
               <div className="space-y-2">
-                <Label htmlFor="specifications">Specifications *</Label>
+                <Label htmlFor="specifications" className="text-sm font-medium">Specifications *</Label>
                 <Textarea
                   id="specifications"
                   placeholder="Enter detailed specifications (size, grade, model, technical details, etc.)"
                   value={formData.specifications}
                   onChange={(e) => handleInputChange("specifications", e.target.value)}
-                  className="input-friendly min-h-[100px]"
+                  className="min-h-[60px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
                 />
-                {errors.specifications && <p className="text-destructive text-sm">{errors.specifications}</p>}
+                {errors.specifications && <p className="text-destructive text-sm mt-1">{errors.specifications}</p>}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Third Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="partNumber">Part Number</Label>
+                  <Label htmlFor="partNumber" className="text-sm font-medium">Part Number</Label>
                   <Input
                     id="partNumber"
                     placeholder="Manufacturer part number"
                     value={formData.partNumber}
                     onChange={(e) => handleInputChange("partNumber", e.target.value)}
-                    className="input-friendly"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="location">Storage Location</Label>
-                  <Select value={formData.location} onValueChange={(value) => handleInputChange("location", value)}>
-                    <SelectTrigger className="input-friendly">
+                  <Label htmlFor="location" className="text-sm font-medium">Storage Location</Label>
+                  <Select value={formData.location} onValueChange={(value) => handleSelectChange("location", value)}>
+                    <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
                       <SelectValue placeholder="Select storage location" />
                     </SelectTrigger>
                     <SelectContent>
@@ -287,23 +342,32 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                       ))}
                     </SelectContent>
                   </Select>
+                  {formData.location === "Other" && (
+                    <Input
+                      placeholder="Enter custom location"
+                      value={formData.customLocation}
+                      onChange={(e) => handleInputChange("customLocation", e.target.value)}
+                      className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-2"
+                    />
+                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Stock Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4" />
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
                 Stock Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <CardContent className="space-y-6">
+              {/* Stock Levels Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="currentStock">Current Stock *</Label>
+                  <Label htmlFor="currentStock" className="text-sm font-medium">Current Stock *</Label>
                   <Input
                     id="currentStock"
                     type="number"
@@ -311,13 +375,13 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                     min="0"
                     value={formData.currentStock}
                     onChange={(e) => handleInputChange("currentStock", e.target.value)}
-                    className="input-friendly"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
-                  {errors.currentStock && <p className="text-destructive text-sm">{errors.currentStock}</p>}
+                  {errors.currentStock && <p className="text-destructive text-sm mt-1">{errors.currentStock}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="minStock">Min Stock *</Label>
+                  <Label htmlFor="minStock" className="text-sm font-medium">Min Stock *</Label>
                   <Input
                     id="minStock"
                     type="number"
@@ -325,13 +389,13 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                     min="0"
                     value={formData.minStock}
                     onChange={(e) => handleInputChange("minStock", e.target.value)}
-                    className="input-friendly"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
-                  {errors.minStock && <p className="text-destructive text-sm">{errors.minStock}</p>}
+                  {errors.minStock && <p className="text-destructive text-sm mt-1">{errors.minStock}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="maxStock">Max Stock</Label>
+                  <Label htmlFor="maxStock" className="text-sm font-medium">Max Stock</Label>
                   <Input
                     id="maxStock"
                     type="number"
@@ -339,13 +403,13 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                     min="0"
                     value={formData.maxStock}
                     onChange={(e) => handleInputChange("maxStock", e.target.value)}
-                    className="input-friendly"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
-                  {errors.maxStock && <p className="text-destructive text-sm">{errors.maxStock}</p>}
+                  {errors.maxStock && <p className="text-destructive text-sm mt-1">{errors.maxStock}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="reorderLevel">Reorder Level</Label>
+                  <Label htmlFor="reorderLevel" className="text-sm font-medium">Reorder Level</Label>
                   <Input
                     id="reorderLevel"
                     type="number"
@@ -353,14 +417,15 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                     min="0"
                     value={formData.reorderLevel}
                     onChange={(e) => handleInputChange("reorderLevel", e.target.value)}
-                    className="input-friendly"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Price and Lead Time Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="unitPrice">Unit Price (₹)</Label>
+                  <Label htmlFor="unitPrice" className="text-sm font-medium">Unit Price (₹)</Label>
                   <Input
                     id="unitPrice"
                     type="number"
@@ -369,19 +434,19 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                     step="0.01"
                     value={formData.unitPrice}
                     onChange={(e) => handleInputChange("unitPrice", e.target.value)}
-                    className="input-friendly"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
-                  {errors.unitPrice && <p className="text-destructive text-sm">{errors.unitPrice}</p>}
+                  {errors.unitPrice && <p className="text-destructive text-sm mt-1">{errors.unitPrice}</p>}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="leadTime">Lead Time</Label>
+                  <Label htmlFor="leadTime" className="text-sm font-medium">Lead Time</Label>
                   <Input
                     id="leadTime"
                     placeholder="e.g., 5 days"
                     value={formData.leadTime}
                     onChange={(e) => handleInputChange("leadTime", e.target.value)}
-                    className="input-friendly"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
                 </div>
               </div>
@@ -389,34 +454,34 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
           </Card>
 
           {/* Supplier Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Truck className="w-4 h-4" />
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <Truck className="w-5 h-5 text-blue-600" />
                 Supplier Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="supplier">Supplier</Label>
+                  <Label htmlFor="supplier" className="text-sm font-medium">Supplier</Label>
                   <Input
                     id="supplier"
                     placeholder="Supplier company name"
                     value={formData.supplier}
                     onChange={(e) => handleInputChange("supplier", e.target.value)}
-                    className="input-friendly"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="supplierContact">Supplier Contact</Label>
+                  <Label htmlFor="supplierContact" className="text-sm font-medium">Supplier Contact</Label>
                   <Input
                     id="supplierContact"
                     placeholder="Phone number or email"
                     value={formData.supplierContact}
                     onChange={(e) => handleInputChange("supplierContact", e.target.value)}
-                    className="input-friendly"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
                 </div>
               </div>
@@ -424,42 +489,42 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
           </Card>
 
           {/* Additional Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Additional Information</CardTitle>
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg font-semibold">Additional Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="description" className="text-sm font-medium">Description</Label>
                 <Textarea
                   id="description"
                   placeholder="Brief description of the material and its uses"
                   value={formData.description}
                   onChange={(e) => handleInputChange("description", e.target.value)}
-                  className="input-friendly min-h-[80px]"
+                  className="min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Additional Notes</Label>
+                <Label htmlFor="notes" className="text-sm font-medium">Additional Notes</Label>
                 <Textarea
                   id="notes"
                   placeholder="Any additional information, special handling requirements, etc."
                   value={formData.notes}
                   onChange={(e) => handleInputChange("notes", e.target.value)}
-                  className="input-friendly min-h-[80px]"
+                  className="min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
                 />
               </div>
             </CardContent>
           </Card>
 
           {/* Form Actions */}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex justify-end gap-4 pt-6 border-t">
+            <Button type="button" variant="outline" onClick={onClose} className="h-11 px-6">
               <X className="w-4 h-4 mr-2" />
               Cancel
             </Button>
-            <Button type="submit" className="btn-primary">
+            <Button type="submit" className="h-11 px-6 bg-primary hover:bg-primary/90">
               <Save className="w-4 h-4 mr-2" />
               Add Material
             </Button>

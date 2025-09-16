@@ -844,16 +844,16 @@ const SupervisorRequests = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending_approval': return 'bg-warning text-warning-foreground';
-      case 'approved': return 'bg-success text-success-foreground';
-      case 'ordered': return 'bg-primary text-primary-foreground';
-      case 'partially_received': return 'bg-warning text-warning-foreground';
-      case 'material_received': return 'bg-success text-success-foreground';
-      case 'issued': return 'bg-accent text-accent-foreground';
-      case 'completed': return 'bg-success text-success-foreground';
-      case 'rejected': return 'bg-destructive text-destructive-foreground';
-      case 'reverted': return 'bg-destructive text-destructive-foreground';
-      default: return 'bg-secondary text-secondary-foreground';
+      case 'pending_approval': return 'bg-yellow-500 text-white border-yellow-600 hover:bg-yellow-500 hover:text-white';
+      case 'approved': return 'bg-green-500 text-white border-green-600 hover:bg-green-500 hover:text-white';
+      case 'ordered': return 'bg-blue-500 text-white border-blue-600 hover:bg-blue-500 hover:text-white';
+      case 'partially_received': return 'bg-orange-500 text-white border-orange-600 hover:bg-orange-500 hover:text-white';
+      case 'material_received': return 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-500 hover:text-white';
+      case 'issued': return 'bg-purple-500 text-white border-purple-600 hover:bg-purple-500 hover:text-white';
+      case 'completed': return 'bg-green-600 text-white border-green-700 hover:bg-green-600 hover:text-white';
+      case 'rejected': return 'bg-red-500 text-white border-red-600 hover:bg-red-500 hover:text-white';
+      case 'reverted': return 'bg-black text-white border-gray-800 hover:bg-black hover:text-white';
+      default: return 'bg-gray-500 text-white border-gray-600 hover:bg-gray-500 hover:text-white';
     }
   };
 
@@ -1037,7 +1037,7 @@ const SupervisorRequests = () => {
                       <div className="text-xs text-muted-foreground">Supplier</div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(request.status)} variant="secondary">
+                      <Badge className={`${getStatusColor(request.status)} border`}>
                         <span className="flex items-center gap-1">
                           {getStatusIcon(request.status)}
                           <span className="text-xs">{request.currentStage}</span>
@@ -1330,7 +1330,7 @@ const SupervisorRequests = () => {
                   <TableCell className="text-sm">{request.quantity}</TableCell>
                   <TableCell className="text-sm font-medium">{request.value}</TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(request.status)}>
+                    <Badge className={`${getStatusColor(request.status)} border`}>
                       <span className="flex items-center gap-1">
                         {getStatusIcon(request.status)}
                         <span className="text-xs">{request.currentStage}</span>
@@ -1458,7 +1458,7 @@ const SupervisorRequests = () => {
           <div className="flex gap-2">
             <Button asChild className="w-full sm:w-auto text-sm sm:text-base" size="sm">
               <Link to="/material-request">
-                <FileEdit className="w-4 h-4" />
+                <Plus className="w-4 h-4" />
                 <span className="hidden sm:inline">INDENT FORM</span>
                 <span className="sm:hidden">INDENT FORM</span>
               </Link>

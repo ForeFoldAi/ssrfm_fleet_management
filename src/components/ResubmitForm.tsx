@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Send, X, FileText, AlertTriangle, Edit, CheckCircle } from "lucide-react";
+import { Send, X, FileText, AlertTriangle, Edit, CheckCircle, Plus, Trash2, Camera, Eye, UserRoundPlus } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -11,6 +11,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { toast } from "../hooks/use-toast";
 import { useRole } from "../contexts/RoleContext";
 
+interface VendorQuotation {
+  id: string;
+  vendorName: string;
+  contactPerson: string;
+  phone: string;
+  quotedPrice: string;
+  notes: string;
+  quotationFile?: File | null;
+}
+
+interface RequestItem {
+  id: string;
+  srNo: number;
+  productName: string;
+  machineName: string;
+  specifications: string;
+  oldStock: number;
+  reqQuantity: string;
+  unit: string;
+  image?: File | null;
+  imagePreview?: string | null;
+  vendorQuotations: VendorQuotation[];
+}
+
 interface ResubmitFormProps {
   request: any;
   isOpen: boolean;
@@ -20,31 +44,237 @@ interface ResubmitFormProps {
 
 export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFormProps) => {
   const { currentUser } = useRole();
-  const [formData, setFormData] = useState({
-    materialName: request?.materialName || "",
-    specifications: request?.specifications || "",
-    maker: request?.maker || "",
-    quantity: request?.quantity || "",
-    value: request?.value || "",
-    priority: request?.priority || "medium",
-    materialPurpose: request?.materialPurpose || "",
-    machineId: request?.machineId || "",
-    machineName: request?.machineName || "",
-    additionalNotes: request?.additionalNotes || "",
-    resubmissionNotes: ""
-  });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isVendorFormOpen, setIsVendorFormOpen] = useState(false);
+  const [isViewQuotationsOpen, setIsViewQuotationsOpen] = useState(false);
+  const [currentItemId, setCurrentItemId] = useState<string>("");
+  const [currentQuotations, setCurrentQuotations] = useState<VendorQuotation[]>([]);
+  const [vendorFormData, setVendorFormData] = useState<VendorQuotation>({
+    id: "",
+    vendorName: "",
+    contactPerson: "",
+    phone: "",
+    quotedPrice: "",
+    notes: "",
+    quotationFile: null
+  });
+
+  // Available materials matching the physical form
+  const availableMaterials = [
+    {
+      name: "FEVICOL",
+      specifications: "SH adhesive",
+      unit: "kg",
+      category: "Adhesives"
+    },
+    {
+      name: "COPPER WIRE BRUSH",
+      specifications: "0.01 mm thickness of wire",
+      unit: "pieces",
+      category: "Tools"
+    },
+    {
+      name: "DHOLLAK BALL",
+      specifications: "PVC transparent",
+      unit: "pieces",
+      category: "Components"
+    },
+    {
+      name: "TRIANGLE BRUSH",
+      specifications: "Cleaning brush",
+      unit: "pieces",
+      category: "Tools"
+    },
+    {
+      name: "GUM TAPE",
+      specifications: "1 inch width adhesive tape",
+      unit: "pieces",
+      category: "Office Supplies"
+    },
+    {
+      name: "BEARINGS (SKF 6205-2RS)",
+      specifications: "Deep Grove Ball Bearing, Inner: 25mm, Outer: 52mm",
+      unit: "pieces",
+      category: "Parts"
+    },
+    {
+      name: "MOTOR OIL (SAE 10W-30)",
+      specifications: "Industrial grade lubricant for machinery",
+      unit: "liters",
+      category: "Lubricants"
+    },
+    {
+      name: "CONVEYOR BELTS",
+      specifications: "Rubber belt, 600mm width, food grade",
+      unit: "meters",
+      category: "Equipment"
+    }
+  ];
+
+  // Machines for the supervisor
+  const machines = [
+    "BLENDER",
+    "MAIN FLOUR MILL #01",
+    "SECONDARY MILL #02", 
+    "FLOUR SIFTER #01",
+    "MAIN CONVEYOR #01"
+  ];
+
+  // Initialize request items from the original request
+  const [requestItems, setRequestItems] = useState<RequestItem[]>([
+    {
+      id: "1",
+      srNo: 1,
+      productName: request?.items?.[0]?.productName || request?.materialName || "",
+      machineName: request?.items?.[0]?.machineName || request?.machineName || "",
+      specifications: request?.items?.[0]?.specifications || request?.specifications || "",
+      oldStock: request?.items?.[0]?.oldStock || 0,
+      reqQuantity: request?.items?.[0]?.reqQuantity || request?.quantity || "",
+      unit: request?.items?.[0]?.unit || "",
+      image: null,
+      imagePreview: null,
+      vendorQuotations: request?.items?.[0]?.vendorQuotations || []
+    }
+  ]);
+
+  const [resubmissionNotes, setResubmissionNotes] = useState("");
+
+  const handleItemChange = (itemId: string, field: string, value: string) => {
+    setRequestItems(prev => prev.map(item => 
+      item.id === itemId ? { ...item, [field]: value } : item
+    ));
+    
+    // Clear error for this field
+    if (errors[`${field}_${itemId}`]) {
+      setErrors(prev => ({ ...prev, [`${field}_${itemId}`]: "" }));
+    }
+  };
+
+  const handleFileChange = (itemId: string, field: string, file: File) => {
+    setRequestItems(prev => prev.map(item => 
+      item.id === itemId ? { ...item, [field]: file } : item
+    ));
+  };
+
+  const handleMaterialSelect = (itemId: string, materialName: string) => {
+    const material = availableMaterials.find(m => m.name === materialName);
+    if (material) {
+      setRequestItems(prev => prev.map(item => 
+        item.id === itemId ? {
+          ...item,
+          productName: material.name,
+          specifications: material.specifications,
+          unit: material.unit
+        } : item
+      ));
+    }
+  };
+
+  const addNewItem = () => {
+    const newItem: RequestItem = {
+      id: String(Date.now()),
+      srNo: requestItems.length + 1,
+      productName: "",
+      machineName: "",
+      specifications: "",
+      oldStock: 0,
+      reqQuantity: "",
+      unit: "",
+      image: null,
+      imagePreview: null,
+      vendorQuotations: []
+    };
+    setRequestItems(prev => [...prev, newItem]);
+  };
+
+  const removeItem = (itemId: string) => {
+    if (requestItems.length > 1) {
+      setRequestItems(prev => prev.filter(item => item.id !== itemId));
+    }
+  };
+
+  const openVendorForm = (itemId: string) => {
+    setCurrentItemId(itemId);
+    setVendorFormData({
+      id: "",
+      vendorName: "",
+      contactPerson: "",
+      phone: "",
+      quotedPrice: "",
+      notes: "",
+      quotationFile: null
+    });
+    setIsVendorFormOpen(true);
+  };
+
+  const viewVendorQuotations = (itemId: string) => {
+    const item = requestItems.find(item => item.id === itemId);
+    if (item) {
+      setCurrentQuotations(item.vendorQuotations);
+      setCurrentItemId(itemId);
+      setIsViewQuotationsOpen(true);
+    }
+  };
+
+  const handleVendorFormChange = (field: string, value: string) => {
+    setVendorFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleVendorFileChange = (file: File) => {
+    setVendorFormData(prev => ({ ...prev, quotationFile: file }));
+  };
+
+  const addVendorQuotation = () => {
+    const currentItem = requestItems.find(item => item.id === currentItemId);
+    if (currentItem && currentItem.vendorQuotations.length < 4) {
+      const newQuotation: VendorQuotation = {
+        ...vendorFormData,
+        id: String(Date.now())
+      };
+      
+      setRequestItems(prev => prev.map(item => 
+        item.id === currentItemId 
+          ? { ...item, vendorQuotations: [...item.vendorQuotations, newQuotation] }
+          : item
+      ));
+      
+      setIsVendorFormOpen(false);
+      toast({
+        title: "Vendor Quotation Added",
+        description: `Quotation from ${vendorFormData.vendorName} added successfully`,
+      });
+    } else if (currentItem && currentItem.vendorQuotations.length >= 4) {
+      toast({
+        title: "Maximum Quotations Reached",
+        description: "You can only add up to 4 vendor quotations per item",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const removeVendorQuotation = (itemId: string, quotationId: string) => {
+    setRequestItems(prev => prev.map(item => 
+      item.id === itemId 
+        ? { ...item, vendorQuotations: item.vendorQuotations.filter(q => q.id !== quotationId) }
+        : item
+    ));
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+    
+    requestItems.forEach((item, index) => {
+      if (!item.productName.trim()) newErrors[`productName_${item.id}`] = `Product name is required for item ${index + 1}`;
+      if (!item.machineName.trim()) newErrors[`machineName_${item.id}`] = `Machine name is required for item ${index + 1}`;
+      if (!item.reqQuantity.trim()) newErrors[`reqQuantity_${item.id}`] = `Required quantity is required for item ${index + 1}`;
+      
+      const qty = Number(item.reqQuantity);
+      if (qty <= 0) newErrors[`reqQuantity_${item.id}`] = `Quantity must be greater than 0 for item ${index + 1}`;
+    });
 
-    if (!formData.materialName.trim()) newErrors.materialName = "Material name is required";
-    if (!formData.specifications.trim()) newErrors.specifications = "Specifications are required";
-    if (!formData.maker.trim()) newErrors.maker = "Maker/Brand is required";
-    if (!formData.quantity.trim()) newErrors.quantity = "Quantity is required";
-    if (!formData.value.trim()) newErrors.value = "Estimated value is required";
-    if (!formData.materialPurpose.trim()) newErrors.materialPurpose = "Material purpose is required";
-    if (!formData.resubmissionNotes.trim()) newErrors.resubmissionNotes = "Please explain the changes made to address the revert reason";
+    if (!resubmissionNotes.trim()) {
+      newErrors.resubmissionNotes = "Please explain the changes made to address the revert reason";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -52,21 +282,34 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) return;
+    
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const updatedRequest = {
       ...request,
-      ...formData,
+      id: request.id,
       status: "pending_approval",
       statusDescription: "Resubmitted after addressing Owner's concerns",
       currentStage: "Pending Approval",
       progressStage: 1,
       resubmittedBy: currentUser?.name,
       resubmittedDate: new Date().toISOString(),
-      resubmissionNotes: formData.resubmissionNotes,
+      resubmissionNotes: resubmissionNotes,
       originalRevertReason: request.revertReason,
-      resubmissionCount: (request.resubmissionCount || 0) + 1
+      resubmissionCount: (request.resubmissionCount || 0) + 1,
+      items: requestItems.map(item => ({
+        ...item,
+        reqQuantity: Number(item.reqQuantity)
+      })),
+      requestedBy: currentUser?.name || "",
+      department: currentUser?.department || ""
     };
 
     onSubmit(updatedRequest);
@@ -79,16 +322,192 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
     onClose();
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
-    }
-  };
+  const ListView = () => (
+    <div className="space-y-6">
+      {requestItems.map((item) => (
+        <Card key={item.id} className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Product Name *</Label>
+                  <Select value={item.productName} onValueChange={(value) => handleMaterialSelect(item.id, value)}>
+                    <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
+                      <SelectValue placeholder="Select Product" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableMaterials.map((material) => (
+                        <SelectItem key={material.name} value={material.name}>
+                          <div className="flex flex-col">
+                            <div className="font-semibold">{material.name}</div>
+                            <div className="text-sm text-muted-foreground">{material.category}</div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors[`productName_${item.id}`] && (
+                    <p className="text-destructive text-sm mt-1">{errors[`productName_${item.id}`]}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Machine Name *</Label>
+                  <Select value={item.machineName} onValueChange={(value) => handleItemChange(item.id, "machineName", value)}>
+                    <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
+                      <SelectValue placeholder="Select Machine" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {machines.map((machine) => (
+                        <SelectItem key={machine} value={machine}>
+                          {machine}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors[`machineName_${item.id}`] && (
+                    <p className="text-destructive text-sm mt-1">{errors[`machineName_${item.id}`]}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Specifications</Label>
+                  <Textarea
+                    value={item.specifications}
+                    onChange={(e) => handleItemChange(item.id, "specifications", e.target.value)}
+                    placeholder="Enter detailed specifications"
+                    className="min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Old Stock</Label>
+                    <Input
+                      type="number"
+                      value={item.oldStock}
+                      onChange={(e) => handleItemChange(item.id, "oldStock", e.target.value)}
+                      placeholder="0"
+                      min="0"
+                      className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Required Quantity *</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={item.reqQuantity}
+                        onChange={(e) => handleItemChange(item.id, "reqQuantity", e.target.value)}
+                        placeholder="Enter quantity"
+                        min="0"
+                        className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                      />
+                      <span className="text-sm text-muted-foreground">{item.unit}</span>
+                    </div>
+                    {errors[`reqQuantity_${item.id}`] && (
+                      <p className="text-destructive text-sm mt-1">{errors[`reqQuantity_${item.id}`]}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Image</Label>
+                  <div className="flex items-center gap-4">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (e) => {
+                            handleItemChange(item.id, "imagePreview", e.target?.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                          handleFileChange(item.id, "image", file);
+                        }
+                      }}
+                      className="flex-1 h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                    />
+                    {item.imagePreview && (
+                      <div className="w-16 h-16 rounded-[5px] border overflow-hidden">
+                        <img src={item.imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Vendor Quotations ({item.vendorQuotations.length}/4)</Label>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 h-11"
+                      onClick={() => openVendorForm(item.id)}
+                      disabled={item.vendorQuotations.length >= 4}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Vendor Quotation
+                    </Button>
+                    {item.vendorQuotations.length > 0 && (
+                      <Button
+                        variant="outline"
+                        onClick={() => viewVendorQuotations(item.id)}
+                        className="px-3 h-11"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {item.vendorQuotations.length > 0 && (
+                    <div className="space-y-2">
+                      {item.vendorQuotations.map((quotation) => (
+                        <div key={quotation.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-[5px] border">
+                          <div>
+                            <div className="font-medium text-sm">{quotation.vendorName}</div>
+                            <div className="text-xs text-muted-foreground">{quotation.quotedPrice}</div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeVendorQuotation(item.id, quotation.id)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {requestItems.length > 1 && (
+                  <div className="flex justify-end">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeItem(item.id)}
+                      className="text-destructive hover:text-destructive h-10"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Remove Item
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Edit className="w-5 h-5 text-foreground" />
@@ -98,158 +517,18 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Revert Information */}
-          <Card className="border-red-200 bg-red-50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-red-800 flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5" />
-                Owner's Revert Reason
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="p-3 bg-red-100 border border-red-200 rounded-lg">
-                <div className="text-sm text-red-800">
-                  <strong>Reverted by:</strong> {request?.revertedBy} on {new Date(request?.revertedDate).toLocaleDateString()}
-                </div>
-                <div className="text-sm text-red-700 mt-2">
-                  <strong>Reason:</strong> {request?.revertReason}
-                </div>
-              </div>
-              <div className="text-sm text-red-700">
-                <strong>Instructions:</strong> Please address the above concerns and update the request details accordingly before resubmitting.
-              </div>
-            </CardContent>
-          </Card>
+         
 
-          {/* Material Information */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Material Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="material-name">Material Name *</Label>
-                  <Input
-                    id="material-name"
-                    placeholder="Enter material name"
-                    value={formData.materialName}
-                    onChange={(e) => handleInputChange("materialName", e.target.value)}
-                    className={errors.materialName ? "border-red-500" : ""}
-                  />
-                  {errors.materialName && (
-                    <p className="text-red-500 text-sm">{errors.materialName}</p>
-                  )}
-                </div>
+          {/* Add Item Button */}
+          <div className="flex justify-end">
+            <Button type="button" onClick={addNewItem} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Add New Item
+            </Button>
+          </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="maker">Maker/Brand *</Label>
-                  <Input
-                    id="maker"
-                    placeholder="Enter manufacturer or brand"
-                    value={formData.maker}
-                    onChange={(e) => handleInputChange("maker", e.target.value)}
-                    className={errors.maker ? "border-red-500" : ""}
-                  />
-                  {errors.maker && (
-                    <p className="text-red-500 text-sm">{errors.maker}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantity *</Label>
-                  <Input
-                    id="quantity"
-                    placeholder="Enter quantity with unit"
-                    value={formData.quantity}
-                    onChange={(e) => handleInputChange("quantity", e.target.value)}
-                    className={errors.quantity ? "border-red-500" : ""}
-                  />
-                  {errors.quantity && (
-                    <p className="text-red-500 text-sm">{errors.quantity}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="value">Estimated Value *</Label>
-                  <Input
-                    id="value"
-                    placeholder="Enter estimated cost (₹)"
-                    value={formData.value}
-                    onChange={(e) => handleInputChange("value", e.target.value)}
-                    className={errors.value ? "border-red-500" : ""}
-                  />
-                  {errors.value && (
-                    <p className="text-red-500 text-sm">{errors.value}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="priority">Priority</Label>
-                  <Select value={formData.priority} onValueChange={(value) => handleInputChange("priority", value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="machine-name">Machine Name</Label>
-                  <Input
-                    id="machine-name"
-                    placeholder="Enter machine name"
-                    value={formData.machineName}
-                    onChange={(e) => handleInputChange("machineName", e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="specifications">Specifications *</Label>
-                <Textarea
-                  id="specifications"
-                  placeholder="Enter detailed specifications (address the Owner's concerns)"
-                  value={formData.specifications}
-                  onChange={(e) => handleInputChange("specifications", e.target.value)}
-                  rows={4}
-                  className={errors.specifications ? "border-red-500" : ""}
-                />
-                {errors.specifications && (
-                  <p className="text-red-500 text-sm">{errors.specifications}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="material-purpose">Material Purpose *</Label>
-                <Textarea
-                  id="material-purpose"
-                  placeholder="Describe the purpose and justification for this material"
-                  value={formData.materialPurpose}
-                  onChange={(e) => handleInputChange("materialPurpose", e.target.value)}
-                  rows={3}
-                  className={errors.materialPurpose ? "border-red-500" : ""}
-                />
-                {errors.materialPurpose && (
-                  <p className="text-red-500 text-sm">{errors.materialPurpose}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="additional-notes">Additional Notes</Label>
-                <Textarea
-                  id="additional-notes"
-                  placeholder="Any additional information or special requirements"
-                  value={formData.additionalNotes}
-                  onChange={(e) => handleInputChange("additionalNotes", e.target.value)}
-                  rows={2}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          {/* Items Section */}
+          <ListView />
 
           {/* Resubmission Notes */}
           <Card className="border-secondary bg-secondary/10">
@@ -262,10 +541,10 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
                 <Textarea
                   id="resubmission-notes"
                   placeholder="Explain what changes you have made to address the Owner's concerns..."
-                  value={formData.resubmissionNotes}
-                  onChange={(e) => handleInputChange("resubmissionNotes", e.target.value)}
+                  value={resubmissionNotes}
+                  onChange={(e) => setResubmissionNotes(e.target.value)}
                   rows={4}
-                  className={errors.resubmissionNotes ? "border-red-500" : ""}
+                  className={`min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200 ${errors.resubmissionNotes ? "border-red-500" : ""}`}
                 />
                 {errors.resubmissionNotes && (
                   <p className="text-red-500 text-sm">{errors.resubmissionNotes}</p>
@@ -273,26 +552,6 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
               </div>
               <div className="text-sm text-foreground">
                 <strong>Note:</strong> Please be specific about how you have addressed each point raised in the revert reason.
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Summary */}
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="w-5 h-5 text-primary/80 mt-0.5" />
-                <div>
-                  <div className="font-medium text-primary">Resubmission Summary</div>
-                  <div className="text-sm text-primary/90 mt-1">
-                    <div>Request ID: {request?.id}</div>
-                    <div>Material: {formData.materialName}</div>
-                    <div>Quantity: {formData.quantity}</div>
-                    <div>Estimated Value: {formData.value}</div>
-                    <div>Resubmitted by: {currentUser?.name}</div>
-                    <div>Status after resubmission: Pending Approval</div>
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -309,6 +568,184 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
             </Button>
           </div>
         </form>
+
+        {/* Vendor Quotation Form Dialog */}
+        <Dialog open={isVendorFormOpen} onOpenChange={setIsVendorFormOpen}>
+          <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto">
+            <DialogHeader className="pb-4">
+              <DialogTitle className="flex items-center gap-3 text-xl">
+                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                  <UserRoundPlus className="w-6 h-6 text-primary" />
+                </div>
+                Add Vendor Quotation
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="vendorName" className="text-sm font-medium">Vendor Name *</Label>
+                  <Input
+                    id="vendorName"
+                    value={vendorFormData.vendorName}
+                    onChange={(e) => handleVendorFormChange("vendorName", e.target.value)}
+                    placeholder="Enter vendor name"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contactPerson" className="text-sm font-medium">Contact Person *</Label>
+                  <Input
+                    id="contactPerson"
+                    value={vendorFormData.contactPerson}
+                    onChange={(e) => handleVendorFormChange("contactPerson", e.target.value)}
+                    placeholder="Enter contact person"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-sm font-medium">Phone *</Label>
+                  <Input
+                    id="phone"
+                    value={vendorFormData.phone}
+                    onChange={(e) => handleVendorFormChange("phone", e.target.value)}
+                    placeholder="Enter phone number"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="quotedPrice" className="text-sm font-medium">Quoted Price *</Label>
+                  <Input
+                    id="quotedPrice"
+                    value={vendorFormData.quotedPrice}
+                    onChange={(e) => handleVendorFormChange("quotedPrice", e.target.value)}
+                    placeholder="Enter quoted price"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="quotationFile" className="text-sm font-medium">Quotation File</Label>
+                <Input
+                  id="quotationFile"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleVendorFileChange(file);
+                    }
+                  }}
+                  className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
+                <Textarea
+                  id="notes"
+                  value={vendorFormData.notes}
+                  onChange={(e) => handleVendorFormChange("notes", e.target.value)}
+                  placeholder="Additional notes or comments"
+                  className="min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-4 pt-6 border-t">
+              <Button variant="outline" onClick={() => setIsVendorFormOpen(false)} className="h-11 px-6">
+                Cancel
+              </Button>
+              <Button onClick={addVendorQuotation} className="h-11 px-6 bg-primary hover:bg-primary/90">
+                Add Quotation
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Vendor Quotations Dialog */}
+        <Dialog open={isViewQuotationsOpen} onOpenChange={setIsViewQuotationsOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Eye className="w-5 h-5 text-foreground" />
+                Vendor Quotations
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {currentQuotations.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {currentQuotations.map((quotation, index) => (
+                    <Card key={quotation.id} className="border border-gray-200">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg">{quotation.vendorName}</CardTitle>
+                          <Badge variant="secondary">Quotation #{index + 1}</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="font-medium text-muted-foreground">Contact Person:</span>
+                            <div className="font-medium">{quotation.contactPerson}</div>
+                          </div>
+                          <div>
+                            <span className="font-medium text-muted-foreground">Phone:</span>
+                            <div className="font-medium">{quotation.phone}</div>
+                          </div>
+                          <div>
+                            <span className="font-medium text-muted-foreground">Price:</span>
+                            <div className="font-medium text-primary/80">{quotation.quotedPrice}</div>
+                          </div>
+                        </div>
+                        
+                        {quotation.notes && (
+                          <div>
+                            <span className="font-medium text-muted-foreground text-sm">Notes:</span>
+                            <div className="text-sm mt-1 p-2 bg-gray-50 rounded border">
+                              {quotation.notes}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {quotation.quotationFile && (
+                          <div>
+                            <span className="font-medium text-muted-foreground text-sm">Quotation File:</span>
+                            <div className="text-sm mt-1 p-2 bg-secondary/10 rounded border border-secondary">
+                              <div className="flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-foreground" />
+                                <span className="font-medium">{quotation.quotationFile.name}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No Quotations</h3>
+                  <p className="text-muted-foreground">
+                    No vendor quotations have been added for this item yet.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <Button variant="outline" onClick={() => setIsViewQuotationsOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );

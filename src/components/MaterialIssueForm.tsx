@@ -300,51 +300,12 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
               <div className="text-base font-bold">MATERIAL ISSUE FORM</div>
               <div className="text-xs text-muted-foreground">AGAINST REQUISITION AND INDENT FORM</div>
             </div>
-            <Badge variant="secondary" className="ml-auto text-xs">SSRFM Industries</Badge>
+            
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Company Header - Compact */}
-          <Card className="bg-secondary/10 border-secondary">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <img src={logo} alt="Minar Logo" className="w-5 h-5 object-contain" />
-                <div>
-                  <h1 className="text-lg font-bold text-foreground">SREE SAI ROLLER FLOUR MILLS PVT LTD</h1>
-                  <p className="text-sm text-foreground">MATERIAL ISSUE FORM AGAINST REQUISITION AND INDENT FORM</p>
-                </div>
-              </div>
-              
-              {/* Document Information - Compact Grid */}
-              <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-xs bg-white p-3 rounded border">
-                <div>
-                  <span className="font-semibold">DATE:</span>
-                  <div className="text-xs">{new Date(formData.date).toLocaleDateString()}</div>
-                </div>
-                <div>
-                  <span className="font-semibold">MATERIAL ISSUE FORM SR.N.:</span>
-                  <div className="font-mono text-xs">{formData.materialIssueFormSrNo}</div>
-                </div>
-                <div>
-                  <span className="font-semibold">REQ.FORM SR. NO.:</span>
-                  <div className="font-mono text-xs">{formData.reqFormSrNo}</div>
-                </div>
-                <div>
-                  <span className="font-semibold">IND. FORM SR NO.:</span>
-                  <div className="font-mono text-xs">{formData.indFormSrNo}</div>
-                </div>
-                <div>
-                  <span className="font-semibold">REVISION STATUS:</span>
-                  <div className="text-xs">0</div>
-                </div>
-                <div>
-                  <span className="font-semibold">PAGE:</span>
-                  <div className="text-xs">1 OF 1</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+         
 
           {/* Add Item Button - Compact */}
           <div className="flex justify-end">
@@ -451,7 +412,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                               placeholder="Qty"
                               min="0"
                               max={item.existingStock}
-                              className="border-0 p-0 h-auto w-12 text-center text-xs"
+                              className="border-0 p-2 h-10 w-16 text-center text-sm outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
                             />
                             <span className="text-xs text-gray-600">{item.unit}</span>
                           </div>
@@ -499,14 +460,14 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                     <Input
                       value={formData.issuingPersonName}
                       onChange={(e) => handleInputChange("issuingPersonName", e.target.value)}
-                      placeholder="Issuing Person Name"
-                      className="text-center font-semibold text-xs h-8"
+                      placeholder="Enter Issuing Person Name"
+                      className="text-center  text-sm h-10 p-2 border-0 outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
                     />
                     <Input
                       value={formData.issuingPersonDesignation}
                       onChange={(e) => handleInputChange("issuingPersonDesignation", e.target.value)}
                       placeholder="Designation"
-                      className="text-center text-xs h-8"
+                      className="text-center text-sm h-10 p-2 border-0 outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
                     />
                     
                   </div>
@@ -522,14 +483,14 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                     <Input
                       value={formData.receiverName}
                       onChange={(e) => handleInputChange("receiverName", e.target.value)}
-                      placeholder="Receiver Name"
-                      className="text-center font-semibold text-xs h-8"
+                      placeholder="Enter Receiver Name"
+                      className="text-center  text-sm h-10 p-2 border-0 outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
                     />
                     <Input
                       value={formData.receiverDesignation}
                       onChange={(e) => handleInputChange("receiverDesignation", e.target.value)}
                       placeholder="Designation"
-                      className="text-center text-xs h-8"
+                      className="text-center text-sm h-10 p-2 border-0 outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
                     />
                    
                   </div>
@@ -551,7 +512,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                   placeholder="Describe the purpose for this material issue"
                   value={formData.purpose}
                   onChange={(e) => handleInputChange("purpose", e.target.value)}
-                  className="input-friendly min-h-[60px] text-xs"
+                  className="input-friendly min-h-[20px] text-sm p-2 border-0 outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
                 />
                 {errors.purpose && <p className="text-destructive text-xs">{errors.purpose}</p>}
               </div>
@@ -563,7 +524,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                   placeholder="Any additional notes or special instructions"
                   value={formData.notes}
                   onChange={(e) => handleInputChange("notes", e.target.value)}
-                  className="input-friendly min-h-[50px] text-xs"
+                  className="input-friendly min-h-[35px] text-sm p-2 border-0 outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
                 />
               </div>
 

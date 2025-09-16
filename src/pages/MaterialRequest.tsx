@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { FileText, Camera, Upload, X, Eye, User, Settings, MapPin, Package, Plus, Trash2, Building2, List, Table as TableIcon, ArrowLeft, Phone, Mail, Calendar, IndianRupee } from "lucide-react";
+import { FileText, Camera, Upload, X, Eye, User, Settings, MapPin, Package, Plus, Trash2, Building2, List, Table as TableIcon, ArrowLeft, Phone, Mail, Calendar, IndianRupee, UserRoundPlus } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -536,16 +536,16 @@ const MaterialRequest = () => {
   );
 
   const ListView = () => (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {requestItems.map((item) => (
-        <Card key={item.id} className="card-friendly">
-          <CardContent className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              <div className="space-y-4">
+        <Card key={item.id} className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label>Product Name *</Label>
+                  <Label className="text-sm font-medium">Product Name *</Label>
                   <Select value={item.productName} onValueChange={(value) => handleMaterialSelect(item.id, value)}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
                       <SelectValue placeholder="Select Product" />
                     </SelectTrigger>
                     <SelectContent>
@@ -560,14 +560,14 @@ const MaterialRequest = () => {
                     </SelectContent>
                   </Select>
                   {errors[`productName_${item.id}`] && (
-                    <p className="text-destructive text-sm">{errors[`productName_${item.id}`]}</p>
+                    <p className="text-destructive text-sm mt-1">{errors[`productName_${item.id}`]}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Machine Name *</Label>
+                  <Label className="text-sm font-medium">Machine Name *</Label>
                   <Select value={item.machineName} onValueChange={(value) => handleItemChange(item.id, "machineName", value)}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
                       <SelectValue placeholder="Select Machine" />
                     </SelectTrigger>
                     <SelectContent>
@@ -579,35 +579,36 @@ const MaterialRequest = () => {
                     </SelectContent>
                   </Select>
                   {errors[`machineName_${item.id}`] && (
-                    <p className="text-destructive text-sm">{errors[`machineName_${item.id}`]}</p>
+                    <p className="text-destructive text-sm mt-1">{errors[`machineName_${item.id}`]}</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Specifications</Label>
+                  <Label className="text-sm font-medium">Specifications</Label>
                   <Textarea
                     value={item.specifications}
                     onChange={(e) => handleItemChange(item.id, "specifications", e.target.value)}
                     placeholder="Enter detailed specifications"
-                    className="min-h-[80px]"
+                    className="min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
                   />
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Old Stock</Label>
+                    <Label className="text-sm font-medium">Old Stock</Label>
                     <Input
                       type="number"
                       value={item.oldStock}
                       onChange={(e) => handleItemChange(item.id, "oldStock", e.target.value)}
                       placeholder="0"
                       min="0"
+                      className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Required Quantity *</Label>
+                    <Label className="text-sm font-medium">Required Quantity *</Label>
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
@@ -615,17 +616,18 @@ const MaterialRequest = () => {
                         onChange={(e) => handleItemChange(item.id, "reqQuantity", e.target.value)}
                         placeholder="Enter quantity"
                         min="0"
+                        className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                       />
                       <span className="text-sm text-muted-foreground">{item.unit}</span>
                     </div>
                     {errors[`reqQuantity_${item.id}`] && (
-                      <p className="text-destructive text-sm">{errors[`reqQuantity_${item.id}`]}</p>
+                      <p className="text-destructive text-sm mt-1">{errors[`reqQuantity_${item.id}`]}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Image</Label>
+                  <Label className="text-sm font-medium">Image</Label>
                   <div className="flex items-center gap-4">
                     <Input
                       type="file"
@@ -641,10 +643,10 @@ const MaterialRequest = () => {
                           handleFileChange(item.id, "image", file);
                         }
                       }}
-                      className="flex-1"
+                      className="flex-1 h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                     />
                     {item.imagePreview && (
-                      <div className="w-16 h-16 rounded border overflow-hidden">
+                      <div className="w-16 h-16 rounded-[5px] border overflow-hidden">
                         <img src={item.imagePreview} alt="Preview" className="w-full h-full object-cover" />
                       </div>
                     )}
@@ -652,11 +654,11 @@ const MaterialRequest = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Vendor Quotations ({item.vendorQuotations.length}/4)</Label>
+                  <Label className="text-sm font-medium">Vendor Quotations ({item.vendorQuotations.length}/4)</Label>
                   <div className="flex gap-2">
                     <Button 
                       variant="outline" 
-                      className="flex-1"
+                      className="flex-1 h-11"
                       onClick={() => openVendorForm(item.id)}
                       disabled={item.vendorQuotations.length >= 4}
                     >
@@ -667,7 +669,7 @@ const MaterialRequest = () => {
                       <Button
                         variant="outline"
                         onClick={() => viewVendorQuotations(item.id)}
-                        className="px-3"
+                        className="px-3 h-11"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
@@ -676,7 +678,7 @@ const MaterialRequest = () => {
                   {item.vendorQuotations.length > 0 && (
                     <div className="space-y-2">
                       {item.vendorQuotations.map((quotation) => (
-                        <div key={quotation.id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                        <div key={quotation.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-[5px] border">
                           <div>
                             <div className="font-medium text-sm">{quotation.vendorName}</div>
                             <div className="text-xs text-muted-foreground">{quotation.quotedPrice}</div>
@@ -701,7 +703,7 @@ const MaterialRequest = () => {
                       variant="outline"
                       size="sm"
                       onClick={() => removeItem(item.id)}
-                      className="text-destructive hover:text-destructive"
+                      className="text-destructive hover:text-destructive h-10"
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
                       Remove Item
@@ -739,86 +741,46 @@ const MaterialRequest = () => {
           </div>
         </div>
         
-        {/* List/Table Toggle */}
-        <div className="flex rounded-xl border border-secondary overflow-hidden bg-secondary/10/50 w-fit shadow-sm">
-          <Button
-            variant={viewMode === "list" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-            className={`rounded-none px-3 sm:px-4 ${
-              viewMode === "list" 
-                ? "bg-primary text-white hover:bg-primary-hover" 
-                : "text-foreground hover:text-foreground hover:bg-secondary/20"
-            }`}
-          >
-            <List className="w-4 h-4" />
-            <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
-          </Button>
-          <Button
-            variant={viewMode === "table" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("table")}
-            className={`rounded-none px-3 sm:px-4 ${
-              viewMode === "table" 
-                ? "bg-primary text-white hover:bg-primary-hover" 
-                : "text-foreground hover:text-foreground hover:bg-secondary/20"
-            }`}
-          >
-            <TableIcon className="w-4 h-4" />
-            <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
-          </Button>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-        {/* Company Header */}
-        <Card className="bg-secondary/10 border-secondary">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Building2 className="w-6 h-6 text-foreground" />
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">SREE SAI ROLLER FLOUR MILLS PVT LTD</h1>
-                <p className="text-lg text-foreground">MATERIAL INDENT FORM</p>
-              </div>
-            </div>
-            
-            {/* Document Information */}
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm bg-white p-4 rounded border">
-              <div>
-                <span className="font-semibold">DATE:</span>
-                <div>{new Date(headerData.date).toLocaleDateString()}</div>
-              </div>
-              <div>
-                <span className="font-semibold">DOC. NO.:</span>
-                <div className="font-mono text-xs">{headerData.docNo}</div>
-              </div>
-              <div>
-                <span className="font-semibold">REVISION STATUS:</span>
-                <div>{headerData.revisionStatus}</div>
-              </div>
-              <div>
-                <span className="font-semibold">ISSUE NO.:</span>
-                <div>{headerData.issueNo}</div>
-              </div>
-              <div>
-                <span className="font-semibold">PAGE:</span>
-                <div>{headerData.page}</div>
-              </div>
-              <div>
-                <span className="font-semibold">REQ. FORM NO.:</span>
-                <div className="font-mono text-xs">{headerData.reqFormNo}</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Add Item Button */}
-        <div className="flex justify-end">
+        {/* List/Table Toggle and Add Item Button */}
+        <div className="flex items-center gap-3">
+          <div className="flex rounded-xl border border-secondary overflow-hidden bg-secondary/10/50 w-fit shadow-sm">
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className={`rounded-none px-3 sm:px-4 ${
+                viewMode === "list" 
+                  ? "bg-primary text-white hover:bg-primary-hover" 
+                  : "text-foreground hover:text-foreground hover:bg-secondary/20"
+              }`}
+            >
+              <List className="w-4 h-4" />
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              className={`rounded-none px-3 sm:px-4 ${
+                viewMode === "table" 
+                  ? "bg-primary text-white hover:bg-primary-hover" 
+                  : "text-foreground hover:text-foreground hover:bg-secondary/20"
+              }`}
+            >
+              <TableIcon className="w-4 h-4" />
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
+            </Button>
+          </div>
+          
           <Button type="button" onClick={addNewItem} className="gap-2">
             <Plus className="w-4 h-4" />
             Add New Item
           </Button>
         </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+       
 
         {/* Items Section */}
         {viewMode === "table" ? <TableView /> : <ListView />}
@@ -826,8 +788,8 @@ const MaterialRequest = () => {
         {/* Form Actions */}
         <div className="flex justify-center gap-4 pt-6">
           <Button type="submit" size="lg" className="min-w-48 gap-2">
-            <FileText className="w-5 h-5" />
-            Submit Indent Form
+            
+            Submit
           </Button>
           <Button type="button" size="lg" variant="outline" onClick={() => navigate(-1)} className="min-w-48 gap-2">
             <X className="w-5 h-5" />
@@ -838,63 +800,65 @@ const MaterialRequest = () => {
 
       {/* Vendor Quotation Form Dialog */}
       <Dialog open={isVendorFormOpen} onOpenChange={setIsVendorFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <IndianRupee className="w-5 h-5 text-primary/80" />
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                <UserRoundPlus className="w-6 h-6 text-primary" />
+              </div>
               Add Vendor Quotation
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="vendorName">Vendor Name *</Label>
+                <Label htmlFor="vendorName" className="text-sm font-medium">Vendor Name *</Label>
                 <Input
                   id="vendorName"
                   value={vendorFormData.vendorName}
                   onChange={(e) => handleVendorFormChange("vendorName", e.target.value)}
                   placeholder="Enter vendor name"
+                  className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="contactPerson">Contact Person *</Label>
+                <Label htmlFor="contactPerson" className="text-sm font-medium">Contact Person *</Label>
                 <Input
                   id="contactPerson"
                   value={vendorFormData.contactPerson}
                   onChange={(e) => handleVendorFormChange("contactPerson", e.target.value)}
                   placeholder="Enter contact person"
+                  className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone *</Label>
+                <Label htmlFor="phone" className="text-sm font-medium">Phone *</Label>
                 <Input
                   id="phone"
                   value={vendorFormData.phone}
                   onChange={(e) => handleVendorFormChange("phone", e.target.value)}
                   placeholder="Enter phone number"
+                  className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="quotedPrice">Quoted Price *</Label>
+                <Label htmlFor="quotedPrice" className="text-sm font-medium">Quoted Price *</Label>
                 <Input
                   id="quotedPrice"
                   value={vendorFormData.quotedPrice}
                   onChange={(e) => handleVendorFormChange("quotedPrice", e.target.value)}
                   placeholder="Enter quoted price"
+                  className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                 />
               </div>
-              
             </div>
 
-
-            
-
             <div className="space-y-2">
-              <Label htmlFor="quotationFile">Quotation File</Label>
+              <Label htmlFor="quotationFile" className="text-sm font-medium">Quotation File</Label>
               <Input
                 id="quotationFile"
                 type="file"
@@ -905,26 +869,27 @@ const MaterialRequest = () => {
                     handleVendorFileChange(file);
                   }
                 }}
+                className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
               <Textarea
                 id="notes"
                 value={vendorFormData.notes}
                 onChange={(e) => handleVendorFormChange("notes", e.target.value)}
                 placeholder="Additional notes or comments"
-                className="min-h-[80px]"
+                className="min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setIsVendorFormOpen(false)}>
+          <div className="flex justify-end gap-4 pt-6 border-t">
+            <Button variant="outline" onClick={() => setIsVendorFormOpen(false)} className="h-11 px-6">
               Cancel
             </Button>
-            <Button onClick={addVendorQuotation}>
+            <Button onClick={addVendorQuotation} className="h-11 px-6 bg-primary hover:bg-primary/90">
               Add Quotation
             </Button>
           </div>

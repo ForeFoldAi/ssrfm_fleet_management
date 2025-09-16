@@ -17,7 +17,7 @@ const Profile = () => {
     email: "john.martinez@ssrfm.com",
     phone: "+91 98765 43210",
     address: "123 Industrial Area, Mumbai, Maharashtra 400001",
-    department: "Production Floor A",
+    
     employeeId: "EMP-2023-045",
     joinDate: "March 15, 2020",
     supervisor: "Sarah Chen",
@@ -62,7 +62,7 @@ const Profile = () => {
       email: "john.martinez@ssrfm.com",
       phone: "+91 98765 43210",
       address: "123 Industrial Area, Mumbai, Maharashtra 400001",
-      department: "Production Floor A",
+     
       employeeId: "EMP-2023-045",
       joinDate: "March 15, 2020",
       supervisor: "Sarah Chen",
@@ -131,10 +131,7 @@ const Profile = () => {
               <Phone className="w-4 h-4 text-muted-foreground" />
               <span>{formData.phone}</span>
             </div>
-            <div className="flex items-center gap-3 text-sm">
-              <Building className="w-4 h-4 text-muted-foreground" />
-              <span>{formData.department}</span>
-            </div>
+            
             <div className="flex items-center gap-3 text-sm">
               <Calendar className="w-4 h-4 text-muted-foreground" />
               <span>Joined {formData.joinDate}</span>
@@ -238,10 +235,6 @@ const Profile = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="space-y-2">
-              <Label>Department</Label>
-              <p className="text-sm font-medium p-2 bg-secondary/30 rounded-md">{formData.department}</p>
-            </div>
             
             <div className="space-y-2">
               <Label>Role</Label>

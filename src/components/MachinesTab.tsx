@@ -88,61 +88,53 @@ export const MachinesTab = () => {
     <div className="space-y-4 sm:space-y-6">
       {/* Header with Actions */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-            <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">Machines & Equipment</h2>
-            <p className="text-muted-foreground">
-              <span className="bg-primary/10 text-primary px-2 py-1 rounded-full text-xs sm:text-sm font-semibold">
-                {filteredMachines.length} of {machines.length} machines
-              </span>
-            </p>
+        {/* Left side: Title and View Toggle Buttons */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          
+          
+          {/* View Toggle Buttons - Moved to left side */}
+          <div className="flex rounded-lg border border-secondary overflow-hidden bg-secondary/10 w-fit shadow-sm">
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className="rounded-none px-3 sm:px-4"
+            >
+              <List className="w-4 h-4" />
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              className="rounded-none px-3 sm:px-4"
+            >
+              <Table className="w-4 h-4" />
+              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
+            </Button>
           </div>
         </div>
-        
-        {/* Search and Controls - Now beside the header */}
+
+        {/* Right side: Search and Add Machine Button */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input
-            placeholder="Search machines..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64"
-          />
-        </div>
-        
-        <div className="flex rounded-lg border border-secondary overflow-hidden bg-secondary/10 w-fit shadow-sm">
-          <Button
-            variant={viewMode === "list" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-            className="rounded-none px-3 sm:px-4"
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="Search machines..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64"
+            />
+          </div>
+          
+          <Button 
+            className="btn-primary w-full sm:w-auto text-sm sm:text-base"
+            onClick={() => setIsAddMachineOpen(true)}
           >
-            <List className="w-4 h-4" />
-            <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
-          </Button>
-          <Button
-            variant={viewMode === "table" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("table")}
-            className="rounded-none px-3 sm:px-4"
-          >
-            <Table className="w-4 h-4" />
-            <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            Add New Machine
           </Button>
         </div>
-        </div>
-        
-        <Button 
-          className="btn-primary w-full sm:w-auto text-sm sm:text-base"
-          onClick={() => setIsAddMachineOpen(true)}
-        >
-          <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-          Add New Machine
-        </Button>
       </div>
 
       {/* Content */}

@@ -132,18 +132,44 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
 
         const originalQuantity = parseFloat(request.quantity.split(' ')[0]);
         const receivedQuantity = parseFloat(receivedForm.purchasedQuantity);
+        
+        // Calculate total received quantity including previous partial receipts
+        const previousReceipts = request.partialReceipts || [];
+        const totalPreviouslyReceived = previousReceipts.reduce((sum: number, receipt: any) => 
+            sum + parseFloat(receipt.purchasedQuantity), 0);
+        const totalReceived = totalPreviouslyReceived + receivedQuantity;
 
         let newStatus = 'material_received';
         let statusDescription = 'Materials fully received and updated in inventory';
         let currentStage = 'Material Received';
         let progressStage = 5;
 
-        if (isPartialReceipt || receivedQuantity < originalQuantity) {
+        if (isPartialReceipt || totalReceived < originalQuantity) {
             newStatus = 'partially_received';
-            statusDescription = `Partially received: ${receivedQuantity} of ${originalQuantity} units`;
+            statusDescription = `Partially received: ${totalReceived} of ${originalQuantity} units`;
             currentStage = 'Partially Received';
             progressStage = 4;
         }
+
+        // Create receipt record for history
+        const receiptRecord = {
+            id: `receipt-${Date.now()}`,
+            date: new Date().toISOString(),
+            receivedBy: currentUser.name,
+            receivedDate: receivedForm.receivedDate,
+            purchasedPrice: parseFloat(receivedForm.purchasedPrice),
+            purchasedQuantity: receivedQuantity,
+            purchasedFrom: receivedForm.purchasedFrom,
+            invoiceNumber: receivedForm.invoiceNumber,
+            qualityCheck: receivedForm.qualityCheck,
+            notes: receivedForm.notes,
+            isPartial: isPartialReceipt || totalReceived < originalQuantity,
+            totalReceivedSoFar: totalReceived,
+            originalQuantity: originalQuantity
+        };
+
+        // Update partial receipts history
+        const updatedPartialReceipts = [...previousReceipts, receiptRecord];
 
         onStatusUpdate(request.id, newStatus, {
             receivedBy: currentUser.name,
@@ -157,7 +183,9 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
             purchasedFrom: receivedForm.purchasedFrom,
             invoiceNumber: receivedForm.invoiceNumber,
             qualityCheck: receivedForm.qualityCheck,
-            notes: receivedForm.notes
+            notes: receivedForm.notes,
+            partialReceipts: updatedPartialReceipts,
+            totalReceivedQuantity: totalReceived
         });
 
         toast({
@@ -200,6 +228,14 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
         );
     };
 
+    // Calculate receipt progress
+    const getReceiptProgress = () => {
+        const originalQuantity = parseFloat(request.quantity.split(' ')[0]);
+        const totalReceived = request.totalReceivedQuantity || 0;
+        const percentage = Math.round((totalReceived / originalQuantity) * 100);
+        return { totalReceived, originalQuantity, percentage };
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -227,6 +263,27 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                             <div className="text-sm text-muted-foreground">
                                 {request.statusDescription}
                             </div>
+                            
+                            {/* Receipt Progress */}
+                            {(request.status === 'partially_received' || request.status === 'material_received') && (
+                                <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-medium">Receipt Progress</span>
+                                        <span className="text-sm text-muted-foreground">
+                                            {getReceiptProgress().totalReceived} / {getReceiptProgress().originalQuantity} units
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div 
+                                            className="bg-primary h-2 rounded-full transition-all duration-300"
+                                            style={{ width: `${getReceiptProgress().percentage}%` }}
+                                        ></div>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                        {getReceiptProgress().percentage}% Complete
+                                    </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
 
@@ -263,6 +320,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                                             value={revertReason}
                                             onChange={(e) => setRevertReason(e.target.value)}
                                             rows={3}
+                                            className="min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
                                         />
                                         <div className="flex gap-2">
                                             <Button
@@ -329,6 +387,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                                             placeholder="Enter total price"
                                             value={receivedForm.purchasedPrice}
                                             onChange={(e) => setReceivedForm(prev => ({ ...prev, purchasedPrice: e.target.value }))}
+                                            className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                                         />
                                     </div>
 
@@ -340,6 +399,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                                             placeholder="Enter received quantity"
                                             value={receivedForm.purchasedQuantity}
                                             onChange={(e) => setReceivedForm(prev => ({ ...prev, purchasedQuantity: e.target.value }))}
+                                            className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                                         />
                                     </div>
 
@@ -350,6 +410,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                                             placeholder="Supplier/Vendor name"
                                             value={receivedForm.purchasedFrom}
                                             onChange={(e) => setReceivedForm(prev => ({ ...prev, purchasedFrom: e.target.value }))}
+                                            className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                                         />
                                     </div>
 
@@ -360,6 +421,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                                             type="date"
                                             value={receivedForm.receivedDate}
                                             onChange={(e) => setReceivedForm(prev => ({ ...prev, receivedDate: e.target.value }))}
+                                            className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                                         />
                                     </div>
 
@@ -370,6 +432,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                                             placeholder="Invoice/Bill number"
                                             value={receivedForm.invoiceNumber}
                                             onChange={(e) => setReceivedForm(prev => ({ ...prev, invoiceNumber: e.target.value }))}
+                                            className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                                         />
                                     </div>
 
@@ -379,7 +442,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                                             value={receivedForm.qualityCheck}
                                             onValueChange={(value) => setReceivedForm(prev => ({ ...prev, qualityCheck: value }))}
                                         >
-                                            <SelectTrigger>
+                                            <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -399,6 +462,7 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                                         value={receivedForm.notes}
                                         onChange={(e) => setReceivedForm(prev => ({ ...prev, notes: e.target.value }))}
                                         rows={3}
+                                        className="min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
                                     />
                                 </div>
 
@@ -422,6 +486,51 @@ export const RequestStatusManager = ({ request, onStatusUpdate, isOpen, onClose 
                                     <Package className="w-4 h-4 mr-2" />
                                     Update Receipt Status
                                 </Button>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Partial Receipts History */}
+                    {request.partialReceipts && request.partialReceipts.length > 0 && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-lg">Receipt History</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-3">
+                                    {request.partialReceipts.map((receipt: any, index: number) => (
+                                        <div key={receipt.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                                            <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Badge variant={receipt.isPartial ? "secondary" : "default"}>
+                                                        {receipt.isPartial ? "Partial Receipt" : "Full Receipt"}
+                                                    </Badge>
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {new Date(receipt.date).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                                <div className="text-sm space-y-1">
+                                                    <div><strong>Quantity:</strong> {receipt.purchasedQuantity} units</div>
+                                                    <div><strong>From:</strong> {receipt.purchasedFrom}</div>
+                                                    <div><strong>Price:</strong> ₹{receipt.purchasedPrice}</div>
+                                                    {receipt.invoiceNumber && (
+                                                        <div><strong>Invoice:</strong> {receipt.invoiceNumber}</div>
+                                                    )}
+                                                    {receipt.notes && (
+                                                        <div><strong>Notes:</strong> {receipt.notes}</div>
+                                                    )}
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Total received so far: {receipt.totalReceivedSoFar} / {receipt.originalQuantity} units
+                                                    </div>
+                                                </div>
+                                                <div className="text-xs text-muted-foreground mt-1">
+                                                    By: {receipt.receivedBy}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </CardContent>
                         </Card>
                     )}
