@@ -46,10 +46,10 @@ export const RoleSwitcher = () => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <div className={`w-6 h-6 ${currentConfig.color} rounded-md flex items-center justify-center`}>
-            <CurrentIcon className="w-4 h-4 text-white" />
+      <DropdownMenuTrigger asChild className="hover:bg-none border-none outline-none" >
+        <Button variant="outline" className="gap-2 rounded-[10px] bg-none border-none hover:bg-white outline-none focus:outline-none ">
+          <div className={`w-6 h-6 ${currentConfig.color} rounded-[10px] flex items-center justify-center hover:bg-none`}>
+            <CurrentIcon className="w-4 h-4 " />
           </div>
           <div className="text-left">
             <div className="text-sm font-medium">{currentUser.name}</div>
@@ -58,13 +58,13 @@ export const RoleSwitcher = () => {
           <ChevronDown className="w-4 h-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
+      <DropdownMenuContent align="end" className="w-64 rounded-[10px]">
         <DropdownMenuLabel>Account Menu</DropdownMenuLabel>
         <DropdownMenuSeparator />
         
         <DropdownMenuItem asChild>
-          <Link to="/profile" className="flex items-center gap-3 p-3 cursor-pointer">
-            <div className="w-8 h-8 bg-secondary/100 rounded-lg flex items-center justify-center">
+          <Link to="/profile" className="flex items-center gap-3 p-3 cursor-pointer rounded-[20px]">
+            <div className="w-8 h-8 bg-secondary/100 rounded-[20px] flex items-center justify-center">
               <User className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1">
@@ -75,8 +75,8 @@ export const RoleSwitcher = () => {
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
-          <Link to="/settings" className="flex items-center gap-3 p-3 cursor-pointer">
-            <div className="w-8 h-8 bg-gray-500 rounded-lg flex items-center justify-center">
+          <Link to="/settings" className="flex items-center gap-3 p-3 cursor-pointer rounded-[20px]">
+            <div className="w-8 h-8 bg-gray-500 rounded-[20px] flex items-center justify-center">
               <Settings className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1">
@@ -87,8 +87,8 @@ export const RoleSwitcher = () => {
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
-          <Link to="/notifications" className="flex items-center gap-3 p-3 cursor-pointer">
-            <div className="w-8 h-8 bg-secondary/100 rounded-lg flex items-center justify-center">
+          <Link to="/notifications" className="flex items-center gap-3 p-3 cursor-pointer rounded-[20px]">
+            <div className="w-8 h-8 bg-secondary/100 rounded-[20px] flex items-center justify-center">
               <Bell className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1">
@@ -99,8 +99,8 @@ export const RoleSwitcher = () => {
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
-          <Link to="/security" className="flex items-center gap-3 p-3 cursor-pointer">
-            <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
+          <Link to="/security" className="flex items-center gap-3 p-3 cursor-pointer rounded-[20px]">
+            <div className="w-8 h-8 bg-red-500 rounded-[20px] flex items-center justify-center">
               <Lock className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1">
@@ -111,8 +111,8 @@ export const RoleSwitcher = () => {
         </DropdownMenuItem>
 
         <DropdownMenuItem asChild>
-          <Link to="/help" className="flex items-center gap-3 p-3 cursor-pointer">
-            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center">
+          <Link to="/help" className="flex items-center gap-3 p-3 cursor-pointer rounded-[20px]">
+            <div className="w-8 h-8 bg-indigo-500 rounded-[20px] flex items-center justify-center">
               <HelpCircle className="w-5 h-5 text-white" />
             </div>
             <div className="flex-1">

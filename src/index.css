@@ -1,241 +1,81 @@
-@tailwind base;
+@tailwind base; 
 @tailwind components;
 @tailwind utilities;
-
-/* SSRFM Materials Management Design System
-Fire Engine Red & Jonquil Yellow theme for industrial users who need clear, simple interfaces
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    /* White background - Primary Background */
-    --background: 240 100% 99%;
-    --foreground: 20 52% 22%;
+    /* Consistent border radius */
+    --radius: 10px;
+    /* Light background - softer off-white */
+    --background: 45 33% 98%; /* warm white */
+    --foreground: 30 25% 20%; /* dark warm brown for text */
 
-    /* Clean white cards */
-    --card: 240 100% 99%;
-    --card-foreground: 20 52% 22%;
+    /* Clean card backgrounds */
+    --card: 45 33% 98%;
+    --card-foreground: 30 25% 20%;
 
-    --popover: 240 100% 99%;
-    --popover-foreground: 20 52% 22%;
+    --popover: 45 33% 98%;
+    --popover-foreground: 30 25% 20%;
 
-    /* Fire Engine Red - Primary Color */
-    --primary: 0 89% 45%;
-    --primary-foreground: 240 100% 99%;
-    --primary-hover: 0 89% 40%;
+    /* Primary: Muted Gold (to match yellow from logo but softer) */
+    --primary: 43 90% 50%;
+    --primary-foreground: 0 0% 0%;
+    --primary-hover: 43 90% 45%;
 
-    /* Jonquil Yellow - Secondary Color with light tint for backgrounds */
-    --secondary: 48 97% 85%;
-    --secondary-foreground: 0 0% 0%;
+    /* Secondary: Warm Sand */
+    --secondary: 35 60% 88%;
+    --secondary-foreground: 30 25% 20%;
 
-    /* Light muted tones */
-    --muted: 48 97% 90%;
-    --muted-foreground: 20 52% 22%;
+    /* Muted: light beige */
+    --muted: 40 30% 92%;
+    --muted-foreground: 30 20% 25%;
 
-    /* Orange Web - Accent/Hover Color */
-    --accent: 42 95% 57%;
+    /* Accent: Bright Sunshine (for hovers, calls to action) */
+    --accent: 48 95% 55%;
     --accent-foreground: 0 0% 0%;
 
-    /* Status colors using the new scheme */
-    --success: 0 89% 45%;
-    --success-foreground: 240 100% 99%;
-    --warning: 48 97% 55%;
-    --warning-foreground: 0 0% 0%;
-    --destructive: 0 89% 45%;
-    --destructive-foreground: 240 100% 99%;
+    /* Status colors */
+    --success: 120 45% 40%; /* Green that is easy on eyes */
+    --success-foreground: 0 0% 100%;
+    --warning: 45 95% 55%;
+    --warning-foreground: 30 25% 20%;
+    --destructive: 0 65% 40%; /* Deep brownish brick (not pure red) */
+    --destructive-foreground: 0 0% 100%;
 
-    /* Persian Orange for borders */
-    --border: 25 50% 79%;
-    --input: 25 50% 79%;
-    --ring: 0 89% 45%;
+    /* Borders - soft earthy tone */
+    --border: 30 20% 75%;
+    --input: 30 20% 75%;
+    --ring: 43 90% 50%;
 
-    /* Friendly rounded corners */
-    --radius: 0.75rem;
+    /* Status-specific colors */
+    --status-in-stock: 120 45% 40%;
+    --status-low-stock: 45 95% 55%;
+    --status-out-stock: 0 65% 40%;
 
-    /* Status colors for materials */
-    --status-in-stock: 0 89% 45%;
-    --status-low-stock: 48 97% 55%;
-    --status-out-stock: 0 89% 45%;
-    
     /* Priority colors */
-    --priority-high: 0 89% 45%;
-    --priority-medium: 48 97% 55%;
-    --priority-low: 42 95% 57%;
+    --priority-high: 0 65% 40%;
+    --priority-medium: 45 95% 55%;
+    --priority-low: 48 95% 55%;
 
-    /* Gradients for hero sections */
-    --gradient-hero: linear-gradient(135deg, hsl(0 89% 45%) 0%, hsl(48 97% 55%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(240 100% 99%) 0%, hsl(48 97% 90%) 100%);
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(43 90% 50%) 0%, hsl(35 60% 88%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(45 33% 98%) 0%, hsl(40 30% 92%) 100%);
     
-    /* Shadows for depth */
-    --shadow-sm: 0 2px 4px -1px hsl(20 52% 22% / 0.1);
-    --shadow-md: 0 4px 6px -1px hsl(20 52% 22% / 0.1), 0 2px 4px -1px hsl(20 52% 22% / 0.06);
-    --shadow-lg: 0 10px 15px -3px hsl(20 52% 22% / 0.1), 0 4px 6px -2px hsl(20 52% 22% / 0.05);
-    --shadow-xl: 0 20px 25px -5px hsl(20 52% 22% / 0.1), 0 10px 10px -5px hsl(20 52% 22% / 0.04);
+    /* Shadows */
+    --shadow-sm: 0 2px 4px -1px hsl(30 25% 20% / 0.1);
+    --shadow-md: 0 4px 6px -1px hsl(30 25% 20% / 0.1), 0 2px 4px -1px hsl(30 25% 20% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(30 25% 20% / 0.1), 0 4px 6px -2px hsl(30 25% 20% / 0.05);
+    --shadow-xl: 0 20px 25px -5px hsl(30 25% 20% / 0.1), 0 10px 10px -5px hsl(30 25% 20% / 0.04);
 
-    /* Sidebar using black background */
-    --sidebar-background: 0 0% 0%;
-    --sidebar-foreground: 240 100% 99%;
-    --sidebar-primary: 0 89% 45%;
-    --sidebar-primary-foreground: 240 100% 99%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 240 100% 99%;
-    --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 0 89% 45%;
-  }
-
-  .dark {
-    /* Dark mode with black background */
-    --background: 0 0% 0%;
-    --foreground: 240 100% 99%;
-
-    --card: 0 0% 5%;
-    --card-foreground: 240 100% 99%;
-
-    --popover: 0 0% 5%;
-    --popover-foreground: 240 100% 99%;
-
-    /* Fire Engine Red for dark mode */
-    --primary: 0 89% 50%;
-    --primary-foreground: 240 100% 99%;
-    --primary-hover: 0 89% 55%;
-
-    /* Jonquil Yellow for dark mode */
-    --secondary: 48 97% 20%;
-    --secondary-foreground: 48 97% 55%;
-
-    --muted: 0 0% 10%;
-    --muted-foreground: 240 100% 80%;
-
-    /* Orange Web for dark mode */
-    --accent: 42 95% 57%;
-    --accent-foreground: 0 0% 0%;
-
-    --success: 0 89% 50%;
-    --success-foreground: 240 100% 99%;
-    --warning: 48 97% 55%;
-    --warning-foreground: 0 0% 0%;
-    --destructive: 0 89% 50%;
-    --destructive-foreground: 240 100% 99%;
-
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 0 89% 50%;
-
-    --gradient-hero: linear-gradient(135deg, hsl(0 89% 50%) 0%, hsl(48 97% 55%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 5%) 0%, hsl(0 0% 10%) 100%);
-    
-    --shadow-sm: 0 2px 4px -1px hsl(0 0% 0% / 0.3);
-    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -1px hsl(0 0% 0% / 0.2);
-    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.3), 0 4px 6px -2px hsl(0 0% 0% / 0.2);
-    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.3), 0 10px 10px -5px hsl(0 0% 0% / 0.2);
-    
-    --sidebar-background: 0 0% 0%;
-    --sidebar-foreground: 240 100% 99%;
-    --sidebar-primary: 0 89% 50%;
-    --sidebar-primary-foreground: 240 100% 99%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 240 100% 99%;
-    --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 0 89% 50%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground font-sans antialiased;
-  }
-
-  /* Friendly button styles for industrial users */
-  .btn-friendly {
-    @apply px-6 py-4 text-lg font-semibold rounded-xl shadow-md transition-all duration-200 
-           hover:shadow-lg hover:scale-105 active:scale-95 
-           focus:outline-none focus:ring-4 focus:ring-primary/30;
-  }
-
-  .btn-primary {
-    @apply btn-friendly bg-primary text-primary-foreground hover:bg-primary-hover;
-  }
-
-  .btn-secondary {
-    @apply btn-friendly bg-secondary text-secondary-foreground hover:bg-accent;
-  }
-
-  .btn-warning {
-    @apply btn-friendly bg-warning text-warning-foreground hover:bg-accent;
-  }
-
-  .btn-danger {
-    @apply btn-friendly bg-destructive text-destructive-foreground hover:bg-primary-hover;
-  }
-
-  /* Friendly card styles */
-  .card-friendly {
-    @apply bg-card border border-border rounded-xl shadow-md hover:shadow-lg 
-           transition-all duration-200 overflow-hidden;
-  }
-
-  /* Status badges using new color scheme */
-  .badge-status {
-    @apply px-3 py-1.5 text-sm font-bold rounded-full uppercase tracking-wide;
-  }
-
-  .badge-in-stock {
-    @apply badge-status bg-primary/10 text-primary ring-1 ring-primary/20;
-  }
-
-  .badge-low-stock {
-    @apply badge-status bg-warning/10 text-warning-foreground ring-1 ring-warning/20;
-  }
-
-  .badge-out-stock {
-    @apply badge-status bg-destructive/10 text-destructive ring-1 ring-destructive/20;
-  }
-
-  /* Large, friendly input styles */
-  .input-friendly {
-    @apply w-full px-4 py-3 text-lg border border-input rounded-xl 
-           focus:outline-none focus:ring-4 focus:ring-primary/30 focus:border-primary
-           transition-all duration-200;
-  }
-
-  /* Override hover states to use new color scheme */
-  .hover\:bg-accent:hover {
-    background-color: hsl(var(--accent)) !important;
-    color: hsl(var(--accent-foreground)) !important;
-  }
-
-  /* Mobile-specific improvements */
-  @media (max-width: 768px) {
-    /* Improve touch targets */
-    button, [role="button"] {
-      min-height: 44px;
-      min-width: 44px;
-    }
-    
-    /* Better spacing for mobile */
-    .space-y-4 > * + * {
-      margin-top: 1rem;
-    }
-    
-    /* Improve form inputs on mobile */
-    input, textarea, select {
-      font-size: 16px; /* Prevents zoom on iOS */
-    }
-    
-    /* Better card padding on mobile */
-    .card-friendly {
-      padding: 1rem;
-    }
-    
-    /* Improve table responsiveness */
-    .table-responsive {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
+    /* Sidebar - Professional Theme */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 84% 4.9%;
+    --sidebar-primary: 222 84% 4.9%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 96%;
+    --sidebar-accent-foreground: 222 84% 4.9%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 222 84% 4.9%;
+    --sidebar-muted: 210 40% 96%;
+    --sidebar-muted-foreground: 215 16% 47%;
   }
 }

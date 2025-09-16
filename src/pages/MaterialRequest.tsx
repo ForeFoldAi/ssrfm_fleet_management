@@ -349,11 +349,11 @@ const MaterialRequest = () => {
   };
 
   const TableView = () => (
-    <Card>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+    <Card className="border-0 shadow-none">
+      <CardContent className="p-0 border-none">
+        <div className="overflow-x-auto border-none">
+          <Table className="border-none">
+            <TableHeader className="border-none">
               <TableRow className="bg-gray-50">
                 <TableHead className="border border-gray-300 font-semibold">SR.NO.</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">PRODUCT NAME</TableHead>
@@ -829,8 +829,8 @@ const MaterialRequest = () => {
             <FileText className="w-5 h-5" />
             Submit Indent Form
           </Button>
-          <Button type="button" variant="outline" onClick={() => navigate(-1)} className="gap-2">
-            <X className="w-4 h-4" />
+          <Button type="button" size="lg" variant="outline" onClick={() => navigate(-1)} className="min-w-48 gap-2">
+            <X className="w-5 h-5" />
             Cancel
           </Button>
         </div>

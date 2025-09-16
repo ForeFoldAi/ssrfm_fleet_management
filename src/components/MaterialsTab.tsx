@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { Plus, Search, List, Table, Edit, Eye, Package } from "lucide-react";
+import { Plus, Search, List, Table, Edit, Eye, Package, FileText } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Card, CardContent } from "./ui/card";
+import { Table as TableComponent, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Badge } from "./ui/badge";
 import { AddMaterialForm } from "./AddMaterialForm";
 
 export const MaterialsTab = () => {
@@ -107,11 +110,11 @@ export const MaterialsTab = () => {
             placeholder="Search materials..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 input-friendly h-10 w-64"
+            className="pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64"
           />
         </div>
         
-        <div className="flex rounded-xl border border-border overflow-hidden bg-secondary w-fit">
+        <div className="flex rounded-lg border border-secondary overflow-hidden bg-secondary/10 w-fit shadow-sm">
           <Button
             variant={viewMode === "list" ? "default" : "ghost"}
             size="sm"
@@ -137,7 +140,7 @@ export const MaterialsTab = () => {
           className="btn-primary w-full sm:w-auto text-sm sm:text-base"
           onClick={() => setIsAddMaterialOpen(true)}
         >
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+          <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
           Add New Material
         </Button>
       </div>
@@ -192,67 +195,66 @@ export const MaterialsTab = () => {
           ))}
         </div>
       ) : (
-        <div className="card-friendly overflow-x-auto">
-          <div className="p-3 sm:p-6 min-w-[800px]">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                  <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Material</th>
-                  <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Specifications</th>
-                  <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Current Stock</th>
-                  <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Min Stock</th>
-                  <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Status</th>
-                  <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Supplier</th>
-                  <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredMaterials.map((material) => (
-                <tr key={material.id} className="border-b border-border hover:bg-secondary/30 transition-colors duration-200">
-                    <td className="py-2 sm:py-3 px-1 sm:px-2">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                          <Package className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                      </div>
-                        <span className="font-semibold text-foreground text-xs sm:text-sm">{material.name}</span>
-                    </div>
-                  </td>
-                    <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground max-w-xs truncate text-xs sm:text-sm">
-                    {material.specifications}
-                  </td>
-                    <td className="py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">
-                    {material.currentStock} {material.unit}
-                  </td>
-                    <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground text-xs sm:text-sm">
-                    {material.minStock} {material.unit}
-                  </td>
-                    <td className="py-2 sm:py-3 px-1 sm:px-2">
-                      <span className={`${getStatusBadge(material.status)} text-xs`}>
-                      {material.status}
-                    </span>
-                  </td>
-                    <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground text-xs sm:text-sm truncate max-w-32">{material.maker}</td>
-                    <td className="py-2 sm:py-3 px-1 sm:px-2">
-                    <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
-                          <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
-                          <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-        </div>
+        <Card className="rounded-lg shadow-sm">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <TableComponent>
+                <TableHeader>
+                  <TableRow className="bg-secondary/20 border-b-2 border-secondary/30">
+                    <TableHead className="min-w-[150px] text-foreground font-semibold">Material</TableHead>
+                    <TableHead className="min-w-[200px] text-foreground font-semibold">Specifications</TableHead>
+                    <TableHead className="min-w-[100px] text-foreground font-semibold">Current Stock</TableHead>
+                    <TableHead className="min-w-[100px] text-foreground font-semibold">Min Stock</TableHead>
+                    <TableHead className="min-w-[100px] text-foreground font-semibold">Status</TableHead>
+                    <TableHead className="min-w-[120px] text-foreground font-semibold">Supplier</TableHead>
+                    <TableHead className="min-w-[100px] text-foreground font-semibold">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredMaterials.map((material) => (
+                    <TableRow key={material.id} className="hover:bg-muted/30 border-b border-secondary/20">
+                      <TableCell className="font-semibold text-foreground">
+                          <span className="font-semibold text-foreground">{material.name}</span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground max-w-xs truncate">
+                        {material.specifications}
+                      </TableCell>
+                      <TableCell className="font-semibold text-foreground">
+                        {material.currentStock} {material.unit}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {material.minStock} {material.unit}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${getStatusBadge(material.status)} text-xs`}>
+                          {material.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground truncate max-w-32">
+                        {material.maker}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </TableComponent>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Empty State */}
       {filteredMaterials.length === 0 && (
-        <div className="card-friendly p-8 sm:p-12 text-center">
+        <Card className="rounded-lg shadow-sm p-8 text-center">
           <div className="w-12 h-12 sm:w-16 sm:h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
             <Package className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground" />
           </div>
@@ -264,10 +266,10 @@ export const MaterialsTab = () => {
             className="btn-primary text-sm sm:text-base"
             onClick={() => setIsAddMaterialOpen(true)}
           >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Add First Material
           </Button>
-        </div>
+        </Card>
       )}
 
       {/* Add Material Form */}

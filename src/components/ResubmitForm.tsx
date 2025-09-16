@@ -37,7 +37,7 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.materialName.trim()) newErrors.materialName = "Material name is required";
     if (!formData.specifications.trim()) newErrors.specifications = "Specifications are required";
     if (!formData.maker.trim()) newErrors.maker = "Maker/Brand is required";
@@ -45,16 +45,16 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
     if (!formData.value.trim()) newErrors.value = "Estimated value is required";
     if (!formData.materialPurpose.trim()) newErrors.materialPurpose = "Material purpose is required";
     if (!formData.resubmissionNotes.trim()) newErrors.resubmissionNotes = "Please explain the changes made to address the revert reason";
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     const updatedRequest = {
       ...request,
       ...formData,
@@ -68,14 +68,14 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
       originalRevertReason: request.revertReason,
       resubmissionCount: (request.resubmissionCount || 0) + 1
     };
-    
+
     onSubmit(updatedRequest);
-    
+
     toast({
       title: "Request Resubmitted",
       description: `Request ${request.id} has been resubmitted for approval with your updates.`,
     });
-    
+
     onClose();
   };
 

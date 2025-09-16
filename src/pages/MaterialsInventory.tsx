@@ -13,42 +13,35 @@ const MaterialsInventory = () => {
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
       {/* Header */}
-      <div className="text-center sm:text-left">
-        <h6 className="text-sm sm:text-1xl md:text-2xl lg:text-3xl font-bold text-foreground mb-1">
-          Materials & Equipment Inventory
-        </h6>
-       
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
+          Stock Register
+        </h1>
       </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-auto p-1 sm:p-2 bg-secondary rounded-xl">
+        <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-secondary/10 rounded-lg shadow-sm">
           <TabsTrigger 
             value="material-issues" 
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 md:px-4 py-2 sm:py-2 md:py-3 text-xs sm:text-sm md:text-base font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            className="flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
           >
-            <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="flex flex-col sm:flex-row sm:items-center sm:gap-1">
-              <span>Issues Material</span>
-            </span>
+            <ClipboardList className="w-4 h-4" />
+            <span>Issues Material</span>
           </TabsTrigger>
           <TabsTrigger 
             value="materials" 
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 md:px-4 py-2 sm:py-2 md:py-3 text-xs sm:text-sm md:text-base font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            className="flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
           >
-            <Package className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="flex flex-col sm:flex-row sm:items-center sm:gap-1">
-              <span>Outstanding Materials</span>
-            </span>
+            <Package className="w-4 h-4" />
+            <span>Outstanding Materials</span>
           </TabsTrigger>
           <TabsTrigger 
             value="machines" 
-            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 md:px-4 py-2 sm:py-2 md:py-3 text-xs sm:text-sm md:text-base font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            className="flex items-center gap-2 px-4 py-3 text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
           >
-            <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="flex flex-col sm:flex-row sm:items-center sm:gap-1">
-              <span>Machines</span>
-            </span>
+            <Settings className="w-4 h-4" />
+            <span>Machines</span>
           </TabsTrigger>
         </TabsList>
 

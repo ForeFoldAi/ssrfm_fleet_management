@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clock, CheckCircle, XCircle, Eye, FileText, Plus, AlertTriangle, User, Calendar, Package, Truck, CheckSquare, List, Table as TableIcon, ChevronRight, ChevronDown, MoreVertical, Send, Search } from "lucide-react";
+import { Clock, CheckCircle, XCircle, Eye, FileText, Plus, AlertTriangle, User, Calendar, Package, Truck, CheckSquare, List, Table as TableIcon, ChevronRight, ChevronDown, MoreVertical, Send, Search, FileEdit } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -844,15 +844,15 @@ const SupervisorRequests = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending_approval': return 'bg-yellow-500 text-white';
-      case 'approved': return 'bg-secondary/100 text-white';
-      case 'ordered': return 'bg-purple-500 text-white';
-      case 'partially_received': return 'bg-orange-500 text-white';
-      case 'material_received': return 'bg-primary text-white';
-      case 'issued': return 'bg-orange-500 text-white';
-      case 'completed': return 'bg-primary text-white';
-      case 'rejected': return 'bg-red-500 text-white';
-      case 'reverted': return 'bg-red-600 text-white';
+      case 'pending_approval': return 'bg-warning text-warning-foreground';
+      case 'approved': return 'bg-success text-success-foreground';
+      case 'ordered': return 'bg-primary text-primary-foreground';
+      case 'partially_received': return 'bg-warning text-warning-foreground';
+      case 'material_received': return 'bg-success text-success-foreground';
+      case 'issued': return 'bg-accent text-accent-foreground';
+      case 'completed': return 'bg-success text-success-foreground';
+      case 'rejected': return 'bg-destructive text-destructive-foreground';
+      case 'reverted': return 'bg-destructive text-destructive-foreground';
       default: return 'bg-secondary text-secondary-foreground';
     }
   };
@@ -943,13 +943,13 @@ const SupervisorRequests = () => {
         <div className="hidden sm:flex items-center space-x-2">
         {stages.map((stageName, index) => (
           <div key={index} className="flex items-center">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white ${
               index < stage ? getProgressColor(index + 1) : 'bg-gray-300'
             }`}>
               {index + 1}
             </div>
             {index < stages.length - 1 && (
-              <div className={`w-12 h-1 mx-2 ${
+              <div className={`w-12 h-1 mx-2 rounded-full ${
                 index < stage - 1 ? getProgressColor(index + 1) : 'bg-gray-300'
               }`} />
             )}
@@ -961,7 +961,7 @@ const SupervisorRequests = () => {
         <div className="sm:hidden space-y-2">
           {stages.map((stageName, index) => (
             <div key={index} className="flex items-center space-x-3">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white ${
                 index < stage ? getProgressColor(index + 1) : 'bg-gray-300'
               }`}>
                 {index + 1}
@@ -982,32 +982,32 @@ const SupervisorRequests = () => {
 
   // Enhanced List View Component - Table-like format with expandable details
   const ListView = ({ requests }: { requests: any[] }) => (
-    <Card>
+    <Card className="rounded-lg shadow-sm">
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-12"></TableHead>
-                <TableHead className="min-w-[200px]">REQUEST</TableHead>
-                <TableHead className="min-w-[120px]">CONTACT</TableHead>
-                <TableHead className="min-w-[120px]">COMPANY</TableHead>
-                <TableHead className="min-w-[100px]">STATUS</TableHead>
-                <TableHead className="min-w-[140px]">SUBMITTED DATE</TableHead>
-                <TableHead className="min-w-[140px]">LAST UPDATED</TableHead>
-                <TableHead className="min-w-[140px]">NEXT ACTION DATE</TableHead>
-                <TableHead className="min-w-[100px]">ACTIONS</TableHead>
+              <TableRow className="bg-secondary/20 border-b-2 border-secondary/30">
+                <TableHead className="w-12 text-foreground font-semibold"></TableHead>
+                <TableHead className="min-w-[200px] text-foreground font-semibold">REQUEST</TableHead>
+                <TableHead className="min-w-[120px] text-foreground font-semibold">CONTACT</TableHead>
+                <TableHead className="min-w-[120px] text-foreground font-semibold">COMPANY</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">STATUS</TableHead>
+                <TableHead className="min-w-[140px] text-foreground font-semibold">SUBMITTED DATE</TableHead>
+                <TableHead className="min-w-[140px] text-foreground font-semibold">LAST UPDATED</TableHead>
+                <TableHead className="min-w-[140px] text-foreground font-semibold">NEXT ACTION DATE</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">ACTIONS</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {requests.map((request) => (
                 <>
-                  <TableRow key={request.id} className="hover:bg-muted/50">
+                  <TableRow key={request.id} className="hover:bg-muted/30 border-b border-secondary/20">
                     <TableCell>
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="h-6 w-6 p-0"
+                        className="h-6 w-6 p-0 rounded-lg"
                         onClick={() => toggleRowExpansion(request.id)}
                       >
                         {expandedRows.has(request.id) ? (
@@ -1058,18 +1058,21 @@ const SupervisorRequests = () => {
                     </TableCell>
                     <TableCell>
                       <div className={`text-sm px-2 py-1 rounded ${
-                        request.status === 'pending_approval' ? 'bg-yellow-100 text-yellow-800' :
-                        request.status === 'approved' ? 'bg-secondary/20 text-foreground' :
-                        request.status === 'ordered' ? 'bg-purple-100 text-purple-800' :
-                        request.status === 'issued' ? 'bg-orange-100 text-accent-foreground' :
-                        request.status === 'completed' ? 'bg-primary/10 text-primary' :
-                        'bg-red-100 text-red-800'
+                        request.status === 'pending_approval' ? 'bg-warning/20 text-warning-foreground' :
+                        request.status === 'approved' ? 'bg-success/20 text-success-foreground' :
+                        request.status === 'ordered' ? 'bg-primary/15 text-primary' :
+                        request.status === 'partially_received' ? 'bg-warning/20 text-warning-foreground' :
+                        request.status === 'material_received' ? 'bg-success/20 text-success-foreground' :
+                        request.status === 'issued' ? 'bg-accent/20 text-accent-foreground' :
+                        request.status === 'completed' ? 'bg-success/20 text-success-foreground' :
+                        request.status === 'reverted' ? 'bg-destructive/20 text-destructive-foreground' :
+                        'bg-destructive/20 text-destructive-foreground'
                       }`}>
                         {request.expectedDelivery || request.issuedDate || request.completedDate || 'N/A'}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </TableCell>
@@ -1167,11 +1170,11 @@ const SupervisorRequests = () => {
                                   {request.status === 'partially_received' && (
                                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                                       <div className="text-sm space-y-1">
-                                        <div><strong className="text-accent-foreground">Partially Received:</strong> {request.receivedDate}</div>
-                                        <div><strong className="text-accent-foreground">Received Quantity:</strong> {request.purchasedQuantity} of {request.quantity}</div>
-                                        <div><strong className="text-accent-foreground">Supplier:</strong> {request.purchasedFrom}</div>
-                                        <div><strong className="text-accent-foreground">Invoice:</strong> {request.invoiceNumber}</div>
-                                        {request.notes && <div><strong className="text-accent-foreground">Notes:</strong> {request.notes}</div>}
+                                        <div><strong className="text-orange-800">Partially Received:</strong> {request.receivedDate}</div>
+                                        <div><strong className="text-orange-800">Received Quantity:</strong> {request.purchasedQuantity} of {request.quantity}</div>
+                                        <div><strong className="text-orange-800">Supplier:</strong> {request.purchasedFrom}</div>
+                                        <div><strong className="text-orange-800">Invoice:</strong> {request.invoiceNumber}</div>
+                                        {request.notes && <div><strong className="text-orange-800">Notes:</strong> {request.notes}</div>}
                                       </div>
                                     </div>
                                   )}
@@ -1191,9 +1194,9 @@ const SupervisorRequests = () => {
                                   {request.status === 'issued' && (
                                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                                       <div className="text-sm space-y-1">
-                                        <div><strong className="text-accent-foreground">Issued:</strong> {request.issuedDate}</div>
-                                        <div><strong className="text-accent-foreground">Received By:</strong> {request.receivedBy}</div>
-                                        <div><strong className="text-accent-foreground">Delivered:</strong> {request.deliveredDate}</div>
+                                        <div><strong className="text-orange-800">Issued:</strong> {request.issuedDate}</div>
+                                        <div><strong className="text-orange-800">Received By:</strong> {request.receivedBy}</div>
+                                        <div><strong className="text-orange-800">Delivered:</strong> {request.deliveredDate}</div>
                                       </div>
                                     </div>
                                   )}
@@ -1249,7 +1252,7 @@ const SupervisorRequests = () => {
                           
                           {/* Action Buttons */}
                           <div className="flex gap-3 pt-4 border-t mt-6">
-                            <Button variant="outline" className="gap-2">
+                            <Button variant="outline" className="gap-2 rounded-lg">
                               <Eye className="w-4 h-4" />
                               View Full Details
                             </Button>
@@ -1258,7 +1261,7 @@ const SupervisorRequests = () => {
                             {(currentUser?.role === 'company_owner' || currentUser?.role === 'site_supervisor') && (
                               <Button 
                                 variant="outline" 
-                                className="gap-2"
+                                className="gap-2 rounded-lg"
                                 onClick={() => openStatusManager(request)}
                               >
                                 <CheckSquare className="w-4 h-4" />
@@ -1269,7 +1272,7 @@ const SupervisorRequests = () => {
                             {(request.status === 'rejected' || request.status === 'reverted') && (
                               <Button 
                                 variant="outline" 
-                                className="gap-2"
+                                className="gap-2 rounded-lg"
                                 onClick={() => request.status === 'reverted' ? openResubmitForm(request) : null}
                               >
                                 <Plus className="w-4 h-4" />
@@ -1277,7 +1280,7 @@ const SupervisorRequests = () => {
                               </Button>
                             )}
                             {(request.status === 'ordered' || request.status === 'issued' || request.status === 'completed') && (
-                              <Button variant="outline" className="gap-2">
+                              <Button variant="outline" className="gap-2 rounded-lg">
                                 <FileText className="w-4 h-4" />
                                 Track Status
                               </Button>
@@ -1298,25 +1301,25 @@ const SupervisorRequests = () => {
 
   // Compact Table View Component
   const TableView = ({ requests }: { requests: any[] }) => (
-    <Card>
+    <Card className="rounded-lg shadow-sm">
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead className="min-w-[120px]">Request ID</TableHead>
-                <TableHead className="min-w-[150px]">Material</TableHead>
-                <TableHead className="min-w-[100px]">Quantity</TableHead>
-                <TableHead className="min-w-[100px]">Value</TableHead>
-                <TableHead className="min-w-[100px]">Status</TableHead>
-                <TableHead className="min-w-[100px]">Date</TableHead>
-                <TableHead className="min-w-[100px]">Machine</TableHead>
-                <TableHead className="min-w-[120px]">Actions</TableHead>
+              <TableRow className="bg-secondary/20 border-b-2 border-secondary/30">
+                <TableHead className="min-w-[120px] text-foreground font-semibold">Request ID</TableHead>
+                <TableHead className="min-w-[150px] text-foreground font-semibold">Material</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Quantity</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Value</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Status</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Date</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Machine</TableHead>
+                <TableHead className="min-w-[120px] text-foreground font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {requests.map((request) => (
-                <TableRow key={request.id}>
+                <TableRow key={request.id} className="hover:bg-muted/30 border-b border-secondary/20">
                   <TableCell className="font-medium">{request.id}</TableCell>
                   <TableCell>
                     <div>
@@ -1338,7 +1341,7 @@ const SupervisorRequests = () => {
                   <TableCell className="text-sm">{request.machineName}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Button variant="outline" size="sm" className="h-7 w-7 p-0">
+                      <Button variant="outline" size="sm" className="h-7 w-7 p-0 rounded-lg">
                         <Eye className="w-3 h-3" />
                       </Button>
                       
@@ -1347,7 +1350,7 @@ const SupervisorRequests = () => {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="h-7 w-7 p-0"
+                          className="h-7 w-7 p-0 rounded-lg"
                           onClick={() => openStatusManager(request)}
                         >
                           <CheckSquare className="w-3 h-3" />
@@ -1358,7 +1361,7 @@ const SupervisorRequests = () => {
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          className="h-7 w-7 p-0"
+                          className="h-7 w-7 p-0 rounded-lg"
                           onClick={() => request.status === 'reverted' ? openResubmitForm(request) : null}
                         >
                           <Plus className="w-3 h-3" />
@@ -1376,22 +1379,19 @@ const SupervisorRequests = () => {
   );
 
   return (
-    <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
-      {/* Header with Search and Actions */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
-            
-            <div>
-              
-              <h1 className="text-sm sm:text-1xl md:text-2xl lg:text-3xl font-bold text-foreground mb-1">
-              Outstanding Materials
+    <div className="space-y-6 p-4 sm:p-0">
+      {/* Main Heading */}
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
+          Outstanding Materials
         </h1>
-            </div>
-          </div>
-          
-          {/* List/Table Toggle - Now beside the heading */}
-          <div className="flex rounded-xl border border-secondary overflow-hidden bg-secondary/10/50 w-fit shadow-sm">
+      </div>
+
+      {/* Search, Views, Status and Actions Row */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          {/* List/Table Toggle */}
+          <div className="flex rounded-lg border border-secondary overflow-hidden bg-secondary/10 w-fit shadow-sm">
             <Button
               variant={viewMode === "list" ? "default" : "ghost"}
               size="sm"
@@ -1430,14 +1430,14 @@ const SupervisorRequests = () => {
                 placeholder="Search by material, request ID, or maker..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 border-secondary focus:border-primary focus:ring-primary/20"
+                className="w-full pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none"
               />
             </div>
           </div>
           
           {/* Status Filter */}
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-full sm:w-48 border-secondary focus:border-primary focus:ring-primary/20">
+            <SelectTrigger className="w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
@@ -1456,10 +1456,9 @@ const SupervisorRequests = () => {
           
           {/* Action Buttons */}
           <div className="flex gap-2">
-            
-            <Button asChild className="btn-primary w-full sm:w-auto text-sm sm:text-base" size="sm">
+            <Button asChild className="w-full sm:w-auto text-sm sm:text-base" size="sm">
               <Link to="/material-request">
-                <Send className="w-4 h-4" />
+                <FileEdit className="w-4 h-4" />
                 <span className="hidden sm:inline">INDENT FORM</span>
                 <span className="sm:hidden">INDENT FORM</span>
               </Link>
@@ -1470,10 +1469,7 @@ const SupervisorRequests = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="order-status" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 h-auto p-1 sm:p-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-secondary rounded-xl shadow-sm">
-           
-        </TabsList>
-
+      
         {/* All Requests Tab */}
         <TabsContent value="all" className="space-y-3 sm:space-y-4">
           {viewMode === "table" ? (
@@ -1493,7 +1489,7 @@ const SupervisorRequests = () => {
                <ListView requests={filteredRequests} />
              )
            ) : (
-             <Card className="card-friendly p-8 text-center">
+             <Card className="rounded-lg shadow-sm p-8 text-center">
                <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                <h3 className="text-lg font-semibold text-foreground mb-2">No Order Requests</h3>
                <p className="text-muted-foreground mb-4">
@@ -1501,7 +1497,7 @@ const SupervisorRequests = () => {
                </p>
                <Button asChild variant="outline">
                  <Link to="/material-request">
-                   <Send className="w-4 h-4 mr-2" />
+                   <FileEdit className="w-4 h-4 mr-2" />
                    Create Order Request
                  </Link>
                </Button>

@@ -133,7 +133,7 @@ export const MobileNavigation = () => {
               to={item.to}
               end={item.to === "/"}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center p-2 rounded-lg transition-all duration-200 min-w-0 flex-1 ${
+                `flex flex-col items-center justify-center p-2 rounded-[20px] transition-all duration-200 min-w-0 flex-1 ${
                   isActive
                     ? "text-foreground bg-secondary/10"
                     : "text-gray-600 hover:text-foreground hover:bg-gray-50"
@@ -148,7 +148,7 @@ export const MobileNavigation = () => {
         
         {/* More menu button */}
         {navItems.length > 4 && (
-          <div className="flex flex-col items-center justify-center p-2 rounded-lg transition-all duration-200 min-w-0 flex-1 text-gray-600 hover:text-foreground hover:bg-gray-50">
+          <div className="flex flex-col items-center justify-center p-2 rounded-[20px] transition-all duration-200 min-w-0 flex-1 text-gray-600 hover:text-foreground hover:bg-gray-50">
             <Settings className="w-5 h-5 mb-1" />
             <span className="text-xs font-medium">More</span>
           </div>
