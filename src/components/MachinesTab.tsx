@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { Plus, Search, List, Table, Edit, Eye, Settings, MapPin } from "lucide-react";
+import { Plus, Search, List, Table, Edit, Eye, Settings, MapPin, FileText } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Card, CardContent } from "./ui/card";
+import { Table as TableComponent, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Badge } from "./ui/badge";
 import { AddMachineForm } from "./AddMachineForm";
 
 export const MachinesTab = () => {
@@ -107,11 +110,11 @@ export const MachinesTab = () => {
             placeholder="Search machines..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 input-friendly h-10 w-64"
+            className="pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64"
           />
         </div>
         
-        <div className="flex rounded-xl border border-border overflow-hidden bg-secondary w-fit">
+        <div className="flex rounded-lg border border-secondary overflow-hidden bg-secondary/10 w-fit shadow-sm">
           <Button
             variant={viewMode === "list" ? "default" : "ghost"}
             size="sm"
@@ -137,7 +140,7 @@ export const MachinesTab = () => {
           className="btn-primary w-full sm:w-auto text-sm sm:text-base"
           onClick={() => setIsAddMachineOpen(true)}
         >
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+          <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
           Add New Machine
         </Button>
       </div>
@@ -194,64 +197,65 @@ export const MachinesTab = () => {
           ))}
         </div>
       ) : (
-        <div className="card-friendly overflow-x-auto">
-          <div className="p-3 sm:p-6 min-w-[700px]">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                  <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Machine</th>
-                  <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Type</th>
-                  <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Location</th>
-                  <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Status</th>
-                  <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Last Service</th>
-                  <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-semibold text-foreground text-xs sm:text-sm">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredMachines.map((machine) => (
-                <tr key={machine.id} className="border-b border-border hover:bg-secondary/30 transition-colors duration-200">
-                    <td className="py-2 sm:py-3 px-1 sm:px-2">
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                          <Settings className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                      </div>
-                        <span className="font-semibold text-foreground text-xs sm:text-sm">{machine.name}</span>
-                    </div>
-                  </td>
-                    <td className="py-2 sm:py-3 px-1 sm:px-2 text-primary font-semibold text-xs sm:text-sm">{machine.type}</td>
-                    <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground text-xs sm:text-sm">
-                    <div className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span className="truncate max-w-24 sm:max-w-none">{machine.location}</span>
-                    </div>
-                  </td>
-                    <td className="py-2 sm:py-3 px-1 sm:px-2">
-                      <span className={`${getStatusBadge(machine.status)} text-xs`}>
-                      {machine.status}
-                    </span>
-                  </td>
-                    <td className="py-2 sm:py-3 px-1 sm:px-2 text-muted-foreground text-xs sm:text-sm">{machine.lastMaintenance}</td>
-                    <td className="py-2 sm:py-3 px-1 sm:px-2">
-                    <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
-                          <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0">
-                          <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-        </div>
+        <Card className="rounded-lg shadow-sm">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <TableComponent>
+                <TableHeader>
+                  <TableRow className="bg-secondary/20 border-b-2 border-secondary/30">
+                    <TableHead className="min-w-[150px] text-foreground font-semibold">Machine</TableHead>
+                    <TableHead className="min-w-[150px] text-foreground font-semibold">Type</TableHead>
+                    <TableHead className="min-w-[120px] text-foreground font-semibold">Location</TableHead>
+                    <TableHead className="min-w-[100px] text-foreground font-semibold">Status</TableHead>
+                    <TableHead className="min-w-[120px] text-foreground font-semibold">Last Service</TableHead>
+                    <TableHead className="min-w-[100px] text-foreground font-semibold">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredMachines.map((machine) => (
+                    <TableRow key={machine.id} className="hover:bg-muted/30 border-b border-secondary/20">
+                      <TableCell className="font-semibold text-foreground">
+                          <span className="font-semibold text-foreground">{machine.name}</span>
+                      </TableCell>
+                      <TableCell className="text-primary font-semibold">
+                        {machine.type}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />
+                          <span className="truncate max-w-24 sm:max-w-none">{machine.location}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${getStatusBadge(machine.status)} text-xs`}>
+                          {machine.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {machine.lastMaintenance}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </TableComponent>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Empty State */}
       {filteredMachines.length === 0 && (
-        <div className="card-friendly p-8 sm:p-12 text-center">
+        <Card className="rounded-lg shadow-sm p-8 text-center">
           <div className="w-12 h-12 sm:w-16 sm:h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
             <Settings className="w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground" />
           </div>
@@ -263,10 +267,10 @@ export const MachinesTab = () => {
             className="btn-primary text-sm sm:text-base"
             onClick={() => setIsAddMachineOpen(true)}
           >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Add First Machine
           </Button>
-        </div>
+        </Card>
       )}
 
       {/* Add Machine Form */}

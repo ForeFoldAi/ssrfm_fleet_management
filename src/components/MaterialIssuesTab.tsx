@@ -146,11 +146,11 @@ export const MaterialIssuesTab = () => {
               placeholder="Search issues..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 input-friendly h-10 w-64"
+              className="pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64"
             />
           </div>
           
-          <div className="flex rounded-xl border border-border overflow-hidden bg-secondary w-fit">
+          <div className="flex rounded-lg border border-secondary overflow-hidden bg-secondary/10 w-fit shadow-sm">
             <Button
               variant={viewMode === "list" ? "default" : "ghost"}
               size="sm"
@@ -176,7 +176,7 @@ export const MaterialIssuesTab = () => {
           className="btn-primary w-full sm:w-auto text-sm sm:text-base"
           onClick={() => setIsIssueFormOpen(true)}
         >
-          <Package className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+          <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
           Issue Material
         </Button>
       </div>
@@ -185,25 +185,25 @@ export const MaterialIssuesTab = () => {
       {filteredIssues.length > 0 ? (
         viewMode === "table" ? (
           // Table View for Material Issues
-          <Card>
+          <Card className="rounded-lg shadow-sm">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <TableComponent>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[120px]">Issue ID</TableHead>
-                      <TableHead className="min-w-[150px]">Material</TableHead>
-                      <TableHead className="min-w-[100px]">Stock Info</TableHead>
-                      <TableHead className="min-w-[120px]">Recipient</TableHead>
-                      <TableHead className="min-w-[120px]">Issuing Person</TableHead>
-                     
-                      <TableHead className="min-w-[100px]">Date</TableHead>
-                      <TableHead className="min-w-[80px]">Status</TableHead>
+                    <TableRow className="bg-secondary/20 border-b-2 border-secondary/30">
+                      <TableHead className="min-w-[120px] text-foreground font-semibold">Issue ID</TableHead>
+                      <TableHead className="min-w-[150px] text-foreground font-semibold">Material</TableHead>
+                      <TableHead className="min-w-[100px] text-foreground font-semibold">Stock Info</TableHead>
+                      <TableHead className="min-w-[120px] text-foreground font-semibold">Recipient</TableHead>
+                      <TableHead className="min-w-[120px] text-foreground font-semibold">Issuing Person</TableHead>
+                      <TableHead className="min-w-[100px] text-foreground font-semibold">Department</TableHead>
+                      <TableHead className="min-w-[100px] text-foreground font-semibold">Date</TableHead>
+                      <TableHead className="min-w-[80px] text-foreground font-semibold">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredIssues.map((issue) => (
-                      <TableRow key={issue.id}>
+                      <TableRow key={issue.id} className="hover:bg-muted/30 border-b border-secondary/20">
                         <TableCell className="font-medium">
                           <div>
                             <div>{issue.id}</div>
@@ -244,7 +244,11 @@ export const MaterialIssuesTab = () => {
                             <div className="text-xs text-muted-foreground">{issue.issuingPersonDesignation}</div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm">{issue.department}</TableCell>
+                        <TableCell className="text-sm">
+                          <Badge variant="outline">
+                            {issue.department}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-sm">{new Date(issue.issuedDate).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <Badge className="bg-primary/10 text-primary border-primary/20">
@@ -261,7 +265,7 @@ export const MaterialIssuesTab = () => {
           </Card>
         ) : (
           // List View for Material Issues - Matching Order Request Status ListView style
-          <Card>
+          <Card className="rounded-lg shadow-sm">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <TableComponent>
@@ -455,7 +459,7 @@ export const MaterialIssuesTab = () => {
           </Card>
         )
       ) : (
-        <Card className="card-friendly p-8 text-center">
+        <Card className="rounded-lg shadow-sm p-8 text-center">
           <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-foreground mb-2">No Material Issues Found</h3>
           <p className="text-muted-foreground mb-4">

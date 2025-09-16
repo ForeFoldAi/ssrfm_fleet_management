@@ -97,12 +97,10 @@ export const Sidebar = () => {
                 to={item.to}
                 end={item.to === "/"}
                 className={({ isActive }) =>
-                  `group flex items-center ${isExpanded ? 'space-x-3 px-4' : 'justify-center w-full px-2'} py-3 font-medium transition-all duration-300 ${
+                  `group flex items-center ${isExpanded ? 'space-x-3 px-4' : 'justify-center px-2'} py-3 font-medium transition-all duration-300 ${
                     isActive
-                      ? isExpanded 
-                        ? "bg-gray-100 text-gray-900 border-l-4 border-primary"
-                        : "bg-gray-100 text-gray-900"
-                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                      ? "bg-gray-100 text-gray-900 border-l-4 border-primary"
+                      : "text-gray-700 hover:bg-gray-50 border-none hover:text-gray-900"
                   }`
                 }
               >
@@ -137,16 +135,16 @@ export const Sidebar = () => {
         </nav>
 
         {/* Logout Button at Bottom */}
-        <div className="p-4 ">
+        <div className="p-4  border-gray-200">
           {!isExpanded ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="outline"
                   onClick={handleLogout}
-                  className="w-full justify-center border-gray-300 hover:bg-gray-50 hover:text-gray-900 text-gray-700 bg-transparent text-sm  rounded-full transition-all duration-300 font-medium"
+                  className="w-full justify-center border-gray-300 hover:bg-gray-50 hover:text-gray-900 text-gray-700 bg-transparent text-sm px-4 py-2 rounded-full transition-all duration-300 font-medium"
                 >
-                  <LogOut className="w-4 h-4 transition-all duration-300 group-hover:scale-105 flex-shrink-0" />
+                  <LogOut className="w-4 h-2 transition-all duration-300 group-hover:scale-105 flex-shrink-0" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right" className="rounded-[10px]">
