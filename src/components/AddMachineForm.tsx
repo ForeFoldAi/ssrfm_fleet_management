@@ -107,7 +107,7 @@ export const AddMachineForm = ({ isOpen, onClose, onSubmit }: AddMachineFormProp
     }
     if (!formData.location) newErrors.location = "Location is required";
     if (formData.location === "Other" && !formData.customLocation.trim()) {
-      newErrors.customLocation = "Custom Site location is required";
+      newErrors.customLocation = "Custom Unit is required";
     }
     if (!formData.specifications.trim()) newErrors.specifications = "Specifications are required";
     if (!formData.manufacturer.trim()) newErrors.manufacturer = "Manufacturer is required";
@@ -161,319 +161,262 @@ export const AddMachineForm = ({ isOpen, onClose, onSubmit }: AddMachineFormProp
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
-        <DialogHeader className="pb-4">
-          <DialogTitle className="flex items-center gap-3 text-xl">
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-              <Plus className="w-6 h-6 text-primary" />
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+              <Plus className="w-4 h-4 text-primary" />
             </div>
             Add New Machine
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Single Card for all form content */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <CardContent className="space-y-4">
+              {/* Basic Information */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-medium text-muted-foreground border-b pb-1">Basic Information</h4>
                 
-                Basic Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* First Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-medium">Machine Name *</Label>
-                  <Input
-                    id="name"
-                    placeholder="e.g., Main Flour Mill #01"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange("name", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                  {errors.name && <p className="text-destructive text-sm mt-1">{errors.name}</p>}
+                {/* First Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="name" className="text-xs font-medium">Machine Name *</Label>
+                    <Input
+                      id="name"
+                      placeholder="e.g., Main Flour Mill #01"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange("name", e.target.value)}
+                      className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200"
+                    />
+                    {errors.name && <p className="text-destructive text-xs mt-1">{errors.name}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="type" className="text-xs font-medium">Machine Type *</Label>
+                    <Select value={formData.type} onValueChange={(value) => handleSelectChange("type", value)}>
+                      <SelectTrigger className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200">
+                        <SelectValue placeholder="Select machine type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {machineTypes.map((type) => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {formData.type === "Other" && (
+                      <Input
+                        placeholder="Enter custom machine type"
+                        value={formData.customType}
+                        onChange={(e) => handleInputChange("customType", e.target.value)}
+                        className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 mt-1"
+                      />
+                    )}
+                    {errors.type && <p className="text-destructive text-xs mt-1">{errors.type}</p>}
+                    {errors.customType && <p className="text-destructive text-xs mt-1">{errors.customType}</p>}
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="type" className="text-sm font-medium">Machine Type *</Label>
-                  <Select value={formData.type} onValueChange={(value) => handleSelectChange("type", value)}>
-                    <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
-                      <SelectValue placeholder="Select machine type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {machineTypes.map((type) => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                {/* Second Row */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="location" className="text-xs font-medium">Site Location *</Label>
+                    <Select value={formData.location} onValueChange={(value) => handleSelectChange("location", value)}>
+                      <SelectTrigger className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200">
+                        <SelectValue placeholder="Select Site Location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations.map((location) => (
+                          <SelectItem key={location} value={location}>{location}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {formData.location === "Other" && (
+                      <Input
+                        placeholder="Enter custom location"
+                        value={formData.customLocation}
+                        onChange={(e) => handleInputChange("customLocation", e.target.value)}
+                        className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 mt-1"
+                      />
+                    )}
+                    {errors.location && <p className="text-destructive text-xs mt-1">{errors.location}</p>}
+                    {errors.customLocation && <p className="text-destructive text-xs mt-1">{errors.customLocation}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium">Status</Label>
+                    <div className="flex gap-1">
+                      {statusOptions.map((status) => (
+                        <button
+                          key={status.value}
+                          type="button"
+                          onClick={() => handleInputChange("status", status.value)}
+                          className={`h-7 px-2 py-1 rounded-[5px] border text-left transition-all duration-200 text-xs font-medium ${
+                            formData.status === status.value
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-input bg-background hover:border-primary/50 hover:bg-muted/30"
+                          }`}
+                        >
+                          {status.label}
+                        </button>
                       ))}
-                    </SelectContent>
-                  </Select>
-                  {formData.type === "Other" && (
-                    <Input
-                      placeholder="Enter custom machine type"
-                      value={formData.customType}
-                      onChange={(e) => handleInputChange("customType", e.target.value)}
-                      className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-2"
-                    />
-                  )}
-                  {errors.type && <p className="text-destructive text-sm mt-1">{errors.type}</p>}
-                  {errors.customType && <p className="text-destructive text-sm mt-1">{errors.customType}</p>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Specifications */}
+                <div className="space-y-1">
+                  <Label htmlFor="specifications" className="text-xs font-medium">Specifications *</Label>
+                  <Textarea
+                    id="specifications"
+                    placeholder="Enter detailed specifications (capacity, dimensions, technical details, etc.)"
+                    value={formData.specifications}
+                    onChange={(e) => handleInputChange("specifications", e.target.value)}
+                    className="min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200"
+                  />
+                  {errors.specifications && <p className="text-destructive text-xs mt-1">{errors.specifications}</p>}
                 </div>
               </div>
 
-              {/* Second Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="location" className="text-sm font-medium">Site Location *</Label>
-                  <Select value={formData.location} onValueChange={(value) => handleSelectChange("location", value)}>
-                    <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {locations.map((location) => (
-                        <SelectItem key={location} value={location}>{location}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {formData.location === "Other" && (
+              {/* Manufacturing Details */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-medium text-muted-foreground border-b pb-1">Manufacturing Details</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="manufacturer" className="text-xs font-medium">Manufacturer *</Label>
                     <Input
-                      placeholder="Enter custom location"
-                      value={formData.customLocation}
-                      onChange={(e) => handleInputChange("customLocation", e.target.value)}
-                      className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-2"
+                      id="manufacturer"
+                      placeholder="e.g., Bosch, Siemens, etc."
+                      value={formData.manufacturer}
+                      onChange={(e) => handleInputChange("manufacturer", e.target.value)}
+                      className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200"
                     />
-                  )}
-                  {errors.location && <p className="text-destructive text-sm mt-1">{errors.location}</p>}
-                  {errors.customLocation && <p className="text-destructive text-sm mt-1">{errors.customLocation}</p>}
+                    {errors.manufacturer && <p className="text-destructive text-xs mt-1">{errors.manufacturer}</p>}
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="model" className="text-xs font-medium">Model</Label>
+                    <Input
+                      id="model"
+                      placeholder="Model number"
+                      value={formData.model}
+                      onChange={(e) => handleInputChange("model", e.target.value)}
+                      className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="serialNumber" className="text-xs font-medium">Serial Number</Label>
+                    <Input
+                      id="serialNumber"
+                      placeholder="Serial number"
+                      value={formData.serialNumber}
+                      onChange={(e) => handleInputChange("serialNumber", e.target.value)}
+                      className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="capacity" className="text-xs font-medium">Capacity</Label>
+                    <Input
+                      id="capacity"
+                      placeholder="e.g., 500kg/hour"
+                      value={formData.capacity}
+                      onChange={(e) => handleInputChange("capacity", e.target.value)}
+                      className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Status</Label>
-                  <div className="flex gap-2">
-                    {statusOptions.map((status) => (
-                      <button
-                        key={status.value}
-                        type="button"
-                        onClick={() => handleInputChange("status", status.value)}
-                        className={`h-8 px-3 py-1 rounded-[5px] border text-left transition-all duration-200 text-xs font-medium ${
-                          formData.status === status.value
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-input bg-background hover:border-primary/50 hover:bg-muted/30"
-                        }`}
-                      >
-                        {status.label}
-                      </button>
-                    ))}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="purchaseDate" className="text-xs font-medium">Purchase Date</Label>
+                    <Input
+                      id="purchaseDate"
+                      type="date"
+                      value={formData.purchaseDate}
+                      onChange={(e) => handleInputChange("purchaseDate", e.target.value)}
+                      className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="warrantyExpiry" className="text-xs font-medium">Warranty Expiry</Label>
+                    <Input
+                      id="warrantyExpiry"
+                      type="date"
+                      value={formData.warrantyExpiry}
+                      onChange={(e) => handleInputChange("warrantyExpiry", e.target.value)}
+                      className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="installationDate" className="text-xs font-medium">Installation Date</Label>
+                    <Input
+                      id="installationDate"
+                      type="date"
+                      value={formData.installationDate}
+                      onChange={(e) => handleInputChange("installationDate", e.target.value)}
+                      className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200"
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* Specifications */}
-              <div className="space-y-2">
-                <Label htmlFor="specifications" className="text-sm font-medium">Specifications *</Label>
-                <Textarea
-                  id="specifications"
-                  placeholder="Enter detailed specifications (capacity, dimensions, technical details, etc.)"
-                  value={formData.specifications}
-                  onChange={(e) => handleInputChange("specifications", e.target.value)}
-                  className="min-h-[60px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
-                />
-                {errors.specifications && <p className="text-destructive text-sm mt-1">{errors.specifications}</p>}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Manufacturing Details */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              {/* Maintenance Information */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-medium text-muted-foreground border-b pb-1">Maintenance Information</h4>
                 
-                Manufacturing Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="manufacturer" className="text-sm font-medium">Manufacturer *</Label>
-                  <Input
-                    id="manufacturer"
-                    placeholder="e.g., Bosch, Siemens, etc."
-                    value={formData.manufacturer}
-                    onChange={(e) => handleInputChange("manufacturer", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                  {errors.manufacturer && <p className="text-destructive text-sm mt-1">{errors.manufacturer}</p>}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="lastMaintenance" className="text-xs font-medium">Last Service</Label>
+                    <Input
+                      id="lastMaintenance"
+                      type="date"
+                      value={formData.lastMaintenance}
+                      onChange={(e) => handleInputChange("lastMaintenance", e.target.value)}
+                      className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="nextMaintenance" className="text-xs font-medium">Next Maintenance Due</Label>
+                    <Input
+                      id="nextMaintenance"
+                      type="date"
+                      value={formData.nextMaintenance}
+                      onChange={(e) => handleInputChange("nextMaintenance", e.target.value)}
+                      className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="model" className="text-sm font-medium">Model</Label>
-                  <Input
-                    id="model"
-                    placeholder="Model number"
-                    value={formData.model}
-                    onChange={(e) => handleInputChange("model", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                <div className="space-y-1">
+                  <Label htmlFor="notes" className="text-xs font-medium">Additional Notes</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Any additional information about the machine"
+                    value={formData.notes}
+                    onChange={(e) => handleInputChange("notes", e.target.value)}
+                    className="min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="serialNumber" className="text-sm font-medium">Serial Number</Label>
-                  <Input
-                    id="serialNumber"
-                    placeholder="Serial number"
-                    value={formData.serialNumber}
-                    onChange={(e) => handleInputChange("serialNumber", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="purchaseDate" className="text-sm font-medium">Purchase Date</Label>
-                  <Input
-                    id="purchaseDate"
-                    type="date"
-                    value={formData.purchaseDate}
-                    onChange={(e) => handleInputChange("purchaseDate", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="warrantyExpiry" className="text-sm font-medium">Warranty Expiry</Label>
-                  <Input
-                    id="warrantyExpiry"
-                    type="date"
-                    value={formData.warrantyExpiry}
-                    onChange={(e) => handleInputChange("warrantyExpiry", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="installationDate" className="text-sm font-medium">Installation Date</Label>
-                  <Input
-                    id="installationDate"
-                    type="date"
-                    value={formData.installationDate}
-                    onChange={(e) => handleInputChange("installationDate", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Technical Specifications */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                
-                Technical Specifications
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="capacity" className="text-sm font-medium">Capacity</Label>
-                  <Input
-                    id="capacity"
-                    placeholder="e.g., 500kg/hour"
-                    value={formData.capacity}
-                    onChange={(e) => handleInputChange("capacity", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="powerRating" className="text-sm font-medium">Power Rating</Label>
-                  <Input
-                    id="powerRating"
-                    placeholder="e.g., 5kW"
-                    value={formData.powerRating}
-                    onChange={(e) => handleInputChange("powerRating", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="operatingVoltage" className="text-sm font-medium">Operating Voltage</Label>
-                  <Input
-                    id="operatingVoltage"
-                    placeholder="e.g., 415V"
-                    value={formData.operatingVoltage}
-                    onChange={(e) => handleInputChange("operatingVoltage", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Maintenance Information */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-             
-                Maintenance Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="lastMaintenance" className="text-sm font-medium">Last Maintenance</Label>
-                  <Input
-                    id="lastMaintenance"
-                    type="date"
-                    value={formData.lastMaintenance}
-                    onChange={(e) => handleInputChange("lastMaintenance", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="nextMaintenance" className="text-sm font-medium">Next Maintenance</Label>
-                  <Input
-                    id="nextMaintenance"
-                    type="date"
-                    value={formData.nextMaintenance}
-                    onChange={(e) => handleInputChange("nextMaintenance", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="maintenanceInterval" className="text-sm font-medium">Maintenance Interval</Label>
-                  <Input
-                    id="maintenanceInterval"
-                    placeholder="e.g., 3 months"
-                    value={formData.maintenanceInterval}
-                    onChange={(e) => handleInputChange("maintenanceInterval", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes" className="text-sm font-medium">Additional Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Any additional information about the machine"
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange("notes", e.target.value)}
-                  className="min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
-                />
               </div>
             </CardContent>
           </Card>
 
           {/* Form Actions */}
-          <div className="flex justify-end gap-4 pt-6 border-t">
-            <Button type="button" variant="outline" onClick={onClose} className="h-11 px-6">
-              <X className="w-4 h-4 mr-2" />
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onClose} className="h-8 px-4">
+              <X className="w-3 h-3 mr-1" />
               Cancel
             </Button>
-            <Button type="submit" className="h-11 px-6 bg-primary hover:bg-primary/90">
-              <Save className="w-4 h-4 mr-2" />
-              Add Machine
+            <Button type="submit" className="h-8 px-4 bg-primary hover:bg-primary/90">
+              <Save className="w-3 h-3 mr-1" />
+             Submit
             </Button>
           </div>
         </form>

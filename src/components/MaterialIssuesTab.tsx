@@ -5,13 +5,46 @@ import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Card, CardContent } from "./ui/card";
 import { Table as TableComponent, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { MaterialIssueForm } from "./MaterialIssueForm";
+import { toast } from "../hooks/use-toast";
 
 export const MaterialIssuesTab = () => {
   const [viewMode, setViewMode] = useState<"table" | "list">("table");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isIssueFormOpen, setIsIssueFormOpen] = useState(false);
+  const [selectedIssue, setSelectedIssue] = useState<any>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [editingIssue, setEditingIssue] = useState<any>(null);
+
+  // Helper function to check if issue can be edited (within 7 days)
+  const canEditIssue = (issuedDate: string) => {
+    const issueDate = new Date(issuedDate);
+    const currentDate = new Date();
+    const diffTime = Math.abs(currentDate.getTime() - issueDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7;
+  };
+
+  const handleViewIssue = (issue: any) => {
+    setSelectedIssue(issue);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditIssue = (issue: any) => {
+    if (canEditIssue(issue.issuedDate)) {
+      setEditingIssue(issue);
+      setIsIssueFormOpen(true);
+    } else {
+      // Show message when trying to edit after 7 days
+      toast({
+        title: "Cannot Edit Issue",
+        description: "This issue cannot be edited as it's more than 7 days old. Only recent issues (within 7 days) can be modified.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const toggleRowExpansion = (id: string) => {
     const newExpandedRows = new Set(expandedRows);
@@ -25,8 +58,8 @@ export const MaterialIssuesTab = () => {
 
   const [issuedMaterials, setIssuedMaterials] = useState([
     {
-      id: "MI-001",
-      materialIssueFormSrNo: "MIF-2024-001",
+      id: "ssrfm/unit-1/I-250115001",
+      materialIssueFormSrNo: "ssrfm/unit-1/I-250115001",
       materialName: "Steel Rods (20mm)",
       specifications: "High-grade steel, 20mm diameter, 6m length",
       unit: "kg",
@@ -41,12 +74,12 @@ export const MaterialIssuesTab = () => {
       department: "Construction",
       machineName: "Concrete Mixer #1",
       purpose: "Foundation reinforcement work",
-      issuedDate: "2024-01-15",
+      issuedDate: new Date().toISOString().split('T')[0], // Today's date
       status: "Issued"
     },
     {
-      id: "MI-002",
-      materialIssueFormSrNo: "MIF-2024-002",
+      id: "ssrfm/unit-1/I-250115002",
+      materialIssueFormSrNo: "ssrfm/unit-1/I-250115002",
       materialName: "Hydraulic Oil",
       specifications: "SAE 10W-30, Industrial grade",
       unit: "liters",
@@ -61,12 +94,12 @@ export const MaterialIssuesTab = () => {
       department: "Production",
       machineName: "Hydraulic Press #2",
       purpose: "Routine maintenance",
-      issuedDate: "2024-01-14",
+      issuedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 2 days ago
       status: "Issued"
     },
     {
-      id: "MI-003",
-      materialIssueFormSrNo: "MIF-2024-003",
+      id: "ssrfm/unit-1/I-250107003",
+      materialIssueFormSrNo: "ssrfm/unit-1/I-250107003",
       materialName: "Industrial Bolts",
       specifications: "M12x50mm, Grade 8.8, Zinc plated",
       unit: "pieces",
@@ -81,34 +114,56 @@ export const MaterialIssuesTab = () => {
       department: "Assembly",
       machineName: "Assembly Station #3",
       purpose: "Equipment assembly",
-      issuedDate: "2024-01-13",
+      issuedDate: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 8 days ago (should be disabled)
       status: "Issued"
     }
   ]);
 
+  // Helper function to generate new issue ID
+  const generateIssueId = () => {
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2); // Last 2 digits of year
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const dateStr = `${year}${month}${day}`;
+    
+    // Get the next sequence number for today
+    const todayIssues = issuedMaterials.filter(issue => 
+      issue.id.includes(`I-${dateStr}`)
+    );
+    const nextNumber = (todayIssues.length + 1).toString().padStart(3, '0');
+    
+    return `ssrfm/unit-1/I-${dateStr}${nextNumber}`;
+  };
+
   const handleIssueMaterial = (issueData: any) => {
     // Convert the form data to match our display structure
     // Handle multiple items from the form
-    const newIssues = issueData.issuedItems.map((item: any, index: number) => ({
-      id: `MI-${String(issuedMaterials.length + index + 1).padStart(3, '0')}`,
-      materialIssueFormSrNo: issueData.materialIssueFormSrNo || `MIF-2024-${String(issuedMaterials.length + index + 1).padStart(3, '0')}`,
-      materialName: item.nameOfMaterial,
-      specifications: item.specifications || "Standard specifications",
-      unit: item.unit,
-      existingStock: item.existingStock,
-      issuedQuantity: parseInt(item.issuedQty),
-      stockAfterIssue: item.stockAfterIssue,
-      recipientName: issueData.receiverName,
-      recipientDesignation: issueData.receiverDesignation,
-      recipientId: issueData.receiverId || "EMP-XXX",
-      issuingPersonName: issueData.issuingPersonName,
-      issuingPersonDesignation: issueData.issuingPersonDesignation,
-      department: issueData.department || "General",
-      machineName: issueData.machineName || "N/A",
-      purpose: issueData.purpose,
-      issuedDate: issueData.date,
-      status: "Issued"
-    }));
+    const newIssues = issueData.issuedItems.map((item: any, index: number) => {
+      const baseId = generateIssueId();
+      const issueId = index === 0 ? baseId : `${baseId.slice(0, -3)}${(parseInt(baseId.slice(-3)) + index).toString().padStart(3, '0')}`;
+      
+      return {
+        id: issueId,
+        materialIssueFormSrNo: issueId,
+        materialName: item.nameOfMaterial,
+        specifications: item.specifications || "Standard specifications",
+        unit: item.unit,
+        existingStock: item.existingStock,
+        issuedQuantity: parseInt(item.issuedQty),
+        stockAfterIssue: item.stockAfterIssue,
+        recipientName: issueData.receiverName,
+        recipientDesignation: issueData.receiverDesignation,
+        recipientId: issueData.receiverId || "EMP-XXX",
+        issuingPersonName: issueData.issuingPersonName,
+        issuingPersonDesignation: issueData.issuingPersonDesignation,
+        department: issueData.department || "General",
+        machineName: issueData.machineName || "N/A",
+        purpose: issueData.purpose,
+        issuedDate: issueData.date,
+        status: "Issued"
+      };
+    });
     
     setIssuedMaterials(prev => [...newIssues, ...prev]);
   };
@@ -188,20 +243,24 @@ export const MaterialIssuesTab = () => {
                       <TableHead className="min-w-[100px] text-foreground font-semibold">Stock Info</TableHead>
                       <TableHead className="min-w-[120px] text-foreground font-semibold">Recipient</TableHead>
                       <TableHead className="min-w-[120px] text-foreground font-semibold">Issuing Person</TableHead>
-                      <TableHead className="min-w-[100px] text-foreground font-semibold">Department</TableHead>
+                      <TableHead className="min-w-[100px] text-foreground font-semibold">Unit</TableHead>
                       <TableHead className="min-w-[100px] text-foreground font-semibold">Date</TableHead>
-                      <TableHead className="min-w-[80px] text-foreground font-semibold">Status</TableHead>
+                      <TableHead className="min-w-[80px] text-foreground font-semibold">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredIssues.map((issue) => (
                       <TableRow key={issue.id} className="hover:bg-muted/30 border-b border-secondary/20">
                         <TableCell className="font-medium">
-                          <div>
-                            <div>{issue.id}</div>
-                            <div className="text-xs text-muted-foreground">
-                              Form: {issue.materialIssueFormSrNo}
-                            </div>
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto text-left font-medium text-primary hover:text-primary/80"
+                            onClick={() => handleViewIssue(issue)}
+                          >
+                            {issue.id}
+                          </Button>
+                          <div className="text-xs text-muted-foreground">
+                            Form: {issue.materialIssueFormSrNo}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -243,10 +302,18 @@ export const MaterialIssuesTab = () => {
                         </TableCell>
                         <TableCell className="text-sm">{new Date(issue.issuedDate).toLocaleDateString()}</TableCell>
                         <TableCell>
-                          <Badge className="bg-primary/10 text-primary border-primary/20">
-                            <CheckSquare className="w-3 h-3 mr-1" />
-                            Issued
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditIssue(issue)}
+                              disabled={!canEditIssue(issue.issuedDate)}
+                              className="h-8 w-8 p-0"
+                              title={canEditIssue(issue.issuedDate) ? "Edit issue" : "Cannot edit after 7 days"}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -267,11 +334,10 @@ export const MaterialIssuesTab = () => {
                       <TableHead className="min-w-[200px]">MATERIAL ISSUE</TableHead>
                       <TableHead className="min-w-[120px]">RECIPIENT</TableHead>
                       <TableHead className="min-w-[120px]">ISSUING PERSON</TableHead>
-                      <TableHead className="min-w-[100px]">STATUS</TableHead>
+                      <TableHead className="min-w-[100px]">ACTIONS</TableHead>
                       <TableHead className="min-w-[140px]">ISSUED DATE</TableHead>
                       <TableHead className="min-w-[140px]">STOCK INFO</TableHead>
                       <TableHead className="min-w-[100px]">DEPARTMENT</TableHead>
-                      <TableHead className="min-w-[100px]">ACTIONS</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -294,7 +360,13 @@ export const MaterialIssuesTab = () => {
                           </TableCell>
                           <TableCell>
                             <div>
-                              <div className="font-semibold text-sm capitalize">{issue.materialName}</div>
+                              <Button
+                                variant="link"
+                                className="p-0 h-auto text-left font-semibold text-sm text-primary hover:text-primary/80"
+                                onClick={() => handleViewIssue(issue)}
+                              >
+                                {issue.materialName}
+                              </Button>
                               <div className="text-xs text-muted-foreground mt-1">
                                 {issue.purpose}
                               </div>
@@ -312,12 +384,18 @@ export const MaterialIssuesTab = () => {
                             <div className="text-xs text-muted-foreground">{issue.issuingPersonDesignation}</div>
                           </TableCell>
                           <TableCell>
-                            <Badge className="bg-primary/10 text-primary border-primary/20" variant="secondary">
-                              <span className="flex items-center gap-1">
-                                <CheckSquare className="w-3 h-3" />
-                                <span className="text-xs">Issued</span>
-                              </span>
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditIssue(issue)}
+                                disabled={!canEditIssue(issue.issuedDate)}
+                                className="h-8 w-8 p-0"
+                                title={canEditIssue(issue.issuedDate) ? "Edit issue" : "Cannot edit after 7 days"}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="text-sm">{new Date(issue.issuedDate).toLocaleDateString()}</div>
@@ -332,11 +410,6 @@ export const MaterialIssuesTab = () => {
                             <Badge variant="outline">
                               {issue.department}
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
                           </TableCell>
                         </TableRow>
                         
@@ -460,11 +533,140 @@ export const MaterialIssuesTab = () => {
         </Card>
       )}
 
+      {/* Issue Details View Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Material Issue Details - {selectedIssue?.id}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedIssue && (
+            <div className="space-y-6">
+              {/* Issue Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-3">Issue Information</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Issue ID:</span>
+                        <span className="font-medium">{selectedIssue.id}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Form Number:</span>
+                        <span className="font-medium">{selectedIssue.materialIssueFormSrNo}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Material:</span>
+                        <span className="font-medium capitalize">{selectedIssue.materialName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Specifications:</span>
+                        <span className="font-medium text-right max-w-48">{selectedIssue.specifications}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Purpose:</span>
+                        <span className="font-medium">{selectedIssue.purpose}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-3">Stock Information</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Existing Stock:</span>
+                        <span className="font-medium">{selectedIssue.existingStock} {selectedIssue.unit}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Issued Quantity:</span>
+                        <span className="font-medium text-primary">{selectedIssue.issuedQuantity} {selectedIssue.unit}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Stock After Issue:</span>
+                        <span className="font-medium">{selectedIssue.stockAfterIssue} {selectedIssue.unit}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Department:</span>
+                        <span className="font-medium">{selectedIssue.department}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Machine:</span>
+                        <span className="font-medium">{selectedIssue.machineName}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Personnel Information */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-3">Issuing Person</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Name:</span>
+                        <span className="font-medium">{selectedIssue.issuingPersonName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Designation:</span>
+                        <span className="font-medium">{selectedIssue.issuingPersonDesignation}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-3">Recipient</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Name:</span>
+                        <span className="font-medium">{selectedIssue.recipientName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Designation:</span>
+                        <span className="font-medium">{selectedIssue.recipientDesignation}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Employee ID:</span>
+                        <span className="font-medium">{selectedIssue.recipientId}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Date Information */}
+              <Card>
+                <CardContent className="p-4">
+                  <h3 className="font-semibold mb-3">Date Information</h3>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Issued Date:</span>
+                    <span className="font-medium">{new Date(selectedIssue.issuedDate).toLocaleDateString()}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Material Issue Form */}
       <MaterialIssueForm
         isOpen={isIssueFormOpen}
-        onClose={() => setIsIssueFormOpen(false)}
+        onClose={() => {
+          setIsIssueFormOpen(false);
+          setEditingIssue(null);
+        }}
         onSubmit={handleIssueMaterial}
+        editingIssue={editingIssue}
       />
     </div>
   );

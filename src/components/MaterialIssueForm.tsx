@@ -1,6 +1,6 @@
 import logo from "/logo.png";
-import { useState } from "react";
-import { Package, Save, X, User, Calendar, CheckCircle, AlertCircle, FileText, Building2, Trash2, Plus } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Package, Save, X, User, Calendar, CheckCircle, AlertCircle, FileText, Building2, Trash2, Plus, Edit } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -17,16 +17,32 @@ interface MaterialIssueFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (issueData: any) => void;
+  editingIssue?: any;
 }
 
-export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFormProps) => {
+export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: MaterialIssueFormProps) => {
   const { currentUser } = useRole();
+  
+  // Helper function to generate form serial number
+  const generateFormSerialNumber = () => {
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2);
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const dateStr = `${year}${month}${day}`;
+    
+    // Generate a random 3-digit number for the form
+    const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    
+    return `ssrfm/unit-1/I-${dateStr}${randomNum}`;
+  };
+
   const [formData, setFormData] = useState({
     // Document Information (matching the physical form)
     date: new Date().toISOString().split('T')[0],
-    materialIssueFormSrNo: `SSFM/IISFN/006`,
-    reqFormSrNo: `SSFM/MNT/RQ/0011`,
-    indFormSrNo: `SSFM/MNT/IND./0011`,
+    materialIssueFormSrNo: generateFormSerialNumber(),
+    reqFormSrNo: `ssrfm/unit-1/REQ-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}001`,
+    indFormSrNo: `ssrfm/unit-1/IND-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}001`,
     
     // Material items (supporting multiple items like in the physical form)
     items: [
@@ -36,7 +52,10 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
         existingStock: 0,
         issuedQty: "",
         stockAfterIssue: 0,
-        unit: ""
+        unit: "",
+        receiverName: "",
+        image: "",
+        purpose: ""
       }
     ],
     
@@ -50,7 +69,70 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
     purpose: "",
     notes: "",
     requestedBy: currentUser?.name || "",
+    issuedBy: currentUser?.name || "",
   });
+
+  // Effect to populate form when editing
+  useEffect(() => {
+    if (editingIssue && isOpen) {
+      setFormData({
+        date: editingIssue.issuedDate,
+        materialIssueFormSrNo: editingIssue.materialIssueFormSrNo,
+        reqFormSrNo: `ssrfm/unit-1/REQ-${new Date(editingIssue.issuedDate).toISOString().slice(2, 10).replace(/-/g, '')}001`,
+        indFormSrNo: `ssrfm/unit-1/IND-${new Date(editingIssue.issuedDate).toISOString().slice(2, 10).replace(/-/g, '')}001`,
+        items: [
+          {
+            srNo: 1,
+            nameOfMaterial: editingIssue.materialName,
+            existingStock: editingIssue.existingStock,
+            issuedQty: editingIssue.issuedQuantity.toString(),
+            stockAfterIssue: editingIssue.stockAfterIssue,
+            unit: editingIssue.unit,
+            receiverName: editingIssue.recipientName,
+            image: "",
+            purpose: editingIssue.purpose
+          }
+        ],
+        issuingPersonName: editingIssue.issuingPersonName,
+        issuingPersonDesignation: editingIssue.issuingPersonDesignation,
+        receiverName: editingIssue.recipientName,
+        receiverDesignation: editingIssue.recipientDesignation,
+        purpose: editingIssue.purpose,
+        notes: "",
+        requestedBy: currentUser?.name || "",
+        issuedBy: currentUser?.name || "",
+      });
+    } else if (!editingIssue && isOpen) {
+      // Reset form for new issue
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        materialIssueFormSrNo: generateFormSerialNumber(),
+        reqFormSrNo: `ssrfm/unit-1/REQ-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}001`,
+        indFormSrNo: `ssrfm/unit-1/IND-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}001`,
+        items: [
+          {
+            srNo: 1,
+            nameOfMaterial: "",
+            existingStock: 0,
+            issuedQty: "",
+            stockAfterIssue: 0,
+            unit: "",
+            receiverName: "",
+            image: "",
+            purpose: ""
+          }
+        ],
+        issuingPersonName: "",
+        issuingPersonDesignation: "", 
+        receiverName: "",
+        receiverDesignation: "",
+        purpose: "",
+        notes: "",
+        requestedBy: currentUser?.name || "",
+        issuedBy: currentUser?.name || "",
+      });
+    }
+  }, [editingIssue, isOpen, currentUser]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
@@ -64,7 +146,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
       specifications: "SH adhesive",
       unit: "KG",
       currentStock: 1,
-      location: "Chemical Storage"
+      
     },
     {
       id: "MAT-002", 
@@ -233,17 +315,22 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
     
     if (!validateForm()) return;
     
-    // Generate document numbers
+    // Generate document numbers with new format
     const timestamp = Date.now();
-    const docNo = `SSRFM/MNTI/R-${String(timestamp).slice(-4)}`;
-    const reqFormNo = `SSRFM/MNT/REQ.-${String(timestamp).slice(-4)}`;
-    const indFormNo = `SSRFM/MNT/IND.-${String(timestamp).slice(-4)}`;
-    const reqSrNo = `SSRFM/MNT/REQ.-${String(timestamp).slice(-4)}`;
-    const indSrNo = `SSRFM/MNT/IND.-${String(timestamp).slice(-4)}`;
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2);
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const dateStr = `${year}${month}${day}`;
+    const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    
+    const docNo = `ssrfm/unit-1/I-${dateStr}${randomNum}`;
+    const reqFormNo = `ssrfm/unit-1/REQ-${dateStr}${randomNum}`;
+    const indFormNo = `ssrfm/unit-1/IND-${dateStr}${randomNum}`;
     
     const issueData = {
       ...formData,
-      id: `ISS-${timestamp}`,
+      id: docNo,
       status: "issued",
       type: "material_issue",
       timestamp: new Date().toISOString(),
@@ -258,12 +345,12 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
       description: `${issuedItemsCount} material item(s) issued successfully to ${formData.receiverName}`,
     });
     
-    // Reset form
+    // Reset form with new serial numbers
     setFormData({
       date: new Date().toISOString().split('T')[0],
-      materialIssueFormSrNo: `SSFM/IISFN/006`,
-      reqFormSrNo: `SSFM/MNT/RQ/0011`,
-      indFormSrNo: `SSFM/MNT/IND./0011`,
+      materialIssueFormSrNo: generateFormSerialNumber(),
+      reqFormSrNo: `ssrfm/unit-1/REQ-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}001`,
+      indFormSrNo: `ssrfm/unit-1/IND-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}001`,
       items: [
         {
           srNo: 1,
@@ -271,7 +358,10 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
           existingStock: 0,
           issuedQty: "",
           stockAfterIssue: 0,
-          unit: ""
+          unit: "",
+          receiverName: "",
+          image: "",
+          purpose: ""
         }
       ],
       issuingPersonName: "",
@@ -281,6 +371,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
       purpose: "",
       notes: "",
       requestedBy: currentUser?.name || "",
+      issuedBy: currentUser?.name || "",
       
     });
     setSelectedMaterial(null);
@@ -297,10 +388,10 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
               <FileText className="w-4 h-4 text-foreground" />
             </div>
             <div>
-              <div className="text-base font-bold">MATERIAL ISSUE FORM</div>
-              <div className="text-xs text-muted-foreground">AGAINST REQUISITION AND INDENT FORM</div>
+              <div className="text-base font-bold">
+                {editingIssue ? "EDIT MATERIAL ISSUE FORM" : "MATERIAL ISSUE FORM"}
+              </div>
             </div>
-            
           </DialogTitle>
         </DialogHeader>
 
@@ -318,7 +409,10 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                   existingStock: 0,
                   issuedQty: "",
                   stockAfterIssue: 0,
-                  unit: ""
+                  unit: "",
+                  receiverName: "",
+                  image: "",
+                  purpose: ""
                 };
                 setFormData(prev => ({ ...prev, items: [...prev.items, newItem] }));
               }}
@@ -342,6 +436,9 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                       <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">EXISTING STOCK</TableHead>
                       <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">ISSUED QTY</TableHead>
                       <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">STOCK AFTER ISSUE</TableHead>
+                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">RECEIVER NAME</TableHead>
+                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">IMAGE</TableHead>
+                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">PURPOSE OF ISSUE</TableHead>
                       <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">ACTIONS</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -375,12 +472,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                             <SelectContent>
                               {availableMaterials.map((material) => (
                                 <SelectItem key={material.id} value={material.name}>
-                                  <div className="flex flex-col">
-                                    <div className="font-semibold text-xs">{material.name}</div>
-                                    <div className="text-xs text-muted-foreground">
-                                      Stock: {material.currentStock} {material.unit} • {material.make}
-                                    </div>
-                                  </div>
+                                  {material.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -426,6 +518,54 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                           </div>
                         </TableCell>
                         <TableCell className="border border-gray-300 px-2 py-1">
+                          <Input
+                            value={item.receiverName}
+                            onChange={(e) => {
+                              const newItems = [...formData.items];
+                              newItems[index] = {
+                                ...item,
+                                receiverName: e.target.value
+                              };
+                              setFormData(prev => ({ ...prev, items: newItems }));
+                            }}
+                            placeholder="Receiver Name"
+                            className="border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm"
+                          />
+                        </TableCell>
+                        <TableCell className="border border-gray-300 px-2 py-1">
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const newItems = [...formData.items];
+                                newItems[index] = {
+                                  ...item,
+                                  image: file.name
+                                };
+                                setFormData(prev => ({ ...prev, items: newItems }));
+                              }
+                            }}
+                            className="border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm"
+                          />
+                        </TableCell>
+                        <TableCell className="border border-gray-300 px-2 py-1">
+                          <Input
+                            value={item.purpose}
+                            onChange={(e) => {
+                              const newItems = [...formData.items];
+                              newItems[index] = {
+                                ...item,
+                                purpose: e.target.value
+                              };
+                              setFormData(prev => ({ ...prev, items: newItems }));
+                            }}
+                            placeholder="Purpose"
+                            className="border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm"
+                          />
+                        </TableCell>
+                        <TableCell className="border border-gray-300 px-2 py-1">
                           <Button
                             type="button"
                             variant="outline"
@@ -449,73 +589,15 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
               </div>
 
               {/* Signature Section - Compact */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4">
-                {/* Issuing Person */}
-                <div className="border border-gray-300">
-                  <div className="bg-gray-50 border-b border-gray-300 p-2">
-                    <div className="font-semibold text-center text-xs">ISSUING PERSON NAME</div>
-                    <div className="text-center text-xs">DESIGNATION</div>
-                  </div>
-                  <div className="p-3 space-y-2">
-                    <Input
-                      value={formData.issuingPersonName}
-                      onChange={(e) => handleInputChange("issuingPersonName", e.target.value)}
-                      placeholder="Enter Issuing Person Name"
-                      className="text-center text-sm h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] transition-all duration-200"
-                    />
-                    <Input
-                      value={formData.issuingPersonDesignation}
-                      onChange={(e) => handleInputChange("issuingPersonDesignation", e.target.value)}
-                      placeholder="Designation"
-                      className="text-center text-sm h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] transition-all duration-200"
-                    />
-                    
-                  </div>
-                </div>
-
-                {/* Receiver */}
-                <div className="border border-gray-300">
-                  <div className="bg-gray-50 border-b border-gray-300 p-2">
-                    <div className="font-semibold text-center text-xs">RECEIVER NAME</div>
-                    <div className="text-center text-xs">DESIGNATION</div>
-                  </div>
-                  <div className="p-3 space-y-2">
-                    <Input
-                      value={formData.receiverName}
-                      onChange={(e) => handleInputChange("receiverName", e.target.value)}
-                      placeholder="Enter Receiver Name"
-                      className="text-center text-sm h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] transition-all duration-200"
-                    />
-                    <Input
-                      value={formData.receiverDesignation}
-                      onChange={(e) => handleInputChange("receiverDesignation", e.target.value)}
-                      placeholder="Designation"
-                      className="text-center text-sm h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] transition-all duration-200"
-                    />
-                   
-                  </div>
-                </div>
-              </div>
+              
             </CardContent>
           </Card>
 
           {/* Additional Information - Compact */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Additional Information</CardTitle>
-            </CardHeader>
+            
             <CardContent className="space-y-3">
-              <div className="space-y-1">
-                <Label htmlFor="purpose" className="text-xs">Purpose of Issue *</Label>
-                <Textarea
-                  id="purpose"
-                  placeholder="Describe the purpose for this material issue"
-                  value={formData.purpose}
-                  onChange={(e) => handleInputChange("purpose", e.target.value)}
-                  className="min-h-[60px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
-                />
-                {errors.purpose && <p className="text-destructive text-xs">{errors.purpose}</p>}
-              </div>
+              
 
               <div className="space-y-1">
                 <Label htmlFor="notes" className="text-xs">Additional Notes</Label>
@@ -530,9 +612,9 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Requested By</Label>
+                  <Label className="text-xs">Issued By</Label>
                   <div className="input-friendly bg-secondary text-center py-2 font-semibold text-xs">
-                    {formData.requestedBy}
+                    {formData.issuedBy}
                   </div>
                 </div>
                
@@ -550,7 +632,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
           <div className="flex justify-center gap-3 pt-3">
             <Button type="submit" size="sm" className="gap-2">
               <FileText className="w-4 h-4" />
-              Submit Form
+              {editingIssue ? "Update Form" : "Submit Form"}
             </Button>
             <Button type="button" variant="outline" onClick={onClose} className="gap-2" size="sm">
               <X className="w-4 h-4" />

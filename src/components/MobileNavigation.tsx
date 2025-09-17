@@ -11,7 +11,8 @@ import {
   User,
   Settings,
   Bell,
-  LogOut
+  LogOut,
+  ShoppingBasket
 } from "lucide-react";
 import { useRole } from "../contexts/RoleContext";
 import { Button } from "./ui/button";
@@ -55,8 +56,8 @@ export const MobileNavigation = () => {
         },
         { 
           to: "/my-requests", 
-          label: "Materials Order Book", 
-          icon: FileText,
+          label: "Purchased Material", 
+          icon: ShoppingBasket,
           permission: "request:view_own"
         },
         

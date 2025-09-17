@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Plus, Search, List, Table, Package, Settings, FileText, ClipboardList, Factory, Hourglass, ArrowUpRight } from "lucide-react";
+import { Plus, Search, List, Table, Package, Settings, FileText, ClipboardList, Factory, Hourglass, ArrowUpRight, ShoppingBasket } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { MaterialsTab } from "../components/MaterialsTab";
 import { MachinesTab } from "../components/MachinesTab";
 import { MaterialIssuesTab } from "../components/MaterialIssuesTab";
+import { MaterialOrderBookTab } from "@/components/MaterialOrderBookTab";
 
 const MaterialsInventory = () => {
   const [activeTab, setActiveTab] = useState("materials");
@@ -22,7 +23,7 @@ const MaterialsInventory = () => {
       */}
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full sm:w-4/5 md:w-3/5 grid-cols-3 h-auto p-1 bg-secondary/10 rounded-lg shadow-sm">
+        <TabsList className="grid w-4/5 grid-cols-4 h-auto p-1 bg-secondary/10 rounded-lg shadow-sm">
            <TabsTrigger 
             value="materials" 
             className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
@@ -30,7 +31,7 @@ const MaterialsInventory = () => {
             <Hourglass className="w-4 h-4" />
             <span className="hidden xs:inline sm:inline">Outstanding Materials</span>
             <span className="xs:hidden sm:hidden">Outstanding</span>
-          </TabsTrigger>
+        </TabsTrigger>
           
           
           
@@ -45,6 +46,16 @@ const MaterialsInventory = () => {
             <span className="hidden xs:inline sm:inline">Issue Material</span>
             <span className="xs:hidden sm:hidden">Issue</span>
           </TabsTrigger>
+          
+<TabsTrigger 
+            value="material-order-book" 
+            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
+          >
+            <ShoppingBasket className="w-4 h-4" />
+            <span className="hidden xs:inline sm:inline">Purchased Material</span>
+            <span className="xs:hidden sm:hidden">Purchased</span>
+          </TabsTrigger>
+
           
           <TabsTrigger 
             value="machines" 
@@ -64,6 +75,11 @@ const MaterialsInventory = () => {
         <TabsContent value="materials" className="mt-4">
           <MaterialsTab />
         </TabsContent>
+
+<TabsContent value="material-order-book" className="mt-4">
+          <MaterialOrderBookTab />
+        </TabsContent>
+
 
         <TabsContent value="machines" className="mt-4">
           <MachinesTab />

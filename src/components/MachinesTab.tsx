@@ -197,7 +197,7 @@ export const MachinesTab = () => {
                   <TableRow className="bg-secondary/20 border-b-2 border-secondary/30">
                     <TableHead className="min-w-[150px] text-foreground font-semibold">Machine</TableHead>
                     <TableHead className="min-w-[150px] text-foreground font-semibold">Type</TableHead>
-                    <TableHead className="min-w-[120px] text-foreground font-semibold">Site Location</TableHead>
+                    <TableHead className="min-w-[120px] text-foreground font-semibold">Unit</TableHead>
                     <TableHead className="min-w-[100px] text-foreground font-semibold">Status</TableHead>
                     <TableHead className="min-w-[120px] text-foreground font-semibold">Last Service</TableHead>
                     <TableHead className="min-w-[100px] text-foreground font-semibold">Actions</TableHead>

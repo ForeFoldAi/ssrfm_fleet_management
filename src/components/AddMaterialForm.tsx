@@ -206,44 +206,43 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
-        <DialogHeader className="pb-4">
-          <DialogTitle className="flex items-center gap-3 text-xl">
-            <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-              <Plus className="w-6 h-6 text-primary" />
+      <DialogContent className="max-w-4xl max-h-[95vh] overflow-y-auto">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+              <Plus className="w-4 h-4 text-primary" />
             </div>
             Add New Material
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Basic Information */}
           <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-               
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">
                 Basic Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4">
               {/* First Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-2">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-1">
                   <Label htmlFor="name" className="text-sm font-medium">Material Name *</Label>
                   <Input
                     id="name"
                     placeholder="e.g., Steel Rods (20mm)"
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                    className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
-                  {errors.name && <p className="text-destructive text-sm mt-1">{errors.name}</p>}
+                  {errors.name && <p className="text-destructive text-xs mt-1">{errors.name}</p>}
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="category" className="text-sm font-medium">Category *</Label>
                   <Select value={formData.category} onValueChange={(value) => handleSelectChange("category", value)}>
-                    <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
+                    <SelectTrigger className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -257,21 +256,21 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                       placeholder="Enter custom category"
                       value={formData.customCategory}
                       onChange={(e) => handleInputChange("customCategory", e.target.value)}
-                      className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-2"
+                      className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-1"
                     />
                   )}
-                  {errors.category && <p className="text-destructive text-sm mt-1">{errors.category}</p>}
-                  {errors.customCategory && <p className="text-destructive text-sm mt-1">{errors.customCategory}</p>}
+                  {errors.category && <p className="text-destructive text-xs mt-1">{errors.category}</p>}
+                  {errors.customCategory && <p className="text-destructive text-xs mt-1">{errors.customCategory}</p>}
                 </div>
               </div>
 
               {/* Second Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="unit" className="text-sm font-medium">Unit *</Label>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="unit" className="text-sm font-medium">Measure Unit *</Label>
                   <Select value={formData.unit} onValueChange={(value) => handleSelectChange("unit", value)}>
-                    <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
-                      <SelectValue placeholder="Select unit" />
+                    <SelectTrigger className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
+                      <SelectValue placeholder="Select Measure unit" />
                     </SelectTrigger>
                     <SelectContent>
                       {units.map((unit) => (
@@ -284,48 +283,46 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                       placeholder="Enter custom unit"
                       value={formData.customUnit}
                       onChange={(e) => handleInputChange("customUnit", e.target.value)}
-                      className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-2"
+                      className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-1"
                     />
                   )}
-                  {errors.unit && <p className="text-destructive text-sm mt-1">{errors.unit}</p>}
-                  {errors.customUnit && <p className="text-destructive text-sm mt-1">{errors.customUnit}</p>}
+                  {errors.unit && <p className="text-destructive text-xs mt-1">{errors.unit}</p>}
+                  {errors.customUnit && <p className="text-destructive text-xs mt-1">{errors.customUnit}</p>}
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="maker" className="text-sm font-medium">Maker/Brand *</Label>
                   <Input
                     id="maker"
                     placeholder="e.g., SteelCorp Industries"
                     value={formData.maker}
                     onChange={(e) => handleInputChange("maker", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                    className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
-                  {errors.maker && <p className="text-destructive text-sm mt-1">{errors.maker}</p>}
+                  {errors.maker && <p className="text-destructive text-xs mt-1">{errors.maker}</p>}
                 </div>
               </div>
 
               {/* Specifications */}
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="specifications" className="text-sm font-medium">Specifications *</Label>
                 <Textarea
                   id="specifications"
                   placeholder="Enter detailed specifications (size, grade, model, technical details, etc.)"
                   value={formData.specifications}
                   onChange={(e) => handleInputChange("specifications", e.target.value)}
-                  className="min-h-[60px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
+                  className="min-h-[50px] px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
                 />
-                {errors.specifications && <p className="text-destructive text-sm mt-1">{errors.specifications}</p>}
+                {errors.specifications && <p className="text-destructive text-xs mt-1">{errors.specifications}</p>}
               </div>
 
               {/* Third Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-               
-
-                <div className="space-y-2">
-                  <Label htmlFor="location" className="text-sm font-medium">Storage Location</Label>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="location" className="text-sm font-medium">Storage Unit</Label>
                   <Select value={formData.location} onValueChange={(value) => handleSelectChange("location", value)}>
-                    <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
-                      <SelectValue placeholder="Select storage location" />
+                    <SelectTrigger className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
+                      <SelectValue placeholder="Select storage Unit" />
                     </SelectTrigger>
                     <SelectContent>
                       {locations.map((location) => (
@@ -338,26 +335,12 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                       placeholder="Enter custom location"
                       value={formData.customLocation}
                       onChange={(e) => handleInputChange("customLocation", e.target.value)}
-                      className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-2"
+                      className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-1"
                     />
                   )}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Stock Information */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-               
-                Stock Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Stock Levels Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="currentStock" className="text-sm font-medium">Current Stock *</Label>
                   <Input
                     id="currentStock"
@@ -366,57 +349,13 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                     min="0"
                     value={formData.currentStock}
                     onChange={(e) => handleInputChange("currentStock", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                    className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
-                  {errors.currentStock && <p className="text-destructive text-sm mt-1">{errors.currentStock}</p>}
+                  {errors.currentStock && <p className="text-destructive text-xs mt-1">{errors.currentStock}</p>}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="minStock" className="text-sm font-medium">Min Stock *</Label>
-                  <Input
-                    id="minStock"
-                    type="number"
-                    placeholder="0"
-                    min="0"
-                    value={formData.minStock}
-                    onChange={(e) => handleInputChange("minStock", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                  {errors.minStock && <p className="text-destructive text-sm mt-1">{errors.minStock}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="maxStock" className="text-sm font-medium">Max Stock</Label>
-                  <Input
-                    id="maxStock"
-                    type="number"
-                    placeholder="0"
-                    min="0"
-                    value={formData.maxStock}
-                    onChange={(e) => handleInputChange("maxStock", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                  {errors.maxStock && <p className="text-destructive text-sm mt-1">{errors.maxStock}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="reorderLevel" className="text-sm font-medium">Reorder Level</Label>
-                  <Input
-                    id="reorderLevel"
-                    type="number"
-                    placeholder="0"
-                    min="0"
-                    value={formData.reorderLevel}
-                    onChange={(e) => handleInputChange("reorderLevel", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
-              </div>
-
-              {/* Price and Lead Time Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="unitPrice" className="text-sm font-medium">Unit Price (₹)</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="unitPrice" className="text-sm font-medium">Price (₹)</Label>
                   <Input
                     id="unitPrice"
                     type="number"
@@ -425,36 +364,22 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                     step="0.01"
                     value={formData.unitPrice}
                     onChange={(e) => handleInputChange("unitPrice", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                    className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
-                  {errors.unitPrice && <p className="text-destructive text-sm mt-1">{errors.unitPrice}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="leadTime" className="text-sm font-medium">Lead Time</Label>
-                  <Input
-                    id="leadTime"
-                    placeholder="e.g., 5 days"
-                    value={formData.leadTime}
-                    onChange={(e) => handleInputChange("leadTime", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
+                  {errors.unitPrice && <p className="text-destructive text-xs mt-1">{errors.unitPrice}</p>}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          
-          
-
           {/* Form Actions */}
-          <div className="flex justify-end gap-4 pt-6 border-t">
-            <Button type="button" variant="outline" onClick={onClose} className="h-11 px-6">
-              <X className="w-4 h-4 mr-2" />
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onClose} className="h-9 px-4">
+              <X className="w-4 h-4 mr-1" />
               Cancel
             </Button>
-            <Button type="submit" className="h-11 px-6 bg-primary hover:bg-primary/90">
-              <Save className="w-4 h-4 mr-2" />
+            <Button type="submit" className="h-9 px-4 bg-primary hover:bg-primary/90">
+              <Save className="w-4 h-4 mr-1" />
               Add Material
             </Button>
           </div>
