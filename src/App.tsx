@@ -43,9 +43,9 @@ const RoleBasedHome = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Redirect supervisors to their requests page
+  // Redirect supervisors to stock register
   if (currentUser.role === 'site_supervisor') {
-    return <Navigate to="/supervisor-requests" replace />;
+    return <Navigate to="/materials-inventory" replace />;
   }
 
   // Other roles go to dashboard
@@ -60,7 +60,7 @@ const AppRoutes = () => {
     if (!currentUser) return "/";
     
     if (currentUser.role === 'site_supervisor') {
-      return "/supervisor-requests";
+      return "/materials-inventory";
     }
     
     return "/";

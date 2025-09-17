@@ -48,17 +48,18 @@ export const MobileNavigation = () => {
     const roleSpecificItems = {
       site_supervisor: [
         { 
+          to: "/materials", 
+          label: "Stock Register", 
+          icon: Package,
+          permission: "material:view"
+        },
+        { 
           to: "/my-requests", 
-          label: "My Requests", 
+          label: "Materials Order Book", 
           icon: FileText,
           permission: "request:view_own"
         },
-        { 
-          to: "/materials", 
-          label: "Materials", 
-          icon: Package,
-          permission: "material:view"
-        }
+        
       ],
       inventory_manager: [
         { 
@@ -123,7 +124,7 @@ export const MobileNavigation = () => {
   const navItems = getNavigationItems();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-foreground to-foreground backdrop-blur-md border-t border-warning/20 shadow-lg">
       <div className="flex items-center justify-around px-2 py-2">
         {navItems.slice(0, 4).map((item) => {
           const Icon = item.icon;
@@ -135,8 +136,8 @@ export const MobileNavigation = () => {
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center p-2 rounded-[20px] transition-all duration-200 min-w-0 flex-1 ${
                   isActive
-                    ? "text-foreground bg-secondary/10"
-                    : "text-gray-600 hover:text-foreground hover:bg-gray-50"
+                    ? "text-warning bg-warning/10"
+                    : "text-white/70 hover:text-warning hover:bg-white/5"
                 }`
               }
             >
@@ -148,7 +149,7 @@ export const MobileNavigation = () => {
         
         {/* More menu button */}
         {navItems.length > 4 && (
-          <div className="flex flex-col items-center justify-center p-2 rounded-[20px] transition-all duration-200 min-w-0 flex-1 text-gray-600 hover:text-foreground hover:bg-gray-50">
+          <div className="flex flex-col items-center justify-center p-2 rounded-[20px] transition-all duration-200 min-w-0 flex-1 text-white/70 hover:text-warning hover:bg-white/5">
             <Settings className="w-5 h-5 mb-1" />
             <span className="text-xs font-medium">More</span>
           </div>

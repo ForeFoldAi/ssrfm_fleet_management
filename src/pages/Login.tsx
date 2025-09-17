@@ -10,7 +10,6 @@ import { toast } from "../hooks/use-toast";
 
 const DEMO_USERS = [
   { name: 'John Martinez', email: 'john@demo.com', password: 'supervisor123', role: 'site_supervisor' as UserRole, icon: User, color: 'bg-secondary/100' },
-  { name: 'Sarah Chen', email: 'sarah@demo.com', password: 'manager123', role: 'inventory_manager' as UserRole, icon: Settings, color: 'bg-orange-500' },
   { name: 'Robert Williams', email: 'robert@demo.com', password: 'owner123', role: 'company_owner' as UserRole, icon: Shield, color: 'bg-purple-500' }
 ];
 
@@ -24,9 +23,8 @@ const Login = () => {
   const getRoleRedirectPath = (role: UserRole) => {
     switch (role) {
       case 'site_supervisor':
-        return '/supervisor-requests';
-      case 'inventory_manager':
-        return '/';
+        return '/materials-inventory';
+      
       case 'company_owner':
         return '/';
       default:

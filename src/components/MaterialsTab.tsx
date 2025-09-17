@@ -20,8 +20,7 @@ export const MaterialsTab = () => {
       unit: "kg",
       maker: "SteelCorp Industries",
       currentStock: 2500,
-      minStock: 500,
-      status: "In Stock"
+      
     },
     {
       id: 2,
@@ -30,8 +29,7 @@ export const MaterialsTab = () => {
       unit: "liters",
       maker: "FluidTech Solutions",
       currentStock: 45,
-      minStock: 50,
-      status: "Low Stock"
+      
     },
     {
       id: 3,
@@ -40,8 +38,7 @@ export const MaterialsTab = () => {
       unit: "tons",
       maker: "BuildRight Materials",
       currentStock: 0,
-      minStock: 2,
-      status: "Out of Stock"
+    
     },
     {
       id: 4,
@@ -50,8 +47,7 @@ export const MaterialsTab = () => {
       unit: "pieces",
       maker: "FastenTech Corp",
       currentStock: 1200,
-      minStock: 200,
-      status: "In Stock"
+     
     },
     {
       id: 5,
@@ -60,8 +56,7 @@ export const MaterialsTab = () => {
       unit: "boxes",
       maker: "WeldPro Industries",
       currentStock: 25,
-      minStock: 30,
-      status: "Low Stock"
+     
     }
   ]);
 
@@ -151,9 +146,7 @@ export const MaterialsTab = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
                       <h3 className="font-semibold text-foreground text-sm sm:text-base">{material.name}</h3>
-                      <Badge className={`${getStatusBadge(material.status)} border text-xs`}>
-                        {material.status}
-                      </Badge>
+                      
                     </div>
                     <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">
                       {material.specifications}
@@ -162,9 +155,7 @@ export const MaterialsTab = () => {
                       <span className="text-muted-foreground">
                         Stock: <span className="font-medium text-foreground">{material.currentStock} {material.unit}</span>
                       </span>
-                      <span className="text-muted-foreground">
-                        Min: <span className="font-medium text-foreground">{material.minStock} {material.unit}</span>
-                      </span>
+                      
                       <span className="text-muted-foreground truncate">
                         Supplier: <span className="font-medium text-foreground">{material.maker}</span>
                       </span>
@@ -196,9 +187,8 @@ export const MaterialsTab = () => {
                     <TableHead className="min-w-[150px] text-foreground font-semibold">Material</TableHead>
                     <TableHead className="min-w-[200px] text-foreground font-semibold">Specifications</TableHead>
                     <TableHead className="min-w-[100px] text-foreground font-semibold">Current Stock</TableHead>
-                    <TableHead className="min-w-[100px] text-foreground font-semibold">Min Stock</TableHead>
-                    <TableHead className="min-w-[100px] text-foreground font-semibold">Status</TableHead>
-                    <TableHead className="min-w-[120px] text-foreground font-semibold">Supplier</TableHead>
+                    <TableHead className="min-w-[100px] text-foreground font-semibold">Stock Indicator</TableHead>
+                    <TableHead className="min-w-[120px] text-foreground font-semibold">Make/Brand</TableHead>
                     <TableHead className="min-w-[100px] text-foreground font-semibold">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -215,13 +205,9 @@ export const MaterialsTab = () => {
                         {material.currentStock} {material.unit}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {material.minStock} {material.unit}
+                        {/* status badge empty */}
                       </TableCell>
-                      <TableCell>
-                        <Badge className={`${getStatusBadge(material.status)} border text-xs`}>
-                          {material.status}
-                        </Badge>
-                      </TableCell>
+                      
                       <TableCell className="text-muted-foreground truncate max-w-32">
                         {material.maker}
                       </TableCell>

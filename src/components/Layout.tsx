@@ -2,7 +2,7 @@ import { Outlet } from "react-router-dom";
 import { TopHeaderSimple } from "./TopHeaderSimple";
 import { Sidebar } from "./Sidebar";
 import { MobileNavigation } from "./MobileNavigation";
-import { Package, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { useRole } from "../contexts/RoleContext";
@@ -37,15 +37,16 @@ export const Layout = () => {
       </div>
       
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-foreground to-foreground backdrop-blur-md shadow-sm">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-[20px] flex items-center justify-center">
-              <Package className="w-5 h-5 text-white" />
-            </div>
+            <img 
+              src="/logo.png" 
+              alt="Minar Logo" 
+              className="w-10 h-10 object-contain"
+            />
             <div>
-              <h1 className="text-lg font-bold text-gray-900">SSRFM</h1>
-              <p className="text-xs text-gray-500">Industries</p>
+              <h1 className="text-lg font-bold text-white">SSRFM</h1>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -54,7 +55,7 @@ export const Layout = () => {
               variant="outline" 
               size="sm" 
               onClick={handleLogout}
-              className="gap-1 px-2 py-1 text-xs text-gray-600 hover:text-red-600 hover:border-red-300 rounded-[20px]"
+              className="gap-1 px-2 py-1 text-xs text-white hover:text-warning hover:border-warning border-white rounded-[20px] bg-transparent"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden xs:inline">Logout</span>

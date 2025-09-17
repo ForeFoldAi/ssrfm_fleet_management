@@ -885,7 +885,7 @@ const StockManagement = () => {
                   <Input id="unitPrice" type="number" placeholder="0" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="location">Storage Location *</Label>
+                  <Label htmlFor="location">Site Location *</Label>
                   <Input id="location" placeholder="e.g., Parts Storage A-1" />
                 </div>
                 <div className="space-y-2">

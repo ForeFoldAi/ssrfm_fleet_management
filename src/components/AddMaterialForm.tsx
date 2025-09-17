@@ -221,7 +221,7 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <Package className="w-5 h-5 text-primary" />
+               
                 Basic Information
               </CardTitle>
             </CardHeader>
@@ -319,16 +319,7 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
 
               {/* Third Row */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="partNumber" className="text-sm font-medium">Part Number</Label>
-                  <Input
-                    id="partNumber"
-                    placeholder="Manufacturer part number"
-                    value={formData.partNumber}
-                    onChange={(e) => handleInputChange("partNumber", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
+               
 
                 <div className="space-y-2">
                   <Label htmlFor="location" className="text-sm font-medium">Storage Location</Label>
@@ -359,7 +350,7 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
           <Card className="border-0 shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
+               
                 Stock Information
               </CardTitle>
             </CardHeader>
@@ -453,70 +444,8 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
             </CardContent>
           </Card>
 
-          {/* Supplier Information */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <Truck className="w-5 h-5 text-blue-600" />
-                Supplier Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="supplier" className="text-sm font-medium">Supplier</Label>
-                  <Input
-                    id="supplier"
-                    placeholder="Supplier company name"
-                    value={formData.supplier}
-                    onChange={(e) => handleInputChange("supplier", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="supplierContact" className="text-sm font-medium">Supplier Contact</Label>
-                  <Input
-                    id="supplierContact"
-                    placeholder="Phone number or email"
-                    value={formData.supplierContact}
-                    onChange={(e) => handleInputChange("supplierContact", e.target.value)}
-                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Additional Information */}
-          <Card className="border-0 shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg font-semibold">Additional Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Brief description of the material and its uses"
-                  value={formData.description}
-                  onChange={(e) => handleInputChange("description", e.target.value)}
-                  className="min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes" className="text-sm font-medium">Additional Notes</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Any additional information, special handling requirements, etc."
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange("notes", e.target.value)}
-                  className="min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          
+          
 
           {/* Form Actions */}
           <div className="flex justify-end gap-4 pt-6 border-t">

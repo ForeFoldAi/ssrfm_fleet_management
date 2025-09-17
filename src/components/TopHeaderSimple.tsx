@@ -15,7 +15,7 @@ export const TopHeaderSimple = () => {
           <div className="flex items-center space-x-3">
             <img src={logo} alt="Minar Logo" className="w-10 h-10 object-contain" />
             <div>
-              <h1 className="text-xl font-bold text-white">SSRFM Industries</h1>
+              <h1 className="text-xl font-bold text-white">Sree Sai Roller Flour Mill Pvt ltd</h1>
               <p className="text-xs text-warning font-medium">Smart Supply & Resource Management</p>
             </div>
           </div>

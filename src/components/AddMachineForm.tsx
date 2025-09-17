@@ -107,7 +107,7 @@ export const AddMachineForm = ({ isOpen, onClose, onSubmit }: AddMachineFormProp
     }
     if (!formData.location) newErrors.location = "Location is required";
     if (formData.location === "Other" && !formData.customLocation.trim()) {
-      newErrors.customLocation = "Custom location is required";
+      newErrors.customLocation = "Custom Site location is required";
     }
     if (!formData.specifications.trim()) newErrors.specifications = "Specifications are required";
     if (!formData.manufacturer.trim()) newErrors.manufacturer = "Manufacturer is required";
@@ -223,7 +223,7 @@ export const AddMachineForm = ({ isOpen, onClose, onSubmit }: AddMachineFormProp
               {/* Second Row */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
+                  <Label htmlFor="location" className="text-sm font-medium">Site Location *</Label>
                   <Select value={formData.location} onValueChange={(value) => handleSelectChange("location", value)}>
                     <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
                       <SelectValue placeholder="Select location" />

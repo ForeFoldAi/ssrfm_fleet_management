@@ -120,7 +120,7 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
 const getRoleRedirectPath = (role: UserRole) => {
   switch (role) {
     case 'site_supervisor':
-      return '/supervisor-requests';
+      return '/materials-inventory';
     case 'inventory_manager':
       return '/';
     case 'company_owner':

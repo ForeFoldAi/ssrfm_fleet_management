@@ -8,6 +8,9 @@ import type {
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
 
+// Mobile toast duration (1 second)
+const MOBILE_TOAST_DURATION = 1000
+
 type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
@@ -60,13 +63,16 @@ const addToRemoveQueue = (toastId: string) => {
     return
   }
 
+  // Check if it's mobile viewport
+  const isMobile = window.innerWidth < 768 // md breakpoint
+
   const timeout = setTimeout(() => {
     toastTimeouts.delete(toastId)
     dispatch({
       type: "REMOVE_TOAST",
       toastId: toastId,
     })
-  }, TOAST_REMOVE_DELAY)
+  }, isMobile ? MOBILE_TOAST_DURATION : TOAST_REMOVE_DELAY)
 
   toastTimeouts.set(toastId, timeout)
 }

@@ -461,13 +461,13 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                       value={formData.issuingPersonName}
                       onChange={(e) => handleInputChange("issuingPersonName", e.target.value)}
                       placeholder="Enter Issuing Person Name"
-                      className="text-center  text-sm h-10 p-2 border-0 outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
+                      className="text-center text-sm h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] transition-all duration-200"
                     />
                     <Input
                       value={formData.issuingPersonDesignation}
                       onChange={(e) => handleInputChange("issuingPersonDesignation", e.target.value)}
                       placeholder="Designation"
-                      className="text-center text-sm h-10 p-2 border-0 outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
+                      className="text-center text-sm h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] transition-all duration-200"
                     />
                     
                   </div>
@@ -484,13 +484,13 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                       value={formData.receiverName}
                       onChange={(e) => handleInputChange("receiverName", e.target.value)}
                       placeholder="Enter Receiver Name"
-                      className="text-center  text-sm h-10 p-2 border-0 outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
+                      className="text-center text-sm h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] transition-all duration-200"
                     />
                     <Input
                       value={formData.receiverDesignation}
                       onChange={(e) => handleInputChange("receiverDesignation", e.target.value)}
                       placeholder="Designation"
-                      className="text-center text-sm h-10 p-2 border-0 outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
+                      className="text-center text-sm h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] transition-all duration-200"
                     />
                    
                   </div>
@@ -512,7 +512,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                   placeholder="Describe the purpose for this material issue"
                   value={formData.purpose}
                   onChange={(e) => handleInputChange("purpose", e.target.value)}
-                  className="input-friendly min-h-[20px] text-sm p-2 border-0 outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
+                  className="min-h-[60px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
                 />
                 {errors.purpose && <p className="text-destructive text-xs">{errors.purpose}</p>}
               </div>
@@ -524,7 +524,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit }: MaterialIssueFo
                   placeholder="Any additional notes or special instructions"
                   value={formData.notes}
                   onChange={(e) => handleInputChange("notes", e.target.value)}
-                  className="input-friendly min-h-[35px] text-sm p-2 border-0 outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
+                  className="min-h-[60px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
                 />
               </div>
 
