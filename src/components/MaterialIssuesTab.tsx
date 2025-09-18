@@ -70,7 +70,7 @@ export const MaterialIssuesTab = () => {
 
   const [issuedMaterials, setIssuedMaterials] = useState([
     {
-      id: "ssrfm/unit-1/I-250115001",
+      id: "ssrfm/unit-II/I-250115001",
       materialIssueFormSrNo: "ssrfm/unit-1/I-250115001",
       materialName: "Steel Rods (20mm)",
       specifications: "High-grade steel, 20mm diameter, 6m length",
@@ -92,7 +92,7 @@ export const MaterialIssuesTab = () => {
       unitName: "SSRFM Unit 1"
     },
     {
-      id: "ssrfm/unit-2/I-250115002",
+      id: "ssrfm/unit-II/I-250115002",
       materialIssueFormSrNo: "ssrfm/unit-2/I-250115002",
       materialName: "Hydraulic Oil",
       specifications: "SAE 10W-30, Industrial grade",
@@ -114,7 +114,7 @@ export const MaterialIssuesTab = () => {
       unitName: "SSRFM Unit 2"
     },
     {
-      id: "ssrfm/unit-3/I-250107003",
+      id: "ssrfm/unit-III/I-250107003",
       materialIssueFormSrNo: "ssrfm/unit-3/I-250107003",
       materialName: "Industrial Bolts",
       specifications: "M12x50mm, Grade 8.8, Zinc plated",
@@ -144,14 +144,14 @@ export const MaterialIssuesTab = () => {
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const day = now.getDate().toString().padStart(2, '0');
     const dateStr = `${year}${month}${day}`;
-    
+
     // Get the next sequence number for today
-    const todayIssues = issuedMaterials.filter(issue => 
+    const todayIssues = issuedMaterials.filter(issue =>
       issue.id.includes(`I-${dateStr}`)
     );
     const nextNumber = (todayIssues.length + 1).toString().padStart(3, '0');
-    
-    return `ssrfm/unit-1/I-${dateStr}${nextNumber}`;
+
+    return `ssrfm/unit-I/I-${dateStr}${nextNumber}`;
   };
 
   const handleIssueMaterial = (issueData: any) => {
@@ -160,7 +160,7 @@ export const MaterialIssuesTab = () => {
     const newIssues = issueData.issuedItems.map((item: any, index: number) => {
       const baseId = generateIssueId();
       const issueId = index === 0 ? baseId : `${baseId.slice(0, -3)}${(parseInt(baseId.slice(-3)) + index).toString().padStart(3, '0')}`;
-      
+
       return {
         id: issueId,
         materialIssueFormSrNo: issueId,
@@ -181,23 +181,23 @@ export const MaterialIssuesTab = () => {
         issuedDate: issueData.date,
         status: "Issued",
         unit: currentUser?.role === 'company_owner' ? issueData.unit || 'unit-1' : 'unit-1',
-        unitName: currentUser?.role === 'company_owner' ? 
-          (issueData.unit === 'unit-1' ? 'SSRFM Unit 1' : 
-           issueData.unit === 'unit-2' ? 'SSRFM Unit 2' :
-           issueData.unit === 'unit-3' ? 'SSRFM Unit 3' : 'SSRFM Unit 4') : 'SSRFM Unit 1'
+        unitName: currentUser?.role === 'company_owner' ?
+          (issueData.unit === 'unit-1' ? 'SSRFM Unit 1' :
+            issueData.unit === 'unit-2' ? 'SSRFM Unit 2' :
+              issueData.unit === 'unit-3' ? 'SSRFM Unit 3' : 'SSRFM Unit 4') : 'SSRFM Unit 1'
       };
     });
-    
+
     setIssuedMaterials(prev => [...newIssues, ...prev]);
   };
 
   // Filter issues based on search and unit
   const filteredIssues = issuedMaterials.filter(issue => {
     const matchesSearch = issue.materialName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         issue.recipientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         issue.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         issue.id.toLowerCase().includes(searchQuery.toLowerCase());
-    
+      issue.recipientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      issue.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      issue.id.toLowerCase().includes(searchQuery.toLowerCase());
+
     // Unit filtering logic
     let matchesUnit = true;
     if (currentUser?.role === 'company_owner') {
@@ -206,7 +206,7 @@ export const MaterialIssuesTab = () => {
       // For supervisors, only show their unit's data
       matchesUnit = issue.unit === "unit-1"; // Assuming supervisor is from unit-1
     }
-    
+
     return matchesSearch && matchesUnit;
   });
 
@@ -250,7 +250,7 @@ export const MaterialIssuesTab = () => {
               className="pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64"
             />
           </div>
-          
+
           {/* Unit Filter - Only for Company Owner */}
           {currentUser?.role === 'company_owner' && (
             <Select value={filterUnit} onValueChange={setFilterUnit}>
@@ -273,13 +273,13 @@ export const MaterialIssuesTab = () => {
               </SelectContent>
             </Select>
           )}
-          
-          <Button 
+
+          <Button
             className="btn-primary w-full sm:w-auto text-sm sm:text-base"
             onClick={() => setIsIssueFormOpen(true)}
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-            Issue Material
+            Issued Materials
           </Button>
         </div>
       </div>
@@ -295,12 +295,13 @@ export const MaterialIssuesTab = () => {
                   <TableHeader>
                     <TableRow className="bg-secondary/20 border-b-2 border-secondary/30">
                       <TableHead className="min-w-[120px] text-foreground font-semibold">Issue ID</TableHead>
-                      <TableHead className="min-w-[150px] text-foreground font-semibold">Material</TableHead>
+                      <TableHead className="min-w-[150px] text-foreground font-semibold">Issued Material</TableHead>
                       <TableHead className="min-w-[100px] text-foreground font-semibold">Stock Info</TableHead>
-                      <TableHead className="min-w-[120px] text-foreground font-semibold">Recipient</TableHead>
-                      <TableHead className="min-w-[120px] text-foreground font-semibold">Issuing Person</TableHead>
+                      <TableHead className="min-w-[100px] text-foreground font-semibold">Issued Date</TableHead>
+
+                      <TableHead className="min-w-[120px] text-foreground font-semibold">Issued To</TableHead>
+                      <TableHead className="min-w-[120px] text-foreground font-semibold">Issued By</TableHead>
                       <TableHead className="min-w-[100px] text-foreground font-semibold">Unit</TableHead>
-                      <TableHead className="min-w-[100px] text-foreground font-semibold">Date</TableHead>
                       <TableHead className="min-w-[80px] text-foreground font-semibold">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -310,12 +311,12 @@ export const MaterialIssuesTab = () => {
                         <TableCell className="font-medium">
                           <Button
                             variant="link"
-                            className="p-0 h-auto text-left font-medium text-primary hover:text-primary/80"
+                            className="p-0 h-auto text-left font-medium text-primary hover:text-primary/80 uppercase"
                             onClick={() => handleViewIssue(issue)}
                           >
                             {issue.id}
                           </Button>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-xs text-muted-foreground uppercase">
                             Form: {issue.materialIssueFormSrNo}
                           </div>
                         </TableCell>
@@ -338,6 +339,8 @@ export const MaterialIssuesTab = () => {
                             </div>
                           </div>
                         </TableCell>
+                        <TableCell className="text-sm">{new Date(issue.issuedDate).toLocaleDateString()}</TableCell>
+
                         <TableCell>
                           <div>
                             <div className="font-medium">{issue.recipientName}</div>
@@ -356,7 +359,6 @@ export const MaterialIssuesTab = () => {
                             {issue.department}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm">{new Date(issue.issuedDate).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Button
@@ -402,9 +404,9 @@ export const MaterialIssuesTab = () => {
                       <>
                         <TableRow key={issue.id} className="hover:bg-muted/30 border-b border-secondary/20">
                           <TableCell>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="h-6 w-6 p-0"
                               onClick={() => toggleRowExpansion(issue.id)}
                             >
@@ -480,7 +482,7 @@ export const MaterialIssuesTab = () => {
                             </div>
                           </TableCell>
                         </TableRow>
-                        
+
                         {/* Expanded Detail Row */}
                         {expandedRows.has(issue.id) && (
                           <TableRow>
@@ -510,14 +512,14 @@ export const MaterialIssuesTab = () => {
                                             <div className="font-medium">{issue.stockAfterIssue} {issue.unit}</div>
                                           </div>
                                         </div>
-                                        
+
                                         <div>
                                           <span className="font-medium text-muted-foreground">Specifications:</span>
                                           <div className="text-sm mt-1 p-3 bg-background rounded border">
                                             {issue.specifications}
                                           </div>
                                         </div>
-                                        
+
                                         <div>
                                           <span className="font-medium text-muted-foreground">Purpose:</span>
                                           <div className="text-sm mt-1">{issue.purpose}</div>
@@ -525,19 +527,19 @@ export const MaterialIssuesTab = () => {
                                       </div>
                                     </div>
                                   </div>
-                                  
+
                                   {/* Right Column - Personnel & Status */}
                                   <div className="space-y-4">
                                     <div>
                                       <h3 className="font-semibold text-lg mb-3">Personnel & Status</h3>
-                                      
+
                                       {/* Status Information */}
                                       <div className="space-y-3">
                                         <div className="p-3 bg-background rounded border">
                                           <div className="text-sm font-medium mb-2">Current Status</div>
                                           <div className="text-sm text-muted-foreground">Material successfully issued and delivered</div>
                                         </div>
-                                        
+
                                         {/* Issuing Person Info */}
                                         <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
                                           <div className="text-sm">
@@ -567,7 +569,7 @@ export const MaterialIssuesTab = () => {
                                     </div>
                                   </div>
                                 </div>
-                                
+
                                 {/* Action Buttons */}
                                 <div className="flex gap-3 pt-4 border-t mt-6">
                                   <Button variant="outline" className="gap-2">
@@ -610,7 +612,7 @@ export const MaterialIssuesTab = () => {
               Material Issue Details - {selectedIssue?.id}
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedIssue && (
             <div className="space-y-6">
               {/* Issue Information */}

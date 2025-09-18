@@ -321,7 +321,7 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="maker" className="text-sm font-medium">Maker/Brand *</Label>
+                <Label htmlFor="maker" className="text-sm font-medium">Maker/Brand</Label>
                 <Input
                   id="maker"
                   placeholder="Enter maker or brand name"
@@ -332,6 +332,18 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
                 {errors.maker && <p className="text-destructive text-xs mt-1">{errors.maker}</p>}
               </div>
             </div>
+             <div className="space-y-1">
+                <Label htmlFor="currentStock" className="text-sm font-medium">Current Stock *</Label>
+                <Input
+                  id="currentStock"
+                  type="number"
+                  placeholder="0"
+                  value={formData.currentStock}
+                  onChange={(e) => handleInputChange("currentStock", e.target.value)}
+                  className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                />
+                {errors.currentStock && <p className="text-destructive text-xs mt-1">{errors.currentStock}</p>}
+              </div>
 
             {/* Specifications */}
             <div className="space-y-1">
@@ -345,180 +357,12 @@ export const AddMaterialForm = ({ isOpen, onClose, onSubmit }: AddMaterialFormPr
               />
               {errors.specifications && <p className="text-destructive text-xs mt-1">{errors.specifications}</p>}
             </div>
-          </div>
-
-          {/* Supplier Information Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium border-b pb-2">Supplier Information</h3>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="supplier" className="text-sm font-medium">Primary Supplier *</Label>
-                <Input
-                  id="supplier"
-                  placeholder="Enter supplier company name"
-                  value={formData.supplier}
-                  onChange={(e) => handleInputChange("supplier", e.target.value)}
-                  className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                />
-                {errors.supplier && <p className="text-destructive text-xs mt-1">{errors.supplier}</p>}
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="supplierContact" className="text-sm font-medium">Supplier Contact *</Label>
-                <Input
-                  id="supplierContact"
-                  placeholder="Phone number or email"
-                  value={formData.supplierContact}
-                  onChange={(e) => handleInputChange("supplierContact", e.target.value)}
-                  className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                />
-                {errors.supplierContact && <p className="text-destructive text-xs mt-1">{errors.supplierContact}</p>}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="unitPrice" className="text-sm font-medium">Unit Price (₹)</Label>
-                <Input
-                  id="unitPrice"
-                  type="number"
-                  placeholder="0"
-                  value={formData.unitPrice}
-                  onChange={(e) => handleInputChange("unitPrice", e.target.value)}
-                  className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                />
-                {errors.unitPrice && <p className="text-destructive text-xs mt-1">{errors.unitPrice}</p>}
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="leadTime" className="text-sm font-medium">Lead Time *</Label>
-                <Input
-                  id="leadTime"
-                  placeholder="e.g., 5 days, 2 weeks"
-                  value={formData.leadTime}
-                  onChange={(e) => handleInputChange("leadTime", e.target.value)}
-                  className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                />
-                {errors.leadTime && <p className="text-destructive text-xs mt-1">{errors.leadTime}</p>}
-              </div>
-            </div>
-          </div>
-
-          {/* Stock Information Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium border-b pb-2">Stock Information</h3>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="location" className="text-sm font-medium">Storage Unit</Label>
-                <Select value={formData.location} onValueChange={(value) => handleSelectChange("location", value)}>
-                  <SelectTrigger className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
-                    <SelectValue placeholder="Select storage Unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations.map((location) => (
-                      <SelectItem key={location} value={location}>{location}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {formData.location === "Other" && (
-                  <Input
-                    placeholder="Enter custom location"
-                    value={formData.customLocation}
-                    onChange={(e) => handleInputChange("customLocation", e.target.value)}
-                    className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-1"
-                  />
-                )}
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="currentStock" className="text-sm font-medium">Current Stock *</Label>
-                <Input
-                  id="currentStock"
-                  type="number"
-                  placeholder="0"
-                  value={formData.currentStock}
-                  onChange={(e) => handleInputChange("currentStock", e.target.value)}
-                  className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                />
-                {errors.currentStock && <p className="text-destructive text-xs mt-1">{errors.currentStock}</p>}
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="minStock" className="text-sm font-medium">Min Stock Level *</Label>
-                <Input
-                  id="minStock"
-                  type="number"
-                  placeholder="0"
-                  value={formData.minStock}
-                  onChange={(e) => handleInputChange("minStock", e.target.value)}
-                  className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                />
-                {errors.minStock && <p className="text-destructive text-xs mt-1">{errors.minStock}</p>}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="maxStock" className="text-sm font-medium">Max Stock Level *</Label>
-                <Input
-                  id="maxStock"
-                  type="number"
-                  placeholder="0"
-                  value={formData.maxStock}
-                  onChange={(e) => handleInputChange("maxStock", e.target.value)}
-                  className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                />
-                {errors.maxStock && <p className="text-destructive text-xs mt-1">{errors.maxStock}</p>}
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="reorderLevel" className="text-sm font-medium">Reorder Level *</Label>
-                <Input
-                  id="reorderLevel"
-                  type="number"
-                  placeholder="0"
-                  value={formData.reorderLevel}
-                  onChange={(e) => handleInputChange("reorderLevel", e.target.value)}
-                  className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                />
-                {errors.reorderLevel && <p className="text-destructive text-xs mt-1">{errors.reorderLevel}</p>}
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="partNumber" className="text-sm font-medium">Part Number</Label>
-                <Input
-                  id="partNumber"
-                  placeholder="Enter part/model number"
-                  value={formData.partNumber}
-                  onChange={(e) => handleInputChange("partNumber", e.target.value)}
-                  className="h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Information Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium border-b pb-2">Additional Information</h3>
-            
-            <div className="space-y-1">
-              <Label htmlFor="description" className="text-sm font-medium">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Additional description and usage notes"
-                value={formData.description}
-                onChange={(e) => handleInputChange("description", e.target.value)}
-                className="min-h-[60px] px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
-              />
-            </div>
 
             <div className="space-y-1">
-              <Label htmlFor="notes" className="text-sm font-medium">Internal Notes</Label>
+              <Label htmlFor="notes" className="text-sm font-medium">Additional Notes</Label>
               <Textarea
                 id="notes"
-                placeholder="Internal notes and remarks"
+                placeholder="Additional notes and remarks"
                 value={formData.notes}
                 onChange={(e) => handleInputChange("notes", e.target.value)}
                 className="min-h-[60px] px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"

@@ -37,13 +37,13 @@ export const Sidebar = () => {
 
     const roleSpecificItems: Record<string, any[]> = {
       "site_supervisor": [
-        { to: "/materials-inventory", label: "Material Management", icon: Package, permission: "material:view" },
+        { to: "/materials-inventory", label: "Materials Management", icon: Package, permission: "material:view" },
        /* { to: "/supervisor-requests", label: "Materials Order Book", icon: List, permission: "request:view_own" }, */
       ],
       
       "company_owner": [
         { to: "/approval-center", label: "Approval Center", icon: Shield, permission: "request:approve_unlimited" },
-        { to: "/materials-inventory", label: "Material Management", icon: Package, permission: "material:view" },
+        { to: "/materials-inventory", label: "Materials Management", icon: Package, permission: "material:view" },
       ]
     };
 

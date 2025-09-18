@@ -50,7 +50,7 @@ export const MobileNavigation = () => {
       site_supervisor: [
         { 
           to: "/materials", 
-          label: "Stock Register", 
+          label: "Materials Management", 
           icon: Package,
           permission: "material:view"
         },
@@ -71,7 +71,7 @@ export const MobileNavigation = () => {
         },
         { 
           to: "/materials", 
-          label: "Stock Register", 
+          label: "Materials Management", 
           icon: Package,
           permission: "material:view"
         },
@@ -87,7 +87,7 @@ export const MobileNavigation = () => {
         
         { 
           to: "/inventory", 
-          label: "Stock Register", 
+          label: "Materials Management", 
           icon: Package,
           permission: "material:view"
         }

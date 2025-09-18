@@ -43,7 +43,7 @@ const MaterialsInventory = () => {
               <Package className="w-4 h-4" />
               <ArrowUpRight className="w-2 h-2 absolute -top-1 -right-1" />
             </span>
-            <span className="hidden xs:inline sm:inline">Issue Material</span>
+            <span className="hidden xs:inline sm:inline">Issued Materials</span>
             <span className="xs:hidden sm:hidden">Issue</span>
           </TabsTrigger>
           
@@ -52,7 +52,7 @@ const MaterialsInventory = () => {
             className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
           >
             <ShoppingBasket className="w-4 h-4" />
-            <span className="hidden xs:inline sm:inline">Purchased Material</span>
+            <span className="hidden xs:inline sm:inline">Purchased Materials</span>
             <span className="xs:hidden sm:hidden">Purchased</span>
           </TabsTrigger>
 
