@@ -27,19 +27,17 @@ export const RequestForm = ({ formData, onUpdate, onNext }: RequestFormProps) =>
 
   // SSRFM specific materials for Roller Flour Mills
   const materials = [
-    { id: "bearings", name: "Bearings", unit: "pieces", category: "Mechanical Components" },
-    { id: "belts", name: "Belts", unit: "pieces", category: "Mechanical Components" },
-    { id: "fevicol", name: "Fevicol (Adhesive)", unit: "bottles", category: "Adhesives & Sealants" },
-    { id: "motor-oil", name: "Motor Oil", unit: "liters", category: "Lubricants" },
-    { id: "grinding-stones", name: "Grinding Stones", unit: "pieces", category: "Processing Equipment" },
-    { id: "flour-sieves", name: "Flour Sieves", unit: "pieces", category: "Processing Equipment" },
-    { id: "conveyor-belts", name: "Conveyor Belts", unit: "meters", category: "Mechanical Components" },
-    { id: "electrical-wires", name: "Electrical Wires", unit: "meters", category: "Electrical" },
-    { id: "switches", name: "Electrical Switches", unit: "pieces", category: "Electrical" },
-    { id: "safety-equipment", name: "Safety Equipment", unit: "sets", category: "Safety" }
+    { id: "bearings", name: "Bearings", measureUnit: "pieces", category: "Mechanical Components" },
+    { id: "belts", name: "Belts", measureUnit: "pieces", category: "Mechanical Components" },
+    { id: "fevicol", name: "Fevicol (Adhesive)", measureUnit: "bottles", category: "Adhesives & Sealants" },
+    { id: "motor-oil", name: "Motor Oil", measureUnit: "liters", category: "Lubricants" },
+    { id: "grinding-stones", name: "Grinding Stones", measureUnit: "pieces", category: "Processing Equipment" },
+    { id: "flour-sieves", name: "Flour Sieves", measureUnit: "pieces", category: "Processing Equipment" },
+    { id: "conveyor-belts", name: "Conveyor Belts", measureUnit: "meters", category: "Mechanical Components" },
+    { id: "electrical-wires", name: "Electrical Wires", measureUnit: "meters", category: "Electrical" },
+    { id: "switches", name: "Electrical Switches", measureUnit: "pieces", category: "Electrical" },
+    { id: "safety-equipment", name: "Safety Equipment", measureUnit: "sets", category: "Safety" }
   ];
-
-  
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'oldMaterial' | 'signature') => {
     const file = event.target.files?.[0];
@@ -196,7 +194,7 @@ export const RequestForm = ({ formData, onUpdate, onNext }: RequestFormProps) =>
             const material = materials.find(m => m.id === value);
             onUpdate({ 
               materialName: value, 
-              unit: material?.unit || '',
+              measureUnit: material?.measureUnit || '',
               category: material?.category || ''
             });
           }}>
@@ -210,7 +208,7 @@ export const RequestForm = ({ formData, onUpdate, onNext }: RequestFormProps) =>
                     <Package className="w-4 h-4 text-primary" />
                     <div>
                       <div className="font-semibold">{material.name}</div>
-                      <div className="text-sm text-muted-foreground">{material.category} • Unit: {material.unit}</div>
+                      <div className="text-sm text-muted-foreground">{material.category} • Unit: {material.measureUnit}</div>
                     </div>
                   </div>
                 </SelectItem>
@@ -276,7 +274,7 @@ export const RequestForm = ({ formData, onUpdate, onNext }: RequestFormProps) =>
           <div className="space-y-2">
             <Label className="text-lg font-semibold">Unit</Label>
             <div className="input-friendly bg-secondary text-center py-3 font-semibold text-primary">
-              {selectedMaterial?.unit || "Select material first"}
+              {selectedMaterial?.measureUnit || "Select material first"}
             </div>
           </div>
         </div>

@@ -1,16 +1,28 @@
 import { useState } from "react";
-import { Plus, Search, List, Table, Edit, Eye, Settings, MapPin, FileText } from "lucide-react";
+import { Plus, Search, List, Table, Edit, Eye, Settings, MapPin, FileText, Building2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent } from "./ui/card";
 import { Table as TableComponent, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { AddMachineForm } from "./AddMachineForm";
+import { useRole } from "../contexts/RoleContext";
 
 export const MachinesTab = () => {
+  const { currentUser } = useRole();
   const [viewMode, setViewMode] = useState<"table" | "list">("table");
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterUnit, setFilterUnit] = useState("all");
   const [isAddMachineOpen, setIsAddMachineOpen] = useState(false);
+
+  // Available units for company owner
+  const availableUnits = [
+    { id: "unit-1", name: "SSRFM Unit 1", location: "Mumbai" },
+    { id: "unit-2", name: "SSRFM Unit 2", location: "Delhi" },
+    { id: "unit-3", name: "SSRFM Unit 3", location: "Bangalore" },
+    { id: "unit-4", name: "SSRFM Unit 4", location: "Chennai" }
+  ];
 
   const [machines, setMachines] = useState([
     {
@@ -21,7 +33,9 @@ export const MachinesTab = () => {
       status: "Active",
       createdDate: "2023-08-15",
       lastMaintenance: "2024-01-10",
-      specifications: "Heavy-duty steel processing, 5-ton capacity"
+      specifications: "Heavy-duty steel processing, 5-ton capacity",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
       id: 2,
@@ -31,7 +45,9 @@ export const MachinesTab = () => {
       status: "Maintenance",
       createdDate: "2023-05-20",
       lastMaintenance: "2024-01-14",
-      specifications: "200-ton hydraulic press, precision forming"
+      specifications: "200-ton hydraulic press, precision forming",
+      unit: "unit-2",
+      unitName: "SSRFM Unit 2"
     },
     {
       id: 3,
@@ -41,7 +57,9 @@ export const MachinesTab = () => {
       status: "Active",
       createdDate: "2023-11-02",
       lastMaintenance: "2024-01-08",
-      specifications: "6-axis robotic arm, precision assembly"
+      specifications: "6-axis robotic arm, precision assembly",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
       id: 4,
@@ -51,7 +69,9 @@ export const MachinesTab = () => {
       status: "Inactive",
       createdDate: "2023-03-10",
       lastMaintenance: "2023-12-20",
-      specifications: "Industrial concrete mixer, 2m³ capacity"
+      specifications: "Industrial concrete mixer, 2m³ capacity",
+      unit: "unit-3",
+      unitName: "SSRFM Unit 3"
     },
     {
       id: 5,
@@ -61,7 +81,9 @@ export const MachinesTab = () => {
       status: "Active",
       createdDate: "2023-09-18",
       lastMaintenance: "2024-01-12",
-      specifications: "Multi-process welding station, TIG/MIG capable"
+      specifications: "Multi-process welding station, TIG/MIG capable",
+      unit: "unit-4",
+      unitName: "SSRFM Unit 4"
     }
   ]);
 
@@ -69,11 +91,22 @@ export const MachinesTab = () => {
     setMachines(prev => [...prev, machineData]);
   };
 
-  const filteredMachines = machines.filter(machine =>
-    machine.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    machine.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    machine.location.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMachines = machines.filter(machine => {
+    const matchesSearch = machine.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         machine.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         machine.location.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Unit filtering logic
+    let matchesUnit = true;
+    if (currentUser?.role === 'company_owner') {
+      matchesUnit = filterUnit === "all" || machine.unit === filterUnit;
+    } else {
+      // For supervisors, only show their unit's data
+      matchesUnit = machine.unit === "unit-1"; // Assuming supervisor is from unit-1
+    }
+    
+    return matchesSearch && matchesUnit;
+  });
 
   const getStatusBadge = (status: string) => {
     const badges = {
@@ -115,7 +148,7 @@ export const MachinesTab = () => {
           </div>
         </div>
 
-        {/* Right side: Search and Add Machine Button */}
+        {/* Right side: Search, Unit Filter and Add Machine Button */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -126,6 +159,29 @@ export const MachinesTab = () => {
               className="pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64"
             />
           </div>
+          
+          {/* Unit Filter - Only for Company Owner */}
+          {currentUser?.role === 'company_owner' && (
+            <Select value={filterUnit} onValueChange={setFilterUnit}>
+              <SelectTrigger className="w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0 h-10">
+                <SelectValue placeholder="Select Unit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Units</SelectItem>
+                {availableUnits.map((unit) => (
+                  <SelectItem key={unit.id} value={unit.id}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      <div>
+                        <div className="font-medium">{unit.name}</div>
+                        <div className="text-xs text-muted-foreground">{unit.location}</div>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           
           <Button 
             className="btn-primary w-full sm:w-auto text-sm sm:text-base"

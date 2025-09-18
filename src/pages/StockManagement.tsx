@@ -30,7 +30,7 @@ const StockManagement = () => {
       currentStock: 24,
       minStock: 10,
       maxStock: 50,
-      unit: "pieces",
+      MeasureUnit: "pieces",
       location: "Parts Storage A-1",
       supplier: "SKF Industries",
       unitPrice: "₹700",
@@ -47,7 +47,7 @@ const StockManagement = () => {
       currentStock: 65,
       minStock: 20,
       maxStock: 100,
-      unit: "liters",
+      MeasureUnit: "liters",
       location: "Chemical Storage B-1",
       supplier: "Castrol Distributors",
       unitPrice: "₹160",
@@ -64,7 +64,7 @@ const StockManagement = () => {
       currentStock: 45,
       minStock: 15,
       maxStock: 60,
-      unit: "meters",
+      MeasureUnit: "meters",
       location: "Equipment Storage C-1",
       supplier: "Continental Belting",
       unitPrice: "₹1,233",
@@ -81,7 +81,7 @@ const StockManagement = () => {
       currentStock: 4,
       minStock: 2,
       maxStock: 10,
-      unit: "pieces",
+      MeasureUnit: "pieces",
       location: "Mill Equipment D-1",
       supplier: "Stone Craft Industries",
       unitPrice: "₹22,500",
@@ -98,7 +98,7 @@ const StockManagement = () => {
       currentStock: 15,
       minStock: 20,
       maxStock: 50,
-      unit: "sets",
+      MeasureUnit: "sets",
       location: "Safety Storage E-1",
       supplier: "3M Safety Solutions",
       unitPrice: "₹850",
@@ -115,7 +115,7 @@ const StockManagement = () => {
       currentStock: 8,
       minStock: 15,
       maxStock: 40,
-      unit: "bottles",
+      MeasureUnit: "bottles",
       location: "Chemical Storage B-2",
       supplier: "Pidilite Industries",
       unitPrice: "₹120",
@@ -132,7 +132,7 @@ const StockManagement = () => {
       currentStock: 85,
       minStock: 50,
       maxStock: 200,
-      unit: "meters",
+      MeasureUnit: "meters",
       location: "Electrical Storage F-1",
       supplier: "Havells",
       unitPrice: "₹45",
@@ -158,7 +158,7 @@ const StockManagement = () => {
       receiptQuantity: 4,
       issuedQuantity: 0,
       balanceQuantity: 24,
-      unit: "pieces",
+      MeasureUnit: "pieces",
       remarks: "Premium quality bearings for grinding machines"
     },
     {
@@ -173,7 +173,7 @@ const StockManagement = () => {
       receiptQuantity: 0,
       issuedQuantity: 4,
       balanceQuantity: 20,
-      unit: "pieces",
+      MeasureUnit: "pieces",
       remarks: "Issued for flour grinding machine #3 bearing replacement"
     },
     {
@@ -188,7 +188,7 @@ const StockManagement = () => {
       receiptQuantity: 20,
       issuedQuantity: 0,
       balanceQuantity: 85,
-      unit: "liters",
+      MeasureUnit: "liters",
       remarks: "SAE 20W-50 Heavy Duty Motor Oil for routine maintenance"
     },
     {
@@ -203,7 +203,7 @@ const StockManagement = () => {
       receiptQuantity: 0,
       issuedQuantity: 5,
       balanceQuantity: 65,
-      unit: "liters",
+      MeasureUnit: "liters",
       remarks: "Monthly maintenance for grinding motors"
     },
     {
@@ -218,7 +218,7 @@ const StockManagement = () => {
       receiptQuantity: 15,
       issuedQuantity: 0,
       balanceQuantity: 45,
-      unit: "meters",
+      MeasureUnit: "meters",
       remarks: "Food grade rubber conveyor belts for packaging line"
     },
     {
@@ -233,7 +233,7 @@ const StockManagement = () => {
       receiptQuantity: 0,
       issuedQuantity: 2,
       balanceQuantity: 4,
-      unit: "pieces",
+      MeasureUnit: "pieces",
       remarks: "Replacement of worn grinding stones in main flour mill"
     },
     {
@@ -248,7 +248,7 @@ const StockManagement = () => {
       receiptQuantity: 10,
       issuedQuantity: 0,
       balanceQuantity: 25,
-      unit: "sets",
+      MeasureUnit: "sets",
       remarks: "Complete safety equipment sets for mill workers"
     },
     {
@@ -263,7 +263,7 @@ const StockManagement = () => {
       receiptQuantity: 0,
       issuedQuantity: 10,
       balanceQuantity: 15,
-      unit: "sets",
+      MeasureUnit: "sets",
       remarks: "Annual safety equipment distribution to production workers"
     }
   ];
@@ -522,12 +522,12 @@ const StockManagement = () => {
                         </TableCell>
                         <TableCell>
                           <div className="font-semibold">
-                            {item.currentStock} {item.unit}
+                            {item.currentStock} {item.MeasureUnit}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            {item.minStock}/{item.maxStock} {item.unit}
+                            {item.minStock}/{item.maxStock} {item.MeasureUnit}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -796,7 +796,7 @@ const StockManagement = () => {
                           <div className="text-center">
                             {transaction.receiptQuantity > 0 ? (
                               <span className="font-semibold text-foreground">
-                                +{transaction.receiptQuantity} {transaction.unit}
+                                +{transaction.receiptQuantity} {transaction.MeasureUnit}
                               </span>
                             ) : (
                               <span className="text-muted-foreground">-</span>
@@ -807,7 +807,7 @@ const StockManagement = () => {
                           <div className="text-center">
                             {transaction.issuedQuantity > 0 ? (
                               <span className="font-semibold text-red-600">
-                                -{transaction.issuedQuantity} {transaction.unit}
+                                -{transaction.issuedQuantity} {transaction.MeasureUnit}
                               </span>
                             ) : (
                               <span className="text-muted-foreground">-</span>
@@ -816,7 +816,7 @@ const StockManagement = () => {
                         </TableCell>
                         <TableCell>
                           <div className="text-center font-semibold text-purple-600">
-                            {transaction.balanceQuantity} {transaction.unit}
+                            {transaction.balanceQuantity} {transaction.MeasureUnit}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -870,7 +870,7 @@ const StockManagement = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="unit">Unit *</Label>
-                  <Input id="unit" placeholder="pieces, kg, liters, meters..." />
+                  <Input id="MeasureUnit" placeholder="pieces, kg, liters, meters..." />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="minStock">Minimum Stock Level *</Label>

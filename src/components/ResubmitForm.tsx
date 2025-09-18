@@ -29,7 +29,7 @@ interface RequestItem {
   specifications: string;
   oldStock: number;
   reqQuantity: string;
-  unit: string;
+  measureUnit: string;
   image?: File | null;
   imagePreview?: string | null;
   vendorQuotations: VendorQuotation[];
@@ -64,49 +64,49 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
     {
       name: "FEVICOL",
       specifications: "SH adhesive",
-      unit: "kg",
+      measureUnit: "kg",
       category: "Adhesives"
     },
     {
       name: "COPPER WIRE BRUSH",
       specifications: "0.01 mm thickness of wire",
-      unit: "pieces",
+      measureUnit: "pieces",
       category: "Tools"
     },
     {
       name: "DHOLLAK BALL",
       specifications: "PVC transparent",
-      unit: "pieces",
+      measureUnit: "pieces",
       category: "Components"
     },
     {
       name: "TRIANGLE BRUSH",
       specifications: "Cleaning brush",
-      unit: "pieces",
+      measureUnit: "pieces",
       category: "Tools"
     },
     {
       name: "GUM TAPE",
       specifications: "1 inch width adhesive tape",
-      unit: "pieces",
+      measureUnit: "pieces",
       category: "Office Supplies"
     },
     {
       name: "BEARINGS (SKF 6205-2RS)",
       specifications: "Deep Grove Ball Bearing, Inner: 25mm, Outer: 52mm",
-      unit: "pieces",
+      measureUnit: "pieces",
       category: "Parts"
     },
     {
       name: "MOTOR OIL (SAE 10W-30)",
       specifications: "Industrial grade lubricant for machinery",
-      unit: "liters",
+      measureUnit: "liters",
       category: "Lubricants"
     },
     {
       name: "CONVEYOR BELTS",
       specifications: "Rubber belt, 600mm width, food grade",
-      unit: "meters",
+      measureUnit: "meters",
       category: "Equipment"
     }
   ];
@@ -130,7 +130,7 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
       specifications: request?.items?.[0]?.specifications || request?.specifications || "",
       oldStock: request?.items?.[0]?.oldStock || 0,
       reqQuantity: request?.items?.[0]?.reqQuantity || request?.quantity || "",
-      unit: request?.items?.[0]?.unit || "",
+      measureUnit: request?.items?.[0]?.measureUnit || "",
       image: null,
       imagePreview: null,
       vendorQuotations: request?.items?.[0]?.vendorQuotations || []
@@ -164,7 +164,7 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
           ...item,
           productName: material.name,
           specifications: material.specifications,
-          unit: material.unit
+          measureUnit: material.measureUnit
         } : item
       ));
     }
@@ -179,7 +179,7 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
       specifications: "",
       oldStock: 0,
       reqQuantity: "",
-      unit: "",
+      measureUnit: "",
       image: null,
       imagePreview: null,
       vendorQuotations: []
@@ -405,7 +405,7 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
                         min="0"
                         className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                       />
-                      <span className="text-sm text-muted-foreground">{item.unit}</span>
+                      <span className="text-sm text-muted-foreground">{item.measureUnit}</span>
                     </div>
                     {errors[`reqQuantity_${item.id}`] && (
                       <p className="text-destructive text-sm mt-1">{errors[`reqQuantity_${item.id}`]}</p>

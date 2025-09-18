@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clock, CheckCircle, XCircle, Eye, FileText, Plus, AlertTriangle, User, Calendar, Package, Truck, CheckSquare, List, Table as TableIcon, ChevronRight, ChevronDown, MoreVertical, Send, Search, FileEdit } from "lucide-react";
+import { Clock, CheckCircle, XCircle, Eye, FileText, Plus, AlertTriangle, User, Calendar, Package, Truck, CheckSquare, List, Table as TableIcon, ChevronRight, ChevronDown, MoreVertical, Send, Search, FileEdit, Building2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -14,12 +14,12 @@ import { RequestStatusManager } from "../components/RequestStatusManager";
 import { ResubmitForm } from "../components/ResubmitForm";
 import { useRequestWorkflow } from "../hooks/useRequestWorkflow";
 
-
 export const MaterialOrderBookTab = () => {
   const { currentUser } = useRole();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
+  const [filterUnit, setFilterUnit] = useState("all");
   const [viewMode, setViewMode] = useState<"list" | "table">("table");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isIssueFormOpen, setIsIssueFormOpen] = useState(false);
@@ -27,6 +27,14 @@ export const MaterialOrderBookTab = () => {
   const [isStatusManagerOpen, setIsStatusManagerOpen] = useState(false);
   const [selectedRequestForResubmit, setSelectedRequestForResubmit] = useState<any>(null);
   const [isResubmitFormOpen, setIsResubmitFormOpen] = useState(false);
+  
+  // Available units for company owner
+  const availableUnits = [
+    { id: "unit-1", name: "SSRFM Unit 1", location: "Mumbai" },
+    { id: "unit-2", name: "SSRFM Unit 2", location: "Delhi" },
+    { id: "unit-3", name: "SSRFM Unit 3", location: "Bangalore" },
+    { id: "unit-4", name: "SSRFM Unit 4", location: "Chennai" }
+  ];
   
   // Workflow management
   const {
@@ -45,7 +53,7 @@ export const MaterialOrderBookTab = () => {
       materialId: "MAT-001",
       materialName: "fevicol",
       specifications: "SH adhesive, MARINE brand",
-      unit: "KG",
+      MeasureUnit: "KG",
       existingStock: 1,
       issuedQuantity: "1",
       stockAfterIssue: 0,
@@ -65,14 +73,16 @@ export const MaterialOrderBookTab = () => {
       indFormSrNo: "SSFM/MNT/IND./0012",
       status: "issued",
       type: "material_issue",
-      timestamp: "2024-01-22T09:15:00Z"
+      timestamp: "2024-01-22T09:15:00Z",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
       id: "ISS-2024-011",
       materialId: "MAT-002",
       materialName: "wire brush",
       specifications: "0.01 mm thickness of wire, INDUSTRIAL",
-      unit: "pieces",
+      MeasureUnit: "pieces",
       existingStock: 2,
       issuedQuantity: "2",
       stockAfterIssue: 0,
@@ -92,14 +102,16 @@ export const MaterialOrderBookTab = () => {
       indFormSrNo: "SSFM/MNT/IND./0011",
       status: "issued",
       type: "material_issue",
-      timestamp: "2024-01-21T14:30:00Z"
+      timestamp: "2024-01-21T14:30:00Z",
+      unit: "unit-2",
+      unitName: "SSRFM Unit 2"
     },
     {
       id: "ISS-2024-010",
       materialId: "MAT-003",
       materialName: "dholak ball",
       specifications: "PVC transparent, INDUSTRIAL",
-      unit: "pieces",
+      MeasureUnit: "pieces",
       existingStock: 200,
       issuedQuantity: "200",
       stockAfterIssue: 0,
@@ -119,14 +131,16 @@ export const MaterialOrderBookTab = () => {
       indFormSrNo: "SSFM/MNT/IND./0010",
       status: "issued",
       type: "material_issue",
-      timestamp: "2024-01-20T11:45:00Z"
+      timestamp: "2024-01-20T11:45:00Z",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
       id: "ISS-2024-009",
       materialId: "MAT-004",
       materialName: "triangle brush",
       specifications: "Cleaning brush, INDUSTRIAL",
-      unit: "pieces",
+      MeasureUnit: "pieces",
       existingStock: 130,
       issuedQuantity: "60",
       stockAfterIssue: 70,
@@ -146,14 +160,16 @@ export const MaterialOrderBookTab = () => {
       indFormSrNo: "SSFM/MNT/IND./0009",
       status: "issued",
       type: "material_issue",
-      timestamp: "2024-01-19T16:20:00Z"
+      timestamp: "2024-01-19T16:20:00Z",
+      unit: "unit-2",
+      unitName: "SSRFM Unit 2"
     },
     {
       id: "ISS-2024-008",
       materialId: "MAT-005",
       materialName: "gum tape",
       specifications: "1 inch width adhesive tape, INDUSTRIAL",
-      unit: "pieces",
+      MeasureUnit: "pieces",
       existingStock: 14,
       issuedQuantity: "2",
       stockAfterIssue: 12,
@@ -173,14 +189,16 @@ export const MaterialOrderBookTab = () => {
       indFormSrNo: "SSFM/MNT/IND./0008",
       status: "issued",
       type: "material_issue",
-      timestamp: "2024-01-18T13:10:00Z"
+      timestamp: "2024-01-18T13:10:00Z",
+      unit: "unit-3",
+      unitName: "SSRFM Unit 3"
     },
     {
       id: "ISS-2024-007",
       materialId: "MAT-006",
       materialName: "Bearings (SKF 6205-2RS)",
       specifications: "Deep Grove Ball Bearing, Inner: 25mm, Outer: 52mm",
-      unit: "pieces",
+      MeasureUnit: "pieces",
       existingStock: 24,
       issuedQuantity: "4",
       stockAfterIssue: 20,
@@ -200,14 +218,16 @@ export const MaterialOrderBookTab = () => {
       indFormSrNo: "SSFM/MNT/IND./0007",
       status: "issued",
       type: "material_issue",
-      timestamp: "2024-01-17T10:30:00Z"
+      timestamp: "2024-01-17T10:30:00Z",
+      unit: "unit-4",
+      unitName: "SSRFM Unit 4"
     },
     {
       id: "ISS-2024-006",
       materialId: "MAT-007",
       materialName: "Motor Oil (SAE 10W-30)",
       specifications: "Industrial grade lubricant for machinery",
-      unit: "liters",
+      MeasureUnit: "liters",
       existingStock: 65,
       issuedQuantity: "15",
       stockAfterIssue: 50,
@@ -227,14 +247,16 @@ export const MaterialOrderBookTab = () => {
       indFormSrNo: "SSFM/MNT/IND./0006",
       status: "issued",
       type: "material_issue",
-      timestamp: "2024-01-16T14:45:00Z"
+      timestamp: "2024-01-16T14:45:00Z",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
       id: "ISS-2024-005",
       materialId: "MAT-008",
       materialName: "Conveyor Belts",
       specifications: "Rubber belt, 600mm width, food grade",
-      unit: "meters",
+      MeasureUnit: "meters",
       existingStock: 45,
       issuedQuantity: "8",
       stockAfterIssue: 37,
@@ -254,54 +276,14 @@ export const MaterialOrderBookTab = () => {
       indFormSrNo: "SSFM/MNT/IND./0005",
       status: "issued",
       type: "material_issue",
-      timestamp: "2024-01-15T11:20:00Z"
+      timestamp: "2024-01-15T11:20:00Z",
+      unit: "unit-2",
+      unitName: "SSRFM Unit 2"
     }
   ]);
 
-  // Handle status updates
-  const handleStatusUpdate = (requestId: string, newStatus: string, updateData: any) => {
-    updateRequestStatus(requestId, newStatus, updateData, {
-      name: currentUser?.name || 'Unknown User',
-      role: currentUser?.role || 'unknown'
-    });
-    
-    // Update the local requests array
-    setAllRequests(prev => prev.map(req => {
-      if (req.id === requestId) {
-        return {
-          ...req,
-          status: newStatus,
-          statusDescription: updateData.statusDescription || req.statusDescription,
-          currentStage: updateData.currentStage || req.currentStage,
-          progressStage: updateData.progressStage || req.progressStage,
-          ...updateData
-        };
-      }
-      return req;
-    }));
-  };
-
-  const openStatusManager = (request: any) => {
-    setSelectedRequestForStatus(request);
-    setIsStatusManagerOpen(true);
-  };
-
-  const openResubmitForm = (request: any) => {
-    setSelectedRequestForResubmit(request);
-    setIsResubmitFormOpen(true);
-  };
-
-  const handleResubmitRequest = (updatedRequest: any) => {
-    setAllRequests(prev => prev.map(req => 
-      req.id === updatedRequest.id ? updatedRequest : req
-    ));
-    setIsResubmitFormOpen(false);
-    setSelectedRequestForResubmit(null);
-  };
-
-  // SSRFM Status workflow: Pending Approval → Approved → Ordered → Issued → Completed
+  // Update allRequests to include unit information
   const [allRequests, setAllRequests] = useState([
-    // Pending Approval Requests
     {
       id: "REQ-2024-301",
       materialName: "Industrial Bearings",
@@ -322,7 +304,9 @@ export const MaterialOrderBookTab = () => {
       department: "Production",
       urgencyLevel: "Critical",
       estimatedDowntime: "4-6 hours",
-      additionalNotes: "Machine currently running on backup bearing. Immediate replacement required to prevent production halt."
+      additionalNotes: "Machine currently running on backup bearing. Immediate replacement required to prevent production halt.",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
       id: "REQ-2024-302",
@@ -344,7 +328,9 @@ export const MaterialOrderBookTab = () => {
       department: "Maintenance",
       maintenanceType: "Preventive",
       scheduledDate: "2024-01-25",
-      additionalNotes: "Part of quarterly maintenance schedule. Oil level currently at minimum threshold."
+      additionalNotes: "Part of quarterly maintenance schedule. Oil level currently at minimum threshold.",
+      unit: "unit-2",
+      unitName: "SSRFM Unit 2"
     },
     {
       id: "REQ-2024-303",
@@ -365,7 +351,9 @@ export const MaterialOrderBookTab = () => {
       requestedBy: "Mike Johnson",
       department: "Safety & Quality",
       safetyImplications: "High - affects emergency stop functionality",
-      additionalNotes: "Two sensors currently malfunctioning, compromising safety protocols."
+      additionalNotes: "Two sensors currently malfunctioning, compromising safety protocols.",
+      unit: "unit-3",
+      unitName: "SSRFM Unit 3"
     },
 
     // Approved Requests
@@ -391,7 +379,9 @@ export const MaterialOrderBookTab = () => {
       department: "Production",
       procurementTeam: "Industrial Supplies Division",
       expectedProcurementTime: "5-7 business days",
-      additionalNotes: "High priority for production continuity. Current belt showing significant wear."
+      additionalNotes: "High priority for production continuity. Current belt showing significant wear.",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
       id: "REQ-2024-290",
@@ -414,7 +404,9 @@ export const MaterialOrderBookTab = () => {
       approvedDate: "2024-01-16",
       department: "Facilities",
       environmentalImpact: "Improves air quality and worker safety",
-      additionalNotes: "Current filters at 80% capacity. Replacement will ensure optimal air quality."
+      additionalNotes: "Current filters at 80% capacity. Replacement will ensure optimal air quality.",
+      unit: "unit-2",
+      unitName: "SSRFM Unit 2"
     },
 
     // Partially Received Requests
@@ -447,7 +439,9 @@ export const MaterialOrderBookTab = () => {
       invoiceNumber: "FI-2024-0156",
       qualityCheck: "passed",
       notes: "First batch received. Remaining 40 pieces expected by Jan 25th",
-      additionalNotes: "Partial delivery due to supplier stock shortage. Balance quantity confirmed for next week."
+      additionalNotes: "Partial delivery due to supplier stock shortage. Balance quantity confirmed for next week.",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
       id: "REQ-2024-281",
@@ -478,7 +472,9 @@ export const MaterialOrderBookTab = () => {
       invoiceNumber: "HES-2024-0089",
       qualityCheck: "passed",
       notes: "Partial delivery received. Quality inspection passed. Remaining cable expected soon.",
-      additionalNotes: "Project can proceed with received quantity. Balance required for completion."
+      additionalNotes: "Project can proceed with received quantity. Balance required for completion.",
+      unit: "unit-2",
+      unitName: "SSRFM Unit 2"
     },
 
     // Material Received (Complete) Requests
@@ -511,7 +507,9 @@ export const MaterialOrderBookTab = () => {
       invoiceNumber: "MIL-2024-0234",
       qualityCheck: "passed",
       notes: "Complete order received. All cartridges in good condition. Stored in maintenance inventory.",
-      additionalNotes: "Monthly maintenance supply fully restocked. Quality certification received."
+      additionalNotes: "Monthly maintenance supply fully restocked. Quality certification received.",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
       id: "REQ-2024-271",
@@ -542,7 +540,9 @@ export const MaterialOrderBookTab = () => {
       invoiceNumber: "ASS-2024-0167",
       qualityCheck: "passed",
       notes: "Complete order received. All gloves meet safety standards. Distributed to production teams.",
-      additionalNotes: "Safety compliance maintained. All workers equipped with new protective gear."
+      additionalNotes: "Safety compliance maintained. All workers equipped with new protective gear.",
+      unit: "unit-2",
+      unitName: "SSRFM Unit 2"
     },
 
     // Ordered Requests
@@ -571,7 +571,9 @@ export const MaterialOrderBookTab = () => {
       supplierName: "Industrial Lubricants Co.",
       supplierContact: "+91-9876543210",
       trackingNumber: "TRK-IL-240114-001",
-      additionalNotes: "Bulk order for quarterly maintenance cycle. Includes all motor grades."
+      additionalNotes: "Bulk order for quarterly maintenance cycle. Includes all motor grades.",
+      unit: "unit-3",
+      unitName: "SSRFM Unit 3"
     },
     {
       id: "REQ-2024-276",
@@ -598,7 +600,9 @@ export const MaterialOrderBookTab = () => {
       supplierName: "Precision Tools & Abrasives",
       supplierContact: "+91-9876543211",
       expeditedShipping: true,
-      additionalNotes: "Express delivery requested. Current wheels at 15% remaining life."
+      additionalNotes: "Express delivery requested. Current wheels at 15% remaining life.",
+      unit: "unit-4",
+      unitName: "SSRFM Unit 4"
     },
 
     // Issued Requests
@@ -628,7 +632,9 @@ export const MaterialOrderBookTab = () => {
       issuedBy: "Store Manager",
       receivedBy: "Maintenance Team Lead",
       installationScheduled: "2024-01-18",
-      additionalNotes: "Installation planned during weekend shutdown. Quality inspection completed."
+      additionalNotes: "Installation planned during weekend shutdown. Quality inspection completed.",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
       id: "REQ-2024-261",
@@ -655,7 +661,9 @@ export const MaterialOrderBookTab = () => {
       issuedBy: "Store Manager",
       receivedBy: "Maintenance Department",
       distributionPlan: "Allocated across all production lines",
-      additionalNotes: "Monthly maintenance supply. Distributed to all maintenance stations."
+      additionalNotes: "Monthly maintenance supply. Distributed to all maintenance stations.",
+      unit: "unit-2",
+      unitName: "SSRFM Unit 2"
     },
 
     // Completed Requests
@@ -687,7 +695,9 @@ export const MaterialOrderBookTab = () => {
       distributedBy: "Safety Officer",
       safetyTraining: "Completed for all recipients",
       completionNotes: "All safety equipment distributed with proper training. Compliance certificates issued.",
-      additionalNotes: "100% compliance achieved. All workers equipped with new safety gear."
+      additionalNotes: "100% compliance achieved. All workers equipped with new safety gear.",
+      unit: "unit-3",
+      unitName: "SSRFM Unit 3"
     },
     {
       id: "REQ-2024-246",
@@ -716,7 +726,9 @@ export const MaterialOrderBookTab = () => {
       testingCompleted: "2024-01-14",
       certificationIssued: "Electrical Safety Certificate",
       completionNotes: "Panel upgrade completed successfully. All safety tests passed. System operational.",
-      additionalNotes: "Improved electrical safety and added monitoring capabilities. 20% efficiency gain achieved."
+      additionalNotes: "Improved electrical safety and added monitoring capabilities. 20% efficiency gain achieved.",
+      unit: "unit-4",
+      unitName: "SSRFM Unit 4"
     },
 
     // Reverted Requests
@@ -741,7 +753,9 @@ export const MaterialOrderBookTab = () => {
       revertedBy: "Robert Williams",
       revertedDate: "2024-01-18",
       revertReason: "Pump specifications are unclear. Please specify exact model number, flow rate (GPM), and head pressure requirements. Also provide justification for 5HP requirement vs existing 3HP pumps.",
-      additionalNotes: "Critical for production water supply. Current pumps showing signs of failure."
+      additionalNotes: "Critical for production water supply. Current pumps showing signs of failure.",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
       id: "REQ-2024-296",
@@ -764,7 +778,9 @@ export const MaterialOrderBookTab = () => {
       revertedBy: "Robert Williams",
       revertedDate: "2024-01-16",
       revertReason: "Request exceeds department budget limit of ₹20,000. Please get budget approval from finance department or find alternative solution within budget. Also verify if existing transformers can be reconfigured.",
-      additionalNotes: "Required for new packaging line installation scheduled for next month."
+      additionalNotes: "Required for new packaging line installation scheduled for next month.",
+      unit: "unit-2",
+      unitName: "SSRFM Unit 2"
     },
     {
       id: "REQ-2024-297",
@@ -787,7 +803,9 @@ export const MaterialOrderBookTab = () => {
       revertedBy: "Robert Williams",
       revertedDate: "2024-01-14",
       revertReason: "Please conduct assessment of existing measuring tools first. Provide calibration reports and condition assessment. If existing tools can be repaired or recalibrated, that should be considered first before new purchase.",
-      additionalNotes: "Current tools showing accuracy issues during quality checks."
+      additionalNotes: "Current tools showing accuracy issues during quality checks.",
+      unit: "unit-3",
+      unitName: "SSRFM Unit 3"
     },
 
     // Rejected Requests
@@ -814,7 +832,9 @@ export const MaterialOrderBookTab = () => {
       reason: "Current wiring infrastructure is adequate for current operations. Defer to next fiscal year budget. Focus on critical maintenance items first.",
       budgetConstraints: "Q1 electrical budget 85% utilized",
       alternativeSuggestion: "Monitor current system performance and reassess in Q2",
-      additionalNotes: "Request can be resubmitted with detailed justification if system performance degrades."
+      additionalNotes: "Request can be resubmitted with detailed justification if system performance degrades.",
+      unit: "unit-4",
+      unitName: "SSRFM Unit 4"
     },
     {
       id: "REQ-2024-286",
@@ -839,7 +859,9 @@ export const MaterialOrderBookTab = () => {
       reason: "Request does not align with operational priorities. Focus budget on production-critical items. Consider as part of facility improvement plan in future.",
       policyViolation: "Non-production related expense outside approved categories",
       alternativeSuggestion: "Submit as part of annual facility improvement proposal",
-      additionalNotes: "Consider energy-efficient lighting upgrades as part of comprehensive facility modernization plan."
+      additionalNotes: "Consider energy-efficient lighting upgrades as part of comprehensive facility modernization plan.",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1"
     }
   ]);
 
@@ -917,6 +939,29 @@ export const MaterialOrderBookTab = () => {
     setIssuedMaterials(prev => [...prev, issueData]);
   };
 
+  // Add missing functions
+  const openStatusManager = (request: any) => {
+    setSelectedRequestForStatus(request);
+    setIsStatusManagerOpen(true);
+  };
+
+  const openResubmitForm = (request: any) => {
+    setSelectedRequestForResubmit(request);
+    setIsResubmitFormOpen(true);
+  };
+
+  const handleStatusUpdate = (requestId: string, newStatus: string) => {
+    setAllRequests(prev => prev.map(req => 
+      req.id === requestId ? { ...req, status: newStatus } : req
+    ));
+  };
+
+  const handleResubmitRequest = (requestData: any) => {
+    // Handle resubmit logic here
+    console.log('Resubmitting request:', requestData);
+  };
+
+  // Update filter function to include unit filtering
   const filteredRequests = allRequests.filter(request => {
     const matchesSearch = request.materialName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          request.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -924,7 +969,16 @@ export const MaterialOrderBookTab = () => {
     const matchesStatus = filterStatus === "all" || request.status === filterStatus;
     const matchesPriority = filterPriority === "all" || request.priority === filterPriority;
     
-    return matchesSearch && matchesStatus && matchesPriority;
+    // Unit filtering logic
+    let matchesUnit = true;
+    if (currentUser?.role === 'company_owner') {
+      matchesUnit = filterUnit === "all" || request.unit === filterUnit;
+    } else {
+      // For supervisors, only show their unit's data
+      matchesUnit = request.unit === "unit-1"; // Assuming supervisor is from unit-1
+    }
+    
+    return matchesSearch && matchesStatus && matchesPriority && matchesUnit;
   });
 
   const pendingRequests = filteredRequests.filter(req => 
@@ -990,14 +1044,14 @@ export const MaterialOrderBookTab = () => {
             <TableHeader>
               <TableRow className="bg-secondary/20 border-b-2 border-secondary/30">
                 <TableHead className="w-12 text-foreground font-semibold"></TableHead>
-                <TableHead className="min-w-[200px] text-foreground font-semibold">REQUEST</TableHead>
-                <TableHead className="min-w-[120px] text-foreground font-semibold">CONTACT</TableHead>
-                <TableHead className="min-w-[120px] text-foreground font-semibold">COMPANY</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">STATUS</TableHead>
-                <TableHead className="min-w-[140px] text-foreground font-semibold">SUBMITTED DATE</TableHead>
-                <TableHead className="min-w-[140px] text-foreground font-semibold">LAST UPDATED</TableHead>
-                <TableHead className="min-w-[140px] text-foreground font-semibold">NEXT ACTION DATE</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">ACTIONS</TableHead>
+                <TableHead className="min-w-[120px] text-foreground font-semibold">Request ID</TableHead>
+                <TableHead className="min-w-[150px] text-foreground font-semibold">Material</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Quantity</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Value</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Status</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Date</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Machine</TableHead>
+                <TableHead className="min-w-[120px] text-foreground font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1018,25 +1072,15 @@ export const MaterialOrderBookTab = () => {
                         )}
                       </Button>
                     </TableCell>
+                    <TableCell className="font-medium">{request.id}</TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-semibold text-sm">{request.materialName}</div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {request.materialPurpose}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {request.machineName}
-                        </div>
+                        <div className="font-medium">{request.materialName}</div>
+                        <div className="text-xs text-muted-foreground">{request.maker}</div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="text-sm">{request.requestedBy}</div>
-                      <div className="text-xs text-muted-foreground">{request.id}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">{request.maker}</div>
-                      <div className="text-xs text-muted-foreground">Supplier</div>
-                    </TableCell>
+                    <TableCell className="text-sm">{request.quantity}</TableCell>
+                    <TableCell className="text-sm font-medium">{request.value}</TableCell>
                     <TableCell>
                       <Badge className={`${getStatusColor(request.status)} border`}>
                         <span className="flex items-center gap-1">
@@ -1045,37 +1089,37 @@ export const MaterialOrderBookTab = () => {
                         </span>
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-sm">{request.date}</TableCell>
+                    <TableCell className="text-sm">{request.machineName}</TableCell>
                     <TableCell>
-                      <div className="text-sm">{request.date}</div>
-                      <div className="text-xs text-muted-foreground">Submitted</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {request.approvedDate || request.orderedDate || request.issuedDate || request.completedDate || request.rejectedDate || 'N/A'}
+                      <div className="flex gap-1">
+                        <Button variant="outline" size="sm" className="h-7 w-7 p-0 rounded-lg">
+                          <Eye className="w-3 h-3" />
+                        </Button>
+                        
+                        {/* Status Management Button */}
+                        {(currentUser?.role === 'company_owner' || currentUser?.role === 'site_supervisor') && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 w-7 p-0 rounded-lg"
+                            onClick={() => openStatusManager(request)}
+                          >
+                            <CheckSquare className="w-3 h-3" />
+                          </Button>
+                        )}
+                        
+                        {(request.status === 'rejected' || request.status === 'reverted') && (
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 w-7 p-0 rounded-lg"
+                            onClick={() => request.status === 'reverted' ? openResubmitForm(request) : null}
+                          >
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                        )}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {request.approvedBy || request.rejectedBy || 'N/A'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className={`text-sm px-2 py-1 rounded ${
-                        request.status === 'pending_approval' ? 'bg-warning/20 text-warning-foreground' :
-                        request.status === 'approved' ? 'bg-success/20 text-success-foreground' :
-                        request.status === 'ordered' ? 'bg-primary/15 text-primary' :
-                        request.status === 'partially_received' ? 'bg-warning/20 text-warning-foreground' :
-                        request.status === 'material_received' ? 'bg-success/20 text-success-foreground' :
-                        request.status === 'issued' ? 'bg-accent/20 text-accent-foreground' :
-                        request.status === 'completed' ? 'bg-success/20 text-success-foreground' :
-                        request.status === 'reverted' ? 'bg-destructive/20 text-destructive-foreground' :
-                        'bg-destructive/20 text-destructive-foreground'
-                      }`}>
-                        {request.expectedDelivery || request.issuedDate || request.completedDate || 'N/A'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
                     </TableCell>
                   </TableRow>
                   
@@ -1431,6 +1475,29 @@ export const MaterialOrderBookTab = () => {
               />
             </div>
           </div>
+          
+          {/* Unit Filter - Only for Company Owner */}
+          {currentUser?.role === 'company_owner' && (
+            <Select value={filterUnit} onValueChange={setFilterUnit}>
+              <SelectTrigger className="w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0">
+                <SelectValue placeholder="Select Unit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Units</SelectItem>
+                {availableUnits.map((unit) => (
+                  <SelectItem key={unit.id} value={unit.id}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      <div>
+                        <div className="font-medium">{unit.name}</div>
+                        <div className="text-xs text-muted-foreground">{unit.location}</div>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           
           {/* Status Filter */}
           <Select value={filterStatus} onValueChange={setFilterStatus}>

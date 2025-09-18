@@ -232,10 +232,10 @@ const StockRegisterTab = () => {
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs sm:text-sm text-muted-foreground">
                       <div>
-                        <span className="font-medium">Current Stock:</span> {item.currentStock} {item.unit}
+                        <span className="font-medium">Current Stock:</span> {item.currentStock} {item.MeasureUnit}
                       </div>
                       <div>
-                        <span className="font-medium">Min/Max:</span> {item.minStock}/{item.maxStock} {item.unit}
+                        <span className="font-medium">Min/Max:</span> {item.minStock}/{item.maxStock} {item.MeasureUnit}
                       </div>
                       <div className="break-words">
                         <span className="font-medium">Material:</span> {item.supplier}
@@ -333,11 +333,11 @@ const StockRegisterTab = () => {
                         </TableCell>
                         <TableCell className="text-sm">{item.category}</TableCell>
                         <TableCell className="text-sm">{item.supplier}</TableCell>
-                        <TableCell className="text-sm font-medium">{item.currentStock} {item.unit}</TableCell>
+                        <TableCell className="text-sm font-medium">{item.currentStock} {item.MeasureUnit}</TableCell>
                         <TableCell className="text-sm">
                           <div className="space-y-1">
-                            <div>Min: {item.minStock} {item.unit}</div>
-                            <div>Max: {item.maxStock} {item.unit}</div>
+                            <div>Min: {item.minStock} {item.MeasureUnit}</div>
+                            <div>Max: {item.maxStock} {item.MeasureUnit}</div>
                           </div>
                         </TableCell>
                         <TableCell>

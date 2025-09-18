@@ -1,22 +1,34 @@
 import { useState } from "react";
-import { Plus, Search, List, Table, Edit, Eye, Package, CheckSquare, ChevronDown, ChevronRight, MoreVertical, FileText } from "lucide-react";
+import { Plus, Search, List, Table, Edit, Eye, Package, CheckSquare, ChevronDown, ChevronRight, MoreVertical, FileText, Building2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { Card, CardContent } from "./ui/card";
 import { Table as TableComponent, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { MaterialIssueForm } from "./MaterialIssueForm";
 import { toast } from "../hooks/use-toast";
+import { useRole } from "../contexts/RoleContext";
 
 export const MaterialIssuesTab = () => {
+  const { currentUser } = useRole();
   const [viewMode, setViewMode] = useState<"table" | "list">("table");
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterUnit, setFilterUnit] = useState("all");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isIssueFormOpen, setIsIssueFormOpen] = useState(false);
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [editingIssue, setEditingIssue] = useState<any>(null);
+
+  // Available units for company owner
+  const availableUnits = [
+    { id: "unit-1", name: "SSRFM Unit 1", location: "Mumbai" },
+    { id: "unit-2", name: "SSRFM Unit 2", location: "Delhi" },
+    { id: "unit-3", name: "SSRFM Unit 3", location: "Bangalore" },
+    { id: "unit-4", name: "SSRFM Unit 4", location: "Chennai" }
+  ];
 
   // Helper function to check if issue can be edited (within 7 days)
   const canEditIssue = (issuedDate: string) => {
@@ -62,7 +74,7 @@ export const MaterialIssuesTab = () => {
       materialIssueFormSrNo: "ssrfm/unit-1/I-250115001",
       materialName: "Steel Rods (20mm)",
       specifications: "High-grade steel, 20mm diameter, 6m length",
-      unit: "kg",
+      MeasureUnit: "kg",
       existingStock: 2500,
       issuedQuantity: 150,
       stockAfterIssue: 2350,
@@ -75,47 +87,53 @@ export const MaterialIssuesTab = () => {
       machineName: "Concrete Mixer #1",
       purpose: "Foundation reinforcement work",
       issuedDate: new Date().toISOString().split('T')[0], // Today's date
-      status: "Issued"
+      status: "Issued",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
-      id: "ssrfm/unit-1/I-250115002",
-      materialIssueFormSrNo: "ssrfm/unit-1/I-250115002",
+      id: "ssrfm/unit-2/I-250115002",
+      materialIssueFormSrNo: "ssrfm/unit-2/I-250115002",
       materialName: "Hydraulic Oil",
       specifications: "SAE 10W-30, Industrial grade",
-      unit: "liters",
+      MeasureUnit: "liters",
       existingStock: 45,
       issuedQuantity: 20,
       stockAfterIssue: 25,
       recipientName: "Mike Wilson",
       recipientDesignation: "Machine Operator",
       recipientId: "EMP-002",
-      issuingPersonName: "Sarah Johnson",
+      issuingPersonName: "David Brown",
       issuingPersonDesignation: "Inventory Manager",
       department: "Production",
       machineName: "Hydraulic Press #2",
       purpose: "Routine maintenance",
       issuedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 2 days ago
-      status: "Issued"
+      status: "Issued",
+      unit: "unit-2",
+      unitName: "SSRFM Unit 2"
     },
     {
-      id: "ssrfm/unit-1/I-250107003",
-      materialIssueFormSrNo: "ssrfm/unit-1/I-250107003",
+      id: "ssrfm/unit-3/I-250107003",
+      materialIssueFormSrNo: "ssrfm/unit-3/I-250107003",
       materialName: "Industrial Bolts",
       specifications: "M12x50mm, Grade 8.8, Zinc plated",
-      unit: "pieces",
+      MeasureUnit: "pieces",
       existingStock: 1200,
       issuedQuantity: 50,
       stockAfterIssue: 1150,
       recipientName: "David Brown",
       recipientDesignation: "Assembly Technician",
       recipientId: "EMP-003",
-      issuingPersonName: "Sarah Johnson",
+      issuingPersonName: "Lisa Garcia",
       issuingPersonDesignation: "Inventory Manager",
       department: "Assembly",
       machineName: "Assembly Station #3",
       purpose: "Equipment assembly",
       issuedDate: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 8 days ago (should be disabled)
-      status: "Issued"
+      status: "Issued",
+      unit: "unit-3",
+      unitName: "SSRFM Unit 3"
     }
   ]);
 
@@ -148,7 +166,7 @@ export const MaterialIssuesTab = () => {
         materialIssueFormSrNo: issueId,
         materialName: item.nameOfMaterial,
         specifications: item.specifications || "Standard specifications",
-        unit: item.unit,
+        MeasureUnit: item.unit,
         existingStock: item.existingStock,
         issuedQuantity: parseInt(item.issuedQty),
         stockAfterIssue: item.stockAfterIssue,
@@ -161,19 +179,36 @@ export const MaterialIssuesTab = () => {
         machineName: issueData.machineName || "N/A",
         purpose: issueData.purpose,
         issuedDate: issueData.date,
-        status: "Issued"
+        status: "Issued",
+        unit: currentUser?.role === 'company_owner' ? issueData.unit || 'unit-1' : 'unit-1',
+        unitName: currentUser?.role === 'company_owner' ? 
+          (issueData.unit === 'unit-1' ? 'SSRFM Unit 1' : 
+           issueData.unit === 'unit-2' ? 'SSRFM Unit 2' :
+           issueData.unit === 'unit-3' ? 'SSRFM Unit 3' : 'SSRFM Unit 4') : 'SSRFM Unit 1'
       };
     });
     
     setIssuedMaterials(prev => [...newIssues, ...prev]);
   };
 
-  const filteredIssues = issuedMaterials.filter(issue =>
-    issue.materialName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    issue.recipientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    issue.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    issue.id.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter issues based on search and unit
+  const filteredIssues = issuedMaterials.filter(issue => {
+    const matchesSearch = issue.materialName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         issue.recipientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         issue.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         issue.id.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Unit filtering logic
+    let matchesUnit = true;
+    if (currentUser?.role === 'company_owner') {
+      matchesUnit = filterUnit === "all" || issue.unit === filterUnit;
+    } else {
+      // For supervisors, only show their unit's data
+      matchesUnit = issue.unit === "unit-1"; // Assuming supervisor is from unit-1
+    }
+    
+    return matchesSearch && matchesUnit;
+  });
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -181,8 +216,6 @@ export const MaterialIssuesTab = () => {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4">
         {/* Left side: Title and View Toggle Buttons */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          
-          
           {/* View Toggle Buttons - Moved to left side */}
           <div className="flex rounded-lg border border-secondary overflow-hidden bg-secondary/10 w-fit shadow-sm">
             <Button
@@ -206,7 +239,7 @@ export const MaterialIssuesTab = () => {
           </div>
         </div>
 
-        {/* Right side: Search and Issue Material Button */}
+        {/* Right side: Search, Unit Filter and Issue Material Button */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -218,6 +251,29 @@ export const MaterialIssuesTab = () => {
             />
           </div>
           
+          {/* Unit Filter - Only for Company Owner */}
+          {currentUser?.role === 'company_owner' && (
+            <Select value={filterUnit} onValueChange={setFilterUnit}>
+              <SelectTrigger className="w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0">
+                <SelectValue placeholder="Select Unit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Units</SelectItem>
+                {availableUnits.map((unit) => (
+                  <SelectItem key={unit.id} value={unit.id}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      <div>
+                        <div className="font-medium">{unit.name}</div>
+                        <div className="text-xs text-muted-foreground">{unit.location}</div>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          
           <Button 
             className="btn-primary w-full sm:w-auto text-sm sm:text-base"
             onClick={() => setIsIssueFormOpen(true)}
@@ -228,7 +284,7 @@ export const MaterialIssuesTab = () => {
         </div>
       </div>
 
-      {/* Content */}
+      {/* Content - Rest of the component remains exactly the same */}
       {filteredIssues.length > 0 ? (
         viewMode === "table" ? (
           // Table View for Material Issues
@@ -323,27 +379,28 @@ export const MaterialIssuesTab = () => {
             </CardContent>
           </Card>
         ) : (
-          // List View for Material Issues - Matching Order Request Status ListView style
+          // List View for Material Issues - Matching Table View
           <Card className="rounded-lg shadow-sm">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <TableComponent>
                   <TableHeader>
-                    <TableRow>
+                    <TableRow className="bg-secondary/20 border-b-2 border-secondary/30">
                       <TableHead className="w-12"></TableHead>
-                      <TableHead className="min-w-[200px]">MATERIAL ISSUE</TableHead>
-                      <TableHead className="min-w-[120px]">RECIPIENT</TableHead>
-                      <TableHead className="min-w-[120px]">ISSUING PERSON</TableHead>
-                      <TableHead className="min-w-[100px]">ACTIONS</TableHead>
-                      <TableHead className="min-w-[140px]">ISSUED DATE</TableHead>
-                      <TableHead className="min-w-[140px]">STOCK INFO</TableHead>
-                      <TableHead className="min-w-[100px]">DEPARTMENT</TableHead>
+                      <TableHead className="min-w-[120px] text-foreground font-semibold">Issue ID</TableHead>
+                      <TableHead className="min-w-[150px] text-foreground font-semibold">Material</TableHead>
+                      <TableHead className="min-w-[100px] text-foreground font-semibold">Stock Info</TableHead>
+                      <TableHead className="min-w-[120px] text-foreground font-semibold">Recipient</TableHead>
+                      <TableHead className="min-w-[120px] text-foreground font-semibold">Issuing Person</TableHead>
+                      <TableHead className="min-w-[100px] text-foreground font-semibold">Unit</TableHead>
+                      <TableHead className="min-w-[100px] text-foreground font-semibold">Date</TableHead>
+                      <TableHead className="min-w-[80px] text-foreground font-semibold">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredIssues.map((issue) => (
                       <>
-                        <TableRow key={issue.id} className="hover:bg-muted/50">
+                        <TableRow key={issue.id} className="hover:bg-muted/30 border-b border-secondary/20">
                           <TableCell>
                             <Button 
                               variant="ghost" 
@@ -358,31 +415,56 @@ export const MaterialIssuesTab = () => {
                               )}
                             </Button>
                           </TableCell>
+                          <TableCell className="font-medium">
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto text-left font-medium text-primary hover:text-primary/80"
+                              onClick={() => handleViewIssue(issue)}
+                            >
+                              {issue.id}
+                            </Button>
+                            <div className="text-xs text-muted-foreground">
+                              Form: {issue.materialIssueFormSrNo}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <div>
-                              <Button
-                                variant="link"
-                                className="p-0 h-auto text-left font-semibold text-sm text-primary hover:text-primary/80"
-                                onClick={() => handleViewIssue(issue)}
-                              >
-                                {issue.materialName}
-                              </Button>
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {issue.purpose}
+                              <div className="font-medium capitalize">{issue.materialName}</div>
+                              <div className="text-xs text-muted-foreground truncate max-w-40">{issue.specifications}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            <div className="space-y-1">
+                              <div className="text-xs">
+                                <span className="text-muted-foreground">Existing:</span> {issue.existingStock} {issue.unit}
                               </div>
-                              <div className="text-xs text-muted-foreground">
-                                {issue.machineName}
+                              <div className="text-xs font-medium">
+                                <span className="text-muted-foreground">Issued:</span> {issue.issuedQuantity} {issue.unit}
+                              </div>
+                              <div className="text-xs">
+                                <span className="text-muted-foreground">After:</span> {issue.stockAfterIssue} {issue.unit}
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm">{issue.recipientName}</div>
-                            <div className="text-xs text-muted-foreground">{issue.recipientId}</div>
+                            <div>
+                              <div className="font-medium">{issue.recipientName}</div>
+                              <div className="text-xs text-muted-foreground">{issue.recipientDesignation}</div>
+                              <div className="text-xs text-muted-foreground">{issue.recipientId}</div>
+                            </div>
                           </TableCell>
                           <TableCell>
-                            <div className="text-sm">{issue.issuingPersonName}</div>
-                            <div className="text-xs text-muted-foreground">{issue.issuingPersonDesignation}</div>
+                            <div>
+                              <div className="font-medium">{issue.issuingPersonName}</div>
+                              <div className="text-xs text-muted-foreground">{issue.issuingPersonDesignation}</div>
+                            </div>
                           </TableCell>
+                          <TableCell className="text-sm">
+                            <Badge variant="outline">
+                              {issue.department}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm">{new Date(issue.issuedDate).toLocaleDateString()}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <Button
@@ -396,20 +478,6 @@ export const MaterialIssuesTab = () => {
                                 <Edit className="w-4 h-4" />
                               </Button>
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">{new Date(issue.issuedDate).toLocaleDateString()}</div>
-                            <div className="text-xs text-muted-foreground">Completed</div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm px-2 py-1 rounded bg-secondary/20 text-foreground">
-                              {issue.issuedQuantity} {issue.unit} issued
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {issue.department}
-                            </Badge>
                           </TableCell>
                         </TableRow>
                         
@@ -580,7 +648,7 @@ export const MaterialIssuesTab = () => {
                     <h3 className="font-semibold mb-3">Stock Information</h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Existing Stock:</span>
+                        <span className="text-muted-foreground">Current Stock:</span>
                         <span className="font-medium">{selectedIssue.existingStock} {selectedIssue.unit}</span>
                       </div>
                       <div className="flex justify-between">

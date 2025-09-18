@@ -142,7 +142,7 @@ export const useRequestWorkflow = () => {
       receivedDate: receiptData.receivedDate,
       receivedForm: receiptData,
       statusDescription: isPartial 
-        ? `Partially received: ${receiptData.purchasedQuantity} units`
+        ? `Partially received: ${receiptData.purchasedQuantity} MeasureUnits`
         : 'Materials fully received and updated in inventory',
       currentStage: stage,
       progressStage: progressStage,

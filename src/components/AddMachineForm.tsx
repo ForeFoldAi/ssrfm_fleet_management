@@ -105,7 +105,7 @@ export const AddMachineForm = ({ isOpen, onClose, onSubmit }: AddMachineFormProp
     if (formData.type === "Other" && !formData.customType.trim()) {
       newErrors.customType = "Custom machine type is required";
     }
-    if (!formData.location) newErrors.location = "Location is required";
+    if (!formData.location) newErrors.location = "Unit is required";
     if (formData.location === "Other" && !formData.customLocation.trim()) {
       newErrors.customLocation = "Custom Unit is required";
     }
@@ -221,10 +221,10 @@ export const AddMachineForm = ({ isOpen, onClose, onSubmit }: AddMachineFormProp
                 {/* Second Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="location" className="text-xs font-medium">Site Location *</Label>
+                    <Label htmlFor="location" className="text-xs font-medium">Unit *</Label>
                     <Select value={formData.location} onValueChange={(value) => handleSelectChange("location", value)}>
                       <SelectTrigger className="h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200">
-                        <SelectValue placeholder="Select Site Location" />
+                        <SelectValue placeholder="Select Unit" />
                       </SelectTrigger>
                       <SelectContent>
                         {locations.map((location) => (

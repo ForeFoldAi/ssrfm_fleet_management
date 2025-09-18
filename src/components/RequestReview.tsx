@@ -16,11 +16,11 @@ export const RequestReview = ({ formData, onBack }: RequestReviewProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const materials = [
-    { id: "steel-rods", name: "Steel Rods (20mm)", unit: "kg" },
-    { id: "hydraulic-oil", name: "Hydraulic Oil", unit: "liters" },
-    { id: "concrete-mix", name: "Concrete Mix", unit: "tons" },
-    { id: "industrial-bolts", name: "Industrial Bolts", unit: "pieces" },
-    { id: "welding-electrodes", name: "Welding Electrodes", unit: "boxes" }
+    { id: "steel-rods", name: "Steel Rods (20mm)", MeasureUnit: "kg" },
+    { id: "hydraulic-oil", name: "Hydraulic Oil", MeasureUnit: "liters" },
+    { id: "concrete-mix", name: "Concrete Mix", MeasureUnit: "tons" },
+    { id: "industrial-bolts", name: "Industrial Bolts", MeasureUnit: "pieces" },
+    { id: "welding-electrodes", name: "Welding Electrodes", MeasureUnit: "boxes" }
   ];
 
   const selectedMaterial = materials.find(m => m.id === formData.material);
@@ -76,7 +76,7 @@ export const RequestReview = ({ formData, onBack }: RequestReviewProps) => {
             <div>
               <p className="text-sm text-muted-foreground mb-1">Quantity Required</p>
               <p className="text-lg font-bold text-primary">
-                {formData.quantity} {selectedMaterial?.unit}
+                {formData.quantity} {selectedMaterial?.MeasureUnit}
               </p>
             </div>
             

@@ -82,7 +82,7 @@ const InventoryManagerDashboard = () => {
       material: "Steel Plates 5mm",
       currentStock: 12,
       minStock: 50,
-      unit: "pcs",
+      MeasureUnit: "pcs",
       supplier: "SteelCorp Industries",
       lastOrdered: "2024-01-10",
       status: "critical"
@@ -91,7 +91,7 @@ const InventoryManagerDashboard = () => {
       material: "Welding Wire ER70S-6",
       currentStock: 8,
       minStock: 20,
-      unit: "kg",
+      MeasureUnit: "kg",
       supplier: "WeldTech Supply",
       lastOrdered: "2024-01-12",
       status: "low"
@@ -100,7 +100,7 @@ const InventoryManagerDashboard = () => {
       material: "Cutting Oil Premium",
       currentStock: 25,
       minStock: 40,
-      unit: "L",
+      MeasureUnit: "L",
       supplier: "Industrial Oils Ltd",
       lastOrdered: "2024-01-08",
       status: "low"
@@ -232,7 +232,7 @@ const InventoryManagerDashboard = () => {
                       </Badge>
                     </div>
                     <div className="text-xs sm:text-sm text-muted-foreground space-y-1">
-                      <div>Current: {item.currentStock} {item.unit} • Min: {item.minStock} {item.unit}</div>
+                      <div>Current: {item.currentStock} {item.MeasureUnit} • Min: {item.minStock} {item.MeasureUnit}</div>
                       <div className="truncate">Supplier: {item.supplier} • Last ordered: {item.lastOrdered}</div>
                     </div>
                   </div>

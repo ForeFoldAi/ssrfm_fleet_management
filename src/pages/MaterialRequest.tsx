@@ -31,7 +31,7 @@ interface RequestItem {
   specifications: string;
   oldStock: number;
   reqQuantity: string;
-  unit: string;
+  measureUnit: string;
   image?: File | null;
   imagePreview?: string | null;
   vendorQuotations: VendorQuotation[];
@@ -79,7 +79,7 @@ const MaterialRequest = () => {
       specifications: "",
       oldStock: 0,
       reqQuantity: "",
-      unit: "",
+      measureUnit: "",
       image: null,
       imagePreview: null,
       vendorQuotations: []
@@ -91,49 +91,49 @@ const MaterialRequest = () => {
     {
       name: "FEVICOL",
       specifications: "SH adhesive",
-      unit: "kg",
+      measureUnit: "kg",
       category: "Adhesives"
     },
     {
       name: "COPPER WIRE BRUSH",
       specifications: "0.01 mm thickness of wire",
-      unit: "pieces",
+      measureUnit: "pieces",
       category: "Tools"
     },
     {
       name: "DHOLLAK BALL",
       specifications: "PVC transparent",
-      unit: "pieces",
+      measureUnit: "pieces",
       category: "Components"
     },
     {
       name: "TRIANGLE BRUSH",
       specifications: "Cleaning brush",
-      unit: "pieces",
+      measureUnit: "pieces",
       category: "Tools"
     },
     {
       name: "GUM TAPE",
       specifications: "1 inch width adhesive tape",
-      unit: "pieces",
+      measureUnit: "pieces",
       category: "Office Supplies"
     },
     {
       name: "BEARINGS (SKF 6205-2RS)",
       specifications: "Deep Grove Ball Bearing, Inner: 25mm, Outer: 52mm",
-      unit: "pieces",
+      measureUnit: "pieces",
       category: "Parts"
     },
     {
       name: "MOTOR OIL (SAE 10W-30)",
       specifications: "Industrial grade lubricant for machinery",
-      unit: "liters",
+      measureUnit: "liters",
       category: "Lubricants"
     },
     {
       name: "CONVEYOR BELTS",
       specifications: "Rubber belt, 600mm width, food grade",
-      unit: "meters",
+      measureUnit: "meters",
       category: "Equipment"
     }
   ];
@@ -172,7 +172,7 @@ const MaterialRequest = () => {
           ...item,
           productName: material.name,
           specifications: material.specifications,
-          unit: material.unit
+          measureUnit: material.measureUnit
         } : item
       ));
     }
@@ -187,7 +187,7 @@ const MaterialRequest = () => {
       specifications: "",
       oldStock: 0,
       reqQuantity: "",
-      unit: "",
+      measureUnit: "",
       image: null,
       imagePreview: null,
       vendorQuotations: []
@@ -339,7 +339,7 @@ const MaterialRequest = () => {
       specifications: "",
       oldStock: 0,
       reqQuantity: "",
-      unit: "",
+      measureUnit: "",
       image: null,
       imagePreview: null,
       vendorQuotations: []
@@ -420,7 +420,7 @@ const MaterialRequest = () => {
                         min="0"
                         className="border-0 p-0 h-auto w-20"
                       />
-                      <span className="text-sm text-gray-600">{item.unit}</span>
+                      <span className="text-sm text-gray-600">{item.measureUnit}</span>
                     </div>
                     {errors[`reqQuantity_${item.id}`] && (
                       <p className="text-destructive text-xs mt-1">{errors[`reqQuantity_${item.id}`]}</p>
@@ -618,7 +618,7 @@ const MaterialRequest = () => {
                         min="0"
                         className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                       />
-                      <span className="text-sm text-muted-foreground">{item.unit}</span>
+                      <span className="text-sm text-muted-foreground">{item.measureUnit}</span>
                     </div>
                     {errors[`reqQuantity_${item.id}`] && (
                       <p className="text-destructive text-sm mt-1">{errors[`reqQuantity_${item.id}`]}</p>

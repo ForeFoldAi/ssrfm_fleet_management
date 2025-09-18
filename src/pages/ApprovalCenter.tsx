@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Shield, CheckCircle, XCircle, Clock, FileText, AlertTriangle, User, Calendar, IndianRupee, List, Table as TableIcon, RotateCcw, History, Eye,  } from "lucide-react";
+import { Shield, CheckCircle, XCircle, Clock, FileText, AlertTriangle, User, Calendar, IndianRupee, List, Table as TableIcon, RotateCcw, History, Eye, Building2, Search } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -9,14 +9,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { toast } from "../hooks/use-toast";
+import { useRole } from "../contexts/RoleContext";
 
 const ApprovalCenter = () => {
+  const { currentUser } = useRole();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDepartment, setFilterDepartment] = useState("all");
+  const [filterUnit, setFilterUnit] = useState("all");
   const [ownerViewMode, setOwnerViewMode] = useState<"list" | "table">("table");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [currentMaterialHistory, setCurrentMaterialHistory] = useState<any[]>([]);
   const [currentMaterialName, setCurrentMaterialName] = useState("");
+
+  // Available units for company owner
+  const availableUnits = [
+    { id: "unit-1", name: "SSRFM Unit 1", location: "Mumbai" },
+    { id: "unit-2", name: "SSRFM Unit 2", location: "Delhi" },
+    { id: "unit-3", name: "SSRFM Unit 3", location: "Bangalore" },
+    { id: "unit-4", name: "SSRFM Unit 4", location: "Chennai" }
+  ];
 
   // Mock purchase history data
   const purchaseHistory = {
@@ -163,7 +174,7 @@ const ApprovalCenter = () => {
     ]
   };
 
-  // Updated data structure for new approval flow
+  // Updated data structure with unit information
   const pendingOwnerApproval = [
     {
       id: "REQ-2024-189",
@@ -171,6 +182,8 @@ const ApprovalCenter = () => {
       quantity: "1 unit",
       requestedBy: "John Martinez",
       department: "Production Floor A",
+      unit: "unit-1",
+      unitName: "SSRFM Unit 1",
       value: "₹28,500",
       date: "2024-01-16",
       machine: "CNC Machine #01",
@@ -187,6 +200,8 @@ const ApprovalCenter = () => {
       quantity: "1 set",
       requestedBy: "Carol Williams",
       department: "Quality Control",
+      unit: "unit-2",
+      unitName: "SSRFM Unit 2",
       value: "₹35,200",
       date: "2024-01-15",
       machine: "Testing Station #02",
@@ -202,6 +217,8 @@ const ApprovalCenter = () => {
       quantity: "2 units",
       requestedBy: "Maria Santos",
       department: "Production Floor B",
+      unit: "unit-3",
+      unitName: "SSRFM Unit 3",
       value: "₹42,800",
       date: "2024-01-14",
       machine: "Conveyor System #03",
@@ -220,7 +237,17 @@ const ApprovalCenter = () => {
       request.requestedBy.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDepartment = filterDepartment === "all" || request.department === filterDepartment;
-    return matchesSearch && matchesDepartment;
+    
+    // Unit filtering logic
+    let matchesUnit = true;
+    if (currentUser?.role === 'company_owner') {
+      matchesUnit = filterUnit === "all" || request.unit === filterUnit;
+    } else {
+      // For supervisors, only show their unit's data
+      matchesUnit = request.unit === "unit-1"; // Assuming supervisor is from unit-1
+    }
+    
+    return matchesSearch && matchesDepartment && matchesUnit;
   });
 
   // History handler
@@ -247,7 +274,7 @@ const ApprovalCenter = () => {
     });
   };
 
-  // Owner Approval Table View Component (optimized for screen fit)
+  // Owner Approval Table View Component (updated with unit column)
   const OwnerApprovalTableView = () => (
     <Card>
       <CardContent className="p-0">
@@ -262,6 +289,9 @@ const ApprovalCenter = () => {
                 <TableHead className="font-semibold text-xs w-20">VALUE</TableHead>
                 <TableHead className="font-semibold text-xs w-20">DATE</TableHead>
                 <TableHead className="font-semibold text-xs w-24">MACHINE</TableHead>
+                {currentUser?.role === 'company_owner' && (
+                  <TableHead className="font-semibold text-xs w-24">UNIT</TableHead>
+                )}
                 <TableHead className="font-semibold text-xs w-40">VENDOR QUOTATIONS</TableHead>
                 <TableHead className="font-semibold text-xs w-32">ACTIONS</TableHead>
               </TableRow>
@@ -292,6 +322,12 @@ const ApprovalCenter = () => {
                   <TableCell className="text-xs font-medium text-primary/80">{request.value}</TableCell>
                   <TableCell className="text-xs">{request.date}</TableCell>
                   <TableCell className="text-xs">{request.machine}</TableCell>
+                  {currentUser?.role === 'company_owner' && (
+                    <TableCell>
+                      <div className="text-xs font-medium">{request.unitName}</div>
+                      <div className="text-xs text-muted-foreground">{request.unit}</div>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <div className="space-y-1">
                       <Select>
@@ -333,7 +369,7 @@ const ApprovalCenter = () => {
                         <RotateCcw className="w-3 h-3 mr-1" />
                         Revert
                       </Button>
-                     <Button
+                      <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleOwnerReject(request.id)}
@@ -342,8 +378,6 @@ const ApprovalCenter = () => {
                         <Eye className="w-3 h-3 mr-1" />
                         View
                       </Button>
-
-
                     </div>
                   </TableCell>
                 </TableRow>
@@ -355,7 +389,7 @@ const ApprovalCenter = () => {
     </Card>
   );
 
-  // Owner Approval List View Component (simplified)
+  // Owner Approval List View Component (updated with unit info)
   const OwnerApprovalListView = () => (
     <div className="space-y-3">
       {filteredOwnerRequests.map((request) => (
@@ -386,6 +420,12 @@ const ApprovalCenter = () => {
                     <div><strong>Date:</strong> {request.date}</div>
                     <div><strong>By:</strong> {request.requestedBy}</div>
                     <div><strong>Machine:</strong> {request.machine}</div>
+                    {currentUser?.role === 'company_owner' && (
+                      <>
+                        <div><strong>Unit:</strong> {request.unitName}</div>
+                        <div><strong>Department:</strong> {request.department}</div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -427,18 +467,13 @@ const ApprovalCenter = () => {
                   <RotateCcw className="w-3 h-3" />
                   Revert
                 </Button>
-
-
                 <Button
                   variant="outline"
-
                   className="gap-1 text-xs h-8 text-orange-600 border-orange-200 hover:border-orange-300"
                 >
                   <Eye className="w-3 h-3" />
                   View
                 </Button>
-
-
               </div>
             </div>
           </CardContent>
@@ -458,60 +493,81 @@ const ApprovalCenter = () => {
                 Approval Center
               </h6>
             </div>
+            
+            {/* View Mode Toggle - Moved beside title */}
+            <div className="flex rounded-xl border border-primary/20 overflow-hidden bg-secondary/30 w-fit shadow-sm">
+              <Button
+                variant={ownerViewMode === "list" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setOwnerViewMode("list")}
+                className={`rounded-none px-3 sm:px-4 ${ownerViewMode === "list"
+                  ? "bg-primary text-primary-foreground hover:bg-primary-hover"
+                  : "text-primary hover:text-primary-hover hover:bg-secondary/50"
+                  }`}
+              >
+                <List className="w-4 h-4" />
+                <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
+              </Button>
+              <Button
+                variant={ownerViewMode === "table" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setOwnerViewMode("table")}
+                className={`rounded-none px-3 sm:px-4 ${ownerViewMode === "table"
+                  ? "bg-primary text-primary-foreground hover:bg-primary-hover"
+                  : "text-primary hover:text-primary-hover hover:bg-secondary/50"
+                  }`}
+              >
+                <TableIcon className="w-4 h-4" />
+                <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Search Bar and View Toggle Controls */}
+        {/* Search Bar and Unit Filter Controls */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-          {/* Search Bar */}
-          <div className="flex-1 max-w-md min-w-[250px]">
+          {/* Search Bar with Icon */}
+          <div className="flex-1 max-w-md min-w-[250px] relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               placeholder="Search by material, requester, or request ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full"
+              className="w-full pl-10"
             />
           </div>
 
-          {/* View Mode Toggle */}
-          <div className="flex rounded-xl border border-primary/20 overflow-hidden bg-secondary/30 w-fit shadow-sm">
-            <Button
-              variant={ownerViewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setOwnerViewMode("list")}
-              className={`rounded-none px-3 sm:px-4 ${ownerViewMode === "list"
-                ? "bg-primary text-primary-foreground hover:bg-primary-hover"
-                : "text-primary hover:text-primary-hover hover:bg-secondary/50"
-                }`}
-            >
-              <List className="w-4 h-4" />
-              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
-            </Button>
-            <Button
-              variant={ownerViewMode === "table" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setOwnerViewMode("table")}
-              className={`rounded-none px-3 sm:px-4 ${ownerViewMode === "table"
-                ? "bg-primary text-primary-foreground hover:bg-primary-hover"
-                : "text-primary hover:text-primary-hover hover:bg-secondary/50"
-                }`}
-            >
-              <TableIcon className="w-4 h-4" />
-              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
-            </Button>
-          </div>
+          {/* Unit Filter - Only for Company Owner */}
+          {currentUser?.role === 'company_owner' && (
+            <Select value={filterUnit} onValueChange={setFilterUnit}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Select Unit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Units</SelectItem>
+                {availableUnits.map((unit) => (
+                  <SelectItem key={unit.id} value={unit.id}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      <div>
+                        <div className="font-medium">{unit.name}</div>
+                        <div className="text-xs text-muted-foreground">{unit.location}</div>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
       <Tabs defaultValue="owner-approval" className="w-full">
-
-
         {/* Owner Approval Tab */}
         <TabsContent value="owner-approval" className="space-y-3 sm:space-y-4">
           {/* Render based on view mode */}
           {ownerViewMode === "list" ? <OwnerApprovalListView /> : <OwnerApprovalTableView />}
         </TabsContent>
-
       </Tabs>
 
       {/* Purchase History Dialog */}

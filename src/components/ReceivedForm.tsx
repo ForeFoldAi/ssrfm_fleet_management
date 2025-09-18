@@ -298,7 +298,7 @@ export const ReceivedForm = ({ request, isOpen, onClose, onSubmit }: ReceivedFor
                       {isPartialReceipt || isPartialByQuantity ? 'Partial Receipt Summary' : 'Complete Receipt Summary'}
                     </div>
                     <div className={`text-sm mt-1 ${isPartialReceipt || isPartialByQuantity ? 'text-accent-foreground' : 'text-primary/90'}`}>
-                      <div>Received: {receivedQuantity} of {originalQuantity} units</div>
+                      <div>Received: {receivedQuantity} of {originalQuantity} MeasureUnits</div>
                       <div>Total Cost: ₹{formData.purchasedPrice}</div>
                       <div>Supplier: {formData.purchasedFrom}</div>
                       <div>Status: {isPartialReceipt || isPartialByQuantity ? 'Partially Received' : 'Material Received'}</div>

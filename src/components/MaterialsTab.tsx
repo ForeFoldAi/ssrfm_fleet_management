@@ -1,62 +1,79 @@
 import { useState } from "react";
-import { Plus, Search, List, Table, Edit, Eye, Package, FileText } from "lucide-react";
+import { Plus, Search, List, Table, Edit, Eye, Package, FileText, Building2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Card, CardContent } from "./ui/card";
 import { Table as TableComponent, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Badge } from "./ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { AddMaterialForm } from "./AddMaterialForm";
+import { useRole } from "../contexts/RoleContext";
 
 export const MaterialsTab = () => {
+  const { currentUser } = useRole();
   const [viewMode, setViewMode] = useState<"table" | "list">("table");
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterUnit, setFilterUnit] = useState("all");
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
+
+  // Available units for company owner
+  const availableUnits = [
+    { id: "unit-1", name: "SSRFM Unit 1", location: "Mumbai" },
+    { id: "unit-2", name: "SSRFM Unit 2", location: "Delhi" },
+    { id: "unit-3", name: "SSRFM Unit 3", location: "Bangalore" },
+    { id: "unit-4", name: "SSRFM Unit 4", location: "Chennai" }
+  ];
 
   const [materials, setMaterials] = useState([
     {
       id: 1,
       name: "Steel Rods (20mm)",
       specifications: "High-grade steel, 20mm diameter, 6m length",
-      unit: "kg",
+      MeasureUnit: "kg",
       maker: "SteelCorp Industries",
       currentStock: 2500,
-      
+      unitId: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
       id: 2,
       name: "Hydraulic Oil",
       specifications: "SAE 10W-30, Industrial grade",
-      unit: "liters",
+      MeasureUnit: "liters",
       maker: "FluidTech Solutions",
       currentStock: 45,
-      
+      unitId: "unit-2",
+      unitName: "SSRFM Unit 2"
     },
     {
       id: 3,
       name: "Concrete Mix",
       specifications: "Portland cement blend, M25 grade",
-      unit: "tons",
+      MeasureUnit: "tons",
       maker: "BuildRight Materials",
       currentStock: 0,
-    
+      unitId: "unit-3",
+      unitName: "SSRFM Unit 3"
     },
     {
       id: 4,
       name: "Industrial Bolts",
       specifications: "M12x50mm, Grade 8.8, Zinc plated",
-      unit: "pieces",
+      MeasureUnit: "pieces",
       maker: "FastenTech Corp",
       currentStock: 1200,
-     
+      unitId: "unit-1",
+      unitName: "SSRFM Unit 1"
     },
     {
       id: 5,
       name: "Welding Electrodes",
       specifications: "E7018, 3.2mm diameter",
-      unit: "boxes",
+      MeasureUnit: "boxes",
       maker: "WeldPro Industries",
       currentStock: 25,
-     
+      unitId: "unit-4",
+      unitName: "SSRFM Unit 4"
     }
   ]);
 
@@ -64,11 +81,22 @@ export const MaterialsTab = () => {
     setMaterials(prev => [...prev, materialData]);
   };
 
-  const filteredMaterials = materials.filter(material =>
-    material.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    material.specifications.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    material.maker.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMaterials = materials.filter(material => {
+    const matchesSearch = material.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         material.specifications.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         material.maker.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Unit filtering logic
+    let matchesUnit = true;
+    if (currentUser?.role === 'company_owner') {
+      matchesUnit = filterUnit === "all" || material.unitId === filterUnit;
+    } else {
+      // For supervisors, only show their unit's data
+      matchesUnit = material.unitId === "unit-1"; // Assuming supervisor is from unit-1
+    }
+    
+    return matchesSearch && matchesUnit;
+  });
 
   const getStatusBadge = (status: string) => {
     const badges = {
@@ -110,7 +138,7 @@ export const MaterialsTab = () => {
           </div>
         </div>
 
-        {/* Right side: Search and Add Material Button */}
+        {/* Right side: Search, Unit Filter and Add Material Button */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -121,6 +149,29 @@ export const MaterialsTab = () => {
               className="pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64"
             />
           </div>
+          
+          {/* Unit Filter - Only for Company Owner */}
+          {currentUser?.role === 'company_owner' && (
+            <Select value={filterUnit} onValueChange={setFilterUnit}>
+              <SelectTrigger className="w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0 h-10">
+                <SelectValue placeholder="Select Unit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Units</SelectItem>
+                {availableUnits.map((unit) => (
+                  <SelectItem key={unit.id} value={unit.id}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      <div>
+                        <div className="font-medium">{unit.name}</div>
+                        <div className="text-xs text-muted-foreground">{unit.location}</div>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           
           <Button 
             className="btn-primary w-full sm:w-auto text-sm sm:text-base"
@@ -153,7 +204,7 @@ export const MaterialsTab = () => {
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-6 text-xs sm:text-sm">
                       <span className="text-muted-foreground">
-                        Stock: <span className="font-medium text-foreground">{material.currentStock} {material.unit}</span>
+                        Stock: <span className="font-medium text-foreground">{material.currentStock} {material.MeasureUnit}</span>
                       </span>
                       
                       <span className="text-muted-foreground truncate">
@@ -202,7 +253,7 @@ export const MaterialsTab = () => {
                         {material.specifications}
                       </TableCell>
                       <TableCell className="font-semibold text-foreground">
-                        {material.currentStock} {material.unit}
+                        {material.currentStock} {material.MeasureUnit}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {/* status badge empty */}

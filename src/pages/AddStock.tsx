@@ -62,7 +62,7 @@ const AddStock = () => {
 
     try {
       const quantityNum = parseInt(quantity);
-      const transactionNote = note || `Stock added - ${quantityNum} ${selectedItem.unit}${supplierInvoice ? ` (Invoice: ${supplierInvoice})` : ''}`;
+      const transactionNote = note || `Stock added - ${quantityNum} ${selectedItem.MeasureUnit}${supplierInvoice ? ` (Invoice: ${supplierInvoice})` : ''}`;
       
       addStock(selectedItem.id, quantityNum, transactionNote, "Current User");
 
@@ -152,7 +152,7 @@ const AddStock = () => {
                             </Badge>
                           </div>
                           <span className="text-xs text-muted-foreground ml-4">
-                            {item.currentStock} {item.unit}
+                            {item.currentStock} {item.measureUnit}
                           </span>
                         </div>
                       </SelectItem>
@@ -167,7 +167,7 @@ const AddStock = () => {
                 <Input
                   id="quantity"
                   type="number"
-                  placeholder={selectedItem ? `Enter quantity in ${selectedItem.unit}` : "Select an item first"}
+                  placeholder={selectedItem ? `Enter quantity in ${selectedItem.MeasureUnit}` : "Select an item first"}
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                   min="1"
@@ -269,7 +269,7 @@ const AddStock = () => {
                   <div>
                     <span className="font-medium">Current Stock:</span>
                     <div className="text-lg font-semibold text-foreground">
-                      {selectedItem.currentStock} {selectedItem.unit}
+                      {selectedItem.currentStock} {selectedItem.MeasureUnit}
                     </div>
                   </div>
                   <div>
@@ -283,11 +283,11 @@ const AddStock = () => {
                   </div>
                   <div>
                     <span className="font-medium">Min Stock:</span>
-                    <div className="text-muted-foreground">{selectedItem.minStock} {selectedItem.unit}</div>
+                    <div className="text-muted-foreground">{selectedItem.minStock} {selectedItem.MeasureUnit}</div>
                   </div>
                   <div>
                     <span className="font-medium">Max Stock:</span>
-                    <div className="text-muted-foreground">{selectedItem.maxStock} {selectedItem.unit}</div>
+                    <div className="text-muted-foreground">{selectedItem.maxStock} {selectedItem.MeasureUnit}</div>
                   </div>
                 </div>
               </div>
@@ -300,7 +300,7 @@ const AddStock = () => {
                     <div>
                       <span className="font-medium">New Stock:</span>
                       <div className="text-lg font-semibold text-primary/80">
-                        {selectedItem.currentStock + parseInt(quantity)} {selectedItem.unit}
+                        {selectedItem.currentStock + parseInt(quantity)} {selectedItem.MeasureUnit}
                       </div>
                     </div>
                     <div>
@@ -316,7 +316,7 @@ const AddStock = () => {
                     </div>
                     <div>
                       <span className="font-medium">Added Quantity:</span>
-                      <div className="text-primary/90 font-semibold">+{quantity} {selectedItem.unit}</div>
+                      <div className="text-primary/90 font-semibold">+{quantity} {selectedItem.MeasureUnit}</div>
                     </div>
                     <div>
                       <span className="font-medium">New Total Value:</span>

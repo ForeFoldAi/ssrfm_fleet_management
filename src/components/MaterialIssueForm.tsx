@@ -52,7 +52,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
         existingStock: 0,
         issuedQty: "",
         stockAfterIssue: 0,
-        unit: "",
+        measureUnit: "",
         receiverName: "",
         image: "",
         purpose: ""
@@ -87,7 +87,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
             existingStock: editingIssue.existingStock,
             issuedQty: editingIssue.issuedQuantity.toString(),
             stockAfterIssue: editingIssue.stockAfterIssue,
-            unit: editingIssue.unit,
+            measureUnit: editingIssue.measureUnit || editingIssue.unit,
             receiverName: editingIssue.recipientName,
             image: "",
             purpose: editingIssue.purpose
@@ -116,7 +116,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
             existingStock: 0,
             issuedQty: "",
             stockAfterIssue: 0,
-            unit: "",
+            measureUnit: "",
             receiverName: "",
             image: "",
             purpose: ""
@@ -144,7 +144,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
       name: "fevicol",
       make: "MARINE",
       specifications: "SH adhesive",
-      unit: "KG",
+      measureUnit: "KG",
       currentStock: 1,
       
     },
@@ -153,7 +153,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
       name: "wire brush",
       make: "INDUSTRIAL",
       specifications: "0.01 mm thickness of wire",
-      unit: "pieces",
+      measureUnit: "pieces",
       currentStock: 2,
       location: "Tools Storage"
     },
@@ -162,7 +162,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
       name: "dholak ball", 
       make: "INDUSTRIAL",
       specifications: "PVC transparent",
-      unit: "pieces",
+      measureUnit: "pieces",
       currentStock: 200,
       location: "Components Storage"
     },
@@ -171,7 +171,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
       name: "triangle brush",
       make: "INDUSTRIAL", 
       specifications: "Cleaning brush",
-      unit: "pieces",
+      measureUnit: "pieces",
       currentStock: 130,
       location: "Tools Storage"
     },
@@ -180,7 +180,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
       name: "gum tape",
       make: "INDUSTRIAL",
       specifications: "1 inch width adhesive tape", 
-      unit: "pieces",
+      measureUnit: "pieces",
       currentStock: 14,
       location: "Office Supplies"
     },
@@ -189,7 +189,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
       name: "BEARINGS (SKF 6205-2RS)",
       make: "SKF",
       specifications: "Deep Grove Ball Bearing, Inner: 25mm, Outer: 52mm",
-      unit: "pieces",
+      measureUnit: "pieces",
       currentStock: 24,
       location: "Parts Storage A-1"
     },
@@ -198,7 +198,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
       name: "MOTOR OIL (SAE 10W-30)",
       make: "CASTROL",
       specifications: "Industrial grade lubricant for machinery",
-      unit: "liters",
+      measureUnit: "liters",
       currentStock: 65,
       location: "Chemical Storage B-1"
     },
@@ -207,7 +207,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
       name: "CONVEYOR BELTS",
       make: "CONTINENTAL",
       specifications: "Rubber belt, 600mm width, food grade",
-      unit: "meters",
+      measureUnit: "meters",
       currentStock: 45,
       location: "Equipment Storage C-1"
     }
@@ -263,7 +263,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
         productName: material.name,
         make: material.make,
         specifications: material.specifications,
-        unit: material.unit,
+        measureUnit: material.measureUnit,
         oldStock: material.currentStock
       }));
     }
@@ -358,7 +358,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
           existingStock: 0,
           issuedQty: "",
           stockAfterIssue: 0,
-          unit: "",
+          measureUnit: "",
           receiverName: "",
           image: "",
           purpose: ""
@@ -409,7 +409,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
                   existingStock: 0,
                   issuedQty: "",
                   stockAfterIssue: 0,
-                  unit: "",
+                  measureUnit: "",
                   receiverName: "",
                   image: "",
                   purpose: ""
@@ -433,7 +433,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
                     <TableRow className="bg-gray-50">
                       <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">SR.NO.</TableHead>
                       <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">NAME OF THE MATERIAL</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">EXISTING STOCK</TableHead>
+                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">CURRENT STOCK</TableHead>
                       <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">ISSUED QTY</TableHead>
                       <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">STOCK AFTER ISSUE</TableHead>
                       <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">RECEIVER NAME</TableHead>
@@ -459,7 +459,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
                                   ...item,
                                   nameOfMaterial: material.name,
                                   existingStock: material.currentStock,
-                                  unit: material.unit,
+                                  measureUnit: material.measureUnit,
                                   stockAfterIssue: material.currentStock - Number(item.issuedQty || 0)
                                 };
                                 setFormData(prev => ({ ...prev, items: newItems }));
@@ -483,7 +483,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
                         </TableCell>
                         <TableCell className="border border-gray-300 text-center px-2 py-1">
                           <div className="font-semibold text-xs">
-                            {item.existingStock} {item.unit}
+                            {item.existingStock} {item.measureUnit}
                           </div>
                         </TableCell>
                         <TableCell className="border border-gray-300 text-center px-2 py-1">
@@ -506,7 +506,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
                               max={item.existingStock}
                               className="border-0 p-2 h-10 w-16 text-center text-sm outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
                             />
-                            <span className="text-xs text-gray-600">{item.unit}</span>
+                            <span className="text-xs text-gray-600">{item.measureUnit}</span>
                           </div>
                           {errors[`issuedQty_${index}`] && (
                             <p className="text-destructive text-xs mt-1">{errors[`issuedQty_${index}`]}</p>
@@ -514,7 +514,7 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
                         </TableCell>
                         <TableCell className="border border-gray-300 text-center px-2 py-1">
                           <div className="font-semibold text-xs">
-                            {item.stockAfterIssue} {item.unit}
+                            {item.stockAfterIssue} {item.measureUnit}
                           </div>
                         </TableCell>
                         <TableCell className="border border-gray-300 px-2 py-1">
