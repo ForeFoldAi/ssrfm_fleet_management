@@ -54,6 +54,9 @@ const RequestDetails: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser } = useRole();
   
+  // Decode the requestId to handle URL encoded characters
+  const decodedRequestId = requestId ? decodeURIComponent(requestId) : null;
+  
   const [requestData, setRequestData] = useState<RequestData | null>(null);
   const [selectedVendors, setSelectedVendors] = useState<Record<string, string>>({});
   const [selectedStatuses, setSelectedStatuses] = useState<Record<string, string>>({});
@@ -107,11 +110,11 @@ const RequestDetails: React.FC = () => {
         };
 
         const mockRequestData: RequestData = {
-          id: requestId || 'SSRFM/UNITI/R-250120001',
+          id: decodedRequestId || 'SSRFM/UNITI/R-250120001',
           requestedBy: 'John Martinez',
-          location: parseLocationFromId(requestId || 'SSRFM/UNITI/R-250120001'), // Use utility function
+          location: parseLocationFromId(decodedRequestId || 'SSRFM/UNITI/R-250120001'), // Use utility function
           date: '2024-01-20',
-          status: getStatusFromRequestId(requestId || 'SSRFM/UNITI/R-250120001'), // ✅ Dynamic status
+          status: getStatusFromRequestId(decodedRequestId || 'SSRFM/UNITI/R-250120001'), // ✅ Dynamic status
           items: [
             {
               id: '1',
@@ -155,7 +158,7 @@ const RequestDetails: React.FC = () => {
     };
 
     loadRequestData();
-  }, [requestId]);
+  }, [decodedRequestId]); // Use decodedRequestId in dependency array
 
   const handleItemChange = (itemId: string, field: string, value: string) => {
     if (!requestData) return;

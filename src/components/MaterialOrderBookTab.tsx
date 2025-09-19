@@ -1023,7 +1023,9 @@ export const MaterialOrderBookTab = () => {
 
   // Navigation handler for request details
   const handleRequestClick = (requestId: string) => {
-    navigate(`/request-details/${requestId}`);
+    // URL encode the requestId to handle special characters like '/'
+    const encodedRequestId = encodeURIComponent(requestId);
+    navigate(`/request-details/${encodedRequestId}`);
   };
 
   const pendingRequests = filteredRequests.filter(req => 
