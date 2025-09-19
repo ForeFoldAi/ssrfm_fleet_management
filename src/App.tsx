@@ -13,7 +13,6 @@ import MaterialRequest from "./pages/MaterialRequest";
 import RequestsList from "./pages/RequestsList";
 import ApprovalCenter from "./pages/ApprovalCenter";
 import StockManagement from "./pages/StockManagement";
-import SupervisorRequests from "./pages/SupervisorRequests";
 import GenerateReport from "./pages/GenerateReport";
 import AddStock from "./pages/AddStock";
 import Analytics from "./pages/Analytics";
@@ -22,6 +21,7 @@ import FinancialDashboard from "./pages/FinancialDashboard";
 import OrganizationalManagement from "./pages/OrganizationalManagement";
 import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
+import RequestDetails from "./pages/RequestDetails";
 
 
 import Login from "./pages/Login";
@@ -80,7 +80,6 @@ const AppRoutes = () => {
         <Route path="requests-list" element={<RequestsList />} />
         <Route path="approval-center" element={<ApprovalCenter />} />
         <Route path="stock-management" element={<StockManagement />} />
-        <Route path="supervisor-requests" element={<SupervisorRequests />} />
         <Route path="add-stock" element={<AddStock />} />
         <Route path="generate-report" element={<GenerateReport />} />
         <Route path="analytics" element={<Analytics />} />
@@ -89,6 +88,7 @@ const AppRoutes = () => {
         <Route path="organizational-management" element={<OrganizationalManagement />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="request-details/:requestId" element={<RequestDetails />} />
        
         
         {/* Legacy routes for backwards compatibility */}
@@ -97,7 +97,6 @@ const AppRoutes = () => {
         <Route path="approvals" element={<ApprovalCenter />} />
         <Route path="stock" element={<StockManagement />} />
         <Route path="inventory" element={<MaterialsInventory />} />
-        <Route path="my-requests" element={<SupervisorRequests />} />
               
       </Route>
       <Route path="*" element={<NotFound />} />

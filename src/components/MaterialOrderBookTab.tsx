@@ -7,15 +7,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useRole } from "../contexts/RoleContext";
 import { MaterialIssueForm } from "../components/MaterialIssueForm";
 import { RequestStatusManager } from "../components/RequestStatusManager";
 import { ResubmitForm } from "../components/ResubmitForm";
 import { useRequestWorkflow } from "../hooks/useRequestWorkflow";
+import { HistoryView } from "../components/HistoryView";
 
 export const MaterialOrderBookTab = () => {
   const { currentUser } = useRole();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
@@ -290,6 +292,7 @@ export const MaterialOrderBookTab = () => {
       specifications: "SKF Deep Grove Ball Bearing 6205-2RS, Inner Dia: 25mm, Outer Dia: 52mm, Sealed Design",
       maker: "SKF",
       quantity: "6 pieces",
+      unitPrice: "₹700",
       value: "₹4,200",
       priority: "high",
       materialPurpose: "Emergency replacement for critical bearing failure in main grinding unit",
@@ -314,6 +317,7 @@ export const MaterialOrderBookTab = () => {
       specifications: "ISO VG 46 Hydraulic Oil, Anti-wear properties, 20L container",
       maker: "Shell",
       quantity: "40 liters",
+      unitPrice: "₹170",
       value: "₹6,800",
       priority: "medium",
       materialPurpose: "Scheduled maintenance for hydraulic systems",
@@ -961,25 +965,65 @@ export const MaterialOrderBookTab = () => {
     console.log('Resubmitting request:', requestData);
   };
 
-  // Update filter function to include unit filtering
-  const filteredRequests = allRequests.filter(request => {
-    const matchesSearch = request.materialName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         request.maker.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "all" || request.status === filterStatus;
-    const matchesPriority = filterPriority === "all" || request.priority === filterPriority;
-    
-    // Unit filtering logic
-    let matchesUnit = true;
+  // Role-based filtering function
+  const getFilteredRequestsByRole = () => {
+    let baseFilter = allRequests.filter(request => {
+      const matchesSearch = request.materialName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           request.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           request.maker.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = filterStatus === "all" || request.status === filterStatus;
+      const matchesPriority = filterPriority === "all" || request.priority === filterPriority;
+      
+      // Unit filtering logic
+      let matchesUnit = true;
+      if (currentUser?.role === 'company_owner') {
+        matchesUnit = filterUnit === "all" || request.unit === filterUnit;
+      } else {
+        // For supervisors, only show their unit's data
+        matchesUnit = request.unit === "unit-1"; // Assuming supervisor is from unit-1
+      }
+      
+      return matchesSearch && matchesStatus && matchesPriority && matchesUnit;
+    });
+
+    // Role-based status filtering
     if (currentUser?.role === 'company_owner') {
-      matchesUnit = filterUnit === "all" || request.unit === filterUnit;
-    } else {
-      // For supervisors, only show their unit's data
-      matchesUnit = request.unit === "unit-1"; // Assuming supervisor is from unit-1
+      // Owner should only see: Pending Approval, Approved, Reverted
+      return baseFilter.filter(request => 
+        ['pending_approval', 'approved', 'reverted'].includes(request.status)
+      );
+    } else if (currentUser?.role === 'site_supervisor') {
+      // Supervisor can see all statuses but with different actions
+      return baseFilter;
     }
     
-    return matchesSearch && matchesStatus && matchesPriority && matchesUnit;
-  });
+    return baseFilter;
+  };
+
+  const filteredRequests = getFilteredRequestsByRole();
+
+  // Get last 5 approved requests for Company Owner
+  const getApprovedHistory = () => {
+    if (currentUser?.role !== 'company_owner') return [];
+    
+    return allRequests
+      .filter(req => req.status === 'approved')
+      .slice(0, 5)
+      .map(req => ({
+        id: req.id,
+        date: req.date,
+        materialName: req.materialName,
+        quantity: req.quantity,
+        value: req.value,
+        requestedBy: req.requestedBy,
+        status: req.status
+      }));
+  };
+
+  // Navigation handler for request details
+  const handleRequestClick = (requestId: string) => {
+    navigate(`/request-details/${requestId}`);
+  };
 
   const pendingRequests = filteredRequests.filter(req => 
     req.status === 'pending_approval'
@@ -1044,14 +1088,14 @@ export const MaterialOrderBookTab = () => {
             <TableHeader>
               <TableRow className="bg-secondary/20 border-b-2 border-secondary/30">
                 <TableHead className="w-12 text-foreground font-semibold"></TableHead>
-                <TableHead className="min-w-[120px] text-foreground font-semibold">Request ID</TableHead>
-                <TableHead className="min-w-[150px] text-foreground font-semibold">Material</TableHead>
+                <TableHead className="min-w-[120px] text-foreground font-semibold">Purchase ID</TableHead>
+                <TableHead className="min-w-[150px] text-foreground font-semibold">Materials</TableHead>
                 <TableHead className="min-w-[100px] text-foreground font-semibold">Quantity</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Value</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Price</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Total Value</TableHead>
                 <TableHead className="min-w-[100px] text-foreground font-semibold">Status</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Date</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Machine</TableHead>
-                <TableHead className="min-w-[120px] text-foreground font-semibold">Actions</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Purchased Date</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Purchased For</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1072,7 +1116,15 @@ export const MaterialOrderBookTab = () => {
                         )}
                       </Button>
                     </TableCell>
-                    <TableCell className="font-medium">{request.id}</TableCell>
+                    <TableCell className="font-medium">
+                      <Button 
+                        variant="link" 
+                        className="p-0 h-auto font-medium text-primary hover:underline"
+                        onClick={() => handleRequestClick(request.id)}
+                      >
+                        {request.id}
+                      </Button>
+                    </TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium">{request.materialName}</div>
@@ -1080,6 +1132,7 @@ export const MaterialOrderBookTab = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-sm">{request.quantity}</TableCell>
+                    <TableCell className="text-sm font-medium">{request.unitPrice || 'N/A'}</TableCell>
                     <TableCell className="text-sm font-medium">{request.value}</TableCell>
                     <TableCell>
                       <Badge className={`${getStatusColor(request.status)} border`}>
@@ -1091,36 +1144,7 @@ export const MaterialOrderBookTab = () => {
                     </TableCell>
                     <TableCell className="text-sm">{request.date}</TableCell>
                     <TableCell className="text-sm">{request.machineName}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="outline" size="sm" className="h-7 w-7 p-0 rounded-lg">
-                          <Eye className="w-3 h-3" />
-                        </Button>
-                        
-                        {/* Status Management Button */}
-                        {(currentUser?.role === 'company_owner' || currentUser?.role === 'site_supervisor') && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-7 w-7 p-0 rounded-lg"
-                            onClick={() => openStatusManager(request)}
-                          >
-                            <CheckSquare className="w-3 h-3" />
-                          </Button>
-                        )}
-                        
-                        {(request.status === 'rejected' || request.status === 'reverted') && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-7 w-7 p-0 rounded-lg"
-                            onClick={() => request.status === 'reverted' ? openResubmitForm(request) : null}
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+                   
                   </TableRow>
                   
                   {/* Expanded Detail Row */}
@@ -1136,7 +1160,7 @@ export const MaterialOrderBookTab = () => {
                                 <div className="space-y-3">
                                   <div className="grid grid-cols-2 gap-4 text-sm">
                                     <div>
-                                      <span className="font-medium text-muted-foreground">Request ID:</span>
+                                      <span className="font-medium text-muted-foreground">Purchase ID:</span>
                                       <div className="font-medium">{request.id}</div>
                                     </div>
                                     <div>
@@ -1144,11 +1168,11 @@ export const MaterialOrderBookTab = () => {
                                       <div className="font-medium">{request.quantity}</div>
                                     </div>
                                     <div>
-                                      <span className="font-medium text-muted-foreground">Value:</span>
+                                      <span className="font-medium text-muted-foreground">Total Value:</span>
                                       <div className="font-medium">{request.value}</div>
                                     </div>
                                     <div>
-                                      <span className="font-medium text-muted-foreground">Machine ID:</span>
+                                      <span className="font-medium text-muted-foreground">Purchased For:</span>
                                       <div className="font-medium">{request.machineId}</div>
                                     </div>
                                   </div>
@@ -1352,20 +1376,28 @@ export const MaterialOrderBookTab = () => {
           <Table>
             <TableHeader>
               <TableRow className="bg-secondary/20 border-b-2 border-secondary/30">
-                <TableHead className="min-w-[120px] text-foreground font-semibold">Request ID</TableHead>
-                <TableHead className="min-w-[150px] text-foreground font-semibold">Material</TableHead>
+                <TableHead className="min-w-[120px] text-foreground font-semibold">Purchase ID</TableHead>
+                <TableHead className="min-w-[150px] text-foreground font-semibold">Materials</TableHead>
                 <TableHead className="min-w-[100px] text-foreground font-semibold">Quantity</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Value</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Price</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Total Value</TableHead>
                 <TableHead className="min-w-[100px] text-foreground font-semibold">Status</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Date</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Machine</TableHead>
-                <TableHead className="min-w-[120px] text-foreground font-semibold">Actions</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Purchased Date</TableHead>
+                <TableHead className="min-w-[100px] text-foreground font-semibold">Purchased For</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {requests.map((request) => (
                 <TableRow key={request.id} className="hover:bg-muted/30 border-b border-secondary/20">
-                  <TableCell className="font-medium">{request.id}</TableCell>
+                  <TableCell className="font-medium">
+                    <Button 
+                      variant="link" 
+                      className="p-0 h-auto font-medium text-primary hover:underline"
+                      onClick={() => handleRequestClick(request.id)}
+                    >
+                      {request.id}
+                    </Button>
+                  </TableCell>
                   <TableCell>
                     <div>
                       <div className="font-medium">{request.materialName}</div>
@@ -1373,6 +1405,7 @@ export const MaterialOrderBookTab = () => {
                     </div>
                   </TableCell>
                   <TableCell className="text-sm">{request.quantity}</TableCell>
+                  <TableCell className="text-sm font-medium">{request.unitPrice || 'N/A'}</TableCell>
                   <TableCell className="text-sm font-medium">{request.value}</TableCell>
                   <TableCell>
                     <Badge className={`${getStatusColor(request.status)} border`}>
@@ -1384,36 +1417,7 @@ export const MaterialOrderBookTab = () => {
                   </TableCell>
                   <TableCell className="text-sm">{request.date}</TableCell>
                   <TableCell className="text-sm">{request.machineName}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="outline" size="sm" className="h-7 w-7 p-0 rounded-lg">
-                        <Eye className="w-3 h-3" />
-                      </Button>
-                      
-                      {/* Status Management Button */}
-                      {(currentUser?.role === 'company_owner' || currentUser?.role === 'site_supervisor') && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-7 w-7 p-0 rounded-lg"
-                          onClick={() => openStatusManager(request)}
-                        >
-                          <CheckSquare className="w-3 h-3" />
-                        </Button>
-                      )}
-                      
-                      {(request.status === 'rejected' || request.status === 'reverted') && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-7 w-7 p-0 rounded-lg"
-                          onClick={() => request.status === 'reverted' ? openResubmitForm(request) : null}
-                        >
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
+                  
                 </TableRow>
               ))}
             </TableBody>
@@ -1468,7 +1472,7 @@ export const MaterialOrderBookTab = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary/80 w-4 h-4" />
               <Input
-                placeholder="Search by material, request ID, or maker..."
+                placeholder="Search by materials, purchase ID, or maker..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none"
@@ -1601,6 +1605,17 @@ export const MaterialOrderBookTab = () => {
           }}
           onSubmit={handleResubmitRequest}
         />
+      )}
+
+      {/* Company Owner History Section */}
+      {currentUser?.role === 'company_owner' && (
+        <div className="mt-8">
+          <HistoryView
+            userRole="company_owner"
+            historyData={getApprovedHistory()}
+            title="Recently Approved Requests"
+          />
+        </div>
       )}
     </div>
   );

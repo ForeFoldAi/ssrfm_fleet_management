@@ -32,8 +32,9 @@ interface RequestItem {
   oldStock: number;
   reqQuantity: string;
   measureUnit: string;
-  image?: File | null;
-  imagePreview?: string | null;
+  images?: File[];
+  imagePreviews?: string[];
+  notes?: string;
   vendorQuotations: VendorQuotation[];
 }
 
@@ -80,8 +81,9 @@ const MaterialRequest = () => {
       oldStock: 0,
       reqQuantity: "",
       measureUnit: "",
-      image: null,
-      imagePreview: null,
+      images: [],
+      imagePreviews: [],
+      notes: "",
       vendorQuotations: []
     }
   ]);
@@ -158,9 +160,35 @@ const MaterialRequest = () => {
     }
   };
 
-  const handleFileChange = (itemId: string, field: string, file: File) => {
+  const handleMultipleFileChange = (itemId: string, files: FileList) => {
+    const newFiles = Array.from(files);
+    const newPreviews: string[] = [];
+    
+    newFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        newPreviews.push(e.target?.result as string);
+        if (newPreviews.length === newFiles.length) {
     setRequestItems(prev => prev.map(item => 
-      item.id === itemId ? { ...item, [field]: file } : item
+            item.id === itemId ? { 
+              ...item, 
+              images: [...(item.images || []), ...newFiles],
+              imagePreviews: [...(item.imagePreviews || []), ...newPreviews]
+            } : item
+          ));
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeImage = (itemId: string, imageIndex: number) => {
+    setRequestItems(prev => prev.map(item => 
+      item.id === itemId ? {
+        ...item,
+        images: item.images?.filter((_, index) => index !== imageIndex) || [],
+        imagePreviews: item.imagePreviews?.filter((_, index) => index !== imageIndex) || []
+      } : item
     ));
   };
 
@@ -188,8 +216,9 @@ const MaterialRequest = () => {
       oldStock: 0,
       reqQuantity: "",
       measureUnit: "",
-      image: null,
-      imagePreview: null,
+      images: [],
+      imagePreviews: [],
+      notes: "",
       vendorQuotations: []
     };
     setRequestItems(prev => [...prev, newItem]);
@@ -246,10 +275,20 @@ const MaterialRequest = () => {
           : item
       ));
       
-      setIsVendorFormOpen(false);
+      // Clear form for next entry
+      setVendorFormData({
+        id: "",
+        vendorName: "",
+        contactPerson: "",
+        phone: "",
+        quotedPrice: "",
+        notes: "",
+        quotationFile: null
+      });
+      
       toast({
         title: "Vendor Quotation Added",
-        description: `Quotation from ${vendorFormData.vendorName} added successfully`,
+        description: `Quotation from ${newQuotation.vendorName} added successfully`,
       });
     } else if (currentItem && currentItem.vendorQuotations.length >= 4) {
       toast({
@@ -340,8 +379,9 @@ const MaterialRequest = () => {
       oldStock: 0,
       reqQuantity: "",
       measureUnit: "",
-      image: null,
-      imagePreview: null,
+      images: [],
+      imagePreviews: [],
+      notes: "",
       vendorQuotations: []
     }]);
     setErrors({});
@@ -356,13 +396,14 @@ const MaterialRequest = () => {
             <TableHeader className="border-none">
               <TableRow className="bg-gray-50">
                 <TableHead className="border border-gray-300 font-semibold">SR.NO.</TableHead>
-                <TableHead className="border border-gray-300 font-semibold">PRODUCT NAME</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">MATERIALS</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">SPECIFICATIONS</TableHead>
-                <TableHead className="border border-gray-300 font-semibold">OLD STOCK</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">CURRENT STOCK</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">REQ. QUANTITY</TableHead>
-                <TableHead className="border border-gray-300 font-semibold">IMAGE</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">IMAGES</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">VENDOR QUOTATIONS</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">MACHINE NAME</TableHead>
+                <TableHead className="border border-gray-300 font-semibold">NOTES</TableHead>
                 <TableHead className="border border-gray-300 font-semibold">ACTIONS</TableHead>
               </TableRow>
             </TableHeader>
@@ -370,12 +411,12 @@ const MaterialRequest = () => {
               {requestItems.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="border border-gray-300 text-center font-semibold">
-                    {item.srNo}
+                    {String(item.srNo).padStart(2, '0')}
                   </TableCell>
                   <TableCell className="border border-gray-300">
                     <Select value={item.productName} onValueChange={(value) => handleMaterialSelect(item.id, value)}>
-                      <SelectTrigger className="border-0 p-0 h-auto">
-                        <SelectValue placeholder="Select Product" />
+                      <SelectTrigger className="border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none">
+                        <SelectValue placeholder="Select Material" />
                       </SelectTrigger>
                       <SelectContent>
                         {availableMaterials.map((material) => (
@@ -395,10 +436,17 @@ const MaterialRequest = () => {
                   <TableCell className="border border-gray-300">
                     <Input
                       value={item.specifications}
-                      onChange={(e) => handleItemChange(item.id, "specifications", e.target.value)}
-                      placeholder="Specifications"
-                      className="border-0 p-0 h-auto"
+                      onChange={(e) => {
+                        const value = e.target.value.slice(0, 30);
+                        handleItemChange(item.id, "specifications", value);
+                      }}
+                      placeholder="Specifications (max 30 chars)"
+                      maxLength={30}
+                      className="border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none"
                     />
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {item.specifications.length}/30 characters
+                    </div>
                   </TableCell>
                   <TableCell className="border border-gray-300 text-center">
                     <Input
@@ -407,7 +455,7 @@ const MaterialRequest = () => {
                       onChange={(e) => handleItemChange(item.id, "oldStock", e.target.value)}
                       placeholder="0"
                       min="0"
-                      className="border-0 p-0 h-auto w-20 text-center"
+                      className="border-0 p-0 h-auto w-20 text-center focus:ring-0 focus:outline-none rounded-none"
                     />
                   </TableCell>
                   <TableCell className="border border-gray-300">
@@ -418,7 +466,7 @@ const MaterialRequest = () => {
                         onChange={(e) => handleItemChange(item.id, "reqQuantity", e.target.value)}
                         placeholder="Qty"
                         min="0"
-                        className="border-0 p-0 h-auto w-20"
+                        className="border-0 p-0 h-auto w-20 focus:ring-0 focus:outline-none rounded-none"
                       />
                       <span className="text-sm text-gray-600">{item.measureUnit}</span>
                     </div>
@@ -427,30 +475,48 @@ const MaterialRequest = () => {
                     )}
                   </TableCell>
                   <TableCell className="border border-gray-300">
+                    <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Input
                         type="file"
                         accept="image/*"
+                          multiple
                         onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (e) => {
-                              handleItemChange(item.id, "imagePreview", e.target?.result as string);
-                            };
-                            reader.readAsDataURL(file);
-                            handleFileChange(item.id, "image", file);
+                            const files = e.target.files;
+                            if (files && files.length > 0) {
+                              handleMultipleFileChange(item.id, files);
                           }
                         }}
                         className="hidden"
-                        id={`image-${item.id}`}
+                          id={`images-${item.id}`}
                       />
-                      <Label htmlFor={`image-${item.id}`} className="cursor-pointer">
+                        <Label htmlFor={`images-${item.id}`} className="cursor-pointer">
                         <Camera className="w-4 h-4" />
                       </Label>
-                      {item.imagePreview && (
-                        <div className="w-8 h-8 rounded border overflow-hidden">
-                          <img src={item.imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                        <span className="text-xs text-muted-foreground">
+                          ({item.imagePreviews?.length || 0} images)
+                        </span>
+                      </div>
+                      {item.imagePreviews && item.imagePreviews.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {item.imagePreviews.slice(0, 3).map((preview, index) => (
+                            <div key={index} className="relative w-8 h-8 rounded border overflow-hidden">
+                              <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeImage(item.id, index)}
+                                className="absolute -top-1 -right-1 h-4 w-4 p-0 bg-red-500 text-white hover:bg-red-600 rounded-full"
+                              >
+                                <X className="w-2 h-2" />
+                              </Button>
+                            </div>
+                          ))}
+                          {item.imagePreviews.length > 3 && (
+                            <div className="w-8 h-8 rounded border flex items-center justify-center bg-gray-100 text-xs">
+                              +{item.imagePreviews.length - 3}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -482,13 +548,15 @@ const MaterialRequest = () => {
                       {item.vendorQuotations.length > 0 && (
                         <div className="space-y-1">
                           {item.vendorQuotations.map((quotation) => (
-                            <div key={quotation.id} className="flex items-center gap-1 text-xs">
-                              <span className="truncate flex-1">{quotation.vendorName}</span>
+                            <div key={quotation.id} className="flex items-center justify-between gap-2 text-xs bg-gray-50 p-1 rounded border">
+                              <span className="truncate flex-1 font-medium">
+                                {quotation.vendorName} - {quotation.quotedPrice}
+                              </span>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => removeVendorQuotation(item.id, quotation.id)}
-                                className="h-4 w-4 p-0"
+                                className="h-4 w-4 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                               >
                                 <X className="w-2 h-2" />
                               </Button>
@@ -500,7 +568,7 @@ const MaterialRequest = () => {
                   </TableCell>
                   <TableCell className="border border-gray-300">
                     <Select value={item.machineName} onValueChange={(value) => handleItemChange(item.id, "machineName", value)}>
-                      <SelectTrigger className="border-0 p-0 h-auto">
+                      <SelectTrigger className="border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none">
                         <SelectValue placeholder="Select Machine" />
                       </SelectTrigger>
                       <SelectContent>
@@ -514,6 +582,15 @@ const MaterialRequest = () => {
                     {errors[`machineName_${item.id}`] && (
                       <p className="text-destructive text-xs mt-1">{errors[`machineName_${item.id}`]}</p>
                     )}
+                  </TableCell>
+                  <TableCell className="border border-gray-300">
+                    <Textarea
+                      value={item.notes || ''}
+                      onChange={(e) => handleItemChange(item.id, "notes", e.target.value)}
+                      placeholder="Add notes..."
+                      className="border-0 p-0 h-auto min-h-[60px] resize-none focus:ring-0 focus:outline-none rounded-none"
+                      rows={2}
+                    />
                   </TableCell>
                   <TableCell className="border border-gray-300">
                     <Button
@@ -543,10 +620,10 @@ const MaterialRequest = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Product Name *</Label>
+                  <Label className="text-sm font-medium">Materials *</Label>
                   <Select value={item.productName} onValueChange={(value) => handleMaterialSelect(item.id, value)}>
                     <SelectTrigger className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200">
-                      <SelectValue placeholder="Select Product" />
+                      <SelectValue placeholder="Select Material" />
                     </SelectTrigger>
                     <SelectContent>
                       {availableMaterials.map((material) => (
@@ -587,10 +664,17 @@ const MaterialRequest = () => {
                   <Label className="text-sm font-medium">Specifications</Label>
                   <Textarea
                     value={item.specifications}
-                    onChange={(e) => handleItemChange(item.id, "specifications", e.target.value)}
-                    placeholder="Enter detailed specifications"
+                    onChange={(e) => {
+                      const value = e.target.value.slice(0, 30);
+                      handleItemChange(item.id, "specifications", value);
+                    }}
+                    placeholder="Enter detailed specifications (max 30 chars)"
+                    maxLength={30}
                     className="min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
                   />
+                  <div className="text-xs text-muted-foreground">
+                    {item.specifications.length}/30 characters
+                  </div>
                 </div>
               </div>
 
@@ -627,29 +711,40 @@ const MaterialRequest = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Image</Label>
-                  <div className="flex items-center gap-4">
+                  <Label className="text-sm font-medium">Images</Label>
+                  <div className="space-y-4">
                     <Input
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (e) => {
-                            handleItemChange(item.id, "imagePreview", e.target?.result as string);
-                          };
-                          reader.readAsDataURL(file);
-                          handleFileChange(item.id, "image", file);
+                        const files = e.target.files;
+                        if (files && files.length > 0) {
+                          handleMultipleFileChange(item.id, files);
                         }
                       }}
                       className="flex-1 h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                     />
-                    {item.imagePreview && (
-                      <div className="w-16 h-16 rounded-[5px] border overflow-hidden">
-                        <img src={item.imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    {item.imagePreviews && item.imagePreviews.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2">
+                        {item.imagePreviews.map((preview, index) => (
+                          <div key={index} className="relative w-16 h-16 rounded-[5px] border overflow-hidden">
+                            <img src={preview} alt={`Preview ${index + 1}`} className="w-full h-full object-cover" />
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeImage(item.id, index)}
+                              className="absolute -top-1 -right-1 h-5 w-5 p-0 bg-red-500 text-white hover:bg-red-600 rounded-full"
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        ))}
                       </div>
                     )}
+                    <div className="text-xs text-muted-foreground">
+                      {item.imagePreviews?.length || 0} image(s) selected
+                    </div>
                   </div>
                 </div>
 
@@ -732,11 +827,9 @@ const MaterialRequest = () => {
             <div>
               <h1 className="text-sm sm:text-1xl md:text-2xl lg:text-3xl font-bold text-foreground mb-1">
 
-                INDENT FORM
+                Requisition & Indent form
               </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Material Request Form
-              </p>
+              
             </div>
           </div>
         </div>
@@ -798,20 +891,88 @@ const MaterialRequest = () => {
         </div>
       </form>
 
-      {/* Vendor Quotation Form Dialog */}
+      {/* Vendor Quotation Table Dialog */}
       <Dialog open={isVendorFormOpen} onOpenChange={setIsVendorFormOpen}>
-        <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
           <DialogHeader className="pb-4">
             <DialogTitle className="flex items-center gap-3 text-xl">
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
                 <UserRoundPlus className="w-6 h-6 text-primary" />
               </div>
-              Add Vendor Quotation
+              Manage Vendor Quotations
             </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Current Quotations Table */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Current Quotations</h3>
+                <Badge variant="secondary">
+                  {requestItems.find(item => item.id === currentItemId)?.vendorQuotations.length || 0}/4 Quotations
+                </Badge>
+              </div>
+              
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="border-r font-semibold">SR.</TableHead>
+                      <TableHead className="border-r font-semibold">Vendor Name</TableHead>
+                      <TableHead className="border-r font-semibold">Contact Person</TableHead>
+                      <TableHead className="border-r font-semibold">Phone</TableHead>
+                      <TableHead className="border-r font-semibold">Quoted Price</TableHead>
+                      <TableHead className="border-r font-semibold">Notes</TableHead>
+                      <TableHead className="border-r font-semibold">File</TableHead>
+                      <TableHead className="font-semibold">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {requestItems.find(item => item.id === currentItemId)?.vendorQuotations.map((quotation, index) => (
+                      <TableRow key={quotation.id}>
+                        <TableCell className="border-r text-center font-medium">{index + 1}</TableCell>
+                        <TableCell className="border-r font-medium">{quotation.vendorName}</TableCell>
+                        <TableCell className="border-r">{quotation.contactPerson}</TableCell>
+                        <TableCell className="border-r">{quotation.phone}</TableCell>
+                        <TableCell className="border-r font-medium text-primary">{quotation.quotedPrice}</TableCell>
+                        <TableCell className="border-r text-sm">{quotation.notes || '-'}</TableCell>
+                        <TableCell className="border-r">
+                          {quotation.quotationFile ? (
+                            <div className="flex items-center gap-1 text-sm">
+                              <FileText className="w-3 h-3" />
+                              <span className="truncate max-w-20">{quotation.quotationFile.name}</span>
+                            </div>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeVendorQuotation(currentItemId, quotation.id)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!requestItems.find(item => item.id === currentItemId)?.vendorQuotations.length) && (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          No vendor quotations added yet
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Add New Quotation Form */}
+            <div className="space-y-4 border-t pt-6">
+              <h3 className="text-lg font-semibold">Add New Quotation</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="vendorName" className="text-sm font-medium">Vendor Name *</Label>
                 <Input
@@ -819,30 +980,27 @@ const MaterialRequest = () => {
                   value={vendorFormData.vendorName}
                   onChange={(e) => handleVendorFormChange("vendorName", e.target.value)}
                   placeholder="Enter vendor name"
-                  className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                    className="h-10 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-md text-sm transition-all duration-200"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="contactPerson" className="text-sm font-medium">Contact Person *</Label>
+                  <Label htmlFor="contactPerson" className="text-sm font-medium">Contact Person</Label>
                 <Input
                   id="contactPerson"
                   value={vendorFormData.contactPerson}
                   onChange={(e) => handleVendorFormChange("contactPerson", e.target.value)}
                   placeholder="Enter contact person"
-                  className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                    className="h-10 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-md text-sm transition-all duration-200"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-medium">Phone *</Label>
+                  <Label htmlFor="phone" className="text-sm font-medium">Phone</Label>
                 <Input
                   id="phone"
                   value={vendorFormData.phone}
                   onChange={(e) => handleVendorFormChange("phone", e.target.value)}
                   placeholder="Enter phone number"
-                  className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                    className="h-10 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-md text-sm transition-all duration-200"
                 />
               </div>
               <div className="space-y-2">
@@ -852,45 +1010,64 @@ const MaterialRequest = () => {
                   value={vendorFormData.quotedPrice}
                   onChange={(e) => handleVendorFormChange("quotedPrice", e.target.value)}
                   placeholder="Enter quoted price"
-                  className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                    className="h-10 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-md text-sm transition-all duration-200"
                 />
               </div>
             </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="quotationFile" className="text-sm font-medium">Quotation File</Label>
               <Input
                 id="quotationFile"
                 type="file"
-                accept=".pdf,.doc,.docx"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
                     handleVendorFileChange(file);
                   }
                 }}
-                className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                    className="h-10 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-md text-sm transition-all duration-200"
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
-              <Textarea
+                  <Input
                 id="notes"
                 value={vendorFormData.notes}
                 onChange={(e) => handleVendorFormChange("notes", e.target.value)}
                 placeholder="Additional notes or comments"
-                className="min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
+                    className="h-10 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-md text-sm transition-all duration-200"
               />
             </div>
           </div>
 
-          <div className="flex justify-end gap-4 pt-6 border-t">
-            <Button variant="outline" onClick={() => setIsVendorFormOpen(false)} className="h-11 px-6">
-              Cancel
-            </Button>
-            <Button onClick={addVendorQuotation} className="h-11 px-6 bg-primary hover:bg-primary/90">
+              <div className="flex justify-between items-center pt-4">
+                <div className="text-sm text-muted-foreground">
+                  {vendorFormData.quotationFile && (
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      <span>Selected: {vendorFormData.quotationFile.name}</span>
+                    </div>
+                  )}
+                </div>
+                <Button 
+                  onClick={addVendorQuotation} 
+                  disabled={!vendorFormData.vendorName.trim() || !vendorFormData.quotedPrice.trim() || 
+                           (requestItems.find(item => item.id === currentItemId)?.vendorQuotations.length || 0) >= 4}
+                  className="h-10 px-6 bg-primary hover:bg-primary/90"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
               Add Quotation
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-4 pt-6 border-t">
+            <Button variant="outline" onClick={() => setIsVendorFormOpen(false)} className="h-10 px-6">
+              Close
             </Button>
           </div>
         </DialogContent>
@@ -898,7 +1075,7 @@ const MaterialRequest = () => {
 
       {/* View Vendor Quotations Dialog */}
       <Dialog open={isViewQuotationsOpen} onOpenChange={setIsViewQuotationsOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5 text-foreground" />
@@ -908,54 +1085,57 @@ const MaterialRequest = () => {
           
           <div className="space-y-4">
             {currentQuotations.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="border-r font-semibold">SR.</TableHead>
+                      <TableHead className="border-r font-semibold">Vendor Name</TableHead>
+                      <TableHead className="border-r font-semibold">Contact Person</TableHead>
+                      <TableHead className="border-r font-semibold">Phone</TableHead>
+                      <TableHead className="border-r font-semibold">Quoted Price</TableHead>
+                      <TableHead className="border-r font-semibold">Notes</TableHead>
+                      <TableHead className="border-r font-semibold">File</TableHead>
+                      <TableHead className="font-semibold">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                 {currentQuotations.map((quotation, index) => (
-                  <Card key={quotation.id} className="border border-gray-200">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{quotation.vendorName}</CardTitle>
-                        <Badge variant="secondary">Quotation #{index + 1}</Badge>
+                      <TableRow key={quotation.id}>
+                        <TableCell className="border-r text-center font-medium">{index + 1}</TableCell>
+                        <TableCell className="border-r font-medium">{quotation.vendorName}</TableCell>
+                        <TableCell className="border-r">{quotation.contactPerson || '-'}</TableCell>
+                        <TableCell className="border-r">{quotation.phone || '-'}</TableCell>
+                        <TableCell className="border-r font-medium text-primary">{quotation.quotedPrice}</TableCell>
+                        <TableCell className="border-r text-sm max-w-32">
+                          <div className="truncate" title={quotation.notes || ''}>
+                            {quotation.notes || '-'}
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <span className="font-medium text-muted-foreground">Contact Person:</span>
-                          <div className="font-medium">{quotation.contactPerson}</div>
+                        </TableCell>
+                        <TableCell className="border-r">
+                          {quotation.quotationFile ? (
+                            <div className="flex items-center gap-1 text-sm">
+                              <FileText className="w-3 h-3" />
+                              <span className="truncate max-w-20" title={quotation.quotationFile.name}>
+                                {quotation.quotationFile.name}
+                              </span>
                         </div>
-                        <div>
-                          <span className="font-medium text-muted-foreground">Phone:</span>
-                          <div className="font-medium">{quotation.phone}</div>
-                        </div>
-                        <div>
-                          <span className="font-medium text-muted-foreground">Price:</span>
-                          <div className="font-medium text-primary/80">{quotation.quotedPrice}</div>
-                        </div>
-                      </div>
-                      
-                      {quotation.notes && (
-                        <div>
-                          <span className="font-medium text-muted-foreground text-sm">Notes:</span>
-                          <div className="text-sm mt-1 p-2 bg-gray-50 rounded border">
-                            {quotation.notes}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {quotation.quotationFile && (
-                        <div>
-                          <span className="font-medium text-muted-foreground text-sm">Quotation File:</span>
-                          <div className="text-sm mt-1 p-2 bg-secondary/10 rounded border border-secondary">
-                            <div className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-foreground" />
-                              <span className="font-medium">{quotation.quotationFile.name}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeVendorQuotation(currentItemId, quotation.id)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             ) : (
               <div className="text-center py-8">
