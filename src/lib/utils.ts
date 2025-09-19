@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Generate Purchase ID in format: SSRFM/LOCATION/R-YYMMDDSQ
+// Generate Purchase ID in format: SSRFM/unit-IV/I-YYMMDDSQ
 export function generatePurchaseId(location: string, sequence: number = 1): string {
   const now = new Date();
   const year = now.getFullYear().toString().slice(-2); // YY
@@ -13,10 +13,10 @@ export function generatePurchaseId(location: string, sequence: number = 1): stri
   const day = now.getDate().toString().padStart(2, '0'); // DD
   const seq = sequence.toString().padStart(3, '0'); // SQ (3 digits)
   
-  // Convert location to proper format (e.g., "Unit I" -> "UNITI", "Unit II" -> "UNITII")
-  const locationCode = location.replace(/\s+/g, '').toUpperCase();
+  // Convert location to proper format (e.g., "Unit I" -> "unit-i", "Unit II" -> "unit-ii")
+  const locationCode = location.replace(/\s+/g, '-').toLowerCase();
   
-  return `SSRFM/${locationCode}/R-${year}${month}${day}${seq}`;
+  return `SSRFM/${locationCode}/I-${year}${month}${day}${seq}`;
 }
 
 // Generate SR.NO. in same format for individual items
@@ -31,10 +31,10 @@ export function parseLocationFromId(id: string): string {
     return 'Unit I';
   }
   
-  // Handle new format: SSRFM/UNITI/R-250826001 -> Unit I
-  const match = id.match(/SSRFM\/([^\/]+)\/R-/);
-  if (match) {
-    const locationCode = match[1];
+  // Handle old format: SSRFM/UNITI/R-250826001 -> Unit I
+  const oldMatch = id.match(/SSRFM\/([^\/]+)\/R-/);
+  if (oldMatch) {
+    const locationCode = oldMatch[1];
     switch (locationCode) {
       case 'UNITI': return 'Unit I';
       case 'UNITII': return 'Unit II';
@@ -44,5 +44,18 @@ export function parseLocationFromId(id: string): string {
     }
   }
   
-  return 'Unit I'; // Default fallback
+  // Handle new format: SSRFM/unit-IV/I-250115001 -> Unit IV
+  const newMatch = id.match(/SSRFM\/([^\/]+)\/I-/);
+  if (newMatch) {
+    const locationCode = newMatch[1];
+    switch (locationCode) {
+      case 'unit-i': return 'Unit-I';
+      case 'unit-ii': return 'Unit-II';
+      case 'unit-iii': return 'Unit-III';
+      case 'unit-iv': return 'Unit-IV';
+      default: return 'Unit-I'; // Default fallback
+    }
+  }
+  
+  return 'Unit-I'; // Default fallback
 }

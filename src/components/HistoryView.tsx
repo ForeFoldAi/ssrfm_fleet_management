@@ -9,8 +9,11 @@ interface HistoryItem {
   date: string;
   materialName: string;
   quantity: string;
-  value: string;
-  requestedBy: string;
+  purchaseValue: string;
+  previousMaterialValue: string;
+  perMeasureQuantity: string;
+  requestedValue: string;
+  currentValue: string;
   status: string;
   receivedQuantity?: string;
   receivedDate?: string;
@@ -22,13 +25,17 @@ interface HistoryViewProps {
   historyData: HistoryItem[];
   title?: string;
   requestId?: string;
+  materialName?: string;
+  location?: string;
 }
 
 export const HistoryView: React.FC<HistoryViewProps> = ({
   userRole,
   historyData,
   title,
-  requestId
+  requestId,
+  materialName,
+  location
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -57,7 +64,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <Building2 className="w-5 h-5 text-primary" />
-          {title || "Last 5 Approved Requests"}
+          {title || `Last 5 Material Received`}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -68,11 +75,8 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                 <TableRow className="bg-gray-50">
                   <TableHead className="font-semibold whitespace-nowrap">Purchase ID</TableHead>
                   <TableHead className="font-semibold whitespace-nowrap">Purchased Date</TableHead>
-                  <TableHead className="font-semibold whitespace-nowrap">Materials</TableHead>
-                  <TableHead className="font-semibold whitespace-nowrap">Quantity</TableHead>
-                  <TableHead className="font-semibold whitespace-nowrap">Total Value</TableHead>
-                  <TableHead className="font-semibold whitespace-nowrap">Requested By</TableHead>
-                  <TableHead className="font-semibold whitespace-nowrap">Status</TableHead>
+                  <TableHead className="font-semibold whitespace-nowrap">Purchase Value</TableHead>
+                  <TableHead className="font-semibold whitespace-nowrap">Requested Value</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -85,23 +89,11 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                         <span>{item.date}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="font-medium">{item.materialName}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell className="font-medium">{item.value}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <User className="w-3 h-3 text-muted-foreground" />
-                        <span>{item.requestedBy}</span>
-                      </div>
+                    <TableCell className="font-medium">
+                      {item.purchaseValue} - ({item.previousMaterialValue} per {item.perMeasureQuantity})
                     </TableCell>
-                    <TableCell>
-                      <Badge className={`${getStatusColor(item.status)} border`}>
-                        <span className="flex items-center gap-1">
-                          {getStatusIcon(item.status)}
-                          <span className="text-xs">{item.status.replace('_', ' ').toUpperCase()}</span>
-                        </span>
-                      </Badge>
-                    </TableCell>
+                   
+                    <TableCell className="font-medium">{item.requestedValue} ({item.currentValue})</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -110,8 +102,8 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No approved requests found</p>
-            <p className="text-sm">Recent approvals will appear here</p>
+            <p>No material receipts found</p>
+            <p className="text-sm">Recent material receipts for {materialName || 'this material'} will appear here</p>
           </div>
         )}
       </CardContent>
@@ -123,7 +115,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <Package className="w-5 h-5 text-primary" />
-          {title || "Receipt History"}
+          {title || `Last 5 Material Received - ${materialName || 'Material'} (${location || 'Location'})`}
           {requestId && <Badge variant="secondary">{requestId}</Badge>}
         </CardTitle>
       </CardHeader>
@@ -140,28 +132,19 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                         <div className="font-semibold">{item.materialName}</div>
                       </div>
                       <div>
-                        <div className="text-sm text-muted-foreground">Status</div>
-                        <Badge className={`${getStatusColor(item.status)} border mt-1`}>
-                          <span className="flex items-center gap-1">
-                            {getStatusIcon(item.status)}
-                            <span className="text-xs">{item.status.replace('_', ' ').toUpperCase()}</span>
-                          </span>
-                        </Badge>
+                        <div className="text-sm text-muted-foreground">Purchase Value</div>
+                        <div className="font-medium">
+                          {item.purchaseValue} - ({item.previousMaterialValue} per {item.perMeasureQuantity})
+                        </div>
                       </div>
                     </div>
                     
                     <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm text-muted-foreground">Ordered Quantity</div>
-                          <div className="font-medium">{item.quantity}</div>
-                        </div>
-                        {item.receivedQuantity && (
-                          <div>
-                            <div className="text-sm text-muted-foreground">Received Quantity</div>
-                            <div className="font-medium text-primary">{item.receivedQuantity}</div>
-                          </div>
-                        )}
+                     
+                      
+                      <div>
+                        <div className="text-sm text-muted-foreground">Requested Value</div>
+                        <div className="font-medium text-primary">{item.requestedValue} ({item.currentValue})</div>
                       </div>
                       
                       {item.receivedDate && (
@@ -191,8 +174,8 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No receipt history found</p>
-            <p className="text-sm">Material receipts will appear here</p>
+            <p>No material receipts found</p>
+            <p className="text-sm">Material receipts for {materialName || 'this material'} will appear here</p>
           </div>
         )}
       </CardContent>

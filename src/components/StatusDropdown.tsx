@@ -52,12 +52,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
       icon: <RotateCcw className="w-4 h-4" />,
       requiresAdditionalData: true
     },
-    {
-      value: 'rejected',
-      label: 'Rejected',
-      icon: <XCircle className="w-4 h-4" />,
-      requiresAdditionalData: true
-    }
+   
   ];
 
   const getSupervisorStatusOptions = (): StatusOption[] => {

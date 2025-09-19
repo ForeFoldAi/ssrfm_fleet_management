@@ -95,7 +95,7 @@ export const VendorQuotationSelector: React.FC<VendorQuotationSelectorProps> = (
                             {/* Price */}
                             <div className="flex items-center justify-center">
                               <div className="text-center">
-                                <div className="text-sm text-muted-foreground">Quoted Price</div>
+                                <div className="text-sm text-muted-foreground">Total Quotation Amount </div>
                                 <div className="text-xl font-bold text-primary">
                                   {quotation.quotedPrice}
                                 </div>

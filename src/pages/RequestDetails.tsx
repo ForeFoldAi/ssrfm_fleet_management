@@ -110,11 +110,11 @@ const RequestDetails: React.FC = () => {
         };
 
         const mockRequestData: RequestData = {
-          id: decodedRequestId || 'SSRFM/UNITI/R-250120001',
+          id: decodedRequestId || 'SSRFM/unit-I/I-250120001',
           requestedBy: 'John Martinez',
-          location: parseLocationFromId(decodedRequestId || 'SSRFM/UNITI/R-250120001'), // Use utility function
+          location: parseLocationFromId(decodedRequestId || 'SSRFM/unit-I/I-250120001'), // Use utility function
           date: '2024-01-20',
-          status: getStatusFromRequestId(decodedRequestId || 'SSRFM/UNITI/R-250120001'), // ✅ Dynamic status
+          status: getStatusFromRequestId(decodedRequestId || 'SSRFM/unit-I/I-250120001'), // ✅ Dynamic status
           items: [
             {
               id: '1',
@@ -436,7 +436,7 @@ const RequestDetails: React.FC = () => {
       // Return last 5 approved requests (mock data)
       return [
         {
-          id: 'SSRFM/UNITI/R-250115004',
+          id: 'SSRFM/unit-I/I-250115004',
           date: '2024-01-15',
           materialName: 'Conveyor Belts',
           quantity: '25 meters',
@@ -446,7 +446,7 @@ const RequestDetails: React.FC = () => {
           status: 'approved'
         },
         {
-          id: 'SSRFM/UNITII/R-250114005',
+          id: 'SSRFM/unit-II/I-250114005',
           date: '2024-01-14',
           materialName: 'Air Filters',
           quantity: '12 pieces',
@@ -456,7 +456,7 @@ const RequestDetails: React.FC = () => {
           status: 'approved'
         },
         {
-          id: 'SSRFM/UNITI/R-250108008',
+          id: 'SSRFM/unit-I/I-250108008',
           date: '2024-01-08',
           materialName: 'Industrial Lubricants',
           quantity: '20 cartridges',
@@ -466,7 +466,7 @@ const RequestDetails: React.FC = () => {
           status: 'material_received'
         },
         {
-          id: 'SSRFM/UNITII/R-250107009',
+          id: 'SSRFM/unit-II/I-250107009',
           date: '2024-01-07',
           materialName: 'Safety Gloves',
           quantity: '50 pairs',
@@ -476,7 +476,7 @@ const RequestDetails: React.FC = () => {
           status: 'material_received'
         },
         {
-          id: 'SSRFM/UNITIII/R-250102014',
+          id: 'SSRFM/unit-III/I-250102014',
           date: '2024-01-02',
           materialName: 'Safety Equipment',
           quantity: '25 sets',

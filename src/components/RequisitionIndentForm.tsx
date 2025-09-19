@@ -433,7 +433,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                       <TableHead className="border-r font-semibold">Vendor Name</TableHead>
                       <TableHead className="border-r font-semibold">Contact Person</TableHead>
                       <TableHead className="border-r font-semibold">Phone</TableHead>
-                      <TableHead className="border-r font-semibold">Quoted Price</TableHead>
+                      <TableHead className="border-r font-semibold">Total Quotation Amount </TableHead>
                       <TableHead className="border-r font-semibold">Notes</TableHead>
                       <TableHead className="border-r font-semibold">File</TableHead>
                       <TableHead className="font-semibold">Actions</TableHead>
@@ -516,12 +516,12 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="quotedPrice" className="text-sm font-medium">Quoted Price *</Label>
+                  <Label htmlFor="quotedPrice" className="text-sm font-medium">Total Quotation Amount*</Label>
                   <Input
                     id="quotedPrice"
                     value={vendorFormData.quotedPrice}
                     onChange={(e) => handleVendorFormChange("quotedPrice", e.target.value)}
-                    placeholder="Enter quoted price"
+                    placeholder="Enter Total Quotation Amount"
                     className="h-10 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-md text-sm transition-all duration-200"
                   />
                 </div>

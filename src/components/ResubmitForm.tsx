@@ -617,12 +617,12 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="quotedPrice" className="text-sm font-medium">Quoted Price *</Label>
+                  <Label htmlFor="quotedPrice" className="text-sm font-medium">Total Quotation Amount *</Label>
                   <Input
                     id="quotedPrice"
                     value={vendorFormData.quotedPrice}
                     onChange={(e) => handleVendorFormChange("quotedPrice", e.target.value)}
-                    placeholder="Enter quoted price"
+                    placeholder="Enter Total Quotation Amount"
                     className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
                   />
                 </div>

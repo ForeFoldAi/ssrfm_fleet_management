@@ -288,7 +288,7 @@ export const MaterialOrderBookTab = () => {
   // Update allRequests to include unit information
   const [allRequests, setAllRequests] = useState([
     {
-      id: "SSRFM/UNITI/R-250120001",
+      id: "SSRFM/unit-I/I-250120001",
       materialName: "Industrial Bearings",
       specifications: "SKF Deep Grove Ball Bearing 6205-2RS, Inner Dia: 25mm, Outer Dia: 52mm, Sealed Design",
       maker: "SKF",
@@ -313,7 +313,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 1"
     },
     {
-      id: "SSRFM/UNITII/R-250119002",
+      id: "SSRFM/unit-II/I-250119002",
       materialName: "Hydraulic Oil",
       specifications: "ISO VG 46 Hydraulic Oil, Anti-wear properties, 20L container",
       maker: "Shell",
@@ -338,7 +338,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 2"
     },
     {
-      id: "SSRFM/UNITIII/R-250118003",
+      id: "SSRFM/unit-III/I-250118003",
       materialName: "Safety Sensors",
       specifications: "Proximity Sensors M18, PNP Output, 8mm sensing distance, IP67 rated",
       maker: "Omron",
@@ -363,7 +363,7 @@ export const MaterialOrderBookTab = () => {
 
     // Approved Requests
     {
-      id: "SSRFM/UNITI/R-250115004",
+      id: "SSRFM/unit-I/I-250115004",
       materialName: "Conveyor Belts",
       specifications: "Rubber Conveyor Belt, Width: 800mm, Length: 25m, Food Grade, Heat Resistant",
       maker: "Continental Belting",
@@ -389,7 +389,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 1"
     },
     {
-      id: "SSRFM/UNITII/R-250114005",
+      id: "SSRFM/unit-II/I-250114005",
       materialName: "Air Filters",
       specifications: "HEPA Air Filters, 610x610x292mm, 99.97% efficiency, Aluminum frame",
       maker: "Camfil",
@@ -416,7 +416,7 @@ export const MaterialOrderBookTab = () => {
 
     // Partially Received Requests
     {
-      id: "SSRFM/UNITI/R-250112006",
+      id: "SSRFM/unit-I/I-250112006",
       materialName: "Steel Bolts",
       specifications: "M12x50mm Hex Head Bolts, Grade 8.8, Zinc Plated",
       maker: "Fastener Industries",
@@ -449,7 +449,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 1"
     },
     {
-      id: "SSRFM/UNITII/R-250111007",
+      id: "SSRFM/unit-II/I-250111007",
       materialName: "Electrical Cables",
       specifications: "3 Core Copper Cable, 2.5mm², PVC Insulated, IS 694 Standard",
       maker: "Havells",
@@ -484,7 +484,7 @@ export const MaterialOrderBookTab = () => {
 
     // Material Received (Complete) Requests
     {
-      id: "SSRFM/UNITI/R-250108008",
+      id: "SSRFM/unit-I/I-250108008",
       materialName: "Industrial Lubricants",
       specifications: "Multi-purpose Lithium Grease, High Temperature Grade, 400g Cartridges",
       maker: "Mobil",
@@ -517,7 +517,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 1"
     },
     {
-      id: "SSRFM/UNITII/R-250107009",
+      id: "SSRFM/unit-II/I-250107009",
       materialName: "Safety Gloves",
       specifications: "Cut Resistant Gloves, Level 5 Protection, Nitrile Coated Palm",
       maker: "Ansell",
@@ -552,7 +552,7 @@ export const MaterialOrderBookTab = () => {
 
     // Ordered Requests
     {
-      id: "SSRFM/UNITIII/R-250110010",
+      id: "SSRFM/unit-III/I-250110010",
       materialName: "Motor Oil",
       specifications: "SAE 20W-50 Heavy Duty Motor Oil, API CF-4/SG Grade, Synthetic blend",
       maker: "Castrol",
@@ -581,7 +581,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 3"
     },
     {
-      id: "SSRFM/UNITIV/R-250109011",
+      id: "SSRFM/unit-IV/I-250109011",
       materialName: "Grinding Wheels",
       specifications: "Aluminum Oxide Grinding Wheel, 350mm diameter, 40mm width, 32mm bore",
       maker: "Norton",
@@ -612,7 +612,7 @@ export const MaterialOrderBookTab = () => {
 
     // Issued Requests
     {
-      id: "SSRFM/UNITI/R-250105012",
+      id: "SSRFM/unit-I/I-250105012",
       materialName: "Grinding Stones",
       specifications: "Natural Grinding Stone, Diameter: 1200mm, Thickness: 150mm, Premium Grade",
       maker: "Stone Craft Industries",
@@ -642,7 +642,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 1"
     },
     {
-      id: "SSRFM/UNITII/R-250104013",
+      id: "SSRFM/unit-II/I-250104013",
       materialName: "Industrial Lubricants",
       specifications: "Multi-purpose Industrial Grease, Lithium based, High temperature grade",
       maker: "Mobil",
@@ -673,7 +673,7 @@ export const MaterialOrderBookTab = () => {
 
     // Completed Requests
     {
-      id: "SSRFM/UNITIII/R-250102014",
+      id: "SSRFM/unit-III/I-250102014",
       materialName: "Safety Equipment",
       specifications: "Safety Helmets Class A, Safety Goggles, Work Gloves, High-vis vests - Complete PPE Set",
       maker: "3M Safety",
@@ -705,7 +705,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 3"
     },
     {
-      id: "SSRFM/UNITIV/R-250101015",
+      id: "SSRFM/unit-IV/I-250101015",
       materialName: "Electrical Components",
       specifications: "Circuit Breakers 32A, Contactors 25A, Cable glands M20, Terminal blocks",
       maker: "Schneider Electric",
@@ -738,7 +738,7 @@ export const MaterialOrderBookTab = () => {
 
     // Reverted Requests
     {
-      id: "SSRFM/UNITI/R-250116016",
+      id: "SSRFM/unit-I/I-250116016",
       materialName: "Industrial Pumps",
       specifications: "Centrifugal Pump, 5HP, 3 Phase, Cast Iron Body, 2 inch inlet/outlet",
       maker: "Kirloskar",
@@ -763,7 +763,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 1"
     },
     {
-      id: "SSRFM/UNITII/R-250114017",
+      id: "SSRFM/unit-II/I-250114017",
       materialName: "Electrical Transformers",
       specifications: "Step-down Transformer, 440V to 220V, 10KVA, Oil Cooled",
       maker: "Schneider Electric",
@@ -788,7 +788,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 2"
     },
     {
-      id: "SSRFM/UNITIII/R-250112018",
+      id: "SSRFM/unit-III/I-250112018",
       materialName: "Precision Measuring Tools",
       specifications: "Digital Calipers 0-150mm, Micrometer Set 0-25mm, Dial Indicators",
       maker: "Mitutoyo",
@@ -815,7 +815,7 @@ export const MaterialOrderBookTab = () => {
 
     // Rejected Requests
     {
-      id: "SSRFM/UNITIV/R-250108019",
+      id: "SSRFM/unit-IV/I-250108019",
       materialName: "Electrical Wires",
       specifications: "Copper Wire 2.5mm² XLPE Insulated, IS 694 Standard, Flame retardant",
       maker: "Havells",
@@ -842,7 +842,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 4"
     },
     {
-      id: "SSRFM/UNITI/R-250107020",
+      id: "SSRFM/unit-I/I-250107020",
       materialName: "Decorative Lighting",
       specifications: "LED Strip Lights, RGB, 5m length, Remote controlled",
       maker: "Philips",
@@ -1015,7 +1015,11 @@ export const MaterialOrderBookTab = () => {
         date: req.date,
         materialName: req.materialName,
         quantity: req.quantity,
-        value: req.value,
+        purchaseValue: req.value,
+        previousMaterialValue: '₹0', // Default value
+        perMeasureQuantity: '1', // Default value
+        requestedValue: req.value,
+        currentValue: req.value,
         requestedBy: req.requestedBy,
         status: req.status
       }));

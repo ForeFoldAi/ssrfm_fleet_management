@@ -64,14 +64,9 @@ export const CompanyOwnerRequestForm: React.FC<CompanyOwnerRequestFormProps> = (
         value: 'reverted',
         label: 'Revert',
         icon: <RotateCcw className="w-4 h-4" />,
-        description: 'Send back for corrections'
+       
       },
-      {
-        value: 'rejected',
-        label: 'Reject',
-        icon: <XCircle className="w-4 h-4" />,
-        description: 'Reject permanently'
-      }
+     
     ];
 
     if (hasVendorSelected) {
@@ -79,7 +74,7 @@ export const CompanyOwnerRequestForm: React.FC<CompanyOwnerRequestFormProps> = (
         value: 'approved',
         label: 'Approve',
         icon: <CheckCircle className="w-4 h-4" />,
-        description: 'Approve for procurement'
+       
       });
     }
 
@@ -250,7 +245,6 @@ export const CompanyOwnerRequestForm: React.FC<CompanyOwnerRequestFormProps> = (
                                 {option.icon}
                                 <div>
                                   <div className="font-medium">{option.label}</div>
-                                  <div className="text-xs text-muted-foreground">{option.description}</div>
                                 </div>
                               </div>
                             </SelectItem>
