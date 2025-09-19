@@ -42,7 +42,7 @@ export const Sidebar = () => {
       ],
       
       "company_owner": [
-        { to: "/approval-center", label: "Approval Center", icon: Shield, permission: "request:approve_unlimited" },
+        /* { to: "/approval-center", label: "Approval Center", icon: Shield, permission: "request:approve_unlimited" }, */
         { to: "/materials-inventory", label: "Materials Management", icon: Package, permission: "material:view" },
       ]
     };

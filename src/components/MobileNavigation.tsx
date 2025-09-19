@@ -78,12 +78,7 @@ export const MobileNavigation = () => {
         
       ],
       company_owner: [
-        { 
-          to: "/approvals",
-          label: "Approvals",
-          icon: CheckCircle,
-          permission: "request:approve_unlimited"
-        },
+       
         
         { 
           to: "/inventory", 

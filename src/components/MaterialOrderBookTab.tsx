@@ -14,6 +14,7 @@ import { RequestStatusManager } from "../components/RequestStatusManager";
 import { ResubmitForm } from "../components/ResubmitForm";
 import { useRequestWorkflow } from "../hooks/useRequestWorkflow";
 import { HistoryView } from "../components/HistoryView";
+import { generatePurchaseId, parseLocationFromId } from '../lib/utils';
 
 export const MaterialOrderBookTab = () => {
   const { currentUser } = useRole();
@@ -287,7 +288,7 @@ export const MaterialOrderBookTab = () => {
   // Update allRequests to include unit information
   const [allRequests, setAllRequests] = useState([
     {
-      id: "REQ-2024-301",
+      id: "SSRFM/UNITI/R-250120001",
       materialName: "Industrial Bearings",
       specifications: "SKF Deep Grove Ball Bearing 6205-2RS, Inner Dia: 25mm, Outer Dia: 52mm, Sealed Design",
       maker: "SKF",
@@ -312,7 +313,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 1"
     },
     {
-      id: "REQ-2024-302",
+      id: "SSRFM/UNITII/R-250119002",
       materialName: "Hydraulic Oil",
       specifications: "ISO VG 46 Hydraulic Oil, Anti-wear properties, 20L container",
       maker: "Shell",
@@ -337,7 +338,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 2"
     },
     {
-      id: "REQ-2024-303",
+      id: "SSRFM/UNITIII/R-250118003",
       materialName: "Safety Sensors",
       specifications: "Proximity Sensors M18, PNP Output, 8mm sensing distance, IP67 rated",
       maker: "Omron",
@@ -362,7 +363,7 @@ export const MaterialOrderBookTab = () => {
 
     // Approved Requests
     {
-      id: "REQ-2024-289",
+      id: "SSRFM/UNITI/R-250115004",
       materialName: "Conveyor Belts",
       specifications: "Rubber Conveyor Belt, Width: 800mm, Length: 25m, Food Grade, Heat Resistant",
       maker: "Continental Belting",
@@ -388,7 +389,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 1"
     },
     {
-      id: "REQ-2024-290",
+      id: "SSRFM/UNITII/R-250114005",
       materialName: "Air Filters",
       specifications: "HEPA Air Filters, 610x610x292mm, 99.97% efficiency, Aluminum frame",
       maker: "Camfil",
@@ -415,7 +416,7 @@ export const MaterialOrderBookTab = () => {
 
     // Partially Received Requests
     {
-      id: "REQ-2024-280",
+      id: "SSRFM/UNITI/R-250112006",
       materialName: "Steel Bolts",
       specifications: "M12x50mm Hex Head Bolts, Grade 8.8, Zinc Plated",
       maker: "Fastener Industries",
@@ -448,7 +449,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 1"
     },
     {
-      id: "REQ-2024-281",
+      id: "SSRFM/UNITII/R-250111007",
       materialName: "Electrical Cables",
       specifications: "3 Core Copper Cable, 2.5mm², PVC Insulated, IS 694 Standard",
       maker: "Havells",
@@ -483,7 +484,7 @@ export const MaterialOrderBookTab = () => {
 
     // Material Received (Complete) Requests
     {
-      id: "REQ-2024-270",
+      id: "SSRFM/UNITI/R-250108008",
       materialName: "Industrial Lubricants",
       specifications: "Multi-purpose Lithium Grease, High Temperature Grade, 400g Cartridges",
       maker: "Mobil",
@@ -516,7 +517,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 1"
     },
     {
-      id: "REQ-2024-271",
+      id: "SSRFM/UNITII/R-250107009",
       materialName: "Safety Gloves",
       specifications: "Cut Resistant Gloves, Level 5 Protection, Nitrile Coated Palm",
       maker: "Ansell",
@@ -551,7 +552,7 @@ export const MaterialOrderBookTab = () => {
 
     // Ordered Requests
     {
-      id: "REQ-2024-275",
+      id: "SSRFM/UNITIII/R-250110010",
       materialName: "Motor Oil",
       specifications: "SAE 20W-50 Heavy Duty Motor Oil, API CF-4/SG Grade, Synthetic blend",
       maker: "Castrol",
@@ -580,7 +581,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 3"
     },
     {
-      id: "REQ-2024-276",
+      id: "SSRFM/UNITIV/R-250109011",
       materialName: "Grinding Wheels",
       specifications: "Aluminum Oxide Grinding Wheel, 350mm diameter, 40mm width, 32mm bore",
       maker: "Norton",
@@ -611,7 +612,7 @@ export const MaterialOrderBookTab = () => {
 
     // Issued Requests
     {
-      id: "REQ-2024-260",
+      id: "SSRFM/UNITI/R-250105012",
       materialName: "Grinding Stones",
       specifications: "Natural Grinding Stone, Diameter: 1200mm, Thickness: 150mm, Premium Grade",
       maker: "Stone Craft Industries",
@@ -641,7 +642,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 1"
     },
     {
-      id: "REQ-2024-261",
+      id: "SSRFM/UNITII/R-250104013",
       materialName: "Industrial Lubricants",
       specifications: "Multi-purpose Industrial Grease, Lithium based, High temperature grade",
       maker: "Mobil",
@@ -672,7 +673,7 @@ export const MaterialOrderBookTab = () => {
 
     // Completed Requests
     {
-      id: "REQ-2024-245",
+      id: "SSRFM/UNITIII/R-250102014",
       materialName: "Safety Equipment",
       specifications: "Safety Helmets Class A, Safety Goggles, Work Gloves, High-vis vests - Complete PPE Set",
       maker: "3M Safety",
@@ -704,7 +705,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 3"
     },
     {
-      id: "REQ-2024-246",
+      id: "SSRFM/UNITIV/R-250101015",
       materialName: "Electrical Components",
       specifications: "Circuit Breakers 32A, Contactors 25A, Cable glands M20, Terminal blocks",
       maker: "Schneider Electric",
@@ -737,7 +738,7 @@ export const MaterialOrderBookTab = () => {
 
     // Reverted Requests
     {
-      id: "REQ-2024-295",
+      id: "SSRFM/UNITI/R-250116016",
       materialName: "Industrial Pumps",
       specifications: "Centrifugal Pump, 5HP, 3 Phase, Cast Iron Body, 2 inch inlet/outlet",
       maker: "Kirloskar",
@@ -762,7 +763,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 1"
     },
     {
-      id: "REQ-2024-296",
+      id: "SSRFM/UNITII/R-250114017",
       materialName: "Electrical Transformers",
       specifications: "Step-down Transformer, 440V to 220V, 10KVA, Oil Cooled",
       maker: "Schneider Electric",
@@ -787,7 +788,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 2"
     },
     {
-      id: "REQ-2024-297",
+      id: "SSRFM/UNITIII/R-250112018",
       materialName: "Precision Measuring Tools",
       specifications: "Digital Calipers 0-150mm, Micrometer Set 0-25mm, Dial Indicators",
       maker: "Mitutoyo",
@@ -814,7 +815,7 @@ export const MaterialOrderBookTab = () => {
 
     // Rejected Requests
     {
-      id: "REQ-2024-285",
+      id: "SSRFM/UNITIV/R-250108019",
       materialName: "Electrical Wires",
       specifications: "Copper Wire 2.5mm² XLPE Insulated, IS 694 Standard, Flame retardant",
       maker: "Havells",
@@ -841,7 +842,7 @@ export const MaterialOrderBookTab = () => {
       unitName: "SSRFM Unit 4"
     },
     {
-      id: "REQ-2024-286",
+      id: "SSRFM/UNITI/R-250107020",
       materialName: "Decorative Lighting",
       specifications: "LED Strip Lights, RGB, 5m length, Remote controlled",
       maker: "Philips",

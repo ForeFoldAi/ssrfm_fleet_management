@@ -11,6 +11,7 @@ import { SupervisorRequestForm } from '../components/SupervisorRequestForm';
 import { VendorQuotationSelector } from '../components/VendorQuotationSelector';
 import { StatusDropdown } from '../components/StatusDropdown';
 import { HistoryView } from '../components/HistoryView';
+import { generatePurchaseId, parseLocationFromId } from '../lib/utils';
 
 interface VendorQuotation {
   id: string;
@@ -93,31 +94,24 @@ const RequestDetails: React.FC = () => {
       setTimeout(() => {
         // Mock different request statuses based on requestId
         const getStatusFromRequestId = (id: string) => {
-          if (id === 'REQ-2024-289' || id === 'REQ-2024-290') return 'approved';
-          if (id === 'REQ-2024-280' || id === 'REQ-2024-281') return 'partially_received';
-          if (id === 'REQ-2024-270' || id === 'REQ-2024-271') return 'material_received';
-          if (id === 'REQ-2024-275' || id === 'REQ-2024-276') return 'ordered';
-          if (id === 'REQ-2024-260' || id === 'REQ-2024-261') return 'issued';
-          if (id === 'REQ-2024-245' || id === 'REQ-2024-246') return 'completed';
-          if (id === 'REQ-2024-295' || id === 'REQ-2024-296' || id === 'REQ-2024-297') return 'reverted';
-          if (id === 'REQ-2024-285' || id === 'REQ-2024-286') return 'rejected';
+          // Updated to use new ID format
+          if (id.includes('R-250115004') || id.includes('R-250114005')) return 'approved';
+          if (id.includes('R-250112006') || id.includes('R-250111007')) return 'partially_received';
+          if (id.includes('R-250108008') || id.includes('R-250107009')) return 'material_received';
+          if (id.includes('R-250110010') || id.includes('R-250109011')) return 'ordered';
+          if (id.includes('R-250105012') || id.includes('R-250104013')) return 'issued';
+          if (id.includes('R-250102014') || id.includes('R-250101015')) return 'completed';
+          if (id.includes('R-250116016') || id.includes('R-250114017') || id.includes('R-250112018')) return 'reverted';
+          if (id.includes('R-250108019') || id.includes('R-250107020')) return 'rejected';
           return 'pending_approval'; // Default for other requests
         };
 
-        const getLocationFromRequestId = (id: string) => {
-          if (id === 'REQ-2024-289' || id === 'REQ-2024-280' || id === 'REQ-2024-270' || id === 'REQ-2024-260' || id === 'REQ-2024-245' || id === 'REQ-2024-295' || id === 'REQ-2024-285') return 'Unit I';
-          if (id === 'REQ-2024-290' || id === 'REQ-2024-281' || id === 'REQ-2024-271' || id === 'REQ-2024-261' || id === 'REQ-2024-246' || id === 'REQ-2024-296' || id === 'REQ-2024-286') return 'Unit II';
-          if (id === 'REQ-2024-275' || id === 'REQ-2024-297') return 'Unit III';
-          if (id === 'REQ-2024-276') return 'Unit IV';
-          return 'Unit I'; // Default location
-        };
-
         const mockRequestData: RequestData = {
-          id: requestId || 'REQ-2024-001',
+          id: requestId || 'SSRFM/UNITI/R-250120001',
           requestedBy: 'John Martinez',
-          location: getLocationFromRequestId(requestId || 'REQ-2024-001'), // Changed from department
+          location: parseLocationFromId(requestId || 'SSRFM/UNITI/R-250120001'), // Use utility function
           date: '2024-01-20',
-          status: getStatusFromRequestId(requestId || 'REQ-2024-001'), // ✅ Dynamic status
+          status: getStatusFromRequestId(requestId || 'SSRFM/UNITI/R-250120001'), // ✅ Dynamic status
           items: [
             {
               id: '1',
@@ -439,14 +433,54 @@ const RequestDetails: React.FC = () => {
       // Return last 5 approved requests (mock data)
       return [
         {
-          id: 'REQ-2024-001',
+          id: 'SSRFM/UNITI/R-250115004',
           date: '2024-01-15',
-          materialName: 'Industrial Bearings',
-          quantity: '6 pieces',
-          value: '₹4,200',
+          materialName: 'Conveyor Belts',
+          quantity: '25 meters',
+          value: '₹32,500',
           requestedBy: 'John Martinez',
-          location: 'Unit I', // Changed from department
+          location: 'Unit I',
           status: 'approved'
+        },
+        {
+          id: 'SSRFM/UNITII/R-250114005',
+          date: '2024-01-14',
+          materialName: 'Air Filters',
+          quantity: '12 pieces',
+          value: '₹18,600',
+          requestedBy: 'Lisa Anderson',
+          location: 'Unit II',
+          status: 'approved'
+        },
+        {
+          id: 'SSRFM/UNITI/R-250108008',
+          date: '2024-01-08',
+          materialName: 'Industrial Lubricants',
+          quantity: '20 cartridges',
+          value: '₹4,800',
+          requestedBy: 'Sarah Wilson',
+          location: 'Unit I',
+          status: 'material_received'
+        },
+        {
+          id: 'SSRFM/UNITII/R-250107009',
+          date: '2024-01-07',
+          materialName: 'Safety Gloves',
+          quantity: '50 pairs',
+          value: '₹7,500',
+          requestedBy: 'John Martinez',
+          location: 'Unit II',
+          status: 'material_received'
+        },
+        {
+          id: 'SSRFM/UNITIII/R-250102014',
+          date: '2024-01-02',
+          materialName: 'Safety Equipment',
+          quantity: '25 sets',
+          value: '₹21,250',
+          requestedBy: 'John Martinez',
+          location: 'Unit III',
+          status: 'completed'
         }
       ];
     } else {

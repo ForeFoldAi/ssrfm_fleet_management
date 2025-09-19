@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Camera, X, Eye, Plus, Trash2, FileText, UserRoundPlus } from 'lucide-react';
 import { Label } from './ui/label';
 import { toast } from '../hooks/use-toast';
+import { generateSrNo } from '../lib/utils';
 
 interface RequestItem {
   id: string;
@@ -215,7 +216,16 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                 {requestData.items.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="border border-gray-300 text-center font-semibold">
-                      {String(item.srNo).padStart(2, '0')}
+                      {isReadOnly ? (
+                        generateSrNo(requestData.location, item.srNo)
+                      ) : (
+                        <Input
+                          type="text"
+                          value={generateSrNo(requestData.location, item.srNo)}
+                          readOnly
+                          className="border-0 focus:ring-0 focus:outline-none rounded-none bg-transparent"
+                        />
+                      )}
                     </TableCell>
                     <TableCell className="border border-gray-300">
                       {isReadOnly ? (
