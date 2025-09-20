@@ -1,9 +1,10 @@
+import authService from '@/lib/api/auth';
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-export type UserRole = 'site_supervisor' | 'inventory_manager' | 'company_owner';
+export type UserRole = 'supervisor' | 'inventory_manager' | 'company_owner';
 
 export interface User {
-  id: string;
+  id: number;
   name: string;
   email: string;
   role: UserRole;
@@ -32,40 +33,40 @@ export const useRole = () => {
 
 // Demo users for different roles
 const DEMO_USERS: Record<UserRole, User> = {
-  site_supervisor: {
-    id: '1',
+  supervisor: {
+    id: 1,
     name: 'John Martinez',
     email: 'john.martinez@ssrfm.com',
-    role: 'site_supervisor',
+    role: 'supervisor',
     department: 'Production Floor A',
-    assignedMachines: ['Machine-101', 'Machine-102', 'Machine-105']
+    assignedMachines: ['Machine-101', 'Machine-102', 'Machine-105'],
   },
   inventory_manager: {
-    id: '2', 
+    id: 2,
     name: 'Sarah Chen',
     email: 'sarah.chen@ssrfm.com',
     role: 'inventory_manager',
-    department: 'Inventory Management'
+    department: 'Inventory Management',
   },
   company_owner: {
-    id: '3',
+    id: 3,
     name: 'Robert Williams',
     email: 'robert.williams@ssrfm.com',
     role: 'company_owner',
-    department: 'Executive Management'
-  }
+    department: 'Executive Management',
+  },
 };
 
 // Role-based permissions
 const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
-  site_supervisor: [
+  supervisor: [
     'request:create',
     'request:view_own',
     'request:edit_own',
     'request:cancel_own',
     'material:view',
     'machine:view',
-    'report:view_own'
+    'report:view_own',
   ],
   inventory_manager: [
     'request:create',
@@ -84,7 +85,7 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'audit:view',
     'report:generate',
     'stock:manage',
-    'inventory:manage'
+    'inventory:manage',
   ],
   company_owner: [
     'request:create',
@@ -94,7 +95,7 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'request:emergency_override',
     'request:cancel_own',
     'material:create',
-    'material:edit', 
+    'material:edit',
     'material:delete',
     'material:view',
     'machine:create',
@@ -113,13 +114,13 @@ const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     'approval:manage',
     'stock:manage',
     'inventory:manage',
-  ]
+  ],
 };
 
 // Get role-specific redirect path
 const getRoleRedirectPath = (role: UserRole) => {
   switch (role) {
-    case 'site_supervisor':
+    case 'supervisor':
       return '/materials-inventory';
     case 'inventory_manager':
       return '/';
@@ -130,7 +131,9 @@ const getRoleRedirectPath = (role: UserRole) => {
   }
 };
 
-export const RoleProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const RoleProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   // Start with no user - login required
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
@@ -141,7 +144,7 @@ export const RoleProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const switchRole = (role: UserRole, navigate?: (path: string) => void) => {
     setCurrentUser(DEMO_USERS[role]);
-    
+
     // Navigate to role-specific page if navigate function is provided
     if (navigate) {
       navigate(getRoleRedirectPath(role));
@@ -150,19 +153,20 @@ export const RoleProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     setCurrentUser(null);
+    authService.logout();
   };
 
   const isAuthenticated = currentUser !== null;
 
   return (
-    <RoleContext.Provider 
-      value={{ 
-        currentUser, 
-        setCurrentUser, 
-        hasPermission, 
+    <RoleContext.Provider
+      value={{
+        currentUser,
+        setCurrentUser,
+        hasPermission,
         switchRole,
         isAuthenticated,
-        logout
+        logout,
       }}
     >
       {children}
