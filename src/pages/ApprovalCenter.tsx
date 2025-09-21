@@ -12,7 +12,7 @@ import { toast } from "../hooks/use-toast";
 import { useRole } from "../contexts/RoleContext";
 
 const ApprovalCenter = () => {
-  const { currentUser } = useRole();
+  const { currentUser, hasPermission } = useRole();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDepartment, setFilterDepartment] = useState("all");
   const [filterUnit, setFilterUnit] = useState("all");
@@ -240,11 +240,11 @@ const ApprovalCenter = () => {
     
     // Unit filtering logic
     let matchesUnit = true;
-    if (currentUser?.role === 'company_owner') {
+    if (hasPermission('inventory:material-indents:read:all')) {
       matchesUnit = filterUnit === "all" || request.unit === filterUnit;
     } else {
-      // For supervisors, only show their unit's data
-      matchesUnit = request.unit === "unit-1"; // Assuming supervisor is from unit-1
+      // For non-global readers, restrict to a default/unit-specific scope (placeholder)
+      matchesUnit = request.unit === "unit-1";
     }
     
     return matchesSearch && matchesDepartment && matchesUnit;

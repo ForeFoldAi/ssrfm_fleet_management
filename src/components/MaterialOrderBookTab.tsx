@@ -62,7 +62,7 @@ import { HistoryView } from '../components/HistoryView';
 import { generatePurchaseId, parseLocationFromId } from '../lib/utils';
 
 export const MaterialOrderBookTab = () => {
-  const { currentUser } = useRole();
+  const { currentUser, hasPermission } = useRole();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -1096,8 +1096,8 @@ export const MaterialOrderBookTab = () => {
     console.log('Resubmitting request:', requestData);
   };
 
-  // Role-based filtering function
-  const getFilteredRequestsByRole = () => {
+  // Permission-based filtering function
+  const getFilteredRequests = () => {
     let baseFilter = allRequests.filter((request) => {
       const matchesSearch =
         request.materialName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1110,31 +1110,27 @@ export const MaterialOrderBookTab = () => {
 
       // Unit filtering logic
       let matchesUnit = true;
-      if (currentUser?.role === 'company_owner') {
+      if (hasPermission('inventory:material-indents:read:all')) {
         matchesUnit = filterUnit === 'all' || request.unit === filterUnit;
       } else {
-        // For supervisors, only show their unit's data
-        matchesUnit = request.unit === 'unit-1'; // Assuming supervisor is from unit-1
+        // For non-global readers, restrict to a default/unit-specific scope (placeholder)
+        matchesUnit = request.unit === 'unit-1';
       }
 
       return matchesSearch && matchesStatus && matchesPriority && matchesUnit;
     });
 
-    // Role-based status filtering
-    if (currentUser?.role === 'company_owner') {
-      // Owner should only see: Pending Approval, Approved, Reverted
+    // Owner-like users: restrict to most relevant statuses in this view
+    if (hasPermission('inventory:material-indents:approve') || hasPermission('inventory:material-indents:read:all')) {
       return baseFilter.filter((request) =>
         ['pending_approval', 'approved', 'reverted'].includes(request.status)
       );
-    } else if (currentUser?.role === 'supervisor') {
-      // Supervisor can see all statuses but with different actions
-      return baseFilter;
     }
 
     return baseFilter;
   };
 
-  const filteredRequests = getFilteredRequestsByRole();
+  const filteredRequests = getFilteredRequests();
 
   // Get last 5 approved requests for Company Owner
   const getApprovedHistory = () => {
@@ -1671,8 +1667,8 @@ export const MaterialOrderBookTab = () => {
                             </Button>
 
                             {/* Status Management Button */}
-                            {(currentUser?.role === 'company_owner' ||
-                              currentUser?.role === 'supervisor') && (
+                            {(hasPermission('inventory:material-indents:approve') ||
+                              hasPermission('inventory:material-indents:update')) && (
                               <Button
                                 variant='outline'
                                 className='gap-2 rounded-lg'
@@ -1864,8 +1860,8 @@ export const MaterialOrderBookTab = () => {
             </div>
           </div>
 
-          {/* Unit Filter - Only for Company Owner */}
-          {currentUser?.role === 'company_owner' && (
+          {/* Unit Filter - Only for users with global read */}
+          {hasPermission('inventory:material-indents:read:all') && (
             <Select value={filterUnit} onValueChange={setFilterUnit}>
               <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
                 <SelectValue placeholder='Select Unit' />
@@ -2002,8 +1998,8 @@ export const MaterialOrderBookTab = () => {
         />
       )}
 
-      {/* Company Owner History Section */}
-      {currentUser?.role === 'company_owner' && (
+      {/* Owner-like History Section */}
+      {(hasPermission('inventory:material-indents:approve') || hasPermission('inventory:material-indents:read:all')) && (
         <div className='mt-8'>
           <HistoryView
             userRole='company_owner'

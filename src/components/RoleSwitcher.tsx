@@ -19,33 +19,48 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const ROLE_CONFIG = {
-  supervisor: {
+// Compute display labels based on permissions (not roles)
+const getDisplayConfig = (hasPermission: (p: string) => boolean) => {
+  // Owner-like
+  if (hasPermission('inventory:material-indents:approve')) {
+    return {
+      label: 'Company Owner',
+      icon: User,
+      color: 'bg-purple-500',
+      description: 'Full Business Control',
+    } as const;
+  }
+
+  // Inventory manager-like
+  if (
+    hasPermission('inventory:materials:read') &&
+    (hasPermission('inventory:materials:create') ||
+      hasPermission('inventory:materials:update') ||
+      hasPermission('inventory:materials:delete'))
+  ) {
+    return {
+      label: 'Inventory Manager',
+      icon: Settings,
+      color: 'bg-accent',
+      description: 'Inventory & Approvals',
+    } as const;
+  }
+
+  // Default
+  return {
     label: 'Site Supervisor',
     icon: User,
     color: 'bg-secondary/100',
     description: 'Operations & Requests',
-  },
-  inventory_manager: {
-    label: 'Inventory Manager',
-    icon: Settings,
-    color: 'bg-accent',
-    description: 'Inventory & Approvals',
-  },
-  company_owner: {
-    label: 'Company Owner',
-    icon: User,
-    color: 'bg-purple-500',
-    description: 'Full Business Control',
-  },
+  } as const;
 };
 
 export const RoleSwitcher = () => {
-  const { currentUser, logout } = useRole();
+  const { currentUser, hasPermission, logout } = useRole();
 
   if (!currentUser) return null;
 
-  const currentConfig = ROLE_CONFIG[currentUser.role];
+  const currentConfig = getDisplayConfig(hasPermission);
   const CurrentIcon = currentConfig.icon;
 
   const handleLogout = () => {

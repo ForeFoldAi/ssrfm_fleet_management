@@ -12,7 +12,7 @@ import { toast } from "../hooks/use-toast";
 import { useRole } from "../contexts/RoleContext";
 
 export const MaterialIssuesTab = () => {
-  const { currentUser } = useRole();
+  const { currentUser, hasPermission } = useRole();
   const [viewMode, setViewMode] = useState<"table" | "list">("table");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterUnit, setFilterUnit] = useState("all");
@@ -200,11 +200,11 @@ export const MaterialIssuesTab = () => {
 
     // Unit filtering logic
     let matchesUnit = true;
-    if (currentUser?.role === 'company_owner') {
+    if (hasPermission('inventory:material-indents:read:all')) {
       matchesUnit = filterUnit === "all" || issue.unit === filterUnit;
     } else {
-      // For supervisors, only show their unit's data
-      matchesUnit = issue.unit === "unit-1"; // Assuming supervisor is from unit-1
+      // For non-global readers, restrict to a default/unit-specific scope (placeholder)
+      matchesUnit = issue.unit === "unit-1";
     }
 
     return matchesSearch && matchesUnit;

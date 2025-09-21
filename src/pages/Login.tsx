@@ -11,7 +11,7 @@ import {
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Package, User, Settings, Shield } from 'lucide-react';
-import { useRole, UserRole } from '../contexts/RoleContext';
+import { useRole, UserRole, deriveUserRole } from '../contexts/RoleContext';
 import { toast } from '../hooks/use-toast';
 import { authService } from '../lib/api/auth';
 
@@ -54,32 +54,42 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // const user = DEMO_USERS.find(u => u.email === email && u.password === password);
 
-    // if (user) {
-    const user = (await authService.login({ email, password })).user;
-    const roles = authService.getRoles();
-    const permissions = authService.getPermissions();
-    setCurrentUser({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: roles[0] as UserRole,
-      department: user.branch.name,
-    });
-    toast({
-      title: 'Login Successful',
-      description: `Welcome back, ${user.name}!`,
-    });
-    console.log(roles, permissions);
-    navigate(getRoleRedirectPath(roles[0] as UserRole));
-    // } else {
-    toast({
-      title: 'Login Failed',
-      description: 'Invalid credentials',
-      variant: 'destructive',
-    });
-    // }
+    try {
+      const apiResp = await authService.login({ email, password });
+      const apiUser = apiResp.user;
+      const permissions = authService.getPermissions();
+
+      // Derive a legacy label for UI only
+      const derivedRole = deriveUserRole(permissions) as UserRole;
+
+      // Update context user
+      setCurrentUser({
+        id: apiUser.id,
+        name: apiUser.name,
+        email: apiUser.email,
+        role: derivedRole,
+        department: apiUser.branch?.name,
+      });
+
+      // Notify app to refresh permission state
+      window.dispatchEvent(new Event('auth:updated'));
+
+      toast({
+        title: 'Login Successful',
+        description: `Welcome back, ${apiUser?.name || 'User'}!`,
+      });
+
+      // Redirect
+      const redirectPath = derivedRole === 'supervisor' ? '/materials-inventory' : '/';
+      navigate(redirectPath);
+    } catch (err) {
+      toast({
+        title: 'Login Failed',
+        description: 'Invalid credentials',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDemoLogin = (user: (typeof DEMO_USERS)[0]) => {

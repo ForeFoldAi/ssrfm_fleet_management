@@ -36,29 +36,31 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Role-based Home Redirect Component
 const RoleBasedHome = () => {
-  const { currentUser } = useRole();
+  const { currentUser, hasPermission } = useRole();
 
   if (!currentUser) {
     return <Navigate to='/login' replace />;
   }
 
-  // Redirect supervisors to stock register
-  if (currentUser.role === 'supervisor') {
+  const isOwnerLike = hasPermission('inventory:material-indents:approve');
+
+  if (!isOwnerLike && hasPermission('inventory:materials:read')) {
     return <Navigate to='/materials-inventory' replace />;
   }
 
-  // Other roles go to dashboard
   return <Dashboard />;
 };
 
 const AppRoutes = () => {
-  const { isAuthenticated, currentUser } = useRole();
+  const { isAuthenticated, currentUser, hasPermission } = useRole();
 
-  // Handle login redirect based on role
+  // Handle login redirect based on permissions
   const getLoginRedirect = () => {
     if (!currentUser) return '/';
 
-    if (currentUser.role === 'supervisor') {
+    const isOwnerLike = hasPermission('inventory:material-indents:approve');
+
+    if (!isOwnerLike && hasPermission('inventory:materials:read')) {
       return '/materials-inventory';
     }
 

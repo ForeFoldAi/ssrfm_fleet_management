@@ -52,7 +52,7 @@ export const RequestStatusManager = ({
   isOpen,
   onClose,
 }: RequestStatusManagerProps) => {
-  const { currentUser } = useRole();
+  const { currentUser, hasPermission } = useRole();
   const [action, setAction] = useState<
     'approve' | 'revert' | 'update_received' | null
   >(null);
@@ -68,11 +68,11 @@ export const RequestStatusManager = ({
   });
   const [isPartialReceipt, setIsPartialReceipt] = useState(false);
 
-  const canApprove = currentUser?.role === 'company_owner';
+  const canApprove = hasPermission('inventory:material-indents:approve');
   const canUpdateToOrdered =
-    currentUser?.role === 'supervisor' && request.status === 'approved';
+    hasPermission('inventory:material-indents:update') && request.status === 'approved';
   const canUpdateReceived =
-    currentUser?.role === 'supervisor' &&
+    hasPermission('inventory:material-indents:update') &&
     (request.status === 'ordered' || request.status === 'partially_received');
 
   const handleOwnerApproval = () => {
@@ -725,7 +725,7 @@ export const RequestStatusManager = ({
                         <strong>Reason:</strong> {request.revertReason}
                       </div>
                     )}
-                    {currentUser?.role === 'supervisor' && (
+                    {hasPermission('inventory:material-indents:update') && (
                       <div className='mt-3'>
                         <Button
                           onClick={onClose}

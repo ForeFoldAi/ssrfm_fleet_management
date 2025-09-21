@@ -32,11 +32,11 @@ export const MobileNavigation = () => {
     navigate('/login');
   };
 
-  // Get role-specific navigation items
+  // Build nav items by permissions (not roles)
   const getNavigationItems = () => {
     const userRole = currentUser?.role;
 
-    // Dashboard item - exclude for supervisor role
+    // Dashboard item - exclude for supervisor-like users
     const baseItems =
       userRole !== 'supervisor'
         ? [
@@ -49,71 +49,31 @@ export const MobileNavigation = () => {
           ]
         : [];
 
-    const roleSpecificItems = {
-      supervisor: [
-        {
-          to: '/materials',
-          label: 'Materials Management',
-          icon: Package,
-          permission: 'material:view',
-        },
-        {
-          to: '/my-requests',
-          label: 'Purchased Material',
-          icon: ShoppingBasket,
-          permission: 'request:view_own',
-        },
-      ],
-      inventory_manager: [
-        {
-          to: '/requests',
-          label: 'Requests',
-          icon: List,
-          permission: 'request:view_all',
-        },
-        {
-          to: '/materials',
-          label: 'Materials Management',
-          icon: Package,
-          permission: 'material:view',
-        },
-      ],
-      company_owner: [
-        {
-          to: '/inventory',
-          label: 'Materials Management',
-          icon: Package,
-          permission: 'material:view',
-        },
-      ],
-      system_administrator: [
-        {
-          to: '/requests',
-          label: 'Requests',
-          icon: List,
-          permission: 'request:view_all',
-        },
-        {
-          to: '/materials',
-          label: 'Materials',
-          icon: Package,
-          permission: 'material:view',
-        },
-        {
-          to: '/stock',
-          label: 'Stock',
-          icon: BarChart3,
-          permission: 'material:view',
-        },
-      ],
-    };
+    const items = [
+      {
+        to: '/materials-inventory',
+        label: 'Materials',
+        icon: Package,
+        permission: 'inventory:materials:read',
+      },
+      {
+        to: '/requests-list',
+        label: 'Requests',
+        icon: List,
+        permission: 'inventory:material-indents:read',
+      },
+      // Example: include a purchases entry when needed
+      // {
+      //   to: '/purchases',
+      //   label: 'Purchases',
+      //   icon: ShoppingBasket,
+      //   permission: 'inventory:material-purchases:read',
+      // },
+    ];
 
-    if (!userRole) return baseItems;
-
-    const roleItems = roleSpecificItems[userRole] || [];
     return [
       ...baseItems,
-      ...roleItems.filter(
+      ...items.filter(
         (item) => item.permission === null || hasPermission(item.permission)
       ),
     ];

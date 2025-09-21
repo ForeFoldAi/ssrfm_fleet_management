@@ -25,7 +25,7 @@ import { useRole } from '../contexts/RoleContext';
 import { toast } from '../hooks/use-toast';
 
 const Profile = () => {
-  const { currentUser } = useRole();
+  const { currentUser, hasPermission } = useRole();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: currentUser?.name || '',
@@ -39,25 +39,35 @@ const Profile = () => {
     bio: 'Experienced site supervisor with 8+ years in industrial operations. Specialized in production line management and quality assurance.',
   });
 
-  const roleConfig = {
-    supervisor: {
+  // Compute display labels based on permissions (not roles)
+  const getDisplayConfig = () => {
+    if (hasPermission('inventory:material-indents:approve')) {
+      return {
+        label: 'Company Owner',
+        color: 'bg-purple-500',
+        description: 'Full Business Control & Strategy',
+      } as const;
+    }
+    if (
+      hasPermission('inventory:materials:read') &&
+      (hasPermission('inventory:materials:create') ||
+        hasPermission('inventory:materials:update') ||
+        hasPermission('inventory:materials:delete'))
+    ) {
+      return {
+        label: 'Inventory Manager',
+        color: 'bg-orange-500',
+        description: 'Inventory & Approvals Management',
+      } as const;
+    }
+    return {
       label: 'Site Supervisor',
       color: 'bg-secondary/100',
       description: 'Operations & Requests Management',
-    },
-    inventory_manager: {
-      label: 'Inventory Manager',
-      color: 'bg-orange-500',
-      description: 'Inventory & Approvals Management',
-    },
-    company_owner: {
-      label: 'Company Owner',
-      color: 'bg-purple-500',
-      description: 'Full Business Control & Strategy',
-    },
+    } as const;
   };
 
-  const currentRoleConfig = roleConfig[currentUser?.role || 'supervisor'];
+  const currentRoleConfig = getDisplayConfig();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

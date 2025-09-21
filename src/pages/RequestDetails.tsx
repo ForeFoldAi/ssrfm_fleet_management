@@ -57,7 +57,7 @@ interface RequestData {
 const RequestDetails: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
-  const { currentUser } = useRole();
+  const { currentUser, hasPermission } = useRole();
 
   // Decode the requestId to handle URL encoded characters
   const decodedRequestId = requestId ? decodeURIComponent(requestId) : null;
@@ -444,28 +444,26 @@ const RequestDetails: React.FC = () => {
   };
 
   const canEdit = () => {
-    if (!currentUser || !requestData) return false;
+    if (!requestData) return false;
 
-    if (currentUser.role === 'company_owner') {
-      return false; // Owner can't edit, only approve/reject/revert
-    }
+    // Require update permission
+    if (!hasPermission('inventory:material-indents:update')) return false;
 
-    if (currentUser.role === 'supervisor') {
-      // Can only edit reverted requests
-      return requestData.status === 'reverted';
-    }
+    // Approvers don't edit in this flow
+    if (hasPermission('inventory:material-indents:approve')) return false;
 
-    return false;
+    // Only allow editing for reverted requests
+    return requestData.status === 'reverted';
   };
 
   const isReadOnly = () => {
-    if (!currentUser || !requestData) return true;
+    if (!requestData) return true;
 
-    if (currentUser.role === 'company_owner') {
-      return true; // Always read-only for owner
+    if (hasPermission('inventory:material-indents:approve')) {
+      return true; // Always read-only for approvers here
     }
 
-    if (currentUser.role === 'supervisor') {
+    if (hasPermission('inventory:material-indents:update')) {
       // Only allow editing for reverted requests, read-only for all others
       return requestData.status !== 'reverted';
     }
@@ -475,20 +473,20 @@ const RequestDetails: React.FC = () => {
 
   const shouldShowVendorSelector = () => {
     return (
-      currentUser?.role === 'company_owner' &&
+      hasPermission('inventory:material-indents:select-quotation') &&
       requestData?.status === 'pending_approval' &&
       requestData.items.some((item) => item.vendorQuotations.length > 0)
     );
   };
 
   const shouldShowStatusDropdown = () => {
-    if (!currentUser || !requestData) return false;
+    if (!requestData) return false;
 
-    if (currentUser.role === 'company_owner') {
+    if (hasPermission('inventory:material-indents:approve')) {
       return requestData.status === 'pending_approval';
     }
 
-    if (currentUser.role === 'supervisor') {
+    if (hasPermission('inventory:material-indents:update')) {
       return ['approved', 'ordered', 'partially_received'].includes(
         requestData.status
       );
@@ -500,7 +498,7 @@ const RequestDetails: React.FC = () => {
   const getHistoryData = () => {
     if (!requestData) return [];
 
-    if (currentUser?.role === 'company_owner') {
+    if (hasPermission('inventory:material-indents:read:all')) {
       // Return last 5 approved requests (mock data)
       return [
         {
@@ -608,7 +606,7 @@ const RequestDetails: React.FC = () => {
               Request Details
             </h1>
             <p className='text-muted-foreground'>
-              {currentUser?.role === 'company_owner'
+              {hasPermission('inventory:material-indents:approve')
                 ? 'Review and approve request'
                 : 'Manage request status'}
             </p>
@@ -631,10 +629,10 @@ const RequestDetails: React.FC = () => {
           )}
 
           {shouldShowStatusDropdown() &&
-            currentUser?.role !== 'company_owner' && (
+            !hasPermission('inventory:material-indents:approve') && (
               <StatusDropdown
                 currentStatus={requestData.status}
-                userRole={currentUser?.role as 'company_owner' | 'supervisor'}
+                userRole={hasPermission('inventory:material-indents:approve') ? 'company_owner' : 'supervisor'}
                 onStatusChange={handleStatusChange}
                 requestId={requestData.id}
                 hasVendorSelected={
@@ -644,7 +642,7 @@ const RequestDetails: React.FC = () => {
               />
             )}
 
-          {currentUser?.role === 'supervisor' &&
+          {hasPermission('inventory:material-indents:update') &&
             requestData.status === 'reverted' && (
               <Button onClick={handleResubmit} className='gap-2'>
                 <Package className='w-4 h-4' />
@@ -718,7 +716,7 @@ const RequestDetails: React.FC = () => {
 
         {/* History Section */}
         <HistoryView
-          userRole={currentUser?.role as 'company_owner' | 'supervisor'}
+          userRole={hasPermission('inventory:material-indents:approve') ? 'company_owner' : 'supervisor'}
           historyData={getHistoryData()}
           requestId={requestData.id}
         />

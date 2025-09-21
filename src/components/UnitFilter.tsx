@@ -9,7 +9,7 @@ interface UnitFilterProps {
 }
 
 export const UnitFilter = ({ value, onValueChange, className = "" }: UnitFilterProps) => {
-  const { currentUser } = useRole();
+  const { hasPermission } = useRole();
 
   // Available units for company owner
   const availableUnits = [
@@ -19,8 +19,8 @@ export const UnitFilter = ({ value, onValueChange, className = "" }: UnitFilterP
     { id: "unit-4", name: "SSRFM Unit 4", location: "Chennai" }
   ];
 
-  // Only show unit filter for company owners
-  if (currentUser?.role !== 'company_owner') {
+  // Only show unit filter if user can read all units
+  if (!hasPermission('inventory:material-indents:read:all')) {
     return null;
   }
 

@@ -29,11 +29,11 @@ export const Sidebar = () => {
     navigate('/login');
   };
 
-  // Role-specific navigation items
+  // Build nav items by permissions (not roles)
   const getNavigationItems = () => {
     const userRole = currentUser?.role;
 
-    // Dashboard item - exclude for supervisor role
+    // Dashboard item - exclude for supervisor-like users
     const baseItems =
       userRole !== 'supervisor'
         ? [
@@ -46,34 +46,31 @@ export const Sidebar = () => {
           ]
         : [];
 
-    const roleSpecificItems: Record<string, any[]> = {
-      supervisor: [
-        {
-          to: '/materials-inventory',
-          label: 'Materials Management',
-          icon: Package,
-          permission: 'material:view',
-        },
-        /* { to: "/supervisor-requests", label: "Materials Order Book", icon: List, permission: "request:view_own" }, */
-      ],
+    const items: any[] = [
+      {
+        to: '/materials-inventory',
+        label: 'Materials Management',
+        icon: Package,
+        permission: 'inventory:materials:read',
+      },
+      // Example: enable more entries as needed
+      // {
+      //   to: '/requests-list',
+      //   label: 'Requests',
+      //   icon: List,
+      //   permission: 'inventory:material-indents:read',
+      // },
+      // {
+      //   to: '/approval-center',
+      //   label: 'Approval Center',
+      //   icon: Shield,
+      //   permission: 'inventory:material-indents:approve',
+      // },
+    ];
 
-      company_owner: [
-        /* { to: "/approval-center", label: "Approval Center", icon: Shield, permission: "request:approve_unlimited" }, */
-        {
-          to: '/materials-inventory',
-          label: 'Materials Management',
-          icon: Package,
-          permission: 'material:view',
-        },
-      ],
-    };
-
-    if (!userRole) return baseItems;
-
-    const roleItems = roleSpecificItems[userRole] || [];
     return [
       ...baseItems,
-      ...roleItems.filter(
+      ...items.filter(
         (item) => item.permission === null || hasPermission(item.permission)
       ),
     ];
