@@ -34,7 +34,8 @@ import {
 } from './ui/select';
 import { AddMachineForm } from './AddMachineForm';
 import { useRole } from '../contexts/RoleContext';
-import { machinesApi, Machine, PaginatedResponse } from '../lib/api';
+import { Machine, PaginatedResponse } from '../lib/api/types';
+import { machinesApi } from '../lib/api/machines';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import {
   Pagination,
@@ -64,13 +65,13 @@ export const MachinesTab = () => {
     id: number;
     name: string;
     type: string;
-    location: string;
     status: string;
     createdDate: string;
     lastMaintenance: string;
     specifications: string;
     unit: string;
     unitName: string;
+    branch: string;
   }
 
   // Transformed machines data for UI - initialize with empty array to avoid showing dummy data
@@ -95,7 +96,6 @@ export const MachinesTab = () => {
           id: machine.id,
           name: machine.name,
           type: machine.type?.name || 'Unknown Type',
-          location: machine.additionalNotes || 'No location specified',
           status: machine.status,
           createdDate: new Date(machine.createdAt).toISOString().split('T')[0],
           lastMaintenance: machine.lastService
@@ -105,6 +105,7 @@ export const MachinesTab = () => {
             machine.specifications || 'No specifications available',
           unit: `unit-${machine.unit?.id || 1}`,
           unitName: machine.unit?.name || 'Unknown Unit',
+          branch: machine.branch?.name || 'Unknown Location',
         };
       });
 
@@ -137,7 +138,7 @@ export const MachinesTab = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, itemsPerPage]);
 
-  const handleAddMachine = (machineData: TransformedMachine) => {
+  const handleAddMachine = (machineData: Machine) => {
     // After successfully adding a machine, refresh the data
     fetchMachines();
   };
@@ -146,7 +147,7 @@ export const MachinesTab = () => {
     const matchesSearch =
       machine.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       machine.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      machine.location.toLowerCase().includes(searchQuery.toLowerCase());
+      machine.branch.toLowerCase().includes(searchQuery.toLowerCase());
 
     // Simple search filtering
     const shouldInclude = matchesSearch;
@@ -264,7 +265,7 @@ export const MachinesTab = () => {
                     </div>
                     <div className='flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-2'>
                       <MapPin className='w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0' />
-                      <span className='truncate'>{machine.location}</span>
+                      <span className='truncate'>{machine.branch}</span>
                     </div>
                     <div className='flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-2'>
                       <Building2 className='w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0' />
@@ -357,7 +358,7 @@ export const MachinesTab = () => {
                         <div className='flex items-center gap-1'>
                           <Building2 className='w-4 h-4' />
                           <span className='truncate max-w-24 sm:max-w-none'>
-                            {machine.unitName}
+                            {machine.branch}
                           </span>
                         </div>
                       </TableCell>

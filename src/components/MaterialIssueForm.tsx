@@ -1,495 +1,546 @@
-import logo from "/logo.png";
-import { useState, useEffect } from "react";
-import { Package, Save, X, User, Calendar, CheckCircle, AlertCircle, FileText, Building2, Trash2, Plus, Edit } from "lucide-react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Badge } from "./ui/badge";
-import { toast } from "../hooks/use-toast";
-import { useRole } from "../contexts/RoleContext";
+import logo from '/logo.png';
+import { useState, useEffect, useRef } from 'react';
+import {
+  Package,
+  Save,
+  X,
+  User,
+  Calendar,
+  CheckCircle,
+  AlertCircle,
+  FileText,
+  Building2,
+  Trash2,
+  Plus,
+  Edit,
+  Loader2,
+  Upload,
+} from 'lucide-react';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from './ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Badge } from './ui/badge';
+import { toast } from '../hooks/use-toast';
+import { useRole } from '../contexts/RoleContext';
+import { Material, MaterialIssue } from '../lib/api/types';
+import { materialsApi } from '../lib/api/materials';
+import { materialIssuesApi } from '../lib/api/material-issues';
 
 interface MaterialIssueFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (issueData: any) => void;
-  editingIssue?: any;
+  onSubmit: (issueData: MaterialIssue) => void;
+  editingIssue?: Record<string, unknown>;
 }
 
-export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: MaterialIssueFormProps) => {
+interface MaterialItemFormData {
+  srNo: number;
+  materialId: number;
+  nameOfMaterial: string;
+  existingStock: number;
+  issuedQty: string;
+  stockAfterIssue: number;
+  measureUnit: string;
+  receiverName: string;
+  image: File | null;
+  imagePreview?: string;
+  purpose: string;
+}
+
+export const MaterialIssueForm = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  editingIssue,
+}: MaterialIssueFormProps) => {
   const { currentUser } = useRole();
-  
-  // Helper function to generate form serial number
-  const generateFormSerialNumber = () => {
-    const now = new Date();
-    const year = now.getFullYear().toString().slice(-2);
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const day = now.getDate().toString().padStart(2, '0');
-    const dateStr = `${year}${month}${day}`;
-    
-    // Generate a random 3-digit number for the form
-    const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    
-    return `ssrfm/unit-1/I-${dateStr}${randomNum}`;
-  };
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
-    // Document Information (matching the physical form)
+    // Document Information
     date: new Date().toISOString().split('T')[0],
-    materialIssueFormSrNo: generateFormSerialNumber(),
-    reqFormSrNo: `ssrfm/unit-1/REQ-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}001`,
-    indFormSrNo: `ssrfm/unit-1/IND-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}001`,
-    
-    // Material items (supporting multiple items like in the physical form)
+    // Material items (supporting multiple items)
     items: [
       {
         srNo: 1,
-        nameOfMaterial: "",
+        materialId: 0,
+        nameOfMaterial: '',
         existingStock: 0,
-        issuedQty: "",
+        issuedQty: '',
         stockAfterIssue: 0,
-        measureUnit: "",
-        receiverName: "",
-        image: "",
-        purpose: ""
-      }
+        measureUnit: '',
+        receiverName: '',
+        image: null as File | null,
+        imagePreview: '',
+        purpose: '',
+      } as MaterialItemFormData,
     ],
-    
-    // Personnel Information (matching the signature sections)
-    issuingPersonName: "",
-    issuingPersonDesignation: "", 
-    receiverName: "",
-    receiverDesignation: "",
-    
     // Additional fields
-    purpose: "",
-    notes: "",
-    requestedBy: currentUser?.name || "",
-    issuedBy: currentUser?.name || "",
+    additionalNotes: '',
   });
 
   // Effect to populate form when editing
   useEffect(() => {
     if (editingIssue && isOpen) {
+      const issuedDate = String(editingIssue.issuedDate || '');
+
+      // If we have allItems from the API response, use them
+      const items = editingIssue.allItems
+        ? (editingIssue.allItems as Array<Record<string, unknown>>).map(
+            (item, index) =>
+              ({
+                srNo: index + 1,
+                materialId: Number(
+                  item.material
+                    ? (item.material as Record<string, unknown>).id
+                    : 0
+                ),
+                nameOfMaterial: String(
+                  item.material
+                    ? (item.material as Record<string, unknown>).name
+                    : ''
+                ),
+                existingStock: Number(item.stockBeforeIssue || 0),
+                issuedQty: String(item.issuedQuantity || 0),
+                stockAfterIssue: Number(item.stockAfterIssue || 0),
+                measureUnit: String(
+                  item.material
+                    ? (item.material as Record<string, unknown>).makerBrand ||
+                        ''
+                    : ''
+                ),
+                receiverName: String(item.receiverName || ''),
+                image: null as File | null,
+                imagePreview: item.imagePath
+                  ? `http://localhost:3000/${String(item.imagePath)}`
+                  : '',
+                purpose: String(item.purpose || ''),
+              } as MaterialItemFormData)
+          )
+        : [
+            {
+              srNo: 1,
+              materialId: Number(editingIssue.materialId || 0),
+              nameOfMaterial: String(editingIssue.materialName || ''),
+              existingStock: Number(editingIssue.existingStock || 0),
+              issuedQty: String(editingIssue.issuedQuantity || 0),
+              stockAfterIssue: Number(editingIssue.stockAfterIssue || 0),
+              measureUnit: String(editingIssue.measureUnit || ''),
+              receiverName: String(editingIssue.recipientName || ''),
+              image: null,
+              imagePreview: '',
+              purpose: String(editingIssue.purpose || ''),
+            } as MaterialItemFormData,
+          ];
+
       setFormData({
-        date: editingIssue.issuedDate,
-        materialIssueFormSrNo: editingIssue.materialIssueFormSrNo,
-        reqFormSrNo: `ssrfm/unit-1/REQ-${new Date(editingIssue.issuedDate).toISOString().slice(2, 10).replace(/-/g, '')}001`,
-        indFormSrNo: `ssrfm/unit-1/IND-${new Date(editingIssue.issuedDate).toISOString().slice(2, 10).replace(/-/g, '')}001`,
-        items: [
-          {
-            srNo: 1,
-            nameOfMaterial: editingIssue.materialName,
-            existingStock: editingIssue.existingStock,
-            issuedQty: editingIssue.issuedQuantity.toString(),
-            stockAfterIssue: editingIssue.stockAfterIssue,
-            measureUnit: editingIssue.measureUnit || editingIssue.unit,
-            receiverName: editingIssue.recipientName,
-            image: "",
-            purpose: editingIssue.purpose
-          }
-        ],
-        issuingPersonName: editingIssue.issuingPersonName,
-        issuingPersonDesignation: editingIssue.issuingPersonDesignation,
-        receiverName: editingIssue.recipientName,
-        receiverDesignation: editingIssue.recipientDesignation,
-        purpose: editingIssue.purpose,
-        notes: "",
-        requestedBy: currentUser?.name || "",
-        issuedBy: currentUser?.name || "",
+        date: issuedDate,
+        items,
+        additionalNotes: String(editingIssue.additionalNotes || ''),
       });
     } else if (!editingIssue && isOpen) {
       // Reset form for new issue
       setFormData({
         date: new Date().toISOString().split('T')[0],
-        materialIssueFormSrNo: generateFormSerialNumber(),
-        reqFormSrNo: `ssrfm/unit-1/REQ-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}001`,
-        indFormSrNo: `ssrfm/unit-1/IND-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}001`,
         items: [
           {
             srNo: 1,
-            nameOfMaterial: "",
+            materialId: 0,
+            nameOfMaterial: '',
             existingStock: 0,
-            issuedQty: "",
+            issuedQty: '',
             stockAfterIssue: 0,
-            measureUnit: "",
-            receiverName: "",
-            image: "",
-            purpose: ""
-          }
+            measureUnit: '',
+            receiverName: '',
+            image: null,
+            imagePreview: '',
+            purpose: '',
+          } as MaterialItemFormData,
         ],
-        issuingPersonName: "",
-        issuingPersonDesignation: "", 
-        receiverName: "",
-        receiverDesignation: "",
-        purpose: "",
-        notes: "",
-        requestedBy: currentUser?.name || "",
-        issuedBy: currentUser?.name || "",
+        additionalNotes: '',
       });
     }
   }, [editingIssue, isOpen, currentUser]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
+  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(
+    null
+  );
+  const [availableMaterials, setAvailableMaterials] = useState<Material[]>([]);
+  const [isLoadingMaterials, setIsLoadingMaterials] = useState<boolean>(false);
+  const [materialsError, setMaterialsError] = useState<string | null>(null);
 
-  // Available materials with current stock (matching the physical form in the image)
-  const availableMaterials = [
-    {
-      id: "MAT-001",
-      name: "fevicol",
-      make: "MARINE",
-      specifications: "SH adhesive",
-      measureUnit: "KG",
-      currentStock: 1,
-      
-    },
-    {
-      id: "MAT-002", 
-      name: "wire brush",
-      make: "INDUSTRIAL",
-      specifications: "0.01 mm thickness of wire",
-      measureUnit: "pieces",
-      currentStock: 2,
-      location: "Tools Storage"
-    },
-    {
-      id: "MAT-003",
-      name: "dholak ball", 
-      make: "INDUSTRIAL",
-      specifications: "PVC transparent",
-      measureUnit: "pieces",
-      currentStock: 200,
-      location: "Components Storage"
-    },
-    {
-      id: "MAT-004",
-      name: "triangle brush",
-      make: "INDUSTRIAL", 
-      specifications: "Cleaning brush",
-      measureUnit: "pieces",
-      currentStock: 130,
-      location: "Tools Storage"
-    },
-    {
-      id: "MAT-005",
-      name: "gum tape",
-      make: "INDUSTRIAL",
-      specifications: "1 inch width adhesive tape", 
-      measureUnit: "pieces",
-      currentStock: 14,
-      location: "Office Supplies"
-    },
-    {
-      id: "MAT-006",
-      name: "BEARINGS (SKF 6205-2RS)",
-      make: "SKF",
-      specifications: "Deep Grove Ball Bearing, Inner: 25mm, Outer: 52mm",
-      measureUnit: "pieces",
-      currentStock: 24,
-      location: "Parts Storage A-1"
-    },
-    {
-      id: "MAT-007",
-      name: "MOTOR OIL (SAE 10W-30)",
-      make: "CASTROL",
-      specifications: "Industrial grade lubricant for machinery",
-      measureUnit: "liters",
-      currentStock: 65,
-      location: "Chemical Storage B-1"
-    },
-    {
-      id: "MAT-008",
-      name: "CONVEYOR BELTS",
-      make: "CONTINENTAL",
-      specifications: "Rubber belt, 600mm width, food grade",
-      measureUnit: "meters",
-      currentStock: 45,
-      location: "Equipment Storage C-1"
-    }
-  ];
+  // Fetch materials from API
+  useEffect(() => {
+    const fetchMaterials = async () => {
+      setIsLoadingMaterials(true);
+      setMaterialsError(null);
+      try {
+        const response = await materialsApi.getMaterials({
+          limit: 100, // Get a reasonable number of materials
+          sortBy: 'name',
+          sortOrder: 'ASC',
+        });
+        setAvailableMaterials(response.data);
+      } catch (error) {
+        console.error('Error fetching materials:', error);
+        setMaterialsError('Failed to load materials. Please try again.');
+        toast({
+          title: 'Error',
+          description: 'Failed to load materials. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoadingMaterials(false);
+      }
+    };
 
-  // Machines for the supervisor
-  const machines = [
-    {
-      id: "MACHINE-001",
-      name: "BLENDER",
-      type: "Laboratory Equipment",
-      location: "Laboratory"
-    },
-    {
-      id: "MACHINE-002",
-      name: "MAIN FLOUR MILL #01",
-      type: "Roller Flour Mill",
-      location: "Production Floor A"
-    },
-    {
-      id: "MACHINE-003",
-      name: "SECONDARY MILL #02",
-      type: "Roller Flour Mill",
-      location: "Production Floor A"
-    },
-    {
-      id: "MACHINE-004",
-      name: "FLOUR SIFTER #01",
-      type: "Rotary Sifter",
-      location: "Processing Line B"
-    },
-    {
-      id: "MACHINE-005",
-      name: "MAIN CONVEYOR #01",
-      type: "Belt Conveyor",
-      location: "Transport Line"
+    if (isOpen) {
+      fetchMaterials();
     }
-  ];
+  }, [isOpen]);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: "" }));
-    }
-  };
-
-  const handleMaterialSelect = (materialId: string) => {
-    const material = availableMaterials.find(m => m.id === materialId);
-    if (material) {
-      setSelectedMaterial(material);
-      setFormData(prev => ({
-        ...prev,
-        productName: material.name,
-        make: material.make,
-        specifications: material.specifications,
-        measureUnit: material.measureUnit,
-        oldStock: material.currentStock
-      }));
-    }
-  };
-
-  const handleMachineSelect = (machineId: string) => {
-    const machine = machines.find(m => m.id === machineId);
-    if (machine) {
-      setFormData(prev => ({
-        ...prev,
-        machineName: machine.name
-      }));
+      setErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
+
     // Validate each item in the items array
     formData.items.forEach((item, index) => {
       if (!item.nameOfMaterial.trim()) {
-        newErrors[`nameOfMaterial_${index}`] = `Material name is required for item ${index + 1}`;
+        newErrors[
+          `nameOfMaterial_${index}`
+        ] = `Material name is required for item ${index + 1}`;
       }
+
+      if (!item.materialId) {
+        newErrors[
+          `materialId_${index}`
+        ] = `Please select a valid material for item ${index + 1}`;
+      }
+
       if (!item.issuedQty.trim()) {
-        newErrors[`issuedQty_${index}`] = `Issued quantity is required for item ${index + 1}`;
+        newErrors[
+          `issuedQty_${index}`
+        ] = `Issued quantity is required for item ${index + 1}`;
       }
-      
+
       const issuedQty = Number(item.issuedQty);
       if (issuedQty <= 0) {
-        newErrors[`issuedQty_${index}`] = `Issued quantity must be greater than 0 for item ${index + 1}`;
+        newErrors[
+          `issuedQty_${index}`
+        ] = `Issued quantity must be greater than 0 for item ${index + 1}`;
       }
+
       if (issuedQty > item.existingStock) {
-        newErrors[`issuedQty_${index}`] = `Issued quantity cannot exceed existing stock for item ${index + 1}`;
+        newErrors[
+          `issuedQty_${index}`
+        ] = `Issued quantity cannot exceed existing stock for item ${
+          index + 1
+        }`;
+      }
+
+      if (!item.receiverName.trim()) {
+        newErrors[
+          `receiverName_${index}`
+        ] = `Receiver name is required for item ${index + 1}`;
+      }
+
+      if (!item.purpose.trim()) {
+        newErrors[`purpose_${index}`] = `Purpose is required for item ${
+          index + 1
+        }`;
       }
     });
 
-    // Validate personnel information
-    if (!formData.issuingPersonName.trim()) newErrors.issuingPersonName = "Issuing person name is required";
-    if (!formData.issuingPersonDesignation.trim()) newErrors.issuingPersonDesignation = "Issuing person designation is required";
-    if (!formData.receiverName.trim()) newErrors.receiverName = "Receiver name is required";
-    if (!formData.receiverDesignation.trim()) newErrors.receiverDesignation = "Receiver designation is required";
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
-    // Generate document numbers with new format
-    const timestamp = Date.now();
-    const now = new Date();
-    const year = now.getFullYear().toString().slice(-2);
-    const month = (now.getMonth() + 1).toString().padStart(2, '0');
-    const day = now.getDate().toString().padStart(2, '0');
-    const dateStr = `${year}${month}${day}`;
-    const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    
-    const docNo = `ssrfm/unit-1/I-${dateStr}${randomNum}`;
-    const reqFormNo = `ssrfm/unit-1/REQ-${dateStr}${randomNum}`;
-    const indFormNo = `ssrfm/unit-1/IND-${dateStr}${randomNum}`;
-    
-    const issueData = {
-      ...formData,
-      id: docNo,
-      status: "issued",
-      type: "material_issue",
-      timestamp: new Date().toISOString(),
-      issuedItems: formData.items.filter(item => item.nameOfMaterial && item.issuedQty)
-    };
-    
-    onSubmit(issueData);
-    
-    const issuedItemsCount = formData.items.filter(item => item.nameOfMaterial && item.issuedQty).length;
-    toast({
-      title: "Material Issue Form Submitted",
-      description: `${issuedItemsCount} material item(s) issued successfully to ${formData.receiverName}`,
-    });
-    
-    // Reset form with new serial numbers
-    setFormData({
-      date: new Date().toISOString().split('T')[0],
-      materialIssueFormSrNo: generateFormSerialNumber(),
-      reqFormSrNo: `ssrfm/unit-1/REQ-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}001`,
-      indFormSrNo: `ssrfm/unit-1/IND-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}001`,
-      items: [
-        {
-          srNo: 1,
-          nameOfMaterial: "",
-          existingStock: 0,
-          issuedQty: "",
-          stockAfterIssue: 0,
-          measureUnit: "",
-          receiverName: "",
-          image: "",
-          purpose: ""
+    setIsSubmitting(true);
+
+    try {
+      // Create a FormData object for the API request
+      const formDataObj = new FormData();
+
+      // Add additional notes and date
+      formDataObj.append('additionalNotes', formData.additionalNotes);
+      formDataObj.append('issueDate', formData.date);
+
+      // Prepare items data as JSON string
+      const itemsData = formData.items
+        .filter((item) => item.nameOfMaterial && item.issuedQty)
+        .map((item) => ({
+          materialId: item.materialId,
+          issuedQuantity: parseInt(item.issuedQty),
+          receiverName: item.receiverName,
+          purpose: item.purpose,
+        }));
+
+      formDataObj.append('items', JSON.stringify(itemsData));
+
+      // Add image files
+      formData.items.forEach((item) => {
+        if (item.image) {
+          formDataObj.append('files', item.image);
         }
-      ],
-      issuingPersonName: "",
-      issuingPersonDesignation: "", 
-      receiverName: "",
-      receiverDesignation: "",
-      purpose: "",
-      notes: "",
-      requestedBy: currentUser?.name || "",
-      issuedBy: currentUser?.name || "",
-      
-    });
-    setSelectedMaterial(null);
-    setErrors({});
-    onClose();
+      });
+
+      // Submit to API
+      const response = await materialIssuesApi.create(formDataObj);
+
+      // Call the onSubmit callback with the API response
+      onSubmit(response);
+
+      const issuedItemsCount = itemsData.length;
+      toast({
+        title: 'Material Issue Created',
+        description: `${issuedItemsCount} material item(s) issued successfully`,
+      });
+
+      // Reset form
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        items: [
+          {
+            srNo: 1,
+            materialId: 0,
+            nameOfMaterial: '',
+            existingStock: 0,
+            issuedQty: '',
+            stockAfterIssue: 0,
+            measureUnit: '',
+            receiverName: '',
+            image: null,
+            imagePreview: '',
+            purpose: '',
+          } as MaterialItemFormData,
+        ],
+        additionalNotes: '',
+      });
+
+      setSelectedMaterial(null);
+      setErrors({});
+      onClose();
+    } catch (error: unknown) {
+      const err = error as {
+        response?: {
+          data?: { message?: string };
+          status?: number;
+        };
+        message?: string;
+      };
+
+      console.error('Error creating material issue:', error);
+
+      let errorMessage = 'Failed to create material issue. Please try again.';
+
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto p-4">
-        <DialogHeader className="pb-3">
-          <DialogTitle className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-secondary/20 rounded-lg flex items-center justify-center">
-              <FileText className="w-4 h-4 text-foreground" />
+      <DialogContent className='max-w-6xl max-h-[95vh] overflow-y-auto p-4'>
+        <DialogHeader className='pb-3'>
+          <DialogTitle className='flex items-center gap-2'>
+            <div className='w-8 h-8 bg-secondary/20 rounded-lg flex items-center justify-center'>
+              <FileText className='w-4 h-4 text-foreground' />
             </div>
             <div>
-              <div className="text-base font-bold">
-                {editingIssue ? "EDIT MATERIAL ISSUE FORM" : "MATERIAL ISSUE FORM"}
+              <div className='text-base font-bold'>
+                {editingIssue
+                  ? 'EDIT MATERIAL ISSUE FORM'
+                  : 'MATERIAL ISSUE FORM'}
               </div>
             </div>
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-         
-
+        <form onSubmit={handleSubmit} className='space-y-3'>
           {/* Add Item Button - Compact */}
-          <div className="flex justify-end">
-            <Button 
-              type="button"
+          <div className='flex justify-end'>
+            <Button
+              type='submit'
               onClick={() => {
                 const newItem = {
                   srNo: formData.items.length + 1,
-                  nameOfMaterial: "",
+                  nameOfMaterial: '',
                   existingStock: 0,
-                  issuedQty: "",
+                  issuedQty: '',
                   stockAfterIssue: 0,
-                  measureUnit: "",
-                  receiverName: "",
-                  image: "",
-                  purpose: ""
+                  measureUnit: '',
+                  receiverName: '',
+                  image: null,
+                  imagePreview: '',
+                  materialId: 0,
+                  purpose: '',
                 };
-                setFormData(prev => ({ ...prev, items: [...prev.items, newItem] }));
+                setFormData((prev) => ({
+                  ...prev,
+                  items: [...prev.items, newItem],
+                }));
               }}
-              className="gap-1 h-8 text-xs"
-              size="sm"
+              className='gap-1 h-8 text-xs'
+              size='sm'
             >
-              <Plus className="w-3 h-3" />
+              <Plus className='w-3 h-3' />
               Add Item
             </Button>
           </div>
 
           {/* Material Items Table - Compact */}
           <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
+            <CardContent className='p-0'>
+              <div className='overflow-x-auto'>
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">SR.NO.</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">NAME OF THE MATERIAL</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">CURRENT STOCK</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">ISSUED QTY</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">STOCK AFTER ISSUE</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">RECEIVER NAME</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">IMAGE</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">PURPOSE OF ISSUE</TableHead>
-                      <TableHead className="border border-gray-300 font-semibold text-xs px-2 py-1">ACTIONS</TableHead>
+                    <TableRow className='bg-gray-50'>
+                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                        SR.NO.
+                      </TableHead>
+                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                        NAME OF THE MATERIAL
+                      </TableHead>
+                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                        CURRENT STOCK
+                      </TableHead>
+                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                        ISSUED QTY
+                      </TableHead>
+                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                        STOCK AFTER ISSUE
+                      </TableHead>
+                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                        RECEIVER NAME
+                      </TableHead>
+                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                        IMAGE
+                      </TableHead>
+                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                        PURPOSE OF ISSUE
+                      </TableHead>
+                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                        ACTIONS
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {formData.items.map((item, index) => (
                       <TableRow key={index}>
-                        <TableCell className="border border-gray-300 text-center font-semibold text-xs px-2 py-1">
+                        <TableCell className='border border-gray-300 text-center font-semibold text-xs px-2 py-1'>
                           {item.srNo}
                         </TableCell>
-                        <TableCell className="border border-gray-300 px-2 py-1">
-                          <Select 
-                            value={item.nameOfMaterial} 
+                        <TableCell className='border border-gray-300 px-2 py-1'>
+                          <Select
+                            value={item.nameOfMaterial}
                             onValueChange={(value) => {
-                              const material = availableMaterials.find(m => m.name === value);
+                              const material = availableMaterials.find(
+                                (m) => m.name === value
+                              );
                               if (material) {
                                 const newItems = [...formData.items];
                                 newItems[index] = {
                                   ...item,
                                   nameOfMaterial: material.name,
                                   existingStock: material.currentStock,
-                                  measureUnit: material.measureUnit,
-                                  stockAfterIssue: material.currentStock - Number(item.issuedQty || 0)
+                                  measureUnit: material.makerBrand || '', // Use makerBrand as measure unit if available
+                                  stockAfterIssue:
+                                    material.currentStock -
+                                    Number(item.issuedQty || 0),
+                                  materialId: material.id,
                                 };
-                                setFormData(prev => ({ ...prev, items: newItems }));
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  items: newItems,
+                                }));
                               }
                             }}
+                            disabled={isLoadingMaterials}
                           >
-                            <SelectTrigger className="border-0 p-0 h-auto text-xs">
-                              <SelectValue placeholder="Select Material" />
+                            <SelectTrigger className='border-0 p-0 h-auto text-xs'>
+                              {isLoadingMaterials ? (
+                                <div className='flex items-center gap-2'>
+                                  <Loader2 className='h-3 w-3 animate-spin' />
+                                  <span>Loading...</span>
+                                </div>
+                              ) : (
+                                <SelectValue placeholder='Select Material' />
+                              )}
                             </SelectTrigger>
                             <SelectContent>
-                              {availableMaterials.map((material) => (
-                                <SelectItem key={material.id} value={material.name}>
-                                  {material.name}
-                                </SelectItem>
-                              ))}
+                              {materialsError ? (
+                                <div className='p-2 text-xs text-destructive'>
+                                  {materialsError}
+                                </div>
+                              ) : (
+                                availableMaterials.map((material) => (
+                                  <SelectItem
+                                    key={material.id}
+                                    value={material.name}
+                                  >
+                                    <div className='flex flex-col'>
+                                      <span>{material.name}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))
+                              )}
                             </SelectContent>
                           </Select>
                           {errors[`nameOfMaterial_${index}`] && (
-                            <p className="text-destructive text-xs mt-1">{errors[`nameOfMaterial_${index}`]}</p>
+                            <p className='text-destructive text-xs mt-1'>
+                              {errors[`nameOfMaterial_${index}`]}
+                            </p>
                           )}
                         </TableCell>
-                        <TableCell className="border border-gray-300 text-center px-2 py-1">
-                          <div className="font-semibold text-xs">
-                            {item.existingStock} {item.measureUnit}
+                        <TableCell className='border border-gray-300 text-center px-2 py-1'>
+                          <div className='font-semibold text-xs'>
+                            {item.existingStock}
                           </div>
                         </TableCell>
-                        <TableCell className="border border-gray-300 text-center px-2 py-1">
-                          <div className="flex items-center gap-1">
+                        <TableCell className='border border-gray-300 text-center px-2 py-1'>
+                          <div className='flex items-center gap-1'>
                             <Input
-                              type="number"
+                              type='number'
                               value={item.issuedQty}
                               onChange={(e) => {
                                 const issuedQty = Number(e.target.value) || 0;
@@ -497,89 +548,159 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
                                 newItems[index] = {
                                   ...item,
                                   issuedQty: e.target.value,
-                                  stockAfterIssue: item.existingStock - issuedQty
+                                  stockAfterIssue:
+                                    item.existingStock - issuedQty,
                                 };
-                                setFormData(prev => ({ ...prev, items: newItems }));
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  items: newItems,
+                                }));
                               }}
-                              placeholder="Qty"
-                              min="0"
+                              placeholder='Qty'
+                              min='0'
                               max={item.existingStock}
-                              className="border-0 p-2 h-10 w-16 text-center text-sm outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm"
+                              className='border-0 p-2 h-10 w-16 text-center text-sm outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm'
                             />
-                            <span className="text-xs text-gray-600">{item.measureUnit}</span>
                           </div>
                           {errors[`issuedQty_${index}`] && (
-                            <p className="text-destructive text-xs mt-1">{errors[`issuedQty_${index}`]}</p>
+                            <p className='text-destructive text-xs mt-1'>
+                              {errors[`issuedQty_${index}`]}
+                            </p>
                           )}
                         </TableCell>
-                        <TableCell className="border border-gray-300 text-center px-2 py-1">
-                          <div className="font-semibold text-xs">
-                            {item.stockAfterIssue} {item.measureUnit}
+                        <TableCell className='border border-gray-300 text-center px-2 py-1'>
+                          <div className='font-semibold text-xs'>
+                            {item.stockAfterIssue}
                           </div>
                         </TableCell>
-                        <TableCell className="border border-gray-300 px-2 py-1">
+                        <TableCell className='border border-gray-300 px-2 py-1'>
                           <Input
                             value={item.receiverName}
                             onChange={(e) => {
                               const newItems = [...formData.items];
                               newItems[index] = {
                                 ...item,
-                                receiverName: e.target.value
+                                receiverName: e.target.value,
                               };
-                              setFormData(prev => ({ ...prev, items: newItems }));
+                              setFormData((prev) => ({
+                                ...prev,
+                                items: newItems,
+                              }));
                             }}
-                            placeholder="Receiver Name"
-                            className="border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm"
+                            placeholder='Receiver Name'
+                            className='border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm'
                           />
                         </TableCell>
-                        <TableCell className="border border-gray-300 px-2 py-1">
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const newItems = [...formData.items];
-                                newItems[index] = {
-                                  ...item,
-                                  image: file.name
-                                };
-                                setFormData(prev => ({ ...prev, items: newItems }));
-                              }
-                            }}
-                            className="border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm"
-                          />
+                        <TableCell className='border border-gray-300 px-2 py-1'>
+                          <div className='flex flex-col gap-1'>
+                            {item.imagePreview ? (
+                              <div className='relative w-full h-16 mb-1'>
+                                <img
+                                  src={item.imagePreview}
+                                  alt='Preview'
+                                  className='h-full object-contain rounded-sm'
+                                />
+                                <Button
+                                  type='button'
+                                  variant='destructive'
+                                  size='sm'
+                                  className='absolute top-0 right-0 h-5 w-5 p-0'
+                                  onClick={() => {
+                                    const newItems = [
+                                      ...formData.items,
+                                    ] as MaterialItemFormData[];
+                                    newItems[index] = {
+                                      ...item,
+                                      image: null,
+                                      imagePreview: '',
+                                    } as MaterialItemFormData;
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      items: newItems,
+                                    }));
+                                  }}
+                                >
+                                  <X className='h-3 w-3' />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className='flex items-center gap-1'>
+                                <Input
+                                  type='file'
+                                  accept='image/*'
+                                  id={`file-upload-${index}`}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                      // Create a preview URL
+                                      const previewUrl =
+                                        URL.createObjectURL(file);
+
+                                      const newItems = [
+                                        ...formData.items,
+                                      ] as MaterialItemFormData[];
+                                      newItems[index] = {
+                                        ...item,
+                                        image: file,
+                                        imagePreview: previewUrl,
+                                      } as MaterialItemFormData;
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        items: newItems,
+                                      }));
+                                    }
+                                  }}
+                                  className='hidden'
+                                />
+                                <Label
+                                  htmlFor={`file-upload-${index}`}
+                                  className='flex items-center justify-center gap-1 cursor-pointer text-xs bg-secondary/20 hover:bg-secondary/30 rounded-sm p-1 w-full'
+                                >
+                                  <Upload className='h-3 w-3' />
+                                  Upload Image
+                                </Label>
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
-                        <TableCell className="border border-gray-300 px-2 py-1">
+                        <TableCell className='border border-gray-300 px-2 py-1'>
                           <Input
                             value={item.purpose}
                             onChange={(e) => {
                               const newItems = [...formData.items];
                               newItems[index] = {
                                 ...item,
-                                purpose: e.target.value
+                                purpose: e.target.value,
                               };
-                              setFormData(prev => ({ ...prev, items: newItems }));
+                              setFormData((prev) => ({
+                                ...prev,
+                                items: newItems,
+                              }));
                             }}
-                            placeholder="Purpose"
-                            className="border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm"
+                            placeholder='Purpose'
+                            className='border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm'
                           />
                         </TableCell>
-                        <TableCell className="border border-gray-300 px-2 py-1">
+                        <TableCell className='border border-gray-300 px-2 py-1'>
                           <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
+                            type='button'
+                            variant='outline'
+                            size='sm'
                             onClick={() => {
                               if (formData.items.length > 1) {
-                                const newItems = formData.items.filter((_, i) => i !== index);
-                                setFormData(prev => ({ ...prev, items: newItems }));
+                                const newItems = formData.items.filter(
+                                  (_, i) => i !== index
+                                );
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  items: newItems,
+                                }));
                               }
                             }}
                             disabled={formData.items.length === 1}
-                            className="gap-1 text-xs h-6 w-6 p-0"
+                            className='gap-1 text-xs h-6 w-6 p-0'
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className='w-3 h-3' />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -589,38 +710,38 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
               </div>
 
               {/* Signature Section - Compact */}
-              
             </CardContent>
           </Card>
 
           {/* Additional Information - Compact */}
           <Card>
-            
-            <CardContent className="space-y-3">
-              
-
-              <div className="space-y-1">
-                <Label htmlFor="notes" className="text-xs">Additional Notes</Label>
+            <CardContent className='space-y-3'>
+              <div className='space-y-1'>
+                <Label htmlFor='additionalNotes' className='text-xs'>
+                  Additional Notes
+                </Label>
                 <Textarea
-                  id="notes"
-                  placeholder="Any additional notes or special instructions"
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange("notes", e.target.value)}
-                  className="min-h-[60px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200"
+                  id='additionalNotes'
+                  placeholder='Any additional notes or special instructions'
+                  value={formData.additionalNotes}
+                  onChange={(e) =>
+                    handleInputChange('additionalNotes', e.target.value)
+                  }
+                  className='min-h-[60px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200'
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Issued By</Label>
-                  <div className="input-friendly bg-secondary text-center py-2 font-semibold text-xs">
-                    {formData.issuedBy}
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
+                <div className='space-y-1'>
+                  <Label className='text-xs'>Issued By</Label>
+                  <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs'>
+                    {currentUser?.name || 'Current User'}
                   </div>
                 </div>
-               
-                <div className="space-y-1">
-                  <Label className="text-xs">Date</Label>
-                  <div className="input-friendly bg-secondary text-center py-2 font-semibold text-xs">
+
+                <div className='space-y-1'>
+                  <Label className='text-xs'>Date</Label>
+                  <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs'>
                     {new Date(formData.date).toLocaleDateString()}
                   </div>
                 </div>
@@ -629,13 +750,34 @@ export const MaterialIssueForm = ({ isOpen, onClose, onSubmit, editingIssue }: M
           </Card>
 
           {/* Form Actions - Compact */}
-          <div className="flex justify-center gap-3 pt-3">
-            <Button type="submit" size="sm" className="gap-2">
-              <FileText className="w-4 h-4" />
-              {editingIssue ? "Update Form" : "Submit Form"}
+          <div className='flex justify-center gap-3 pt-3'>
+            <Button
+              type='submit'
+              size='sm'
+              className='gap-2'
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className='h-4 w-4 animate-spin mr-2' />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <FileText className='w-4 h-4' />
+                  {editingIssue ? 'Update Form' : 'Submit Form'}
+                </>
+              )}
             </Button>
-            <Button type="button" variant="outline" onClick={onClose} className="gap-2" size="sm">
-              <X className="w-4 h-4" />
+            <Button
+              type='button'
+              variant='outline'
+              onClick={onClose}
+              className='gap-2'
+              size='sm'
+              disabled={isSubmitting}
+            >
+              <X className='w-4 h-4' />
               Cancel
             </Button>
           </div>

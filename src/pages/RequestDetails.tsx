@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, FileEdit, Package } from 'lucide-react';
+import { ArrowLeft, Save, FileEdit, Package, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
   Card,
@@ -17,6 +17,8 @@ import { VendorQuotationSelector } from '../components/VendorQuotationSelector';
 import { StatusDropdown } from '../components/StatusDropdown';
 import { HistoryView } from '../components/HistoryView';
 import { generatePurchaseId, parseLocationFromId } from '../lib/utils';
+import materialIndentsApi, { IndentStatus } from '../lib/api/material-indents';
+import { MaterialIndent } from '../lib/api/types';
 
 interface VendorQuotation {
   id: string;
@@ -47,11 +49,23 @@ interface RequestData {
   id: string;
   items: RequestItem[];
   requestedBy: string;
-  location: string; // Changed from department
+  location: string;
   date: string;
   status: string;
   selectedVendors?: Record<string, string>;
-  receiptHistory?: any[];
+  receiptHistory?: Array<{
+    id: string;
+    date: string;
+    materialName: string;
+    quantity: string;
+    receivedQuantity?: string;
+    receivedDate?: string;
+    purchaseOrderNumber?: string;
+    totalValue?: string;
+    notes?: string;
+    status: string;
+  }>;
+  apiData?: MaterialIndent; // Store the original API data
 }
 
 const RequestDetails: React.FC = () => {
@@ -71,119 +85,124 @@ const RequestDetails: React.FC = () => {
   >({});
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data - in real app, this would be fetched from API
-  const availableMaterials = [
-    {
-      name: 'FEVICOL',
-      specifications: 'SH adhesive',
-      measureUnit: 'kg',
-      category: 'Adhesives',
-    },
-    {
-      name: 'COPPER WIRE BRUSH',
-      specifications: '0.01 mm thickness of wire',
-      measureUnit: 'pieces',
-      category: 'Tools',
-    },
-    // ... more materials
-  ];
-
-  const machines = [
-    'BLENDER',
-    'MAIN FLOUR MILL #01',
-    'SECONDARY MILL #02',
-    'FLOUR SIFTER #01',
-    'MAIN CONVEYOR #01',
-  ];
+  // Available materials and machines will be populated from API data
+  const [availableMaterials, setAvailableMaterials] = useState<
+    Array<{
+      name: string;
+      specifications: string;
+      measureUnit: string;
+      category: string;
+    }>
+  >([]);
+  const [machines, setMachines] = useState<string[]>([]);
 
   useEffect(() => {
-    // Mock data loading - replace with actual API call
     const loadRequestData = async () => {
-      setLoading(true);
-
-      // Simulate API call
-      setTimeout(() => {
-        // Mock different request statuses based on requestId
-        const getStatusFromRequestId = (id: string) => {
-          // Updated to use new ID format
-          if (id.includes('R-250115004') || id.includes('R-250114005'))
-            return 'approved';
-          if (id.includes('R-250112006') || id.includes('R-250111007'))
-            return 'partially_received';
-          if (id.includes('R-250108008') || id.includes('R-250107009'))
-            return 'material_received';
-          if (id.includes('R-250110010') || id.includes('R-250109011'))
-            return 'ordered';
-          if (id.includes('R-250105012') || id.includes('R-250104013'))
-            return 'issued';
-          if (id.includes('R-250102014') || id.includes('R-250101015'))
-            return 'completed';
-          if (
-            id.includes('R-250116016') ||
-            id.includes('R-250114017') ||
-            id.includes('R-250112018')
-          )
-            return 'reverted';
-          if (id.includes('R-250108019') || id.includes('R-250107020'))
-            return 'rejected';
-          return 'pending_approval'; // Default for other requests
-        };
-
-        const mockRequestData: RequestData = {
-          id: decodedRequestId || 'SSRFM/unit-I/I-250120001',
-          requestedBy: 'John Martinez',
-          location: parseLocationFromId(
-            decodedRequestId || 'SSRFM/unit-I/I-250120001'
-          ), // Use utility function
-          date: '2024-01-20',
-          status: getStatusFromRequestId(
-            decodedRequestId || 'SSRFM/unit-I/I-250120001'
-          ), // ✅ Dynamic status
-          items: [
-            {
-              id: '1',
-              srNo: 1,
-              productName: 'FEVICOL',
-              machineName: 'BLENDER',
-              specifications: 'SH adhesive',
-              oldStock: 5,
-              reqQuantity: '10',
-              measureUnit: 'kg',
-              notes: 'Urgent requirement for production',
-              vendorQuotations: [
-                {
-                  id: 'v1',
-                  vendorName: 'ABC Suppliers',
-                  contactPerson: 'Raj Kumar',
-                  phone: '+91-9876543210',
-                  quotedPrice: '₹500/kg',
-                  notes: 'Best quality adhesive',
-                  quotationFile: null,
-                },
-                {
-                  id: 'v2',
-                  vendorName: 'XYZ Industries',
-                  contactPerson: 'Suresh Patel',
-                  phone: '+91-9876543211',
-                  quotedPrice: '₹480/kg',
-                  notes: 'Bulk discount available',
-                  quotationFile: null,
-                },
-              ],
-            },
-          ],
-          selectedVendors: {},
-          receiptHistory: [],
-        };
-
-        setRequestData(mockRequestData);
+      if (!decodedRequestId) {
+        setError('Request ID is missing');
         setLoading(false);
-      }, 1000);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Extract numeric ID from the request ID
+        const numericId = parseInt(
+          decodedRequestId.split('/').pop()?.split('-').pop() || '0',
+          10
+        );
+
+        if (isNaN(numericId) || numericId <= 0) {
+          throw new Error('Invalid request ID format');
+        }
+
+        // Fetch the material indent data from API
+        const indentData = await materialIndentsApi.getById(numericId);
+
+        // Transform API data to match the RequestData interface
+        const transformedData: RequestData = {
+          id: indentData.uniqueId,
+          requestedBy: indentData.requestedBy?.name || 'Unknown',
+          location: indentData.branch?.name || 'Unknown',
+          date: indentData.requestDate,
+          status: indentData.status,
+          apiData: indentData, // Store the original API data
+          items: indentData.items.map((item) => ({
+            id: item.id.toString(),
+            srNo: item.id,
+            productName: item.material.name,
+            machineName: item.machine?.name || 'N/A',
+            specifications:
+              item.specifications || item.material.specifications || '',
+            oldStock: item.currentStock,
+            reqQuantity: item.requestedQuantity.toString(),
+            measureUnit: item.material.measureUnitId?.toString() || 'units',
+            notes: item.notes || '',
+            imagePreviews: item.imagePaths || [],
+            vendorQuotations: item.quotations.map((quotation) => ({
+              id: quotation.id.toString(),
+              vendorName: quotation.vendorName,
+              contactPerson: quotation.contactPerson,
+              phone: quotation.phone,
+              quotedPrice: `₹${quotation.quotationAmount}`,
+              notes: quotation.notes,
+              quotationFile: null,
+              isSelected: quotation.isSelected,
+            })),
+          })),
+          selectedVendors: {},
+          receiptHistory: indentData.purchases.map((purchase) => ({
+            id: purchase.id.toString(),
+            date: purchase.orderDate,
+            materialName: indentData.items[0]?.material.name || 'Unknown',
+            quantity: indentData.items[0]?.requestedQuantity.toString() || '0',
+            purchaseOrderNumber: purchase.purchaseOrderNumber,
+            totalValue: purchase.totalValue,
+            notes: purchase.additionalNotes,
+            status: 'purchased',
+          })),
+        };
+
+        // Set initial selected vendors based on API data
+        const initialSelectedVendors: Record<string, string> = {};
+        indentData.items.forEach((item) => {
+          if (item.selectedQuotation) {
+            initialSelectedVendors[item.id.toString()] =
+              item.selectedQuotation.id.toString();
+          }
+        });
+
+        setSelectedVendors(initialSelectedVendors);
+        setRequestData(transformedData);
+
+        // Extract available materials and machines from the API data
+        const materials = indentData.items.map((item) => ({
+          name: item.material.name,
+          specifications: item.material.specifications || '',
+          measureUnit: item.material.measureUnitId?.toString() || 'units',
+          category: 'Materials',
+        }));
+
+        const machineNames = indentData.items
+          .filter((item) => item.machine)
+          .map((item) => item.machine.name);
+
+        setAvailableMaterials(materials);
+        setMachines([...new Set(machineNames)]);
+      } catch (error) {
+        console.error('Error fetching request details:', error);
+        setError('Failed to load request details. Please try again.');
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadRequestData();
-  }, [decodedRequestId]); // Use decodedRequestId in dependency array
+  }, [decodedRequestId]);
 
   const handleItemChange = (itemId: string, field: string, value: string) => {
     if (!requestData) return;
@@ -210,223 +229,414 @@ const RequestDetails: React.FC = () => {
     }));
   };
 
-  const handleCompanyOwnerSubmit = () => {
-    if (!requestData) return;
+  const handleCompanyOwnerSubmit = async () => {
+    if (!requestData || !requestData.apiData) return;
 
-    // Process the decisions
-    const decisions = requestData.items.map((item) => ({
-      itemId: item.id,
-      materialName: item.productName,
-      selectedVendor: selectedVendors[item.id],
-      status: selectedStatuses[item.id],
-    }));
+    try {
+      // Extract numeric ID from the request ID
+      const numericId = parseInt(
+        requestData.id.split('/').pop()?.split('-').pop() || '0',
+        10
+      );
 
-    // Count different statuses
-    const approvedItems = decisions.filter((d) => d.status === 'approved');
-    const rejectedItems = decisions.filter((d) => d.status === 'rejected');
-    const revertedItems = decisions.filter((d) => d.status === 'reverted');
+      if (isNaN(numericId) || numericId <= 0) {
+        throw new Error('Invalid request ID format');
+      }
 
-    // Update request data based on decisions
-    let finalStatus = 'pending_approval';
-    if (approvedItems.length === decisions.length) {
-      finalStatus = 'approved';
-    } else if (rejectedItems.length === decisions.length) {
-      finalStatus = 'rejected';
-    } else if (revertedItems.length === decisions.length) {
-      finalStatus = 'reverted';
-    } else {
-      // Mixed decisions - handle as needed
-      finalStatus = 'partially_processed';
+      // Process the decisions
+      const decisions = requestData.items.map((item) => ({
+        itemId: parseInt(item.id),
+        materialName: item.productName,
+        selectedVendor: selectedVendors[item.id],
+        status: selectedStatuses[item.id],
+      }));
+
+      // Count different statuses
+      const approvedItems = decisions.filter(
+        (d) => d.status === IndentStatus.APPROVED
+      );
+      const rejectedItems = decisions.filter(
+        (d) => d.status === IndentStatus.REJECTED
+      );
+      const revertedItems = decisions.filter((d) => d.status === 'reverted'); // Custom status
+
+      // Determine the overall status
+      let finalStatus: IndentStatus;
+      let updatedIndent;
+
+      if (approvedItems.length === decisions.length) {
+        // If all items are approved, approve the entire indent
+        updatedIndent = await materialIndentsApi.approve(numericId);
+        finalStatus = IndentStatus.APPROVED;
+      } else if (rejectedItems.length === decisions.length) {
+        // If all items are rejected, reject the entire indent
+        updatedIndent = await materialIndentsApi.reject(
+          numericId,
+          'Rejected by Company Owner'
+        );
+        finalStatus = IndentStatus.REJECTED;
+      } else {
+        // For mixed decisions or other cases, update with the appropriate status
+        finalStatus = IndentStatus.PENDING_APPROVAL; // Default
+
+        // Update the material indent with selected quotations and status
+        const updateData: Partial<MaterialIndent> = {
+          status: finalStatus,
+          // We're only updating the selectedQuotation property, not the entire item
+          // The API will handle partial updates correctly
+        };
+
+        updatedIndent = await materialIndentsApi.update(numericId, updateData);
+      }
+
+      // Update local state with API response
+      const updatedData = {
+        ...requestData,
+        status: finalStatus,
+        apiData: updatedIndent,
+        selectedVendors,
+      };
+
+      setRequestData(updatedData);
+
+      // Show success message
+      const successMessage = `Successfully processed ${decisions.length} item${
+        decisions.length > 1 ? 's' : ''
+      }: ${approvedItems.length} approved, ${rejectedItems.length} rejected, ${
+        revertedItems.length
+      } reverted`;
+
+      toast({
+        title: 'Request Processed',
+        description: successMessage,
+      });
+    } catch (error) {
+      console.error('Error processing company owner decisions:', error);
+
+      toast({
+        title: 'Processing Failed',
+        description: 'Failed to process the request. Please try again.',
+        variant: 'destructive',
+      });
     }
-
-    const updatedData = {
-      ...requestData,
-      status: finalStatus,
-      selectedVendors,
-      decisions,
-    };
-
-    setRequestData(updatedData);
-
-    // Show success message
-    const successMessage = `Successfully processed ${decisions.length} item${
-      decisions.length > 1 ? 's' : ''
-    }: ${approvedItems.length} approved, ${rejectedItems.length} rejected, ${
-      revertedItems.length
-    } reverted`;
-
-    toast({
-      title: 'Request Processed',
-      description: successMessage,
-    });
-
-    // In real app, save to backend here
-    console.log('Company Owner Decisions:', {
-      requestId: requestData.id,
-      decisions,
-    });
   };
 
-  const handleSupervisorSubmit = () => {
-    if (!requestData) return;
+  const handleSupervisorSubmit = async () => {
+    if (!requestData || !requestData.apiData) return;
 
-    // Process the supervisor status updates
-    const updates = requestData.items.map((item) => ({
-      itemId: item.id,
-      materialName: item.productName,
-      newStatus: selectedStatuses[item.id],
-    }));
+    try {
+      // Extract numeric ID from the request ID
+      const numericId = parseInt(
+        requestData.id.split('/').pop()?.split('-').pop() || '0',
+        10
+      );
 
-    // Determine the overall request status
-    const statusValues = Object.values(selectedStatuses);
-    let finalStatus = requestData.status;
+      if (isNaN(numericId) || numericId <= 0) {
+        throw new Error('Invalid request ID format');
+      }
 
-    if (statusValues.every((status) => status === 'ordered')) {
-      finalStatus = 'ordered';
-    } else if (statusValues.every((status) => status === 'material_received')) {
-      finalStatus = 'material_received';
-    } else if (statusValues.every((status) => status === 'issued')) {
-      finalStatus = 'issued';
-    } else if (statusValues.every((status) => status === 'completed')) {
-      finalStatus = 'completed';
-    } else if (statusValues.every((status) => status === 'pending_approval')) {
-      finalStatus = 'pending_approval';
-    } else if (statusValues.some((status) => status === 'partially_received')) {
-      finalStatus = 'partially_received';
-    }
+      // Process the supervisor status updates
+      const updates = requestData.items.map((item) => ({
+        itemId: parseInt(item.id),
+        materialName: item.productName,
+        newStatus: selectedStatuses[item.id],
+      }));
 
-    const updatedData = {
-      ...requestData,
-      status: finalStatus,
-      statusUpdates: updates,
-    };
+      // Determine the overall request status
+      const statusValues = Object.values(selectedStatuses);
+      let finalStatus = requestData.status;
 
-    setRequestData(updatedData);
-
-    // Show success message
-    const orderedCount = statusValues.filter(
-      (status) => status === 'ordered'
-    ).length;
-    const partialCount = statusValues.filter(
-      (status) => status === 'partially_received'
-    ).length;
-    const receivedCount = statusValues.filter(
-      (status) => status === 'material_received'
-    ).length;
-    const issuedCount = statusValues.filter(
-      (status) => status === 'issued'
-    ).length;
-    const completedCount = statusValues.filter(
-      (status) => status === 'completed'
-    ).length;
-    const resubmitCount = statusValues.filter(
-      (status) => status === 'pending_approval'
-    ).length;
-
-    let successMessage = `Successfully updated ${updates.length} item${
-      updates.length > 1 ? 's' : ''
-    }`;
-    if (orderedCount > 0) successMessage += ` - ${orderedCount} ordered`;
-    if (partialCount > 0)
-      successMessage += ` - ${partialCount} partially received`;
-    if (receivedCount > 0)
-      successMessage += ` - ${receivedCount} fully received`;
-    if (issuedCount > 0) successMessage += ` - ${issuedCount} issued`;
-    if (completedCount > 0) successMessage += ` - ${completedCount} completed`;
-    if (resubmitCount > 0) successMessage += ` - ${resubmitCount} resubmitted`;
-
-    toast({
-      title: 'Status Updated',
-      description: successMessage,
-    });
-
-    // In real app, save to backend here
-    console.log('Supervisor Status Updates:', {
-      requestId: requestData.id,
-      updates,
-    });
-  };
-
-  const handleStatusChange = (newStatus: string, additionalData?: any) => {
-    if (!requestData) return;
-
-    const updatedData = {
-      ...requestData,
-      status: newStatus,
-      selectedVendors:
-        newStatus === 'approved'
-          ? selectedVendors
-          : requestData.selectedVendors,
-    };
-
-    if (additionalData) {
-      // Add receipt history or other additional data
-      if (
-        newStatus === 'partially_received' ||
-        newStatus === 'material_received'
+      if (statusValues.every((status) => status === IndentStatus.ORDERED)) {
+        finalStatus = IndentStatus.ORDERED;
+      } else if (
+        statusValues.every((status) => status === IndentStatus.FULLY_RECEIVED)
       ) {
+        finalStatus = IndentStatus.FULLY_RECEIVED;
+      } else if (statusValues.every((status) => status === 'issued')) {
+        // Custom status
+        finalStatus = 'issued';
+      } else if (
+        statusValues.every((status) => status === IndentStatus.CLOSED)
+      ) {
+        finalStatus = IndentStatus.CLOSED;
+      } else if (
+        statusValues.every((status) => status === IndentStatus.PENDING_APPROVAL)
+      ) {
+        finalStatus = IndentStatus.PENDING_APPROVAL;
+      } else if (
+        statusValues.some(
+          (status) => status === IndentStatus.PARTIALLY_RECEIVED
+        )
+      ) {
+        finalStatus = IndentStatus.PARTIALLY_RECEIVED;
+      }
+
+      // Update the material indent via API
+      const updatedIndent = await materialIndentsApi.update(numericId, {
+        status: finalStatus as IndentStatus,
+        additionalNotes: `Status updated by ${
+          currentUser?.name || 'Supervisor'
+        } on ${new Date().toLocaleDateString()}.`,
+      });
+
+      // Update local state with API response
+      const updatedData = {
+        ...requestData,
+        status: finalStatus,
+        apiData: updatedIndent,
+      };
+
+      setRequestData(updatedData);
+
+      // Show success message
+      const orderedCount = statusValues.filter(
+        (status) => status === IndentStatus.ORDERED
+      ).length;
+      const partialCount = statusValues.filter(
+        (status) => status === IndentStatus.PARTIALLY_RECEIVED
+      ).length;
+      const receivedCount = statusValues.filter(
+        (status) => status === IndentStatus.FULLY_RECEIVED
+      ).length;
+      const issuedCount = statusValues.filter(
+        (status) => status === 'issued'
+      ).length;
+      const completedCount = statusValues.filter(
+        (status) => status === IndentStatus.CLOSED
+      ).length;
+      const resubmitCount = statusValues.filter(
+        (status) => status === IndentStatus.PENDING_APPROVAL
+      ).length;
+
+      let successMessage = `Successfully updated ${updates.length} item${
+        updates.length > 1 ? 's' : ''
+      }`;
+      if (orderedCount > 0) successMessage += ` - ${orderedCount} ordered`;
+      if (partialCount > 0)
+        successMessage += ` - ${partialCount} partially received`;
+      if (receivedCount > 0)
+        successMessage += ` - ${receivedCount} fully received`;
+      if (issuedCount > 0) successMessage += ` - ${issuedCount} issued`;
+      if (completedCount > 0)
+        successMessage += ` - ${completedCount} completed`;
+      if (resubmitCount > 0)
+        successMessage += ` - ${resubmitCount} resubmitted`;
+
+      toast({
+        title: 'Status Updated',
+        description: successMessage,
+      });
+    } catch (error) {
+      console.error('Error updating supervisor status:', error);
+
+      toast({
+        title: 'Status Update Failed',
+        description: 'Failed to update the status. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleStatusChange = async (
+    newStatus: string,
+    additionalData?: Record<string, unknown>
+  ) => {
+    if (!requestData || !requestData.apiData) return;
+
+    try {
+      // Extract numeric ID from the request ID
+      const numericId = parseInt(
+        requestData.id.split('/').pop()?.split('-').pop() || '0',
+        10
+      );
+
+      if (isNaN(numericId) || numericId <= 0) {
+        throw new Error('Invalid request ID format');
+      }
+
+      let updatedIndent;
+
+      // Call the appropriate API based on the status
+      if (newStatus === IndentStatus.APPROVED) {
+        updatedIndent = await materialIndentsApi.approve(numericId);
+      } else if (
+        newStatus === IndentStatus.REJECTED &&
+        additionalData?.rejectionReason
+      ) {
+        const rejectionReason = String(
+          additionalData.rejectionReason || 'Rejected'
+        );
+        updatedIndent = await materialIndentsApi.reject(
+          numericId,
+          rejectionReason
+        );
+      } else {
+        // For other status changes
+        updatedIndent = await materialIndentsApi.update(numericId, {
+          status: newStatus as IndentStatus,
+          ...additionalData,
+        });
+      }
+
+      // Update the local state with the API response
+      const updatedData = {
+        ...requestData,
+        status: updatedIndent.status,
+        apiData: updatedIndent,
+        selectedVendors:
+          newStatus === IndentStatus.APPROVED
+            ? selectedVendors
+            : requestData.selectedVendors,
+      };
+
+      // Update receipt history if needed
+      if (
+        additionalData &&
+        (newStatus === IndentStatus.PARTIALLY_RECEIVED ||
+          newStatus === IndentStatus.FULLY_RECEIVED)
+      ) {
+        const receivedDate =
+          (additionalData.receivedDate as string) ||
+          new Date().toISOString().split('T')[0];
+        const receivedQuantity =
+          (additionalData.receivedQuantity as string) || '0';
+        const notes = (additionalData.notes as string) || '';
+
         updatedData.receiptHistory = [
           ...(requestData.receiptHistory || []),
           {
             id: `receipt-${Date.now()}`,
-            date: additionalData.receivedDate,
-            materialName: requestData.items[0].productName,
-            quantity: requestData.items[0].reqQuantity,
-            receivedQuantity: additionalData.receivedQuantity,
-            receivedDate: additionalData.receivedDate,
-            notes: additionalData.notes,
+            date: receivedDate,
+            materialName: requestData.items[0]?.productName || 'Unknown',
+            quantity: requestData.items[0]?.reqQuantity || '0',
+            receivedQuantity: receivedQuantity,
+            receivedDate: receivedDate,
+            notes: notes,
             status: newStatus,
           },
         ];
       }
+
+      setRequestData(updatedData);
+
+      toast({
+        title: 'Status Updated',
+        description: `Request status changed to ${newStatus.replace('_', ' ')}`,
+      });
+    } catch (error) {
+      console.error('Error updating status:', error);
+
+      toast({
+        title: 'Status Update Failed',
+        description: 'Failed to update the request status. Please try again.',
+        variant: 'destructive',
+      });
     }
-
-    setRequestData(updatedData);
-
-    toast({
-      title: 'Status Updated',
-      description: `Request status changed to ${newStatus.replace('_', ' ')}`,
-    });
-
-    // In real app, save to backend here
   };
 
-  const handleSave = () => {
-    if (!requestData) return;
+  const handleSave = async () => {
+    if (!requestData || !requestData.apiData) return;
 
-    // Save changes to backend
-    toast({
-      title: 'Changes Saved',
-      description: 'Request has been updated successfully',
-    });
+    try {
+      // Extract numeric ID from the request ID
+      const numericId = parseInt(
+        requestData.id.split('/').pop()?.split('-').pop() || '0',
+        10
+      );
 
-    setIsEditing(false);
+      if (isNaN(numericId) || numericId <= 0) {
+        throw new Error('Invalid request ID format');
+      }
+
+      // Transform the edited data back to API format
+      const apiUpdateData: Partial<MaterialIndent> = {
+        additionalNotes: requestData.items.some((item) => item.notes)
+          ? requestData.items.find((item) => item.notes)?.notes
+          : undefined,
+        // We're only updating notes and specifications, not the entire item structure
+        // The API will handle partial updates correctly
+      };
+
+      // Update the material indent via API
+      const updatedIndent = await materialIndentsApi.update(
+        numericId,
+        apiUpdateData
+      );
+
+      // Update local state with API response
+      setRequestData({
+        ...requestData,
+        apiData: updatedIndent,
+      });
+
+      toast({
+        title: 'Changes Saved',
+        description: 'Request has been updated successfully',
+      });
+
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error saving changes:', error);
+
+      toast({
+        title: 'Save Failed',
+        description: 'Failed to save changes. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleResubmit = () => {
-    if (!requestData) return;
+  const handleResubmit = async () => {
+    if (!requestData || !requestData.apiData) return;
 
-    // Update status to pending_approval for resubmission
-    const updatedData = {
-      ...requestData,
-      status: 'pending_approval',
-      resubmittedAt: new Date().toISOString(),
-      resubmittedBy: currentUser?.name || 'Supervisor',
-    };
+    try {
+      // Extract numeric ID from the request ID
+      const numericId = parseInt(
+        requestData.id.split('/').pop()?.split('-').pop() || '0',
+        10
+      );
 
-    setRequestData(updatedData);
+      if (isNaN(numericId) || numericId <= 0) {
+        throw new Error('Invalid request ID format');
+      }
 
-    toast({
-      title: 'Request Resubmitted',
-      description:
-        'Request has been resubmitted for approval with updated vendor quotations',
-    });
+      // Update the material indent status to pending_approval
+      const updatedIndent = await materialIndentsApi.update(numericId, {
+        status: IndentStatus.PENDING_APPROVAL,
+        additionalNotes: requestData.items.some((item) => item.notes)
+          ? `Resubmitted by ${
+              currentUser?.name || 'Supervisor'
+            } on ${new Date().toLocaleDateString()}. ${
+              requestData.items.find((item) => item.notes)?.notes || ''
+            }`
+          : `Resubmitted by ${
+              currentUser?.name || 'Supervisor'
+            } on ${new Date().toLocaleDateString()}.`,
+      });
 
-    // In real app, save to backend here
-    console.log('Request Resubmitted:', {
-      requestId: requestData.id,
-      updatedData,
-    });
+      // Update local state with API response
+      const updatedData = {
+        ...requestData,
+        status: IndentStatus.PENDING_APPROVAL,
+        apiData: updatedIndent,
+      };
+
+      setRequestData(updatedData);
+
+      toast({
+        title: 'Request Resubmitted',
+        description:
+          'Request has been resubmitted for approval with updated vendor quotations',
+      });
+    } catch (error) {
+      console.error('Error resubmitting request:', error);
+
+      toast({
+        title: 'Resubmission Failed',
+        description: 'Failed to resubmit the request. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleVendorQuotationChange = (
@@ -495,66 +705,122 @@ const RequestDetails: React.FC = () => {
     return false;
   };
 
+  // State for last five material indents
+  const [lastFiveIndents, setLastFiveIndents] = useState<MaterialIndent[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  // Item and quotation image URLs state
+  const [itemImageUrls, setItemImageUrls] = useState<Record<string, string[]>>(
+    {}
+  );
+  const [quotationImageUrls, setQuotationImageUrls] = useState<
+    Record<string, string[]>
+  >({});
+
+  const handleFetchItemImages = async (itemId: number) => {
+    try {
+      if (!requestData?.apiData?.id) return;
+      const urls = await materialIndentsApi.getItemImageUrls(
+        requestData.apiData.id,
+        itemId
+      );
+      setItemImageUrls((prev) => ({ ...prev, [String(itemId)]: urls }));
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load item images',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleFetchQuotationImages = async (itemId: number) => {
+    try {
+      if (!requestData?.apiData?.id) return;
+      const urls = await materialIndentsApi.getItemQuotationImageUrls(
+        requestData.apiData.id,
+        itemId
+      );
+      setQuotationImageUrls((prev) => ({ ...prev, [String(itemId)]: urls }));
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load quotation images',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Fetch last five material indents
+  useEffect(() => {
+    const fetchLastFiveIndents = async () => {
+      if (!hasPermission('inventory:material-indents:read:all')) return;
+
+      setIsLoadingHistory(true);
+      setHistoryError(null);
+
+      try {
+        const indents = await materialIndentsApi.getLastFive();
+        setLastFiveIndents(indents);
+      } catch (error) {
+        console.error('Error fetching last five indents:', error);
+        setHistoryError('Failed to load recent requests history.');
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    fetchLastFiveIndents();
+  }, [hasPermission]);
+
   const getHistoryData = () => {
     if (!requestData) return [];
 
     if (hasPermission('inventory:material-indents:read:all')) {
-      // Return last 5 approved requests (mock data)
-      return [
-        {
-          id: 'SSRFM/unit-I/I-250115004',
-          date: '2024-01-15',
-          materialName: 'Conveyor Belts',
-          quantity: '25 meters',
-          value: '₹32,500',
-          requestedBy: 'John Martinez',
-          location: 'Unit I',
-          status: 'approved',
-        },
-        {
-          id: 'SSRFM/unit-II/I-250114005',
-          date: '2024-01-14',
-          materialName: 'Air Filters',
-          quantity: '12 pieces',
-          value: '₹18,600',
-          requestedBy: 'Lisa Anderson',
-          location: 'Unit II',
-          status: 'approved',
-        },
-        {
-          id: 'SSRFM/unit-I/I-250108008',
-          date: '2024-01-08',
-          materialName: 'Industrial Lubricants',
-          quantity: '20 cartridges',
-          value: '₹4,800',
-          requestedBy: 'Sarah Wilson',
-          location: 'Unit I',
-          status: 'material_received',
-        },
-        {
-          id: 'SSRFM/unit-II/I-250107009',
-          date: '2024-01-07',
-          materialName: 'Safety Gloves',
-          quantity: '50 pairs',
-          value: '₹7,500',
-          requestedBy: 'John Martinez',
-          location: 'Unit II',
-          status: 'material_received',
-        },
-        {
-          id: 'SSRFM/unit-III/I-250102014',
-          date: '2024-01-02',
-          materialName: 'Safety Equipment',
-          quantity: '25 sets',
-          value: '₹21,250',
-          requestedBy: 'John Martinez',
-          location: 'Unit III',
-          status: 'completed',
-        },
-      ];
+      // Use the last five indents from API
+      return lastFiveIndents.map((indent) => {
+        // Get the first item for display purposes
+        const firstItem =
+          indent.items && indent.items.length > 0 ? indent.items[0] : null;
+        const firstQuotation =
+          firstItem?.selectedQuotation ||
+          (firstItem?.quotations && firstItem.quotations.length > 0
+            ? firstItem.quotations[0]
+            : null);
+
+        return {
+          id: indent.uniqueId,
+          date: indent.requestDate,
+          materialName: firstItem?.material?.name || 'Unknown',
+          quantity: firstItem ? `${firstItem.requestedQuantity}` : '0',
+          purchaseValue:
+            indent.purchases && indent.purchases.length > 0
+              ? indent.purchases[0].totalValue || '0'
+              : '0',
+          previousMaterialValue: '0', // Default value
+          perMeasureQuantity: '1', // Default value
+          requestedValue: firstQuotation ? firstQuotation.quotationAmount : '0',
+          currentValue:
+            indent.purchases && indent.purchases.length > 0
+              ? indent.purchases[0].totalValue || '0'
+              : '0',
+          status: indent.status,
+          requestedBy: indent.requestedBy?.name,
+          location: indent.branch?.name || 'Unknown',
+        };
+      });
     } else {
-      // Return receipt history for supervisor
-      return requestData.receiptHistory || [];
+      // For supervisor, show receipt history from current indent
+      // Return receipt history for supervisor, but ensure it matches the HistoryItem interface
+      return (requestData.receiptHistory || []).map((item) => ({
+        ...item,
+        purchaseValue: item.totalValue || '0',
+        previousMaterialValue: '0', // Default value
+        perMeasureQuantity: '1', // Default value
+        requestedValue: item.totalValue || '0',
+        currentValue: item.totalValue || '0',
+      }));
     }
   };
 
@@ -562,10 +828,29 @@ const RequestDetails: React.FC = () => {
     return (
       <div className='flex items-center justify-center min-h-screen'>
         <div className='text-center'>
-          <div className='animate-spin rounded-full h-32 w-32 border-b-2 border-primary'></div>
+          <Loader2 className='animate-spin h-32 w-32 text-primary mx-auto' />
           <p className='mt-4 text-muted-foreground'>
             Loading request details...
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className='flex items-center justify-center min-h-screen'>
+        <div className='text-center'>
+          <h2 className='text-2xl font-bold text-foreground mb-2'>
+            Error Loading Request
+          </h2>
+          <p className='text-muted-foreground mb-4'>{error}</p>
+          <Button onClick={() => navigate(-1)} className='mr-2'>
+            Go Back
+          </Button>
+          <Button onClick={() => window.location.reload()} variant='outline'>
+            Retry
+          </Button>
         </div>
       </div>
     );
@@ -579,7 +864,7 @@ const RequestDetails: React.FC = () => {
             Request Not Found
           </h2>
           <p className='text-muted-foreground mb-4'>
-            The requested item could not be found.
+            The requested material indent could not be found.
           </p>
           <Button onClick={() => navigate(-1)}>Go Back</Button>
         </div>
@@ -632,7 +917,11 @@ const RequestDetails: React.FC = () => {
             !hasPermission('inventory:material-indents:approve') && (
               <StatusDropdown
                 currentStatus={requestData.status}
-                userRole={hasPermission('inventory:material-indents:approve') ? 'company_owner' : 'supervisor'}
+                userRole={
+                  hasPermission('inventory:material-indents:approve')
+                    ? 'company_owner'
+                    : 'supervisor'
+                }
                 onStatusChange={handleStatusChange}
                 requestId={requestData.id}
                 hasVendorSelected={
@@ -676,6 +965,12 @@ const RequestDetails: React.FC = () => {
               onVendorQuotationChange={handleVendorQuotationChange}
               availableMaterials={availableMaterials}
               machines={machines}
+              onLoadItemImages={(itemId) => handleFetchItemImages(itemId)}
+              onLoadQuotationImages={(itemId) =>
+                handleFetchQuotationImages(itemId)
+              }
+              itemImageUrlsMap={itemImageUrls}
+              quotationImageUrlsMap={quotationImageUrls}
             />
           ) : currentUser?.role === 'supervisor' &&
             ['approved', 'ordered', 'partially_received', 'issued'].includes(
@@ -696,6 +991,12 @@ const RequestDetails: React.FC = () => {
                 onItemChange={handleItemChange}
                 availableMaterials={availableMaterials}
                 machines={machines}
+                onLoadItemImages={(itemId) => handleFetchItemImages(itemId)}
+                onLoadQuotationImages={(itemId) =>
+                  handleFetchQuotationImages(itemId)
+                }
+                itemImageUrlsMap={itemImageUrls}
+                quotationImageUrlsMap={quotationImageUrls}
               />
 
               {shouldShowVendorSelector() && (
@@ -715,11 +1016,60 @@ const RequestDetails: React.FC = () => {
         {/* Request Status Card */}
 
         {/* History Section */}
-        <HistoryView
-          userRole={hasPermission('inventory:material-indents:approve') ? 'company_owner' : 'supervisor'}
-          historyData={getHistoryData()}
-          requestId={requestData.id}
-        />
+        {isLoadingHistory &&
+        hasPermission('inventory:material-indents:read:all') ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Requests History</CardTitle>
+            </CardHeader>
+            <CardContent className='flex justify-center items-center py-8'>
+              <Loader2 className='h-8 w-8 animate-spin text-primary' />
+              <p className='ml-2 text-muted-foreground'>Loading history...</p>
+            </CardContent>
+          </Card>
+        ) : historyError &&
+          hasPermission('inventory:material-indents:read:all') ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Requests History</CardTitle>
+            </CardHeader>
+            <CardContent className='py-6'>
+              <div className='text-center'>
+                <p className='text-muted-foreground mb-2'>{historyError}</p>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => {
+                    setIsLoadingHistory(true);
+                    setHistoryError(null);
+                    materialIndentsApi
+                      .getLastFive()
+                      .then((indents) => setLastFiveIndents(indents))
+                      .catch((err) => {
+                        console.error('Error fetching history:', err);
+                        setHistoryError(
+                          'Failed to load recent requests history.'
+                        );
+                      })
+                      .finally(() => setIsLoadingHistory(false));
+                  }}
+                >
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <HistoryView
+            userRole={
+              hasPermission('inventory:material-indents:approve')
+                ? 'company_owner'
+                : 'supervisor'
+            }
+            historyData={getHistoryData()}
+            requestId={requestData.id}
+          />
+        )}
       </div>
     </div>
   );

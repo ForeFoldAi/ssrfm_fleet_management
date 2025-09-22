@@ -125,6 +125,143 @@ export interface Machine {
   additionalNotes: string;
   createdAt: string;
   updatedAt: string;
-  type: MachineType;
-  unit: Unit;
+  type?: MachineType;
+  unit?: Unit;
+  branch: Branch;
+  typeId?: number;
+  unitId?: number;
+}
+
+export interface MaterialCategory {
+  id: number;
+  name: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Material types used by MaterialsTab
+export interface Material {
+  id: number;
+  name: string;
+  specifications: string;
+  unit?: string;
+  unitId?: number;
+  categoryId?: number;
+  measureUnitId?: number;
+  makerBrand: string; // Make/Brand instead of category
+  currentStock: number;
+  minStockLevel?: number;
+  maxStockLevel?: number;
+  additionalNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MaterialIssueItem {
+  id: number;
+  issuedQuantity: number;
+  stockBeforeIssue: number;
+  stockAfterIssue: number;
+  receiverName: string;
+  imagePath?: string;
+  purpose: string;
+  createdAt: string;
+  updatedAt: string;
+  material: Material;
+  branch: Branch;
+}
+
+export interface MaterialIssue {
+  id: number;
+  uniqueId: string;
+  issuedBy: User;
+  issueDate: string;
+  additionalNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+  items: MaterialIssueItem[];
+  branch: Branch;
+}
+
+export interface VendorQuotation {
+  id: number;
+  vendorName: string;
+  contactPerson: string;
+  phone: string;
+  quotationAmount: string;
+  filePaths: string[];
+  notes: string;
+  isSelected: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MaterialPurchase {
+  id: number;
+  uniqueId: string;
+  orderDate: string;
+  totalValue: string;
+  purchaseOrderNumber: string;
+  additionalNotes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MaterialIndentItem {
+  id: number;
+  specifications: string;
+  currentStock: number;
+  requestedQuantity: number;
+  notes: string;
+  imagePaths: string[];
+  createdAt: string;
+  updatedAt: string;
+  material: Material;
+  machine: Machine;
+  quotations: VendorQuotation[];
+  selectedQuotation?: VendorQuotation;
+}
+
+export interface MaterialIndent {
+  id: number;
+  uniqueId: string;
+  requestDate: string;
+  status: string;
+  approvalDate?: string;
+  rejectionReason?: string;
+  additionalNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+  requestedBy: User;
+  approvedBy?: User;
+  branch: Branch;
+  items: MaterialIndentItem[];
+  purchases: MaterialPurchase[];
+}
+
+// Create Material Indent payloads (for FormData JSON fields)
+export interface CreateVendorQuotationInput {
+  vendorName: string;
+  contactPerson?: string;
+  phone?: string;
+  imageCount?: number; // number of files appended under quotationFiles for this quotation
+  quotationAmount: number | string;
+  notes?: string;
+}
+
+export interface CreateMaterialIndentItemInput {
+  materialId: number;
+  specifications?: string;
+  requestedQuantity: number;
+  machineId?: number;
+  itemImageCount?: number; // number of files appended under itemFiles for this item
+  vendorQuotations?: CreateVendorQuotationInput[];
+  notes?: string;
+}
+
+export interface CreateMaterialIndentRequest {
+  additionalNotes?: string;
+  items: CreateMaterialIndentItemInput[];
+  status?: string; // e.g., pending_approval
 }

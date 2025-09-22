@@ -1,4 +1,5 @@
-import { useState } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect, useCallback } from 'react';
 import {
   Clock,
   CheckCircle,
@@ -21,6 +22,7 @@ import {
   Search,
   FileEdit,
   Building2,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -60,6 +62,10 @@ import { ResubmitForm } from '../components/ResubmitForm';
 import { useRequestWorkflow } from '../hooks/useRequestWorkflow';
 import { HistoryView } from '../components/HistoryView';
 import { generatePurchaseId, parseLocationFromId } from '../lib/utils';
+import materialIndentsApi, { IndentStatus } from '../lib/api/material-indents';
+import { branchesApi } from '../lib/api/branches';
+import { Branch, MaterialIndent, PaginationMeta } from '../lib/api/types';
+import { toast } from '../hooks/use-toast';
 
 export const MaterialOrderBookTab = () => {
   const { currentUser, hasPermission } = useRole();
@@ -72,19 +78,119 @@ export const MaterialOrderBookTab = () => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isIssueFormOpen, setIsIssueFormOpen] = useState(false);
   const [selectedRequestForStatus, setSelectedRequestForStatus] =
-    useState<any>(null);
+    useState<MaterialIndent | null>(null);
   const [isStatusManagerOpen, setIsStatusManagerOpen] = useState(false);
   const [selectedRequestForResubmit, setSelectedRequestForResubmit] =
-    useState<any>(null);
+    useState<MaterialIndent | null>(null);
   const [isResubmitFormOpen, setIsResubmitFormOpen] = useState(false);
 
-  // Available units for company owner
-  const availableUnits = [
-    { id: 'unit-1', name: 'SSRFM Unit 1', location: 'Mumbai' },
-    { id: 'unit-2', name: 'SSRFM Unit 2', location: 'Delhi' },
-    { id: 'unit-3', name: 'SSRFM Unit 3', location: 'Bangalore' },
-    { id: 'unit-4', name: 'SSRFM Unit 4', location: 'Chennai' },
-  ];
+  // API state
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [materialIndents, setMaterialIndents] = useState<MaterialIndent[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    limit: 10,
+    itemCount: 0,
+    pageCount: 0,
+    hasPreviousPage: false,
+    hasNextPage: false,
+  });
+
+  // Available branches
+  const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+
+  // Fetch branches
+  useEffect(() => {
+    const fetchBranches = async () => {
+      setIsLoadingBranches(true);
+      try {
+        const response = await branchesApi.getAll({ limit: 100 });
+        setAvailableBranches(response.data);
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load branches. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoadingBranches(false);
+      }
+    };
+
+    fetchBranches();
+  }, []);
+
+  // Fetch material indents
+  const fetchMaterialIndents = useCallback(
+    async (page = 1, limit = 10) => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const params: {
+          page: number;
+          limit: number;
+          sortBy: string;
+          sortOrder: 'ASC' | 'DESC';
+          status?: string;
+          branchId?: string;
+        } = {
+          page,
+          limit,
+          sortBy: 'id',
+          sortOrder: 'DESC',
+        };
+
+        // Add status filter if not 'all'
+        if (filterStatus !== 'all') {
+          params.status = filterStatus;
+        }
+
+        // Add branch filter if not 'all'
+        if (filterUnit !== 'all') {
+          params.branchId = filterUnit;
+        }
+
+        const response = await materialIndentsApi.getAll(params);
+
+        setPagination({
+          page: response.meta.page,
+          limit: response.meta.limit,
+          itemCount: response.meta.itemCount,
+          pageCount: response.meta.pageCount,
+          hasPreviousPage: response.meta.hasPreviousPage,
+          hasNextPage: response.meta.hasNextPage,
+        });
+
+        setMaterialIndents(response.data);
+      } catch (error) {
+        console.error('Error fetching material indents:', error);
+
+        let errorMessage = 'Failed to load material indents. Please try again.';
+
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        // Check for Axios error response
+        const axiosError = error as {
+          response?: { data?: { message?: string } };
+        };
+        if (axiosError.response?.data?.message) {
+          errorMessage = axiosError.response.data.message;
+        }
+
+        setError(errorMessage);
+        setMaterialIndents([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [filterStatus, filterUnit]
+  );
 
   // Workflow management
   const {
@@ -96,7 +202,38 @@ export const MaterialOrderBookTab = () => {
     getRequestWorkflow,
     canPerformAction,
   } = useRequestWorkflow();
-  const [issuedMaterials, setIssuedMaterials] = useState<any[]>([
+  interface IssuedMaterial {
+    id: string;
+    materialId: string;
+    materialName: string;
+    specifications: string;
+    MeasureUnit: string;
+    existingStock: number;
+    issuedQuantity: string;
+    stockAfterIssue: number;
+    recipientName: string;
+    recipientId: string;
+    recipientDesignation: string;
+    department: string;
+    machineId: string;
+    machineName: string;
+    purpose: string;
+    issuingPersonName: string;
+    issuingPersonDesignation: string;
+    issuedBy: string;
+    issuedDate: string;
+    materialIssueFormSrNo: string;
+    reqFormSrNo: string;
+    indFormSrNo: string;
+    status: string;
+    type: string;
+    timestamp: string;
+    unit: string;
+    unitName: string;
+    [key: string]: unknown; // For other properties
+  }
+
+  const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>([
     // Recent Material Issues - Including items from physical form
     {
       id: 'ISS-2024-012',
@@ -332,672 +469,72 @@ export const MaterialOrderBookTab = () => {
     },
   ]);
 
-  // Update allRequests to include unit information
-  const [allRequests, setAllRequests] = useState([
-    {
-      id: 'SSRFM/unit-I/I-250120001',
-      materialName: 'Industrial Bearings',
-      specifications:
-        'SKF Deep Grove Ball Bearing 6205-2RS, Inner Dia: 25mm, Outer Dia: 52mm, Sealed Design',
-      maker: 'SKF',
-      quantity: '6 pieces',
-      unitPrice: '₹700',
-      value: '₹4,200',
-      priority: 'high',
-      materialPurpose:
-        'Emergency replacement for critical bearing failure in main grinding unit',
-      machineId: 'MACHINE-001',
-      machineName: 'Primary Flour Mill #1',
-      date: '2024-01-20',
-      status: 'pending_approval',
-      statusDescription:
-        'Awaiting supervisor approval - urgent replacement needed',
-      currentStage: 'Pending Approval',
-      progressStage: 1,
-      requestedBy: 'John Martinez',
-      department: 'Production',
-      urgencyLevel: 'Critical',
-      estimatedDowntime: '4-6 hours',
-      additionalNotes:
-        'Machine currently running on backup bearing. Immediate replacement required to prevent production halt.',
-      unit: 'unit-1',
-      unitName: 'SSRFM Unit 1',
-    },
-    {
-      id: 'SSRFM/unit-II/I-250119002',
-      materialName: 'Hydraulic Oil',
-      specifications:
-        'ISO VG 46 Hydraulic Oil, Anti-wear properties, 20L container',
-      maker: 'Shell',
-      quantity: '40 liters',
-      unitPrice: '₹170',
-      value: '₹6,800',
-      priority: 'medium',
-      materialPurpose: 'Scheduled maintenance for hydraulic systems',
-      machineId: 'MACHINE-003',
-      machineName: 'Hydraulic Press Unit',
-      date: '2024-01-19',
-      status: 'pending_approval',
-      statusDescription: 'Routine maintenance request pending approval',
-      currentStage: 'Pending Approval',
-      progressStage: 1,
-      requestedBy: 'Sarah Wilson',
-      department: 'Maintenance',
-      maintenanceType: 'Preventive',
-      scheduledDate: '2024-01-25',
-      additionalNotes:
-        'Part of quarterly maintenance schedule. Oil level currently at minimum threshold.',
-      unit: 'unit-2',
-      unitName: 'SSRFM Unit 2',
-    },
-    {
-      id: 'SSRFM/unit-III/I-250118003',
-      materialName: 'Safety Sensors',
-      specifications:
-        'Proximity Sensors M18, PNP Output, 8mm sensing distance, IP67 rated',
-      maker: 'Omron',
-      quantity: '8 pieces',
-      value: '₹12,400',
-      priority: 'medium',
-      materialPurpose: 'Replace faulty safety sensors in packaging line',
-      machineId: 'MACHINE-007',
-      machineName: 'Automated Packaging Line',
-      date: '2024-01-18',
-      status: 'pending_approval',
-      statusDescription: 'Safety upgrade request under review',
-      currentStage: 'Pending Approval',
-      progressStage: 1,
-      requestedBy: 'Mike Johnson',
-      department: 'Safety & Quality',
-      safetyImplications: 'High - affects emergency stop functionality',
-      additionalNotes:
-        'Two sensors currently malfunctioning, compromising safety protocols.',
-      unit: 'unit-3',
-      unitName: 'SSRFM Unit 3',
-    },
+  // Fetch material indents when filters change
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchMaterialIndents(pagination.page, pagination.limit);
+    }, 300); // Debounce search
 
-    // Approved Requests
-    {
-      id: 'SSRFM/unit-I/I-250115004',
-      materialName: 'Conveyor Belts',
-      specifications:
-        'Rubber Conveyor Belt, Width: 800mm, Length: 25m, Food Grade, Heat Resistant',
-      maker: 'Continental Belting',
-      quantity: '25 meters',
-      value: '₹32,500',
-      priority: 'high',
-      materialPurpose: 'Replace worn conveyor belt in main production line',
-      machineId: 'MACHINE-002',
-      machineName: 'Main Production Conveyor',
-      date: '2024-01-15',
-      status: 'approved',
-      statusDescription: 'Approved by management, ready for procurement',
-      currentStage: 'Approved',
-      progressStage: 2,
-      requestedBy: 'John Martinez',
-      approvedBy: 'Robert Williams',
-      approvedDate: '2024-01-17',
-      department: 'Production',
-      procurementTeam: 'Industrial Supplies Division',
-      expectedProcurementTime: '5-7 business days',
-      additionalNotes:
-        'High priority for production continuity. Current belt showing significant wear.',
-      unit: 'unit-1',
-      unitName: 'SSRFM Unit 1',
-    },
-    {
-      id: 'SSRFM/unit-II/I-250114005',
-      materialName: 'Air Filters',
-      specifications:
-        'HEPA Air Filters, 610x610x292mm, 99.97% efficiency, Aluminum frame',
-      maker: 'Camfil',
-      quantity: '12 pieces',
-      value: '₹18,600',
-      priority: 'medium',
-      materialPurpose: 'Replace air filtration system filters',
-      machineId: 'HVAC-001',
-      machineName: 'Production Area HVAC System',
-      date: '2024-01-14',
-      status: 'approved',
-      statusDescription: 'Approved for procurement - air quality maintenance',
-      currentStage: 'Approved',
-      progressStage: 2,
-      requestedBy: 'Lisa Anderson',
-      approvedBy: 'Robert Williams',
-      approvedDate: '2024-01-16',
-      department: 'Facilities',
-      environmentalImpact: 'Improves air quality and worker safety',
-      additionalNotes:
-        'Current filters at 80% capacity. Replacement will ensure optimal air quality.',
-      unit: 'unit-2',
-      unitName: 'SSRFM Unit 2',
-    },
-
-    // Partially Received Requests
-    {
-      id: 'SSRFM/unit-I/I-250112006',
-      materialName: 'Steel Bolts',
-      specifications: 'M12x50mm Hex Head Bolts, Grade 8.8, Zinc Plated',
-      maker: 'Fastener Industries',
-      quantity: '100 pieces',
-      value: '₹2,500',
-      priority: 'medium',
-      materialPurpose: 'Assembly and maintenance work',
-      machineId: 'MACHINE-005',
-      machineName: 'Assembly Station #2',
-      date: '2024-01-12',
-      status: 'partially_received',
-      statusDescription: 'Partially received: 60 of 100 pieces delivered',
-      currentStage: 'Partially Received',
-      progressStage: 4,
-      requestedBy: 'John Martinez',
-      approvedBy: 'Robert Williams',
-      approvedDate: '2024-01-13',
-      orderedDate: '2024-01-14',
-      receivedDate: '2024-01-18',
-      receivedBy: 'John Martinez',
-      department: 'Production',
-      purchasedPrice: 1500,
-      purchasedQuantity: 60,
-      purchasedFrom: 'Fastener Industries Ltd',
-      invoiceNumber: 'FI-2024-0156',
-      qualityCheck: 'passed',
-      notes: 'First batch received. Remaining 40 pieces expected by Jan 25th',
-      additionalNotes:
-        'Partial delivery due to supplier stock shortage. Balance quantity confirmed for next week.',
-      unit: 'unit-1',
-      unitName: 'SSRFM Unit 1',
-    },
-    {
-      id: 'SSRFM/unit-II/I-250111007',
-      materialName: 'Electrical Cables',
-      specifications:
-        '3 Core Copper Cable, 2.5mm², PVC Insulated, IS 694 Standard',
-      maker: 'Havells',
-      quantity: '50 meters',
-      value: '₹3,200',
-      priority: 'high',
-      materialPurpose: 'Electrical panel rewiring project',
-      machineId: 'ELECTRICAL-PANEL-02',
-      machineName: 'Production Line 2 Control Panel',
-      date: '2024-01-11',
-      status: 'partially_received',
-      statusDescription: 'Partially received: 30 of 50 meters delivered',
-      currentStage: 'Partially Received',
-      progressStage: 4,
-      requestedBy: 'Mike Johnson',
-      approvedBy: 'Robert Williams',
-      approvedDate: '2024-01-12',
-      orderedDate: '2024-01-13',
-      receivedDate: '2024-01-17',
-      receivedBy: 'Mike Johnson',
-      department: 'Electrical',
-      purchasedPrice: 1920,
-      purchasedQuantity: 30,
-      purchasedFrom: 'Havells Electrical Supplies',
-      invoiceNumber: 'HES-2024-0089',
-      qualityCheck: 'passed',
-      notes:
-        'Partial delivery received. Quality inspection passed. Remaining cable expected soon.',
-      additionalNotes:
-        'Project can proceed with received quantity. Balance required for completion.',
-      unit: 'unit-2',
-      unitName: 'SSRFM Unit 2',
-    },
-
-    // Material Received (Complete) Requests
-    {
-      id: 'SSRFM/unit-I/I-250108008',
-      materialName: 'Industrial Lubricants',
-      specifications:
-        'Multi-purpose Lithium Grease, High Temperature Grade, 400g Cartridges',
-      maker: 'Mobil',
-      quantity: '20 cartridges',
-      value: '₹4,800',
-      priority: 'medium',
-      materialPurpose: 'Routine maintenance lubrication for all machinery',
-      machineId: 'ALL-MACHINES',
-      machineName: 'General Machinery Maintenance',
-      date: '2024-01-08',
-      status: 'material_received',
-      statusDescription:
-        'Materials completely received and stored in inventory',
-      currentStage: 'Material Received',
-      progressStage: 5,
-      requestedBy: 'Sarah Wilson',
-      approvedBy: 'Robert Williams',
-      approvedDate: '2024-01-09',
-      orderedDate: '2024-01-10',
-      receivedDate: '2024-01-16',
-      receivedBy: 'Sarah Wilson',
-      department: 'Maintenance',
-      purchasedPrice: 4800,
-      purchasedQuantity: 20,
-      purchasedFrom: 'Mobil Industrial Lubricants',
-      invoiceNumber: 'MIL-2024-0234',
-      qualityCheck: 'passed',
-      notes:
-        'Complete order received. All cartridges in good condition. Stored in maintenance inventory.',
-      additionalNotes:
-        'Monthly maintenance supply fully restocked. Quality certification received.',
-      unit: 'unit-1',
-      unitName: 'SSRFM Unit 1',
-    },
-    {
-      id: 'SSRFM/unit-II/I-250107009',
-      materialName: 'Safety Gloves',
-      specifications:
-        'Cut Resistant Gloves, Level 5 Protection, Nitrile Coated Palm',
-      maker: 'Ansell',
-      quantity: '50 pairs',
-      value: '₹7,500',
-      priority: 'high',
-      materialPurpose: 'Worker safety equipment replacement',
-      machineId: 'GENERAL',
-      machineName: 'General Safety Requirements',
-      date: '2024-01-07',
-      status: 'material_received',
-      statusDescription: 'Safety equipment completely received and distributed',
-      currentStage: 'Material Received',
-      progressStage: 5,
-      requestedBy: 'John Martinez',
-      approvedBy: 'Robert Williams',
-      approvedDate: '2024-01-08',
-      orderedDate: '2024-01-09',
-      receivedDate: '2024-01-15',
-      receivedBy: 'John Martinez',
-      department: 'Safety',
-      purchasedPrice: 7500,
-      purchasedQuantity: 50,
-      purchasedFrom: 'Ansell Safety Solutions',
-      invoiceNumber: 'ASS-2024-0167',
-      qualityCheck: 'passed',
-      notes:
-        'Complete order received. All gloves meet safety standards. Distributed to production teams.',
-      additionalNotes:
-        'Safety compliance maintained. All workers equipped with new protective gear.',
-      unit: 'unit-2',
-      unitName: 'SSRFM Unit 2',
-    },
-
-    // Ordered Requests
-    {
-      id: 'SSRFM/unit-III/I-250110010',
-      materialName: 'Motor Oil',
-      specifications:
-        'SAE 20W-50 Heavy Duty Motor Oil, API CF-4/SG Grade, Synthetic blend',
-      maker: 'Castrol',
-      quantity: '60 liters',
-      value: '₹9,600',
-      priority: 'medium',
-      materialPurpose: 'Routine maintenance for all grinding motors',
-      machineId: 'MACHINE-GROUP-A',
-      machineName: 'Primary Grinding Motors',
-      date: '2024-01-10',
-      status: 'ordered',
-      statusDescription: 'Order placed with supplier, awaiting delivery',
-      currentStage: 'Ordered',
-      progressStage: 3,
-      requestedBy: 'John Martinez',
-      approvedBy: 'Robert Williams',
-      approvedDate: '2024-01-12',
-      orderedDate: '2024-01-14',
-      orderNumber: 'PO-2024-0875',
-      expectedDelivery: '2024-01-22',
-      supplierName: 'Industrial Lubricants Co.',
-      supplierContact: '+91-9876543210',
-      trackingNumber: 'TRK-IL-240114-001',
-      additionalNotes:
-        'Bulk order for quarterly maintenance cycle. Includes all motor grades.',
-      unit: 'unit-3',
-      unitName: 'SSRFM Unit 3',
-    },
-    {
-      id: 'SSRFM/unit-IV/I-250109011',
-      materialName: 'Grinding Wheels',
-      specifications:
-        'Aluminum Oxide Grinding Wheel, 350mm diameter, 40mm width, 32mm bore',
-      maker: 'Norton',
-      quantity: '8 pieces',
-      value: '₹15,200',
-      priority: 'high',
-      materialPurpose: 'Replace worn grinding wheels in finishing department',
-      machineId: 'MACHINE-008',
-      machineName: 'Surface Grinding Machine',
-      date: '2024-01-09',
-      status: 'ordered',
-      statusDescription: 'Expedited order placed due to high priority',
-      currentStage: 'Ordered',
-      progressStage: 3,
-      requestedBy: 'David Chen',
-      approvedBy: 'Robert Williams',
-      approvedDate: '2024-01-11',
-      orderedDate: '2024-01-13',
-      orderNumber: 'PO-2024-0876',
-      expectedDelivery: '2024-01-20',
-      supplierName: 'Precision Tools & Abrasives',
-      supplierContact: '+91-9876543211',
-      expeditedShipping: true,
-      additionalNotes:
-        'Express delivery requested. Current wheels at 15% remaining life.',
-      unit: 'unit-4',
-      unitName: 'SSRFM Unit 4',
-    },
-
-    // Issued Requests
-    {
-      id: 'SSRFM/unit-I/I-250105012',
-      materialName: 'Grinding Stones',
-      specifications:
-        'Natural Grinding Stone, Diameter: 1200mm, Thickness: 150mm, Premium Grade',
-      maker: 'Stone Craft Industries',
-      quantity: '2 pieces',
-      value: '₹45,000',
-      priority: 'high',
-      materialPurpose: 'Replace worn grinding stones in main flour mill',
-      machineId: 'MACHINE-004',
-      machineName: 'Main Flour Mill',
-      date: '2024-01-05',
-      status: 'issued',
-      statusDescription: 'Materials delivered and issued to maintenance team',
-      currentStage: 'Issued',
-      progressStage: 4,
-      requestedBy: 'John Martinez',
-      approvedBy: 'Robert Williams',
-      approvedDate: '2024-01-07',
-      orderedDate: '2024-01-08',
-      orderNumber: 'PO-2024-0850',
-      deliveredDate: '2024-01-15',
-      issuedDate: '2024-01-16',
-      issuedBy: 'Store Manager',
-      receivedBy: 'Maintenance Team Lead',
-      installationScheduled: '2024-01-18',
-      additionalNotes:
-        'Installation planned during weekend shutdown. Quality inspection completed.',
-      unit: 'unit-1',
-      unitName: 'SSRFM Unit 1',
-    },
-    {
-      id: 'SSRFM/unit-II/I-250104013',
-      materialName: 'Industrial Lubricants',
-      specifications:
-        'Multi-purpose Industrial Grease, Lithium based, High temperature grade',
-      maker: 'Mobil',
-      quantity: '24 cartridges',
-      value: '₹7,200',
-      priority: 'medium',
-      materialPurpose: 'Lubrication maintenance for all machinery',
-      machineId: 'ALL-MACHINES',
-      machineName: 'General Machinery Maintenance',
-      date: '2024-01-04',
-      status: 'issued',
-      statusDescription: 'Bulk lubricants issued for maintenance schedule',
-      currentStage: 'Issued',
-      progressStage: 4,
-      requestedBy: 'Sarah Wilson',
-      approvedBy: 'Robert Williams',
-      approvedDate: '2024-01-06',
-      orderedDate: '2024-01-07',
-      deliveredDate: '2024-01-14',
-      issuedDate: '2024-01-15',
-      issuedBy: 'Store Manager',
-      receivedBy: 'Maintenance Department',
-      distributionPlan: 'Allocated across all production lines',
-      additionalNotes:
-        'Monthly maintenance supply. Distributed to all maintenance stations.',
-      unit: 'unit-2',
-      unitName: 'SSRFM Unit 2',
-    },
-
-    // Completed Requests
-    {
-      id: 'SSRFM/unit-III/I-250102014',
-      materialName: 'Safety Equipment',
-      specifications:
-        'Safety Helmets Class A, Safety Goggles, Work Gloves, High-vis vests - Complete PPE Set',
-      maker: '3M Safety',
-      quantity: '25 sets',
-      value: '₹21,250',
-      priority: 'high',
-      materialPurpose:
-        'Annual safety equipment replacement for all production workers',
-      machineId: 'GENERAL',
-      machineName: 'General Safety Requirements',
-      date: '2024-01-02',
-      status: 'completed',
-      statusDescription:
-        'Request completed successfully with full documentation',
-      currentStage: 'Completed',
-      progressStage: 5,
-      requestedBy: 'John Martinez',
-      approvedBy: 'Robert Williams',
-      approvedDate: '2024-01-03',
-      orderedDate: '2024-01-04',
-      deliveredDate: '2024-01-12',
-      issuedDate: '2024-01-13',
-      completedDate: '2024-01-15',
-      issuedBy: 'Store Manager',
-      receivedBy: 'HR Department',
-      distributedBy: 'Safety Officer',
-      safetyTraining: 'Completed for all recipients',
-      completionNotes:
-        'All safety equipment distributed with proper training. Compliance certificates issued.',
-      additionalNotes:
-        '100% compliance achieved. All workers equipped with new safety gear.',
-      unit: 'unit-3',
-      unitName: 'SSRFM Unit 3',
-    },
-    {
-      id: 'SSRFM/unit-IV/I-250101015',
-      materialName: 'Electrical Components',
-      specifications:
-        'Circuit Breakers 32A, Contactors 25A, Cable glands M20, Terminal blocks',
-      maker: 'Schneider Electric',
-      quantity: '1 set',
-      value: '₹14,800',
-      priority: 'medium',
-      materialPurpose:
-        'Electrical panel upgrade for improved safety and efficiency',
-      machineId: 'ELECTRICAL-PANEL-03',
-      machineName: 'Production Line 3 Control Panel',
-      date: '2024-01-01',
-      status: 'completed',
-      statusDescription: 'Electrical upgrade completed and tested successfully',
-      currentStage: 'Completed',
-      progressStage: 5,
-      requestedBy: 'Mike Johnson',
-      approvedBy: 'Robert Williams',
-      approvedDate: '2024-01-02',
-      orderedDate: '2024-01-03',
-      deliveredDate: '2024-01-10',
-      issuedDate: '2024-01-11',
-      completedDate: '2024-01-14',
-      installedBy: 'Electrical Maintenance Team',
-      testingCompleted: '2024-01-14',
-      certificationIssued: 'Electrical Safety Certificate',
-      completionNotes:
-        'Panel upgrade completed successfully. All safety tests passed. System operational.',
-      additionalNotes:
-        'Improved electrical safety and added monitoring capabilities. 20% efficiency gain achieved.',
-      unit: 'unit-4',
-      unitName: 'SSRFM Unit 4',
-    },
-
-    // Reverted Requests
-    {
-      id: 'SSRFM/unit-I/I-250116016',
-      materialName: 'Industrial Pumps',
-      specifications:
-        'Centrifugal Pump, 5HP, 3 Phase, Cast Iron Body, 2 inch inlet/outlet',
-      maker: 'Kirloskar',
-      quantity: '2 pieces',
-      value: '₹45,000',
-      priority: 'high',
-      materialPurpose: 'Replace failed pumps in water circulation system',
-      machineId: 'PUMP-SYSTEM-01',
-      machineName: 'Water Circulation System',
-      date: '2024-01-16',
-      status: 'reverted',
-      statusDescription:
-        'Reverted by Owner - Specifications need clarification',
-      currentStage: 'Reverted - Resubmission Required',
-      progressStage: 0,
-      requestedBy: 'John Martinez',
-      department: 'Maintenance',
-      revertedBy: 'Robert Williams',
-      revertedDate: '2024-01-18',
-      revertReason:
-        'Pump specifications are unclear. Please specify exact model number, flow rate (GPM), and head pressure requirements. Also provide justification for 5HP requirement vs existing 3HP pumps.',
-      additionalNotes:
-        'Critical for production water supply. Current pumps showing signs of failure.',
-      unit: 'unit-1',
-      unitName: 'SSRFM Unit 1',
-    },
-    {
-      id: 'SSRFM/unit-II/I-250114017',
-      materialName: 'Electrical Transformers',
-      specifications: 'Step-down Transformer, 440V to 220V, 10KVA, Oil Cooled',
-      maker: 'Schneider Electric',
-      quantity: '1 piece',
-      value: '₹25,000',
-      priority: 'medium',
-      materialPurpose: 'Voltage regulation for new equipment installation',
-      machineId: 'ELECTRICAL-PANEL-04',
-      machineName: 'New Equipment Power Supply',
-      date: '2024-01-14',
-      status: 'reverted',
-      statusDescription: 'Reverted by Owner - Budget approval required',
-      currentStage: 'Reverted - Resubmission Required',
-      progressStage: 0,
-      requestedBy: 'Mike Johnson',
-      department: 'Electrical',
-      revertedBy: 'Robert Williams',
-      revertedDate: '2024-01-16',
-      revertReason:
-        'Request exceeds department budget limit of ₹20,000. Please get budget approval from finance department or find alternative solution within budget. Also verify if existing transformers can be reconfigured.',
-      additionalNotes:
-        'Required for new packaging line installation scheduled for next month.',
-      unit: 'unit-2',
-      unitName: 'SSRFM Unit 2',
-    },
-    {
-      id: 'SSRFM/unit-III/I-250112018',
-      materialName: 'Precision Measuring Tools',
-      specifications:
-        'Digital Calipers 0-150mm, Micrometer Set 0-25mm, Dial Indicators',
-      maker: 'Mitutoyo',
-      quantity: '1 set',
-      value: '₹18,500',
-      priority: 'low',
-      materialPurpose:
-        'Quality control and precision measurement in production',
-      machineId: 'QC-STATION-01',
-      machineName: 'Quality Control Station',
-      date: '2024-01-12',
-      status: 'reverted',
-      statusDescription: 'Reverted by Owner - Existing tools assessment needed',
-      currentStage: 'Reverted - Resubmission Required',
-      progressStage: 0,
-      requestedBy: 'Sarah Wilson',
-      department: 'Quality Control',
-      revertedBy: 'Robert Williams',
-      revertedDate: '2024-01-14',
-      revertReason:
-        'Please conduct assessment of existing measuring tools first. Provide calibration reports and condition assessment. If existing tools can be repaired or recalibrated, that should be considered first before new purchase.',
-      additionalNotes:
-        'Current tools showing accuracy issues during quality checks.',
-      unit: 'unit-3',
-      unitName: 'SSRFM Unit 3',
-    },
-
-    // Rejected Requests
-    {
-      id: 'SSRFM/unit-IV/I-250108019',
-      materialName: 'Electrical Wires',
-      specifications:
-        'Copper Wire 2.5mm² XLPE Insulated, IS 694 Standard, Flame retardant',
-      maker: 'Havells',
-      quantity: '100 meters',
-      value: '₹4,500',
-      priority: 'low',
-      materialPurpose:
-        'Electrical maintenance and rewiring of secondary systems',
-      machineId: 'MACHINE-005',
-      machineName: 'Secondary Control Panel Systems',
-      date: '2024-01-08',
-      status: 'rejected',
-      statusDescription:
-        'Rejected - insufficient justification and budget constraints',
-      currentStage: 'Rejected',
-      progressStage: 0,
-      requestedBy: 'John Martinez',
-      rejectedBy: 'Sarah Chen',
-      rejectedDate: '2024-01-10',
-      rejectedAt: 'manager_level',
-      reason:
-        'Current wiring infrastructure is adequate for current operations. Defer to next fiscal year budget. Focus on critical maintenance items first.',
-      budgetConstraints: 'Q1 electrical budget 85% utilized',
-      alternativeSuggestion:
-        'Monitor current system performance and reassess in Q2',
-      additionalNotes:
-        'Request can be resubmitted with detailed justification if system performance degrades.',
-      unit: 'unit-4',
-      unitName: 'SSRFM Unit 4',
-    },
-    {
-      id: 'SSRFM/unit-I/I-250107020',
-      materialName: 'Decorative Lighting',
-      specifications: 'LED Strip Lights, RGB, 5m length, Remote controlled',
-      maker: 'Philips',
-      quantity: '10 strips',
-      value: '₹8,900',
-      priority: 'low',
-      materialPurpose: 'Improve workplace ambiance in break areas',
-      machineId: 'GENERAL',
-      machineName: 'Employee Break Areas',
-      date: '2024-01-07',
-      status: 'rejected',
-      statusDescription:
-        'Rejected - non-essential item, not aligned with operational priorities',
-      currentStage: 'Rejected',
-      progressStage: 0,
-      requestedBy: 'Lisa Anderson',
-      rejectedBy: 'Robert Williams',
-      rejectedDate: '2024-01-09',
-      rejectedAt: 'supervisor_level',
-      reason:
-        'Request does not align with operational priorities. Focus budget on production-critical items. Consider as part of facility improvement plan in future.',
-      policyViolation:
-        'Non-production related expense outside approved categories',
-      alternativeSuggestion:
-        'Submit as part of annual facility improvement proposal',
-      additionalNotes:
-        'Consider energy-efficient lighting upgrades as part of comprehensive facility modernization plan.',
-      unit: 'unit-1',
-      unitName: 'SSRFM Unit 1',
-    },
+    return () => clearTimeout(timeoutId);
+  }, [
+    searchTerm,
+    filterStatus,
+    filterUnit,
+    pagination.page,
+    pagination.limit,
+    fetchMaterialIndents,
   ]);
+
+  // Legacy state for backward compatibility
+  interface LegacyRequest {
+    id: string;
+    originalId: number;
+    materialName: string;
+    specifications: string;
+    maker: string;
+    quantity: string;
+    unitPrice?: string;
+    value: string;
+    priority: string;
+    materialPurpose: string;
+    machineId: string;
+    machineName: string;
+    date: string;
+    status: string;
+    statusDescription: string;
+    currentStage: string;
+    progressStage: number;
+    requestedBy: string;
+    department?: string; // Make optional since some entries don't have it
+    unit: string;
+    unitName: string;
+    approvedBy?: string;
+    approvedDate?: string;
+    additionalNotes?: string;
+    rejectionReason?: string;
+    [key: string]: unknown; // For other legacy fields
+  }
+
+  const [allRequests, setAllRequests] = useState<LegacyRequest[]>([]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending_approval':
+      case IndentStatus.DRAFT:
+        return 'bg-gray-500 text-white border-gray-600 hover:bg-gray-500 hover:text-white';
+      case IndentStatus.PENDING_APPROVAL:
         return 'bg-yellow-500 text-white border-yellow-600 hover:bg-yellow-500 hover:text-white';
-      case 'approved':
+      case IndentStatus.APPROVED:
         return 'bg-green-500 text-white border-green-600 hover:bg-green-500 hover:text-white';
-      case 'ordered':
+      case IndentStatus.ORDERED:
         return 'bg-blue-500 text-white border-blue-600 hover:bg-blue-500 hover:text-white';
-      case 'partially_received':
+      case IndentStatus.PARTIALLY_RECEIVED:
         return 'bg-orange-500 text-white border-orange-600 hover:bg-orange-500 hover:text-white';
-      case 'material_received':
+      case IndentStatus.FULLY_RECEIVED:
         return 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-500 hover:text-white';
-      case 'issued':
-        return 'bg-purple-500 text-white border-purple-600 hover:bg-purple-500 hover:text-white';
-      case 'completed':
+      case IndentStatus.CLOSED:
         return 'bg-green-600 text-white border-green-700 hover:bg-green-600 hover:text-white';
-      case 'rejected':
+      case IndentStatus.REJECTED:
         return 'bg-red-500 text-white border-red-600 hover:bg-red-500 hover:text-white';
-      case 'reverted':
-        return 'bg-black text-white border-gray-800 hover:bg-black hover:text-white';
       default:
         return 'bg-gray-500 text-white border-gray-600 hover:bg-gray-500 hover:text-white';
     }
@@ -1018,43 +555,87 @@ export const MaterialOrderBookTab = () => {
 
   const getProgressColor = (stage: number) => {
     switch (stage) {
-      case 1:
+      case 1: // DRAFT or PENDING_APPROVAL
         return 'bg-secondary/100';
-      case 2:
+      case 2: // APPROVED
         return 'bg-secondary/100';
-      case 3:
+      case 3: // ORDERED
         return 'bg-purple-500';
-      case 4:
+      case 4: // PARTIALLY_RECEIVED or FULLY_RECEIVED
         return 'bg-orange-500';
-      case 5:
+      case 5: // CLOSED
         return 'bg-primary';
       default:
         return 'bg-gray-300';
     }
   };
 
+  const getProgressStage = (status: string): number => {
+    switch (status) {
+      case IndentStatus.DRAFT:
+        return 1;
+      case IndentStatus.PENDING_APPROVAL:
+        return 1;
+      case IndentStatus.APPROVED:
+        return 2;
+      case IndentStatus.ORDERED:
+        return 3;
+      case IndentStatus.PARTIALLY_RECEIVED:
+        return 4;
+      case IndentStatus.FULLY_RECEIVED:
+        return 4;
+      case IndentStatus.CLOSED:
+        return 5;
+      case IndentStatus.REJECTED:
+        return 0;
+      default:
+        return 0;
+    }
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending_approval':
+      case IndentStatus.DRAFT:
+        return <FileEdit className='w-4 h-4' />;
+      case IndentStatus.PENDING_APPROVAL:
         return <Clock className='w-4 h-4' />;
-      case 'approved':
+      case IndentStatus.APPROVED:
         return <CheckCircle className='w-4 h-4' />;
-      case 'ordered':
+      case IndentStatus.ORDERED:
         return <Package className='w-4 h-4' />;
-      case 'partially_received':
+      case IndentStatus.PARTIALLY_RECEIVED:
         return <Truck className='w-4 h-4' />;
-      case 'material_received':
+      case IndentStatus.FULLY_RECEIVED:
         return <CheckSquare className='w-4 h-4' />;
-      case 'issued':
-        return <Truck className='w-4 h-4' />;
-      case 'completed':
+      case IndentStatus.CLOSED:
         return <CheckSquare className='w-4 h-4' />;
-      case 'rejected':
-        return <XCircle className='w-4 h-4' />;
-      case 'reverted':
+      case IndentStatus.REJECTED:
         return <XCircle className='w-4 h-4' />;
       default:
         return <AlertTriangle className='w-4 h-4' />;
+    }
+  };
+
+  const getStatusLabel = (status: string): string => {
+    switch (status) {
+      case IndentStatus.DRAFT:
+        return 'Draft';
+      case IndentStatus.PENDING_APPROVAL:
+        return 'Pending Approval';
+      case IndentStatus.APPROVED:
+        return 'Approved';
+      case IndentStatus.ORDERED:
+        return 'Ordered';
+      case IndentStatus.PARTIALLY_RECEIVED:
+        return 'Partially Received';
+      case IndentStatus.FULLY_RECEIVED:
+        return 'Fully Received';
+      case IndentStatus.CLOSED:
+        return 'Closed';
+      case IndentStatus.REJECTED:
+        return 'Rejected';
+      default:
+        return 'Unknown';
     }
   };
 
@@ -1068,18 +649,22 @@ export const MaterialOrderBookTab = () => {
     setExpandedRows(newExpandedRows);
   };
 
-  const handleMaterialIssue = (issueData: any) => {
-    setIssuedMaterials((prev) => [...prev, issueData]);
+  const handleMaterialIssue = (issueData: Record<string, unknown>) => {
+    // Cast the issueData to IssuedMaterial to satisfy TypeScript
+    setIssuedMaterials((prev) => [
+      ...prev,
+      issueData as unknown as IssuedMaterial,
+    ]);
   };
 
   // Add missing functions
-  const openStatusManager = (request: any) => {
-    setSelectedRequestForStatus(request);
+  const openStatusManager = (request: MaterialIndent | LegacyRequest) => {
+    setSelectedRequestForStatus(request as MaterialIndent);
     setIsStatusManagerOpen(true);
   };
 
-  const openResubmitForm = (request: any) => {
-    setSelectedRequestForResubmit(request);
+  const openResubmitForm = (request: MaterialIndent | LegacyRequest) => {
+    setSelectedRequestForResubmit(request as MaterialIndent);
     setIsResubmitFormOpen(true);
   };
 
@@ -1089,48 +674,105 @@ export const MaterialOrderBookTab = () => {
         req.id === requestId ? { ...req, status: newStatus } : req
       )
     );
+
+    // In a real implementation, we would call the API to update the status
+    // materialIndentsApi.updateStatus(requestId, newStatus)
+    //   .then(() => fetchMaterialIndents())
+    //   .catch(error => console.error('Failed to update status:', error));
   };
 
-  const handleResubmitRequest = (requestData: any) => {
+  const handleResubmitRequest = (requestData: Record<string, unknown>) => {
     // Handle resubmit logic here
     console.log('Resubmitting request:', requestData);
+
+    // In a real implementation, we would call the API to resubmit the request
+    // materialIndentsApi.create(requestData)
+    //   .then(() => fetchMaterialIndents())
+    //   .catch(error => console.error('Failed to resubmit request:', error));
   };
 
-  // Permission-based filtering function
-  const getFilteredRequests = () => {
-    let baseFilter = allRequests.filter((request) => {
-      const matchesSearch =
-        request.materialName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.maker.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus =
-        filterStatus === 'all' || request.status === filterStatus;
-      const matchesPriority =
-        filterPriority === 'all' || request.priority === filterPriority;
+  // Transform API data to UI format
+  const transformApiIndentToUiFormat = (indent: MaterialIndent) => {
+    // Get the first item for display purposes (if available)
+    const firstItem =
+      indent.items && indent.items.length > 0 ? indent.items[0] : null;
+    const firstQuotation =
+      firstItem?.selectedQuotation ||
+      (firstItem?.quotations && firstItem.quotations.length > 0
+        ? firstItem.quotations[0]
+        : null);
 
-      // Unit filtering logic
-      let matchesUnit = true;
-      if (hasPermission('inventory:material-indents:read:all')) {
-        matchesUnit = filterUnit === 'all' || request.unit === filterUnit;
-      } else {
-        // For non-global readers, restrict to a default/unit-specific scope (placeholder)
-        matchesUnit = request.unit === 'unit-1';
+    return {
+      id: indent.uniqueId,
+      originalId: indent.id,
+      materialName: firstItem?.material.name || 'N/A',
+      specifications:
+        firstItem?.specifications || firstItem?.material.specifications || '',
+      maker: firstItem?.material.makerBrand || 'N/A',
+      quantity: firstItem ? `${firstItem.requestedQuantity} units` : '0',
+      unitPrice: firstQuotation ? `₹${firstQuotation.quotationAmount}` : 'N/A',
+      value: firstQuotation
+        ? `₹${
+            Number(firstQuotation.quotationAmount) *
+            (firstItem?.requestedQuantity || 0)
+          }`
+        : 'N/A',
+      priority: 'medium', // Not available in API, using default
+      materialPurpose: firstItem?.notes || indent.additionalNotes || '',
+      machineId: firstItem?.machine?.id.toString() || 'N/A',
+      machineName: firstItem?.machine?.name || 'N/A',
+      date: new Date(indent.requestDate).toLocaleDateString(),
+      status: indent.status,
+      statusDescription: `${getStatusLabel(indent.status)} - ${
+        indent.additionalNotes || ''
+      }`,
+      currentStage: getStatusLabel(indent.status),
+      progressStage: getProgressStage(indent.status),
+      requestedBy: indent.requestedBy?.name || 'Unknown',
+      department: 'Production', // Not available in API, using default
+      unit: indent.branch?.code || '',
+      unitName: indent.branch?.name || '',
+      approvedBy: indent.approvedBy?.name,
+      approvedDate: indent.approvalDate
+        ? new Date(indent.approvalDate).toLocaleDateString()
+        : undefined,
+      additionalNotes: indent.additionalNotes,
+      rejectionReason: indent.rejectionReason,
+      // Include the original data for reference
+      originalIndent: indent,
+    };
+  };
+
+  // Client-side filtering for search
+  const filterIndents = (indents: MaterialIndent[]) => {
+    if (!searchTerm) return indents;
+
+    return indents.filter((indent) => {
+      // Search in indent uniqueId
+      if (indent.uniqueId.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return true;
       }
 
-      return matchesSearch && matchesStatus && matchesPriority && matchesUnit;
+      // Search in items
+      return indent.items.some((item) => {
+        return (
+          item.material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.material.makerBrand
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          item.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      });
     });
-
-    // Owner-like users: restrict to most relevant statuses in this view
-    if (hasPermission('inventory:material-indents:approve') || hasPermission('inventory:material-indents:read:all')) {
-      return baseFilter.filter((request) =>
-        ['pending_approval', 'approved', 'reverted'].includes(request.status)
-      );
-    }
-
-    return baseFilter;
   };
 
-  const filteredRequests = getFilteredRequests();
+  // Get filtered and transformed indents for UI
+  const getFilteredIndents = () => {
+    const filteredData = filterIndents(materialIndents);
+    return filteredData.map(transformApiIndentToUiFormat);
+  };
+
+  const filteredRequests = getFilteredIndents();
 
   // Get last 5 approved requests for Company Owner
   const getApprovedHistory = () => {
@@ -1667,8 +1309,12 @@ export const MaterialOrderBookTab = () => {
                             </Button>
 
                             {/* Status Management Button */}
-                            {(hasPermission('inventory:material-indents:approve') ||
-                              hasPermission('inventory:material-indents:update')) && (
+                            {(hasPermission(
+                              'inventory:material-indents:approve'
+                            ) ||
+                              hasPermission(
+                                'inventory:material-indents:update'
+                              )) && (
                               <Button
                                 variant='outline'
                                 className='gap-2 rounded-lg'
@@ -1765,7 +1411,7 @@ export const MaterialOrderBookTab = () => {
                     <Button
                       variant='link'
                       className='p-0 h-auto font-medium text-primary hover:underline'
-                      onClick={() => handleRequestClick(request.id)}
+                      onClick={() => handleRequestClick(request.originalId)}
                     >
                       {request.id}
                     </Button>
@@ -1862,20 +1508,26 @@ export const MaterialOrderBookTab = () => {
 
           {/* Unit Filter - Only for users with global read */}
           {hasPermission('inventory:material-indents:read:all') && (
-            <Select value={filterUnit} onValueChange={setFilterUnit}>
+            <Select
+              value={filterUnit}
+              onValueChange={setFilterUnit}
+              disabled={isLoadingBranches}
+            >
               <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-                <SelectValue placeholder='Select Unit' />
+                <SelectValue placeholder='Select Unit'>
+                  {isLoadingBranches ? 'Loading...' : 'Select Unit'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='all'>All Units</SelectItem>
-                {availableUnits.map((unit) => (
-                  <SelectItem key={unit.id} value={unit.id}>
+                {availableBranches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id.toString()}>
                     <div className='flex items-center gap-2'>
                       <Building2 className='w-4 h-4' />
                       <div>
-                        <div className='font-medium'>{unit.name}</div>
+                        <div className='font-medium'>{branch.name}</div>
                         <div className='text-xs text-muted-foreground'>
-                          {unit.location}
+                          {branch.location}
                         </div>
                       </div>
                     </div>
@@ -1892,19 +1544,20 @@ export const MaterialOrderBookTab = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value='all'>All Status</SelectItem>
-              <SelectItem value='pending_approval'>Pending Approval</SelectItem>
-              <SelectItem value='approved'>Approved</SelectItem>
-              <SelectItem value='ordered'>Ordered</SelectItem>
-              <SelectItem value='partially_received'>
+              <SelectItem value={IndentStatus.DRAFT}>Draft</SelectItem>
+              <SelectItem value={IndentStatus.PENDING_APPROVAL}>
+                Pending Approval
+              </SelectItem>
+              <SelectItem value={IndentStatus.APPROVED}>Approved</SelectItem>
+              <SelectItem value={IndentStatus.ORDERED}>Ordered</SelectItem>
+              <SelectItem value={IndentStatus.PARTIALLY_RECEIVED}>
                 Partially Received
               </SelectItem>
-              <SelectItem value='material_received'>
-                Material Received
+              <SelectItem value={IndentStatus.FULLY_RECEIVED}>
+                Fully Received
               </SelectItem>
-              <SelectItem value='issued'>Issued</SelectItem>
-              <SelectItem value='completed'>Completed</SelectItem>
-              <SelectItem value='rejected'>Rejected</SelectItem>
-              <SelectItem value='reverted'>Reverted</SelectItem>
+              <SelectItem value={IndentStatus.CLOSED}>Closed</SelectItem>
+              <SelectItem value={IndentStatus.REJECTED}>Rejected</SelectItem>
             </SelectContent>
           </Select>
 
@@ -1938,8 +1591,30 @@ export const MaterialOrderBookTab = () => {
 
         {/* Order Request Status Tab */}
         <TabsContent value='order-status' className='space-y-3 sm:space-y-4'>
-          {/* Request List */}
-          {filteredRequests.length > 0 ? (
+          {/* Loading State */}
+          {isLoading ? (
+            <Card className='rounded-lg shadow-sm p-8 text-center'>
+              <Loader2 className='w-12 h-12 text-primary mx-auto mb-4 animate-spin' />
+              <h3 className='text-lg font-semibold text-foreground mb-2'>
+                Loading Material Indents
+              </h3>
+              <p className='text-muted-foreground mb-4'>
+                Please wait while we fetch the data...
+              </p>
+            </Card>
+          ) : error ? (
+            <Card className='rounded-lg shadow-sm p-8 text-center'>
+              <AlertTriangle className='w-12 h-12 text-red-500 mx-auto mb-4' />
+              <h3 className='text-lg font-semibold text-foreground mb-2'>
+                Error Loading Data
+              </h3>
+              <p className='text-muted-foreground mb-4'>{error}</p>
+              <Button variant='outline' onClick={() => fetchMaterialIndents()}>
+                <AlertTriangle className='w-4 h-4 mr-2' />
+                Try Again
+              </Button>
+            </Card>
+          ) : filteredRequests.length > 0 ? (
             viewMode === 'table' ? (
               <TableView requests={filteredRequests} />
             ) : (
@@ -1949,15 +1624,15 @@ export const MaterialOrderBookTab = () => {
             <Card className='rounded-lg shadow-sm p-8 text-center'>
               <FileText className='w-12 h-12 text-muted-foreground mx-auto mb-4' />
               <h3 className='text-lg font-semibold text-foreground mb-2'>
-                No Order Requests
+                No Material Indents Found
               </h3>
               <p className='text-muted-foreground mb-4'>
-                You haven't submitted any order requests yet.
+                No material indents match your current filters.
               </p>
               <Button asChild variant='outline'>
                 <Link to='/material-request'>
                   <FileEdit className='w-4 h-4 mr-2' />
-                  Create Order Request
+                  Create Material Indent
                 </Link>
               </Button>
             </Card>
@@ -1969,7 +1644,9 @@ export const MaterialOrderBookTab = () => {
       <MaterialIssueForm
         isOpen={isIssueFormOpen}
         onClose={() => setIsIssueFormOpen(false)}
-        onSubmit={handleMaterialIssue}
+        onSubmit={(data) =>
+          handleMaterialIssue(data as unknown as Record<string, unknown>)
+        }
       />
 
       {/* Request Status Manager */}
@@ -1999,7 +1676,8 @@ export const MaterialOrderBookTab = () => {
       )}
 
       {/* Owner-like History Section */}
-      {(hasPermission('inventory:material-indents:approve') || hasPermission('inventory:material-indents:read:all')) && (
+      {(hasPermission('inventory:material-indents:approve') ||
+        hasPermission('inventory:material-indents:read:all')) && (
         <div className='mt-8'>
           <HistoryView
             userRole='company_owner'
