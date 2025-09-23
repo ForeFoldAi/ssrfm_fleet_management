@@ -166,6 +166,8 @@ export interface MaterialIssueItem {
   receiverName: string;
   imagePath?: string;
   purpose: string;
+  machineId?: number;
+  machineName?: string;
   createdAt: string;
   updatedAt: string;
   material: Material;
@@ -264,4 +266,96 @@ export interface CreateMaterialIndentRequest {
   additionalNotes?: string;
   items: CreateMaterialIndentItemInput[];
   status?: string; // e.g., pending_approval
+}
+
+// Material Purchase Item Types
+export interface MaterialPurchaseItem {
+  id: number;
+  materialId: number;
+  materialName: string;
+  specifications: string;
+  orderedQuantity: number;
+  receivedQuantity: number;
+  pendingQuantity: number;
+  unitPrice: string;
+  totalPrice: string;
+  status: 'pending' | 'partially_received' | 'fully_received';
+  receivedDate?: string;
+  receivedBy?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  material: Material;
+}
+
+// Enhanced Material Purchase interface
+export interface MaterialPurchase {
+  id: number;
+  uniqueId: string;
+  orderDate: string;
+  totalValue: string;
+  purchaseOrderNumber: string;
+  status: 'pending' | 'partially_received' | 'fully_received' | 'closed';
+  additionalNotes: string;
+  createdAt: string;
+  updatedAt: string;
+  items: MaterialPurchaseItem[];
+  branch: Branch;
+  createdBy: User;
+}
+
+// Create Material Purchase Request
+export interface CreateMaterialPurchaseRequest {
+  purchaseOrderNumber: string;
+  orderDate: string;
+  totalValue: string;
+  additionalNotes?: string;
+  items: CreateMaterialPurchaseItemInput[];
+}
+
+export interface CreateMaterialPurchaseItemInput {
+  materialId: number;
+  orderedQuantity: number;
+  unitPrice: string;
+  notes?: string;
+}
+
+// Receive Material Purchase Item Request
+export interface ReceiveMaterialPurchaseItemRequest {
+  receivedQuantity: number;
+  receivedDate: string;
+  notes?: string;
+}
+
+// Receive Material Purchase Item Response
+export interface ReceiveMaterialPurchaseItemResponse {
+  id: number;
+  receivedQuantity: number;
+  pendingQuantity: number;
+  status: 'pending' | 'partially_received' | 'fully_received';
+  receivedDate: string;
+  receivedBy: string;
+  notes?: string;
+  updatedAt: string;
+  material: Material;
+}
+
+// Approve/Reject Material Indent Request
+export interface ApproveRejectMaterialIndentRequest {
+  status: 'approved' | 'rejected';
+  rejectionReason?: string;
+  itemId: number;
+  quotationId: number;
+}
+
+// Approve/Reject Material Indent Response
+export interface ApproveRejectMaterialIndentResponse {
+  id: number;
+  uniqueId: string;
+  status: string;
+  approvalDate?: string;
+  rejectionReason?: string;
+  updatedAt: string;
+  approvedBy?: User;
+  items: MaterialIndentItem[];
 }

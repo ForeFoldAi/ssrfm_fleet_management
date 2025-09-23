@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search, List, Table, Package, Settings, FileText, ClipboardList, Factory, Hourglass, ArrowUpRight, ShoppingBasket } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -7,9 +7,29 @@ import { MaterialsTab } from "../components/MaterialsTab";
 import { MachinesTab } from "../components/MachinesTab";
 import { MaterialIssuesTab } from "../components/MaterialIssuesTab";
 import { MaterialOrderBookTab } from "@/components/MaterialOrderBookTab";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 const MaterialsInventory = () => {
   const [activeTab, setActiveTab] = useState("materials");
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Check if we're on a nested route (like material-request)
+  const isNestedRoute = location.pathname.includes('/material-request');
+  
+  // Handle state parameter for active tab (from back navigation)
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+      // Clear the state to prevent it from persisting
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
+  
+  // If we're on a nested route, render the outlet instead of the main content
+  if (isNestedRoute) {
+    return <Outlet />;
+  }
   
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
@@ -85,6 +105,13 @@ const MaterialsInventory = () => {
           <MachinesTab />
         </TabsContent>
       </Tabs>
+      
+      {/* Fixed Footer */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border/50 py-2 z-10">
+        <p className="text-center text-sm text-muted-foreground">
+          Developed & Maintained by ForeFold AI
+        </p>
+      </div>
     </div>
   );
 };

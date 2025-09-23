@@ -423,10 +423,7 @@ const MaterialRequest = () => {
         newErrors[
           `productName_${item.id}`
         ] = `Product name is required for item ${index + 1}`;
-      if (!item.machineName.trim())
-        newErrors[
-          `machineName_${item.id}`
-        ] = `Machine name is required for item ${index + 1}`;
+      // Removed machine name validation - now optional
       if (!item.reqQuantity.trim())
         newErrors[
           `reqQuantity_${item.id}`
@@ -802,7 +799,7 @@ const MaterialRequest = () => {
                       }
                     >
                       <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none'>
-                        <SelectValue placeholder='Select Machine' />
+                        <SelectValue placeholder='Select Machine (Optional)' />
                       </SelectTrigger>
                       <SelectContent>
                         {availableMachines.map((machine) => (
@@ -812,11 +809,7 @@ const MaterialRequest = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    {errors[`machineName_${item.id}`] && (
-                      <p className='text-destructive text-xs mt-1'>
-                        {errors[`machineName_${item.id}`]}
-                      </p>
-                    )}
+                    {/* Removed error display for machine name since it's now optional */}
                   </TableCell>
                   <TableCell className='border border-gray-300'>
                     <Textarea
@@ -889,7 +882,7 @@ const MaterialRequest = () => {
                 </div>
 
                 <div className='space-y-2'>
-                  <Label className='text-sm font-medium'>Machine Name *</Label>
+                  <Label className='text-sm font-medium'>Machine Name (Optional)</Label>
                   <Select
                     value={item.machineName}
                     onValueChange={(value) =>
@@ -897,7 +890,7 @@ const MaterialRequest = () => {
                     }
                   >
                     <SelectTrigger className='h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
-                      <SelectValue placeholder='Select Machine' />
+                      <SelectValue placeholder='Select Machine (Optional)' />
                     </SelectTrigger>
                     <SelectContent>
                       {availableMachines.map((machine) => (
@@ -907,11 +900,7 @@ const MaterialRequest = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors[`machineName_${item.id}`] && (
-                    <p className='text-destructive text-sm mt-1'>
-                      {errors[`machineName_${item.id}`]}
-                    </p>
-                  )}
+                  {/* Removed error display for machine name since it's now optional */}
                 </div>
 
                 <div className='space-y-2'>
@@ -1107,7 +1096,7 @@ const MaterialRequest = () => {
           <Button
             variant='outline'
             size='sm'
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/materials-inventory')}
             className='gap-2'
           >
             <ArrowLeft className='w-4 h-4' />
@@ -1173,7 +1162,7 @@ const MaterialRequest = () => {
             type='button'
             size='lg'
             variant='outline'
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/materials-inventory')}
             className='min-w-48 gap-2'
           >
             <X className='w-5 h-5' />

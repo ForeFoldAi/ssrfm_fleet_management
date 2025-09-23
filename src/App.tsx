@@ -2,7 +2,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { RoleProvider, useRole } from './contexts/RoleContext';
 import { StockProvider } from './contexts/StockContext';
 import { SidebarProvider } from './contexts/SidebarContext';
@@ -88,8 +88,15 @@ const AppRoutes = () => {
         }
       >
         <Route index element={<RoleBasedHome />} />
-        <Route path='materials-inventory' element={<MaterialsInventory />} />
+        
+        {/* Nested routes under materials-inventory */}
+        <Route path='materials-inventory' element={<MaterialsInventory />}>
+          <Route path='material-request' element={<MaterialRequest />} />
+        </Route>
+        
+        {/* Keep the standalone material-request route for backwards compatibility */}
         <Route path='material-request' element={<MaterialRequest />} />
+        
         <Route path='requests-list' element={<RequestsList />} />
         <Route path='approval-center' element={<ApprovalCenter />} />
         <Route path='stock-management' element={<StockManagement />} />

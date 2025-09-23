@@ -33,7 +33,7 @@ export const Sidebar = () => {
   const getNavigationItems = () => {
     const userRole = currentUser?.role;
 
-    // Dashboard item - exclude for supervisor-like users
+    // Dashboard item - completely exclude for supervisors
     const baseItems =
       userRole !== 'supervisor'
         ? [

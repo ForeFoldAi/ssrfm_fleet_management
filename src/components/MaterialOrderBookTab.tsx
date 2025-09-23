@@ -23,6 +23,14 @@ import {
   FileEdit,
   Building2,
   Loader2,
+  ChevronUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
+  ShoppingCart,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -54,6 +62,15 @@ import {
   TableHeader,
   TableRow,
 } from '../components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../components/ui/dialog';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRole } from '../contexts/RoleContext';
 import { MaterialIssueForm } from '../components/MaterialIssueForm';
@@ -63,8 +80,16 @@ import { useRequestWorkflow } from '../hooks/useRequestWorkflow';
 import { HistoryView } from '../components/HistoryView';
 import { generatePurchaseId, parseLocationFromId } from '../lib/utils';
 import materialIndentsApi, { IndentStatus } from '../lib/api/material-indents';
+import { materialPurchasesApi, MaterialPurchaseStatus } from '../lib/api/materials-purchases';
 import { branchesApi } from '../lib/api/branches';
-import { Branch, MaterialIndent, PaginationMeta } from '../lib/api/types';
+import { 
+  Branch, 
+  MaterialIndent, 
+  PaginationMeta,
+  MaterialPurchase,
+  ApproveRejectMaterialIndentRequest,
+  ReceiveMaterialPurchaseItemRequest
+} from '../lib/api/types';
 import { toast } from '../hooks/use-toast';
 
 export const MaterialOrderBookTab = () => {
@@ -84,13 +109,36 @@ export const MaterialOrderBookTab = () => {
     useState<MaterialIndent | null>(null);
   const [isResubmitFormOpen, setIsResubmitFormOpen] = useState(false);
 
+  // New state for approval/rejection workflow
+  const [selectedIndentForApproval, setSelectedIndentForApproval] = useState<MaterialIndent | null>(null);
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+  const [selectedQuotationId, setSelectedQuotationId] = useState<number | null>(null);
+
+  // New state for material purchase workflow
+  const [selectedIndentForOrder, setSelectedIndentForOrder] = useState<MaterialIndent | null>(null);
+  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
+  const [selectedPurchase, setSelectedPurchase] = useState<MaterialPurchase | null>(null);
+  const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
+  const [receiveData, setReceiveData] = useState<ReceiveMaterialPurchaseItemRequest>({
+    receivedQuantity: 0,
+    receivedDate: new Date().toISOString().split('T')[0],
+    notes: ''
+  });
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>('id');
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+
   // API state
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [materialIndents, setMaterialIndents] = useState<MaterialIndent[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta>({
     page: 1,
-    limit: 10,
+    limit: 5, // Changed default to 5
     itemCount: 0,
     pageCount: 0,
     hasPreviousPage: false,
@@ -125,7 +173,7 @@ export const MaterialOrderBookTab = () => {
 
   // Fetch material indents
   const fetchMaterialIndents = useCallback(
-    async (page = 1, limit = 10) => {
+    async (page = 1, limit = 5) => { // Changed default to 5
       setIsLoading(true);
       setError(null);
 
@@ -140,8 +188,8 @@ export const MaterialOrderBookTab = () => {
         } = {
           page,
           limit,
-          sortBy: 'id',
-          sortOrder: 'DESC',
+          sortBy,
+          sortOrder,
         };
 
         // Add status filter if not 'all'
@@ -189,8 +237,30 @@ export const MaterialOrderBookTab = () => {
         setIsLoading(false);
       }
     },
-    [filterStatus, filterUnit]
+    [filterStatus, filterUnit, sortBy, sortOrder] // Added sortBy and sortOrder to dependencies
   );
+
+  // Handle column sorting
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      // Toggle sort order if same column
+      setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      // Set new column and default to ASC
+      setSortBy(column);
+      setSortOrder('ASC');
+    }
+  };
+
+  // Get sort icon for column
+  const getSortIcon = (column: string) => {
+    if (sortBy !== column) {
+      return <ArrowUpDown className='w-4 h-4 text-muted-foreground' />;
+    }
+    return sortOrder === 'ASC' ? 
+      <ChevronUp className='w-4 h-4 text-primary' /> : 
+      <ChevronDown className='w-4 h-4 text-primary' />;
+  };
 
   // Workflow management
   const {
@@ -691,6 +761,199 @@ export const MaterialOrderBookTab = () => {
     //   .catch(error => console.error('Failed to resubmit request:', error));
   };
 
+  // New function to handle approval
+  const handleApproveIndent = async () => {
+    if (!selectedIndentForApproval || !selectedItemId || !selectedQuotationId) {
+      toast({
+        title: 'Error',
+        description: 'Please select an item and quotation to approve.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const approvalData: ApproveRejectMaterialIndentRequest = {
+        status: 'approved',
+        itemId: selectedItemId,
+        quotationId: selectedQuotationId,
+      };
+
+      await materialIndentsApi.approve(selectedIndentForApproval.id);
+      
+      toast({
+        title: 'Success',
+        description: 'Material indent approved successfully.',
+      });
+
+      setIsApprovalDialogOpen(false);
+      setSelectedIndentForApproval(null);
+      setSelectedItemId(null);
+      setSelectedQuotationId(null);
+      fetchMaterialIndents(pagination.page, pagination.limit);
+    } catch (error) {
+      console.error('Error approving indent:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to approve material indent. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // New function to handle rejection
+  const handleRejectIndent = async () => {
+    if (!selectedIndentForApproval || !rejectionReason.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please provide a rejection reason.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await materialIndentsApi.reject(selectedIndentForApproval.id, rejectionReason);
+      
+      toast({
+        title: 'Success',
+        description: 'Material indent rejected successfully.',
+      });
+
+      setIsRejectionDialogOpen(false);
+      setSelectedIndentForApproval(null);
+      setRejectionReason('');
+      fetchMaterialIndents(pagination.page, pagination.limit);
+    } catch (error) {
+      console.error('Error rejecting indent:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reject material indent. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // New function to create material purchase order
+  const handleCreatePurchaseOrder = async () => {
+    if (!selectedIndentForOrder) {
+      toast({
+        title: 'Error',
+        description: 'No indent selected for ordering.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Create purchase order from approved indent
+      const purchaseData = {
+        purchaseOrderNumber: `PO-${selectedIndentForOrder.uniqueId}`,
+        orderDate: new Date().toISOString().split('T')[0],
+        totalValue: selectedIndentForOrder.items.reduce((total, item) => {
+          const quotation = item.selectedQuotation || item.quotations[0];
+          return total + (quotation ? Number(quotation.quotationAmount) * item.requestedQuantity : 0);
+        }, 0).toString(),
+        additionalNotes: selectedIndentForOrder.additionalNotes || '',
+        items: selectedIndentForOrder.items.map(item => ({
+          materialId: item.material.id,
+          orderedQuantity: item.requestedQuantity,
+          unitPrice: item.selectedQuotation?.quotationAmount || item.quotations[0]?.quotationAmount || '0',
+          notes: item.notes || ''
+        }))
+      };
+
+      await materialPurchasesApi.create(purchaseData);
+      
+      // Update indent status to ordered
+      // Note: You might need to add an update status API call here
+      
+      toast({
+        title: 'Success',
+        description: 'Purchase order created successfully.',
+      });
+
+      setIsOrderDialogOpen(false);
+      setSelectedIndentForOrder(null);
+      fetchMaterialIndents(pagination.page, pagination.limit);
+    } catch (error) {
+      console.error('Error creating purchase order:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create purchase order. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // New function to handle material receipt
+  const handleReceiveMaterial = async () => {
+    if (!selectedPurchase || !receiveData.receivedQuantity || !receiveData.receivedDate) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // For now, we'll assume we're receiving the first item
+      // In a real implementation, you'd select which item to receive
+      const firstItem = selectedPurchase.items[0];
+      if (!firstItem) {
+        toast({
+          title: 'Error',
+          description: 'No items found in this purchase order.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      await materialPurchasesApi.receiveItem(
+        selectedPurchase.id,
+        firstItem.id,
+        receiveData
+      );
+      
+      toast({
+        title: 'Success',
+        description: 'Material received successfully.',
+      });
+
+      setIsReceiveDialogOpen(false);
+      setSelectedPurchase(null);
+      setReceiveData({
+        receivedQuantity: 0,
+        receivedDate: new Date().toISOString().split('T')[0],
+        notes: ''
+      });
+      fetchMaterialIndents(pagination.page, pagination.limit);
+    } catch (error) {
+      console.error('Error receiving material:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to receive material. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Helper function to format Purchase ID
+  const formatPurchaseId = (uniqueId: string, branchCode?: string) => {
+    // Convert to uppercase
+    let formattedId = uniqueId.toUpperCase();
+    
+    // Convert unit numbers to Roman numerals (UNIT1 -> UNIT-I, UNIT2 -> UNIT-II, etc.)
+    formattedId = formattedId.replace(/UNIT(\d+)/g, (match, unitNumber) => {
+      const num = parseInt(unitNumber, 10);
+      const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+      return `UNIT-${romanNumerals[num] || unitNumber}`;
+    });
+    
+    return formattedId;
+  };
+
   // Transform API data to UI format
   const transformApiIndentToUiFormat = (indent: MaterialIndent) => {
     // Get the first item for display purposes (if available)
@@ -703,7 +966,7 @@ export const MaterialOrderBookTab = () => {
         : null);
 
     return {
-      id: indent.uniqueId,
+      id: formatPurchaseId(indent.uniqueId, indent.branch?.code),
       originalId: indent.id,
       materialName: firstItem?.material.name || 'N/A',
       specifications:
@@ -882,29 +1145,77 @@ export const MaterialOrderBookTab = () => {
             <TableHeader>
               <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
                 <TableHead className='w-12 text-foreground font-semibold'></TableHead>
-                <TableHead className='min-w-[120px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[120px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('uniqueId')}
+                >
+                  <div className='flex items-center gap-2'>
                   Purchase ID
+                    {getSortIcon('uniqueId')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[150px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[150px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('materialName')}
+                >
+                  <div className='flex items-center gap-2'>
                   Materials
+                    {getSortIcon('materialName')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('quantity')}
+                >
+                  <div className='flex items-center gap-2'>
                   Quantity
+                    {getSortIcon('quantity')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('unitPrice')}
+                >
+                  <div className='flex items-center gap-2'>
                   Price
+                    {getSortIcon('unitPrice')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('value')}
+                >
+                  <div className='flex items-center gap-2'>
                   Total Value
+                    {getSortIcon('value')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('status')}
+                >
+                  <div className='flex items-center gap-2'>
                   Status
+                    {getSortIcon('status')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('requestDate')}
+                >
+                  <div className='flex items-center gap-2'>
                   Purchased Date
+                    {getSortIcon('requestDate')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('machineName')}
+                >
+                  <div className='flex items-center gap-2'>
                   Purchased For
+                    {getSortIcon('machineName')}
+                  </div>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -1375,29 +1686,77 @@ export const MaterialOrderBookTab = () => {
           <Table>
             <TableHeader>
               <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
-                <TableHead className='min-w-[120px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[120px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('uniqueId')}
+                >
+                  <div className='flex items-center gap-2'>
                   Purchase ID
+                    {getSortIcon('uniqueId')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[150px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[150px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('materialName')}
+                >
+                  <div className='flex items-center gap-2'>
                   Materials
+                    {getSortIcon('materialName')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('quantity')}
+                >
+                  <div className='flex items-center gap-2'>
                   Quantity
+                    {getSortIcon('quantity')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('unitPrice')}
+                >
+                  <div className='flex items-center gap-2'>
                   Price
+                    {getSortIcon('unitPrice')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('value')}
+                >
+                  <div className='flex items-center gap-2'>
                   Total Value
+                    {getSortIcon('value')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('status')}
+                >
+                  <div className='flex items-center gap-2'>
                   Status
+                    {getSortIcon('status')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('requestDate')}
+                >
+                  <div className='flex items-center gap-2'>
                   Purchased Date
+                    {getSortIcon('requestDate')}
+                  </div>
                 </TableHead>
-                <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                <TableHead 
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('machineName')}
+                >
+                  <div className='flex items-center gap-2'>
                   Purchased For
+                    {getSortIcon('machineName')}
+                  </div>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -1454,6 +1813,182 @@ export const MaterialOrderBookTab = () => {
     </Card>
   );
 
+  // Add pagination handlers
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, page: newPage }));
+    fetchMaterialIndents(newPage, pagination.limit);
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setPagination(prev => ({ ...prev, limit: newLimit, page: 1 }));
+    fetchMaterialIndents(1, newLimit);
+  };
+
+  // Enhanced action buttons in the expanded detail row
+  const renderActionButtons = (request: any) => {
+    const canApprove = hasPermission('inventory:material-indents:approve') && 
+                      request.status === 'pending_approval';
+    const canReject = hasPermission('inventory:material-indents:approve') && 
+                     request.status === 'pending_approval';
+    const canOrder = hasPermission('inventory:material-indents:update') && 
+                    request.status === 'approved';
+    const canReceive = hasPermission('inventory:material-purchases:receive') && 
+                      (request.status === 'ordered' || request.status === 'partially_received');
+
+    return (
+      <div className='flex flex-wrap gap-2 pt-4 border-t mt-6'>
+        <Button
+          variant='outline'
+          className='gap-2 rounded-lg'
+          onClick={() => handleRequestClick(request.id)}
+        >
+          <Eye className='w-4 h-4' />
+          View Full Details
+        </Button>
+
+        {canApprove && (
+          <Button
+            variant='outline'
+            className='gap-2 rounded-lg text-green-600 border-green-600 hover:bg-green-50'
+            onClick={() => {
+              setSelectedIndentForApproval(request.originalIndent);
+              setIsApprovalDialogOpen(true);
+            }}
+          >
+            <CheckCircle className='w-4 h-4' />
+            Approve
+          </Button>
+        )}
+
+        {canReject && (
+          <Button
+            variant='outline'
+            className='gap-2 rounded-lg text-red-600 border-red-600 hover:bg-red-50'
+            onClick={() => {
+              setSelectedIndentForApproval(request.originalIndent);
+              setIsRejectionDialogOpen(true);
+            }}
+          >
+            <XCircle className='w-4 h-4' />
+            Reject
+          </Button>
+        )}
+
+        {canOrder && (
+          <Button
+            variant='outline'
+            className='gap-2 rounded-lg text-blue-600 border-blue-600 hover:bg-blue-50'
+            onClick={() => {
+              setSelectedIndentForOrder(request.originalIndent);
+              setIsOrderDialogOpen(true);
+            }}
+          >
+            <ShoppingCart className='w-4 h-4' />
+            Create Order
+          </Button>
+        )}
+
+        {canReceive && (
+          <Button
+            variant='outline'
+            className='gap-2 rounded-lg text-orange-600 border-orange-600 hover:bg-orange-50'
+            onClick={() => {
+              // In a real implementation, you'd fetch the purchase order
+              // For now, we'll create a mock purchase object
+              setSelectedPurchase({
+                id: 1,
+                uniqueId: request.id,
+                orderDate: request.date,
+                totalValue: request.value,
+                purchaseOrderNumber: `PO-${request.id}`,
+                status: 'pending',
+                additionalNotes: '',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                items: [{
+                  id: 1,
+                  materialId: 1,
+                  materialName: request.materialName,
+                  specifications: request.specifications,
+                  orderedQuantity: parseInt(request.quantity),
+                  receivedQuantity: 0,
+                  pendingQuantity: parseInt(request.quantity),
+                  unitPrice: request.unitPrice,
+                  totalPrice: request.value,
+                  status: 'pending',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  material: {
+                    id: 1,
+                    name: request.materialName,
+                    specifications: request.specifications,
+                    makerBrand: request.maker,
+                    currentStock: 0,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  }
+                }],
+                branch: {
+                  id: 1,
+                  name: request.unitName,
+                  location: '',
+                  contactPhone: null,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
+                createdBy: {
+                  id: 1,
+                  name: request.requestedBy,
+                  email: '',
+                  company: {} as any,
+                  branch: {} as any,
+                  userType: {} as any,
+                  roles: [],
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                }
+              });
+              setIsReceiveDialogOpen(true);
+            }}
+          >
+            <Package className='w-4 h-4' />
+            Receive Material
+          </Button>
+        )}
+
+        {/* Status Management Button */}
+        {(hasPermission('inventory:material-indents:approve') ||
+          hasPermission('inventory:material-indents:update')) && (
+          <Button
+            variant='outline'
+            className='gap-2 rounded-lg'
+            onClick={() => openStatusManager(request)}
+          >
+            <CheckSquare className='w-4 h-4' />
+            Manage Status
+          </Button>
+        )}
+
+        {(request.status === 'rejected' || request.status === 'reverted') && (
+          <Button
+            variant='outline'
+            className='gap-2 rounded-lg'
+            onClick={() =>
+              request.status === 'reverted'
+                ? openResubmitForm(request)
+                : null
+            }
+          >
+            <Plus className='w-4 h-4' />
+            {request.status === 'reverted'
+              ? 'Resubmit Indent Form'
+              : 'Resubmit Request'}
+          </Button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className='space-y-6 p-4 sm:p-0'>
       {/* Main Heading */}
@@ -1506,8 +2041,8 @@ export const MaterialOrderBookTab = () => {
             </div>
           </div>
 
-          {/* Unit Filter - Only for users with global read */}
-          {hasPermission('inventory:material-indents:read:all') && (
+          {/* Unit Filter - Only for company owners */}
+          {currentUser?.role === 'company_owner' && (
             <Select
               value={filterUnit}
               onValueChange={setFilterUnit}
@@ -1568,7 +2103,7 @@ export const MaterialOrderBookTab = () => {
               className='w-full sm:w-auto text-sm sm:text-base'
               size='sm'
             >
-              <Link to='/material-request'>
+              <Link to='/materials-inventory/material-request'>
                 <Plus className='w-4 h-4' />
                 <span className='hidden sm:inline'>INDENT FORM</span>
                 <span className='sm:hidden'>INDENT FORM</span>
@@ -1615,11 +2150,120 @@ export const MaterialOrderBookTab = () => {
               </Button>
             </Card>
           ) : filteredRequests.length > 0 ? (
-            viewMode === 'table' ? (
+            <>
+              {viewMode === 'table' ? (
               <TableView requests={filteredRequests} />
             ) : (
               <ListView requests={filteredRequests} />
-            )
+              )}
+              
+              {/* Pagination Controls */}
+              <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
+                {/* Page Info */}
+                <div className='text-sm text-muted-foreground'>
+                  Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                  {Math.min(pagination.page * pagination.limit, pagination.itemCount)} of{' '}
+                  {pagination.itemCount} entries
+                </div>
+
+                {/* Pagination Controls */}
+                <div className='flex items-center gap-2'>
+                  {/* Items per page selector */}
+                  <div className='flex items-center gap-2'>
+                    <span className='text-sm text-muted-foreground'>Show:</span>
+                    <Select
+                      value={pagination.limit.toString()}
+                      onValueChange={(value) => handleLimitChange(parseInt(value))}
+                    >
+                      <SelectTrigger className='w-20 h-8'>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='5'>5</SelectItem>
+                        <SelectItem value='10'>10</SelectItem>
+                        <SelectItem value='20'>20</SelectItem>
+                        <SelectItem value='50'>50</SelectItem>
+                        <SelectItem value='100'>100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className='text-sm text-muted-foreground'>per page</span>
+                  </div>
+
+                  {/* Page navigation */}
+                  <div className='flex items-center gap-1'>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => handlePageChange(1)}
+                      disabled={!pagination.hasPreviousPage || pagination.page === 1}
+                      className='h-8 w-8 p-0'
+                    >
+                      <ChevronsLeft className='w-4 h-4' />
+                   
+                    </Button>
+                    
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={!pagination.hasPreviousPage}
+                      className='h-8 w-8 p-0'
+                    >
+                      <ChevronLeft className='w-4 h-4' />
+                    </Button>
+
+                    {/* Page numbers */}
+                    <div className='flex items-center gap-1 mx-2'>
+                      {Array.from({ length: Math.min(5, pagination.pageCount) }, (_, i) => {
+                        let pageNum;
+                        if (pagination.pageCount <= 5) {
+                          pageNum = i + 1;
+                        } else if (pagination.page <= 3) {
+                          pageNum = i + 1;
+                        } else if (pagination.page >= pagination.pageCount - 2) {
+                          pageNum = pagination.pageCount - 4 + i;
+                        } else {
+                          pageNum = pagination.page - 2 + i;
+                        }
+
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={pagination.page === pageNum ? 'default' : 'outline'}
+                            size='sm'
+                            onClick={() => handlePageChange(pageNum)}
+                            className='h-8 w-8 p-0'
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={!pagination.hasNextPage}
+                      className='h-8 w-8 p-0'
+                    >
+                      <ChevronRight className='w-4 h-4' />
+                    </Button>
+                    
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => handlePageChange(pagination.pageCount)}
+                      disabled={!pagination.hasNextPage || pagination.page === pagination.pageCount}
+                      className='h-8 w-8 p-0'
+                    >
+                      <ChevronsRight className='w-4 h-4' />
+                     
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
           ) : (
             <Card className='rounded-lg shadow-sm p-8 text-center'>
               <FileText className='w-12 h-12 text-muted-foreground mx-auto mb-4' />
@@ -1630,7 +2274,7 @@ export const MaterialOrderBookTab = () => {
                 No material indents match your current filters.
               </p>
               <Button asChild variant='outline'>
-                <Link to='/material-request'>
+                <Link to='/materials-inventory/material-request'>
                   <FileEdit className='w-4 h-4 mr-2' />
                   Create Material Indent
                 </Link>
@@ -1675,17 +2319,250 @@ export const MaterialOrderBookTab = () => {
         />
       )}
 
-      {/* Owner-like History Section */}
-      {(hasPermission('inventory:material-indents:approve') ||
-        hasPermission('inventory:material-indents:read:all')) && (
-        <div className='mt-8'>
-          <HistoryView
-            userRole='company_owner'
-            historyData={getApprovedHistory()}
-            title='Recently Approved Requests'
-          />
-        </div>
-      )}
+      {/* Approval Dialog */}
+      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Approve Material Indent</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {selectedIndentForApproval && (
+              <div className='space-y-4'>
+                <div className='p-4 bg-green-50 border border-green-200 rounded-lg'>
+                  <h3 className='font-semibold text-green-800 mb-2'>Indent Details</h3>
+                  <p><strong>ID:</strong> {selectedIndentForApproval.uniqueId}</p>
+                  <p><strong>Requested By:</strong> {selectedIndentForApproval.requestedBy?.name}</p>
+                  <p><strong>Date:</strong> {new Date(selectedIndentForApproval.requestDate).toLocaleDateString()}</p>
+                </div>
+                
+                <div className='space-y-3'>
+                  <Label>Select Item to Approve</Label>
+                  <Select onValueChange={(value) => setSelectedItemId(parseInt(value))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder='Select an item' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedIndentForApproval.items.map((item) => (
+                        <SelectItem key={item.id} value={item.id.toString()}>
+                          {item.material.name} - Qty: {item.requestedQuantity}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedItemId && (
+                  <div className='space-y-3'>
+                    <Label>Select Quotation</Label>
+                    <Select onValueChange={(value) => setSelectedQuotationId(parseInt(value))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder='Select a quotation' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedIndentForApproval.items
+                          .find(item => item.id === selectedItemId)
+                          ?.quotations.map((quotation) => (
+                            <SelectItem key={quotation.id} value={quotation.id.toString()}>
+                              {quotation.vendorName} - ₹{quotation.quotationAmount}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className='flex justify-end gap-2'>
+                  <Button variant='outline' onClick={() => setIsApprovalDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleApproveIndent}
+                    disabled={!selectedItemId || !selectedQuotationId}
+                    className='bg-green-600 hover:bg-green-700'
+                  >
+                    <CheckCircle className='w-4 h-4 mr-2' />
+                    Approve
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rejection Dialog */}
+      <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Reject Material Indent</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {selectedIndentForApproval && (
+              <div className='space-y-4'>
+                <div className='p-4 bg-red-50 border border-red-200 rounded-lg'>
+                  <h3 className='font-semibold text-red-800 mb-2'>Indent Details</h3>
+                  <p><strong>ID:</strong> {selectedIndentForApproval.uniqueId}</p>
+                  <p><strong>Requested By:</strong> {selectedIndentForApproval.requestedBy?.name}</p>
+                  <p><strong>Date:</strong> {new Date(selectedIndentForApproval.requestDate).toLocaleDateString()}</p>
+                </div>
+                
+                <div className='space-y-3'>
+                  <Label htmlFor='rejectionReason'>Rejection Reason *</Label>
+                  <Textarea
+                    id='rejectionReason'
+                    placeholder='Please provide a reason for rejection...'
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    className='min-h-[100px]'
+                  />
+                </div>
+
+                <div className='flex justify-end gap-2'>
+                  <Button variant='outline' onClick={() => setIsRejectionDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleRejectIndent}
+                    disabled={!rejectionReason.trim()}
+                    className='bg-red-600 hover:bg-red-700'
+                  >
+                    <XCircle className='w-4 h-4 mr-2' />
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Creation Dialog */}
+      <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Create Purchase Order</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {selectedIndentForOrder && (
+              <div className='space-y-4'>
+                <div className='p-4 bg-blue-50 border border-blue-200 rounded-lg'>
+                  <h3 className='font-semibold text-blue-800 mb-2'>Indent Details</h3>
+                  <p><strong>ID:</strong> {selectedIndentForOrder.uniqueId}</p>
+                  <p><strong>Requested By:</strong> {selectedIndentForOrder.requestedBy?.name}</p>
+                  <p><strong>Date:</strong> {new Date(selectedIndentForOrder.requestDate).toLocaleDateString()}</p>
+                </div>
+                
+                <div className='space-y-3'>
+                  <h4 className='font-semibold'>Items to Order:</h4>
+                  <div className='space-y-2'>
+                    {selectedIndentForOrder.items.map((item) => (
+                      <div key={item.id} className='p-3 bg-gray-50 rounded border'>
+                        <p><strong>{item.material.name}</strong></p>
+                        <p>Quantity: {item.requestedQuantity}</p>
+                        <p>Selected Quotation: {item.selectedQuotation?.vendorName || 'None selected'}</p>
+                        <p>Amount: ₹{item.selectedQuotation?.quotationAmount || '0'}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className='flex justify-end gap-2'>
+                  <Button variant='outline' onClick={() => setIsOrderDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleCreatePurchaseOrder}
+                    className='bg-blue-600 hover:bg-blue-700'
+                  >
+                    <ShoppingCart className='w-4 h-4 mr-2' />
+                    Create Order
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Material Receipt Dialog */}
+      <Dialog open={isReceiveDialogOpen} onOpenChange={setIsReceiveDialogOpen}>
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Receive Material</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {selectedPurchase && (
+              <div className='space-y-4'>
+                <div className='p-4 bg-orange-50 border border-orange-200 rounded-lg'>
+                  <h3 className='font-semibold text-orange-800 mb-2'>Purchase Order Details</h3>
+                  <p><strong>PO Number:</strong> {selectedPurchase.purchaseOrderNumber}</p>
+                  <p><strong>Order Date:</strong> {new Date(selectedPurchase.orderDate).toLocaleDateString()}</p>
+                  <p><strong>Total Value:</strong> ₹{selectedPurchase.totalValue}</p>
+                </div>
+                
+                <div className='space-y-3'>
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div>
+                      <Label htmlFor='receivedQuantity'>Received Quantity *</Label>
+                      <Input
+                        id='receivedQuantity'
+                        type='number'
+                        value={receiveData.receivedQuantity}
+                        onChange={(e) => setReceiveData(prev => ({
+                          ...prev,
+                          receivedQuantity: parseInt(e.target.value) || 0
+                        }))}
+                        min='1'
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor='receivedDate'>Received Date *</Label>
+                      <Input
+                        id='receivedDate'
+                        type='date'
+                        value={receiveData.receivedDate}
+                        onChange={(e) => setReceiveData(prev => ({
+                          ...prev,
+                          receivedDate: e.target.value
+                        }))}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor='receiveNotes'>Notes</Label>
+                    <Textarea
+                      id='receiveNotes'
+                      placeholder='Any additional notes about the received material...'
+                      value={receiveData.notes}
+                      onChange={(e) => setReceiveData(prev => ({
+                        ...prev,
+                        notes: e.target.value
+                      }))}
+                    />
+                  </div>
+                </div>
+
+                <div className='flex justify-end gap-2'>
+                  <Button variant='outline' onClick={() => setIsReceiveDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleReceiveMaterial}
+                    disabled={!receiveData.receivedQuantity || !receiveData.receivedDate}
+                    className='bg-orange-600 hover:bg-orange-700'
+                  >
+                    <Package className='w-4 h-4 mr-2' />
+                    Receive Material
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      
     </div>
   );
 };

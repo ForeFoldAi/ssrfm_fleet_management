@@ -16,10 +16,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, X, Plus } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { useStock } from '@/contexts/StockContext';
-import { materialsApi, Material } from '@/lib/api/materials';
-import { MaterialCategory, Unit } from '@/lib/api/types';
+import { materialsApi } from '@/lib/api/materials';
+import { Material, MaterialCategory, Unit } from '@/lib/api/types';
 import { getMaterialCategories, getUnits } from '@/lib/api/common';
 import { toast } from '@/hooks/use-toast';
 
@@ -183,7 +183,6 @@ export const AddMaterialForm = ({
     ) {
       newErrors.customMeasureUnit = 'Custom measure unit is required';
     }
-    if (!formData.maker.trim()) newErrors.maker = 'Maker/Brand is required';
     if (!formData.currentStock.trim())
       newErrors.currentStock = 'Current stock is required';
 
@@ -346,14 +345,7 @@ export const AddMaterialForm = ({
           <DialogTitle className='text-xl font-semibold'>
             Add New Material
           </DialogTitle>
-          <Button
-            variant='ghost'
-            size='icon'
-            onClick={handleClose}
-            className='h-6 w-6 rounded-sm opacity-70 hover:opacity-100'
-          >
-            <X className='h-4 w-4' />
-          </Button>
+        
         </DialogHeader>
 
         <form

@@ -17,6 +17,14 @@ import {
   Building2,
   Loader2,
   AlertCircle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  X,
+  ChevronLeft,
+  
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -38,9 +46,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from './ui/pagination';
 import { MaterialIssueForm } from './MaterialIssueForm';
 import { toast } from '../hooks/use-toast';
 import { useRole } from '../contexts/RoleContext';
+import { Label } from './ui/label';
+
+type SortField = 'id' | 'issueDate' | 'issuedBy' | 'branch' | 'uniqueId';
+type SortOrder = 'ASC' | 'DESC';
 
 export const MaterialIssuesTab = () => {
   const { currentUser, hasPermission } = useRole();
@@ -57,6 +77,10 @@ export const MaterialIssuesTab = () => {
     null
   );
 
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField>('issueDate');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('DESC');
+
   // Define interface for transformed issue data
   interface TransformedIssueItem {
     materialId: number;
@@ -68,6 +92,8 @@ export const MaterialIssuesTab = () => {
     recipientName: string;
     purpose: string;
     imagePath?: string;
+    machineId: number;
+    machineName: string;
     originalItem: MaterialIssueItem;
   }
 
@@ -89,14 +115,9 @@ export const MaterialIssuesTab = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [materialIssues, setMaterialIssues] = useState<MaterialIssue[]>([]);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    itemCount: 0,
-    pageCount: 0,
-    hasPreviousPage: false,
-    hasNextPage: false,
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5); // Changed default to 5 to match MachinesTab
+  const [materialIssuesData, setMaterialIssuesData] = useState<any>(null);
 
   // Available units for company owner
   const availableUnits = [
@@ -112,31 +133,30 @@ export const MaterialIssuesTab = () => {
     setError(null);
 
     try {
-      const response = await materialIssuesApi.getAll({
+      const params = {
         page,
         limit,
-        sortBy: 'id',
-        sortOrder: 'DESC', // Most recent first
-      });
+        sortBy: sortField,
+        sortOrder: sortOrder,
+        ...(searchQuery && { search: searchQuery }),
+        ...(filterUnit !== 'all' &&
+          currentUser?.role === 'company_owner' && {
+            branchId: filterUnit,
+          }),
+      };
+
+      const response = await materialIssuesApi.getAll(params);
+      
       // Validate response structure
       if (!response || !response.data || !response.meta) {
         throw new Error('Invalid response format from API');
       }
 
-      setPagination({
-        page: response.meta.page,
-        limit: response.meta.limit,
-        itemCount: response.meta.itemCount,
-        pageCount: response.meta.pageCount,
-        hasPreviousPage: response.meta.hasPreviousPage,
-        hasNextPage: response.meta.hasNextPage,
-      });
-
+      setMaterialIssuesData(response);
       setMaterialIssues(response.data);
 
       // Transform API data to match component data structure
       const transformedIssues = response.data.map(transformApiIssueToUiFormat);
-
       setIssuedMaterials(transformedIssues);
     } catch (error: unknown) {
       const err = error as {
@@ -173,6 +193,28 @@ export const MaterialIssuesTab = () => {
     }
   };
 
+  // Handle column sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle sort order if same field
+      setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      // Set new field with ascending order
+      setSortField(field);
+      setSortOrder('ASC');
+    }
+  };
+
+  // Get sort icon for column header
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-4 h-4 text-muted-foreground" />;
+    }
+    return sortOrder === 'ASC' 
+      ? <ArrowUp className="w-4 h-4 text-primary" />
+      : <ArrowDown className="w-4 h-4 text-primary" />;
+  };
+
   // Transform API response to UI format
   const transformApiIssueToUiFormat = (
     issue: MaterialIssue
@@ -188,13 +230,18 @@ export const MaterialIssuesTab = () => {
       recipientName: item.receiverName,
       purpose: item.purpose,
       imagePath: item.imagePath,
+      machineId: item.machineId,
+      machineName: item.machineName,
       originalItem: item,
     }));
 
+    // Generate formatted Issue ID: SSRMF/UNIT-I/YYMMDDSQ
+    const formattedIssueId = generateFormattedIssueId(issue);
+
     // Create a transformed issue with all items
     return {
-      id: issue.uniqueId,
-      materialIssueFormSrNo: issue.uniqueId,
+      id: formattedIssueId,
+      materialIssueFormSrNo: formattedIssueId,
       issuingPersonName:
         issue.issuedBy?.name || `User ID: ${issue.issuedBy?.id || 'Unknown'}`,
       issuingPersonDesignation: issue.issuedBy?.email || '',
@@ -208,11 +255,65 @@ export const MaterialIssuesTab = () => {
     };
   };
 
+  // Generate formatted Issue ID: SSRMF/UNIT-I/YYMMDDSQ
+  const generateFormattedIssueId = (issue: MaterialIssue): string => {
+    const date = new Date(issue.issueDate);
+    
+    // Format date as YYMMDD
+    const year = date.getFullYear().toString().slice(-2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const dateStr = `${year}${month}${day}`;
+    
+    // Get unit number and convert to Roman numeral
+    const unitNumber = issue.branch?.id || 1;
+    const unitRoman = convertToRoman(unitNumber);
+    
+    // Generate sequence number (using issue ID as sequence)
+    const sequence = issue.id.toString().padStart(2, '0');
+    
+    // Format: SSRMF/UNIT-I/YYMMDDSQ
+    return `SSRMF/UNIT-${unitRoman}/${dateStr}${sequence}`;
+  };
+
+  // Convert number to Roman numeral
+  const convertToRoman = (num: number): string => {
+    const romanNumerals = [
+      { value: 10, numeral: 'X' },
+      { value: 9, numeral: 'IX' },
+      { value: 5, numeral: 'V' },
+      { value: 4, numeral: 'IV' },
+      { value: 1, numeral: 'I' }
+    ];
+
+    let result = '';
+    for (const { value, numeral } of romanNumerals) {
+      while (num >= value) {
+        result += numeral;
+        num -= value;
+      }
+    }
+    return result;
+  };
+
   // Load material issues on component mount
   useEffect(() => {
     fetchMaterialIssues();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Refetch when search, filter, or sorting changes
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchMaterialIssues(1, itemsPerPage);
+    }, 300); // Debounce search
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, filterUnit, sortField, sortOrder]);
+
+  // Load material issues when pagination changes
+  useEffect(() => {
+    fetchMaterialIssues(currentPage, itemsPerPage);
+  }, [currentPage, itemsPerPage]);
 
   // Helper function to check if issue can be edited (within 7 days)
   const canEditIssue = (issuedDate: string) => {
@@ -230,7 +331,28 @@ export const MaterialIssuesTab = () => {
 
   const handleEditIssue = (issue: TransformedIssue) => {
     if (canEditIssue(issue.issuedDate)) {
-      setEditingIssue(issue);
+      // Transform the TransformedIssue to the format expected by MaterialIssueForm
+      const editingData = {
+        issuedDate: issue.issuedDate,
+        additionalNotes: issue.additionalNotes || '',
+        allItems: issue.items.map((item) => ({
+          material: {
+            id: item.materialId,
+            name: item.materialName,
+            makerBrand: item.specifications, // Using specifications as measure unit
+          },
+          stockBeforeIssue: item.existingStock,
+          issuedQuantity: item.issuedQuantity,
+          stockAfterIssue: item.stockAfterIssue,
+          receiverName: item.recipientName,
+          purpose: item.purpose,
+          imagePath: item.imagePath,
+          machineId: item.machineId,
+          machineName: item.machineName,
+        })),
+      };
+      
+      setEditingIssue(editingData as unknown as TransformedIssue);
       setIsIssueFormOpen(true);
     } else {
       // Show message when trying to edit after 7 days
@@ -311,7 +433,7 @@ export const MaterialIssuesTab = () => {
       );
 
       // Refresh the list
-      fetchMaterialIssues();
+      fetchMaterialIssues(currentPage, itemsPerPage);
 
       toast({
         title: 'Success',
@@ -344,16 +466,6 @@ export const MaterialIssuesTab = () => {
       });
     }
   };
-
-  // Refetch when search or filter changes
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchMaterialIssues(pagination.page, pagination.limit);
-    }, 300); // Debounce search
-
-    return () => clearTimeout(timeoutId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, filterUnit]);
 
   // Filter issues based on search and unit
   const filteredIssues = issuedMaterials.filter((issue) => {
@@ -408,7 +520,7 @@ export const MaterialIssuesTab = () => {
           <div className='relative'>
             <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4' />
             <Input
-              placeholder='Search issues...'
+              placeholder='Search issues, materials, recipients...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className='pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64'
@@ -445,7 +557,7 @@ export const MaterialIssuesTab = () => {
             onClick={() => setIsIssueFormOpen(true)}
           >
             <Plus className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
-            Issued Materials
+            Issue Materials
           </Button>
         </div>
       </div>
@@ -477,7 +589,14 @@ export const MaterialIssuesTab = () => {
                   <TableHeader>
                     <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
                       <TableHead className='min-w-[120px] text-foreground font-semibold'>
-                        Issue ID
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort('uniqueId')}
+                          className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                        >
+                          Issue ID
+                          {getSortIcon('uniqueId')}
+                        </Button>
                       </TableHead>
                       <TableHead className='min-w-[150px] text-foreground font-semibold'>
                         Issued Material
@@ -486,20 +605,37 @@ export const MaterialIssuesTab = () => {
                         Stock Info
                       </TableHead>
                       <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                        Issued Date
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort('issueDate')}
+                          className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                        >
+                          Issued Date
+                          {getSortIcon('issueDate')}
+                        </Button>
                       </TableHead>
-
                       <TableHead className='min-w-[120px] text-foreground font-semibold'>
                         Issued To
                       </TableHead>
                       <TableHead className='min-w-[120px] text-foreground font-semibold'>
-                        Issued By
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort('issuedBy')}
+                          className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                        >
+                          Issued By
+                          {getSortIcon('issuedBy')}
+                        </Button>
                       </TableHead>
                       <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                        Unit
-                      </TableHead>
-                      <TableHead className='min-w-[80px] text-foreground font-semibold'>
-                        Actions
+                        <Button
+                          variant="ghost"
+                          onClick={() => handleSort('branch')}
+                          className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                        >
+                          Unit
+                          {getSortIcon('branch')}
+                        </Button>
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -509,19 +645,20 @@ export const MaterialIssuesTab = () => {
                         {/* Parent row showing issue information */}
                         <TableRow
                           key={issue.id}
-                          className='bg-secondary/10 hover:bg-secondary/20 border-b border-secondary/20'
+                          className='bg-secondary/10 hover:bg-secondary/20 border-b border-secondary/20 cursor-pointer'
+                          onClick={() => handleViewIssue(issue)}
                         >
                           <TableCell className='font-medium'>
                             <Button
                               variant='link'
                               className='p-0 h-auto text-left font-medium text-primary hover:text-primary/80 uppercase'
-                              onClick={() => handleViewIssue(issue)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewIssue(issue);
+                              }}
                             >
                               {issue.id}
                             </Button>
-                            <div className='text-xs text-muted-foreground uppercase'>
-                              Form: {issue.materialIssueFormSrNo}
-                            </div>
                             <div className='text-xs mt-1'>
                               <Badge variant='outline' className='text-xs'>
                                 {issue.items.length}{' '}
@@ -561,37 +698,6 @@ export const MaterialIssuesTab = () => {
                           </TableCell>
                           <TableCell className='text-sm'>
                             <Badge variant='outline'>{issue.unitName}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className='flex items-center gap-2'>
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                onClick={() => toggleRowExpansion(issue.id)}
-                                className='h-8 w-8 p-0'
-                                title='View items'
-                              >
-                                {expandedRows.has(issue.id) ? (
-                                  <ChevronDown className='w-4 h-4' />
-                                ) : (
-                                  <ChevronRight className='w-4 h-4' />
-                                )}
-                              </Button>
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                onClick={() => handleEditIssue(issue)}
-                                disabled={!canEditIssue(issue.issuedDate)}
-                                className='h-8 w-8 p-0'
-                                title={
-                                  canEditIssue(issue.issuedDate)
-                                    ? 'Edit issue'
-                                    : 'Cannot edit after 7 days'
-                                }
-                              >
-                                <Edit className='w-4 h-4' />
-                              </Button>
-                            </div>
                           </TableCell>
                         </TableRow>
 
@@ -650,18 +756,6 @@ export const MaterialIssuesTab = () => {
                               </TableCell>
                               <TableCell></TableCell>
                               <TableCell></TableCell>
-                              <TableCell>
-                                {item.imagePath && (
-                                  <Button
-                                    variant='outline'
-                                    size='sm'
-                                    className='h-8 w-8 p-0'
-                                    title='View image'
-                                  >
-                                    <Eye className='w-4 h-4' />
-                                  </Button>
-                                )}
-                              </TableCell>
                             </TableRow>
                           ))}
                       </>
@@ -681,16 +775,16 @@ export const MaterialIssuesTab = () => {
                     <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
                       <TableHead className='w-12'></TableHead>
                       <TableHead className='min-w-[120px] text-foreground font-semibold'>
-                        Issue ID
+                        Issued ID
                       </TableHead>
                       <TableHead className='min-w-[150px] text-foreground font-semibold'>
-                        Materials
+                        Issued Materials
                       </TableHead>
                       <TableHead className='min-w-[100px] text-foreground font-semibold'>
                         Items
                       </TableHead>
                       <TableHead className='min-w-[120px] text-foreground font-semibold'>
-                        Recipients
+                        Issued To
                       </TableHead>
                       <TableHead className='min-w-[120px] text-foreground font-semibold'>
                         Issuing Person
@@ -701,9 +795,6 @@ export const MaterialIssuesTab = () => {
                       <TableHead className='min-w-[100px] text-foreground font-semibold'>
                         Date
                       </TableHead>
-                      <TableHead className='min-w-[80px] text-foreground font-semibold'>
-                        Actions
-                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -711,14 +802,18 @@ export const MaterialIssuesTab = () => {
                       <>
                         <TableRow
                           key={issue.id}
-                          className='hover:bg-muted/30 border-b border-secondary/20'
+                          className='hover:bg-muted/30 border-b border-secondary/20 cursor-pointer'
+                          onClick={() => handleViewIssue(issue)}
                         >
                           <TableCell>
                             <Button
                               variant='ghost'
                               size='sm'
                               className='h-6 w-6 p-0'
-                              onClick={() => toggleRowExpansion(issue.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleRowExpansion(issue.id);
+                              }}
                             >
                               {expandedRows.has(issue.id) ? (
                                 <ChevronDown className='w-4 h-4' />
@@ -730,14 +825,14 @@ export const MaterialIssuesTab = () => {
                           <TableCell className='font-medium'>
                             <Button
                               variant='link'
-                              className='p-0 h-auto text-left font-medium text-primary hover:text-primary/80'
-                              onClick={() => handleViewIssue(issue)}
+                              className='p-0 h-auto text-left font-medium text-primary hover:text-primary/80 uppercase'
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewIssue(issue);
+                              }}
                             >
                               {issue.id}
                             </Button>
-                            <div className='text-xs text-muted-foreground'>
-                              Form: {issue.materialIssueFormSrNo}
-                            </div>
                           </TableCell>
                           <TableCell>
                             <div>
@@ -786,30 +881,12 @@ export const MaterialIssuesTab = () => {
                           <TableCell className='text-sm'>
                             {new Date(issue.issuedDate).toLocaleDateString()}
                           </TableCell>
-                          <TableCell>
-                            <div className='flex items-center gap-2'>
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                onClick={() => handleEditIssue(issue)}
-                                disabled={!canEditIssue(issue.issuedDate)}
-                                className='h-8 w-8 p-0'
-                                title={
-                                  canEditIssue(issue.issuedDate)
-                                    ? 'Edit issue'
-                                    : 'Cannot edit after 7 days'
-                                }
-                              >
-                                <Edit className='w-4 h-4' />
-                              </Button>
-                            </div>
-                          </TableCell>
                         </TableRow>
 
                         {/* Expanded Detail Row */}
                         {expandedRows.has(issue.id) && (
                           <TableRow>
-                            <TableCell colSpan={9} className='p-0'>
+                            <TableCell colSpan={8} className='p-0'>
                               <div className='bg-muted/30 p-6 border-t'>
                                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
                                   {/* Left Column - Issue Details */}
@@ -824,16 +901,8 @@ export const MaterialIssuesTab = () => {
                                             <span className='font-medium text-muted-foreground'>
                                               Issue ID:
                                             </span>
-                                            <div className='font-medium'>
+                                            <div className='font-medium uppercase'>
                                               {issue.id}
-                                            </div>
-                                          </div>
-                                          <div>
-                                            <span className='font-medium text-muted-foreground'>
-                                              Form Number:
-                                            </span>
-                                            <div className='font-medium'>
-                                              {issue.materialIssueFormSrNo}
                                             </div>
                                           </div>
                                           <div>
@@ -965,165 +1034,239 @@ export const MaterialIssuesTab = () => {
         </Card>
       )}
 
-      {/* Issue Details View Dialog */}
+      {/* Pagination */}
+      {materialIssuesData && materialIssuesData.meta && (
+        <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
+          {/* Page Info */}
+          <div className='text-sm text-muted-foreground'>
+            Showing {((materialIssuesData.meta.page - 1) * materialIssuesData.meta.limit) + 1} to{' '}
+            {Math.min(materialIssuesData.meta.page * materialIssuesData.meta.limit, materialIssuesData.meta.itemCount)} of{' '}
+            {materialIssuesData.meta.itemCount} entries
+          </div>
+
+          {/* Pagination Controls */}
+          <div className='flex items-center gap-2'>
+            {/* Items per page selector */}
+            <div className='flex items-center gap-2'>
+              <span className='text-sm text-muted-foreground'>Show:</span>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => {
+                  const newLimit = parseInt(value);
+                  setItemsPerPage(newLimit);
+                  setCurrentPage(1);
+                  fetchMaterialIssues(1, newLimit);
+                }}
+              >
+                <SelectTrigger className='w-20 h-8'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='5'>5</SelectItem>
+                  <SelectItem value='10'>10</SelectItem>
+                  <SelectItem value='20'>20</SelectItem>
+                  <SelectItem value='50'>50</SelectItem>
+                  <SelectItem value='100'>100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className='text-sm text-muted-foreground'>per page</span>
+            </div>
+
+            {/* Page navigation */}
+            <div className='flex items-center gap-1'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setCurrentPage(1);
+                  fetchMaterialIssues(1, itemsPerPage);
+                }}
+                disabled={!materialIssuesData.meta.hasPreviousPage || materialIssuesData.meta.page === 1}
+                className='h-8 w-8 p-0'
+              >
+                <ChevronsLeft className='w-4 h-4' />
+              </Button>
+              
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setCurrentPage(prev => prev - 1);
+                  fetchMaterialIssues(currentPage - 1, itemsPerPage);
+                }}
+                disabled={!materialIssuesData.meta.hasPreviousPage}
+                className='h-8 w-8 p-0'
+              >
+                <ChevronLeft className='w-4 h-4' />
+              </Button>
+
+              {/* Page numbers */}
+              <div className='flex items-center gap-1 mx-2'>
+                {Array.from({ length: Math.min(5, materialIssuesData.meta.pageCount) }, (_, i) => {
+                  let pageNum;
+                  if (materialIssuesData.meta.pageCount <= 5) {
+                    pageNum = i + 1;
+                  } else if (materialIssuesData.meta.page <= 3) {
+                    pageNum = i + 1;
+                  } else if (materialIssuesData.meta.page >= materialIssuesData.meta.pageCount - 2) {
+                    pageNum = materialIssuesData.meta.pageCount - 4 + i;
+                  } else {
+                    pageNum = materialIssuesData.meta.page - 2 + i;
+                  }
+
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={materialIssuesData.meta.page === pageNum ? 'default' : 'outline'}
+                      size='sm'
+                      onClick={() => {
+                        setCurrentPage(pageNum);
+                        fetchMaterialIssues(pageNum, itemsPerPage);
+                      }}
+                      className='h-8 w-8 p-0'
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setCurrentPage(prev => prev + 1);
+                  fetchMaterialIssues(currentPage + 1, itemsPerPage);
+                }}
+                disabled={!materialIssuesData.meta.hasNextPage}
+                className='h-8 w-8 p-0'
+              >
+                <ChevronRight className='w-4 h-4' />
+              </Button>
+              
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setCurrentPage(materialIssuesData.meta.pageCount);
+                  fetchMaterialIssues(materialIssuesData.meta.pageCount, itemsPerPage);
+                }}
+                disabled={!materialIssuesData.meta.hasNextPage || materialIssuesData.meta.page === materialIssuesData.meta.pageCount}
+                className='h-8 w-8 p-0'
+              >
+                <ChevronsRight className='w-4 h-4' />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Issue Details View Dialog - Matching MaterialIssueForm UI */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
-          <DialogHeader>
+        <DialogContent className='max-w-6xl max-h-[95vh] overflow-y-auto p-4'>
+          <DialogHeader className='pb-3'>
             <DialogTitle className='flex items-center gap-2'>
-              <Package className='w-5 h-5' />
-              Material Issue Details - {selectedIssue?.id}
+              <div className='w-8 h-8 bg-secondary/20 rounded-lg flex items-center justify-center'>
+                <FileText className='w-4 h-4 text-foreground' />
+              </div>
+              <div>
+                <div className='text-base font-bold'>
+                  MATERIAL ISSUE DETAILS - {selectedIssue?.id}
+                </div>
+              </div>
             </DialogTitle>
           </DialogHeader>
 
           {selectedIssue && (
-            <div className='space-y-6'>
-              {/* Issue Information */}
-              <div className='grid grid-cols-1 gap-6'>
-                <Card>
-                  <CardContent className='p-4'>
-                    <h3 className='font-semibold mb-3'>Issue Information</h3>
-                    <div className='space-y-2 text-sm'>
-                      <div className='flex justify-between'>
-                        <span className='text-muted-foreground'>Issue ID:</span>
-                        <span className='font-medium'>{selectedIssue.id}</span>
-                      </div>
-                      <div className='flex justify-between'>
-                        <span className='text-muted-foreground'>
-                          Form Number:
-                        </span>
-                        <span className='font-medium'>
-                          {selectedIssue.materialIssueFormSrNo}
-                        </span>
-                      </div>
-                      <div className='flex justify-between'>
-                        <span className='text-muted-foreground'>
-                          Issue Date:
-                        </span>
-                        <span className='font-medium'>
-                          {new Date(
-                            selectedIssue.issuedDate
-                          ).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <div className='flex justify-between'>
-                        <span className='text-muted-foreground'>
-                          Additional Notes:
-                        </span>
-                        <span className='font-medium text-right max-w-48'>
-                          {selectedIssue.additionalNotes || 'None'}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Personnel Information */}
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                <Card>
-                  <CardContent className='p-4'>
-                    <h3 className='font-semibold mb-3'>Issuing Person</h3>
-                    <div className='space-y-2 text-sm'>
-                      <div className='flex justify-between'>
-                        <span className='text-muted-foreground'>Name:</span>
-                        <span className='font-medium'>
-                          {selectedIssue.issuingPersonName}
-                        </span>
-                      </div>
-                      <div className='flex justify-between'>
-                        <span className='text-muted-foreground'>
-                          Designation:
-                        </span>
-                        <span className='font-medium'>
-                          {selectedIssue.issuingPersonDesignation}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className='p-4'>
-                    <h3 className='font-semibold mb-3'>Unit Information</h3>
-                    <div className='space-y-2 text-sm'>
-                      <div className='flex justify-between'>
-                        <span className='text-muted-foreground'>Unit:</span>
-                        <span className='font-medium'>
-                          {selectedIssue.unitName}
-                        </span>
-                      </div>
-                      <div className='flex justify-between'>
-                        <span className='text-muted-foreground'>
-                          Unit Code:
-                        </span>
-                        <span className='font-medium'>
-                          {selectedIssue.unit}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Material Items Table */}
+            <div className='space-y-3'>
+              {/* Material Items Table - Matching MaterialIssueForm */}
               <Card>
-                <CardContent className='p-4'>
-                  <h3 className='font-semibold mb-3'>
-                    Material Items ({selectedIssue.items.length})
-                  </h3>
-
+                <CardContent className='p-0'>
                   <div className='overflow-x-auto'>
                     <TableComponent>
                       <TableHeader>
-                        <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
-                          <TableHead className='w-10'>#</TableHead>
-                          <TableHead>Material</TableHead>
-                          <TableHead>Specifications</TableHead>
-                          <TableHead>Stock Before</TableHead>
-                          <TableHead>Issued Qty</TableHead>
-                          <TableHead>Stock After</TableHead>
-                          <TableHead>Receiver</TableHead>
-                          <TableHead>Purpose</TableHead>
-                          <TableHead>Image</TableHead>
+                        <TableRow className='bg-gray-50'>
+                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                            SR.NO.
+                          </TableHead>
+                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                           ISSUING MATERIAL
+                          </TableHead>
+                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                            CURRENT STOCK
+                          </TableHead>
+                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                            ISSUED QTY
+                          </TableHead>
+                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                            STOCK AFTER ISSUE
+                          </TableHead>
+                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                             ISSUING TO
+                          </TableHead>
+                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                            UPLOAD IMAGE
+                          </TableHead>
+                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                            PURPOSE OF ISSUE
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedIssue.items.map((item, index) => (
-                          <TableRow
-                            key={`item-${index}`}
-                            className='hover:bg-muted/30'
-                          >
-                            <TableCell>{index + 1}</TableCell>
-                            <TableCell className='font-medium'>
-                              {item.materialName}
+                          <TableRow key={index}>
+                            <TableCell className='border border-gray-300 text-center font-semibold text-xs px-2 py-1'>
+                              {index + 1}
                             </TableCell>
-                            <TableCell className='text-sm'>
-                              {item.specifications}
+                            <TableCell className='border border-gray-300 px-2 py-1'>
+                              <div className='flex flex-col'>
+                                <span className='font-medium'>{item.materialName}</span>
+                                {item.specifications && (
+                                  <span className='text-xs text-muted-foreground'>
+                                    {item.specifications}
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
-                            <TableCell>{item.existingStock}</TableCell>
-                            <TableCell className='font-medium text-primary'>
-                              {item.issuedQuantity}
+                            <TableCell className='border border-gray-300 text-center px-2 py-1'>
+                              <div className='font-semibold text-xs'>
+                                {item.existingStock}
+                              </div>
                             </TableCell>
-                            <TableCell>{item.stockAfterIssue}</TableCell>
-                            <TableCell>{item.recipientName}</TableCell>
-                            <TableCell className='text-sm'>
-                              {item.purpose}
+                            <TableCell className='border border-gray-300 text-center px-2 py-1'>
+                              <div className='font-semibold text-xs text-primary'>
+                                {item.issuedQuantity}
+                              </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className='border border-gray-300 text-center px-2 py-1'>
+                              <div className='font-semibold text-xs'>
+                                {item.stockAfterIssue}
+                              </div>
+                            </TableCell>
+                            <TableCell className='border border-gray-300 px-2 py-1'>
+                              <div className='font-medium text-xs'>
+                                {item.recipientName}
+                              </div>
+                            </TableCell>
+                            <TableCell className='border border-gray-300 px-2 py-1'>
                               {item.imagePath ? (
-                                <Button
-                                  variant='outline'
-                                  size='sm'
-                                  className='h-8 w-8 p-0'
-                                  title='View image'
-                                >
-                                  <Eye className='w-4 h-4' />
-                                </Button>
+                                <div className='relative w-full h-16 mb-1'>
+                                  <img
+                                    src={`http://localhost:3000/${item.imagePath}`}
+                                    alt='Material Image'
+                                    className='h-full object-contain rounded-sm'
+                                  />
+                                </div>
                               ) : (
                                 <span className='text-xs text-muted-foreground'>
                                   No image
                                 </span>
                               )}
+                            </TableCell>
+                            <TableCell className='border border-gray-300 px-2 py-1'>
+                              <div className='text-xs'>
+                                {item.purpose}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1132,6 +1275,69 @@ export const MaterialIssuesTab = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Additional Information - Matching MaterialIssueForm */}
+              <Card>
+                <CardContent className='space-y-3'>
+                  <div className='space-y-1'>
+                    <Label className='text-xs'>Additional Notes</Label>
+                    <div className='min-h-[60px] px-4 py-3 border border-input bg-background rounded-[5px] text-sm'>
+                      {selectedIssue.additionalNotes || 'No additional notes'}
+                    </div>
+                  </div>
+
+                  <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
+                    <div className='space-y-1'>
+                      <Label className='text-xs'>Issued By</Label>
+                      <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs'>
+                        {selectedIssue.issuingPersonName}
+                      </div>
+                    </div>
+
+                    <div className='space-y-1'>
+                      <Label className='text-xs'>Date</Label>
+                      <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs'>
+                        {new Date(selectedIssue.issuedDate).toLocaleDateString()}
+                      </div>
+                    </div>
+
+                    <div className='space-y-1'>
+                      <Label className='text-xs'>Unit</Label>
+                      <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs'>
+                        {selectedIssue.unitName}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Form Actions - Matching MaterialIssueForm */}
+              <div className='flex justify-center gap-3 pt-3'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='gap-2'
+                  onClick={() => handleEditIssue(selectedIssue)}
+                  disabled={!canEditIssue(selectedIssue.issuedDate)}
+                  title={
+                    canEditIssue(selectedIssue.issuedDate)
+                      ? 'Edit issue'
+                      : 'Cannot edit after 7 days'
+                  }
+                >
+                  <Edit className='w-4 h-4' />
+                  {canEditIssue(selectedIssue.issuedDate) ? 'Edit Form' : 'Cannot Edit (7+ days)'}
+                </Button>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  className='gap-2'
+                  onClick={() => setIsViewDialogOpen(false)}
+                >
+                  <X className='w-4 h-4' />
+                  Close
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -1149,7 +1355,7 @@ export const MaterialIssuesTab = () => {
         }
         editingIssue={
           editingIssue
-            ? ({ ...editingIssue } as unknown as Record<string, unknown>)
+            ? (editingIssue as unknown as Record<string, unknown>)
             : undefined
         }
       />

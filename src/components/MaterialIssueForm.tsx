@@ -40,9 +40,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Badge } from './ui/badge';
 import { toast } from '../hooks/use-toast';
 import { useRole } from '../contexts/RoleContext';
-import { Material, MaterialIssue } from '../lib/api/types';
+import { Material, MaterialIssue, Machine } from '../lib/api/types';
 import { materialsApi } from '../lib/api/materials';
 import { materialIssuesApi } from '../lib/api/material-issues';
+import { machinesApi } from '../lib/api/machines';
 
 interface MaterialIssueFormProps {
   isOpen: boolean;
@@ -63,6 +64,8 @@ interface MaterialItemFormData {
   image: File | null;
   imagePreview?: string;
   purpose: string;
+  machineId: number;
+  machineName: string;
 }
 
 export const MaterialIssueForm = ({
@@ -91,6 +94,8 @@ export const MaterialIssueForm = ({
         image: null as File | null,
         imagePreview: '',
         purpose: '',
+        machineId: 0,
+        machineName: '',
       } as MaterialItemFormData,
     ],
     // Additional fields
@@ -133,6 +138,8 @@ export const MaterialIssueForm = ({
                   ? `http://localhost:3000/${String(item.imagePath)}`
                   : '',
                 purpose: String(item.purpose || ''),
+                machineId: Number(item.machineId || 0),
+                machineName: String(item.machineName || ''),
               } as MaterialItemFormData)
           )
         : [
@@ -148,6 +155,8 @@ export const MaterialIssueForm = ({
               image: null,
               imagePreview: '',
               purpose: String(editingIssue.purpose || ''),
+              machineId: Number(editingIssue.machineId || 0),
+              machineName: String(editingIssue.machineName || ''),
             } as MaterialItemFormData,
           ];
 
@@ -173,6 +182,8 @@ export const MaterialIssueForm = ({
             image: null,
             imagePreview: '',
             purpose: '',
+            machineId: 0,
+            machineName: '',
           } as MaterialItemFormData,
         ],
         additionalNotes: '',
@@ -185,17 +196,21 @@ export const MaterialIssueForm = ({
     null
   );
   const [availableMaterials, setAvailableMaterials] = useState<Material[]>([]);
+  const [availableMachines, setAvailableMachines] = useState<Machine[]>([]);
   const [isLoadingMaterials, setIsLoadingMaterials] = useState<boolean>(false);
+  const [isLoadingMachines, setIsLoadingMachines] = useState<boolean>(false);
   const [materialsError, setMaterialsError] = useState<string | null>(null);
+  const [machinesError, setMachinesError] = useState<string | null>(null);
 
-  // Fetch materials from API
+  // Fetch materials and machines from API
   useEffect(() => {
-    const fetchMaterials = async () => {
+    const fetchData = async () => {
+      // Fetch materials
       setIsLoadingMaterials(true);
       setMaterialsError(null);
       try {
         const response = await materialsApi.getMaterials({
-          limit: 100, // Get a reasonable number of materials
+          limit: 100,
           sortBy: 'name',
           sortOrder: 'ASC',
         });
@@ -211,10 +226,32 @@ export const MaterialIssueForm = ({
       } finally {
         setIsLoadingMaterials(false);
       }
+
+      // Fetch machines
+      setIsLoadingMachines(true);
+      setMachinesError(null);
+      try {
+        const response = await machinesApi.getAll({
+          limit: 100,
+          sortBy: 'name',
+          sortOrder: 'ASC',
+        });
+        setAvailableMachines(response.data);
+      } catch (error) {
+        console.error('Error fetching machines:', error);
+        setMachinesError('Failed to load machines. Please try again.');
+        toast({
+          title: 'Error',
+          description: 'Failed to load machines. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoadingMachines(false);
+      }
     };
 
     if (isOpen) {
-      fetchMaterials();
+      fetchData();
     }
   }, [isOpen]);
 
@@ -274,6 +311,12 @@ export const MaterialIssueForm = ({
           index + 1
         }`;
       }
+
+      if (!item.machineId) {
+        newErrors[`machineId_${index}`] = `Machine selection is required for item ${
+          index + 1
+        }`;
+      }
     });
 
     setErrors(newErrors);
@@ -302,6 +345,7 @@ export const MaterialIssueForm = ({
           issuedQuantity: parseInt(item.issuedQty),
           receiverName: item.receiverName,
           purpose: item.purpose,
+          machineId: item.machineId,
         }));
 
       formDataObj.append('items', JSON.stringify(itemsData));
@@ -341,6 +385,8 @@ export const MaterialIssueForm = ({
             image: null,
             imagePreview: '',
             purpose: '',
+            machineId: 0,
+            machineName: '',
           } as MaterialItemFormData,
         ],
         additionalNotes: '',
@@ -400,7 +446,7 @@ export const MaterialIssueForm = ({
           {/* Add Item Button - Compact */}
           <div className='flex justify-end'>
             <Button
-              type='submit'
+              type='button'
               onClick={() => {
                 const newItem = {
                   srNo: formData.items.length + 1,
@@ -414,6 +460,8 @@ export const MaterialIssueForm = ({
                   imagePreview: '',
                   materialId: 0,
                   purpose: '',
+                  machineId: 0,
+                  machineName: '',
                 };
                 setFormData((prev) => ({
                   ...prev,
@@ -439,7 +487,7 @@ export const MaterialIssueForm = ({
                         SR.NO.
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                        NAME OF THE MATERIAL
+                        ISSUING MATERIAL
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
                         CURRENT STOCK
@@ -451,10 +499,13 @@ export const MaterialIssueForm = ({
                         STOCK AFTER ISSUE
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                        RECEIVER NAME
+                        ISSUING TO
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                        IMAGE
+                        ISSUED FOR
+                      </TableHead>
+                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
+                        UPLOAD IMAGE
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
                         PURPOSE OF ISSUE
@@ -483,7 +534,7 @@ export const MaterialIssueForm = ({
                                   ...item,
                                   nameOfMaterial: material.name,
                                   existingStock: material.currentStock,
-                                  measureUnit: material.makerBrand || '', // Use makerBrand as measure unit if available
+                                  measureUnit: material.makerBrand || '',
                                   stockAfterIssue:
                                     material.currentStock -
                                     Number(item.issuedQty || 0),
@@ -590,6 +641,66 @@ export const MaterialIssueForm = ({
                             placeholder='Receiver Name'
                             className='border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm'
                           />
+                        </TableCell>
+                        <TableCell className='border border-gray-300 px-2 py-1'>
+                          <Select
+                            value={item.machineName}
+                            onValueChange={(value) => {
+                              const machine = availableMachines.find(
+                                (m) => m.name === value
+                              );
+                              if (machine) {
+                                const newItems = [...formData.items];
+                                newItems[index] = {
+                                  ...item,
+                                  machineName: machine.name,
+                                  machineId: machine.id,
+                                };
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  items: newItems,
+                                }));
+                              }
+                            }}
+                            disabled={isLoadingMachines}
+                          >
+                            <SelectTrigger className='border-0 p-0 h-auto text-xs'>
+                              {isLoadingMachines ? (
+                                <div className='flex items-center gap-2'>
+                                  <Loader2 className='h-3 w-3 animate-spin' />
+                                  <span>Loading...</span>
+                                </div>
+                              ) : (
+                                <SelectValue placeholder='Select Machine *' />
+                              )}
+                            </SelectTrigger>
+                            <SelectContent>
+                              {machinesError ? (
+                                <div className='p-2 text-xs text-destructive'>
+                                  {machinesError}
+                                </div>
+                              ) : (
+                                availableMachines.map((machine) => (
+                                  <SelectItem
+                                    key={machine.id}
+                                    value={machine.name}
+                                  >
+                                    <div className='flex flex-col'>
+                                      <span>{machine.name}</span>
+                                      <span className='text-xs text-muted-foreground'>
+                                        {machine.model} - {machine.serialNumber}
+                                      </span>
+                                    </div>
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                          {errors[`machineId_${index}`] && (
+                            <p className='text-destructive text-xs mt-1'>
+                              {errors[`machineId_${index}`]}
+                            </p>
+                          )}
                         </TableCell>
                         <TableCell className='border border-gray-300 px-2 py-1'>
                           <div className='flex flex-col gap-1'>

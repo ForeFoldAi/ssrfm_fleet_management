@@ -11,7 +11,7 @@ import { useRole } from '@/contexts/RoleContext';
 import {
   ChevronDown,
   User,
-  Settings,
+  
   LogOut,
   Bell,
   Lock,
@@ -40,7 +40,7 @@ const getDisplayConfig = (hasPermission: (p: string) => boolean) => {
   ) {
     return {
       label: 'Inventory Manager',
-      icon: Settings,
+      icon: User,
       color: 'bg-accent',
       description: 'Inventory & Approvals',
     } as const;
@@ -88,81 +88,9 @@ export const RoleSwitcher = () => {
               {currentConfig.label}
             </div>
           </div>
-          <ChevronDown className='w-4 h-4' />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align='end' className='w-64 rounded-[10px]'>
-        <DropdownMenuLabel>Account Menu</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-
-        <DropdownMenuItem asChild>
-          <Link
-            to='/profile'
-            className='flex items-center gap-3 p-3 cursor-pointer rounded-[20px]'
-          >
-            <div className='w-8 h-8 bg-secondary/100 rounded-[20px] flex items-center justify-center'>
-              <User className='w-5 h-5 text-black' />
-            </div>
-            <div className='flex-1'>
-              <div className='font-medium'>My Profile</div>
-              <div className='text-xs text-muted-foreground'>
-                View and edit profile
-              </div>
-            </div>
-          </Link>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem asChild>
-          <Link
-            to='/settings'
-            className='flex items-center gap-3 p-3 cursor-pointer rounded-[20px]'
-          >
-            <div className='w-8 h-8 bg-gray-500 rounded-[20px] flex items-center justify-center'>
-              <Settings className='w-5 h-5 text-white' />
-            </div>
-            <div className='flex-1'>
-              <div className='font-medium'>Settings</div>
-              <div className='text-xs text-muted-foreground'>
-                App preferences
-              </div>
-            </div>
-          </Link>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem asChild>
-          <Link
-            to='/security'
-            className='flex items-center gap-3 p-3 cursor-pointer rounded-[20px]'
-          >
-            <div className='w-8 h-8 bg-red-500 rounded-[20px] flex items-center justify-center'>
-              <Lock className='w-5 h-5 text-white' />
-            </div>
-            <div className='flex-1'>
-              <div className='font-medium'>Security</div>
-              <div className='text-xs text-muted-foreground'>
-                Password & security
-              </div>
-            </div>
-          </Link>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem asChild>
-          <Link
-            to='/help'
-            className='flex items-center gap-3 p-3 cursor-pointer rounded-[20px]'
-          >
-            <div className='w-8 h-8 bg-indigo-500 rounded-[20px] flex items-center justify-center'>
-              <HelpCircle className='w-5 h-5 text-white' />
-            </div>
-            <div className='flex-1'>
-              <div className='font-medium'>Help & Support</div>
-              <div className='text-xs text-muted-foreground'>Get help</div>
-            </div>
-          </Link>
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
-      </DropdownMenuContent>
+      
     </DropdownMenu>
   );
 };

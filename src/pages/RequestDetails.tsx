@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, FileEdit, Package, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, FileEdit, Package, Loader2, ShoppingCart, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
   Card,
@@ -8,6 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
+import { Label } from '../components/ui/label';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
 import { useRole } from '../contexts/RoleContext';
 import { toast } from '../hooks/use-toast';
 import { RequisitionIndentForm } from '../components/RequisitionIndentForm';
@@ -18,7 +27,13 @@ import { StatusDropdown } from '../components/StatusDropdown';
 import { HistoryView } from '../components/HistoryView';
 import { generatePurchaseId, parseLocationFromId } from '../lib/utils';
 import materialIndentsApi, { IndentStatus } from '../lib/api/material-indents';
-import { MaterialIndent } from '../lib/api/types';
+import { materialPurchasesApi, MaterialPurchaseStatus } from '../lib/api/materials-purchases';
+import { 
+  MaterialIndent, 
+  MaterialPurchase,
+  ApproveRejectMaterialIndentRequest,
+  ReceiveMaterialPurchaseItemRequest
+} from '../lib/api/types';
 
 interface VendorQuotation {
   id: string;
@@ -28,6 +43,7 @@ interface VendorQuotation {
   quotedPrice: string;
   notes: string;
   quotationFile?: File | null;
+  isSelected?: boolean; // Add this line
 }
 
 interface RequestItem {
@@ -87,6 +103,21 @@ const RequestDetails: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // New state for enhanced workflow
+  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+  const [selectedQuotationId, setSelectedQuotationId] = useState<number | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
+  const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
+  const [selectedPurchase, setSelectedPurchase] = useState<MaterialPurchase | null>(null);
+  const [receiveData, setReceiveData] = useState<ReceiveMaterialPurchaseItemRequest>({
+    receivedQuantity: 0,
+    receivedDate: new Date().toISOString().split('T')[0],
+    notes: ''
+  });
+
   // Available materials and machines will be populated from API data
   const [availableMaterials, setAvailableMaterials] = useState<
     Array<{
@@ -97,6 +128,21 @@ const RequestDetails: React.FC = () => {
     }>
   >([]);
   const [machines, setMachines] = useState<string[]>([]);
+
+  // Helper function to format Purchase ID (same as MaterialOrderBookTab)
+  const formatPurchaseId = (uniqueId: string, branchCode?: string) => {
+    // Convert to uppercase
+    let formattedId = uniqueId.toUpperCase();
+    
+    // Convert unit numbers to Roman numerals (UNIT1 -> UNIT-I, UNIT2 -> UNIT-II, etc.)
+    formattedId = formattedId.replace(/UNIT(\d+)/g, (match, unitNumber) => {
+      const num = parseInt(unitNumber, 10);
+      const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+      return `UNIT-${romanNumerals[num] || unitNumber}`;
+    });
+    
+    return formattedId;
+  };
 
   useEffect(() => {
     const loadRequestData = async () => {
@@ -125,7 +171,7 @@ const RequestDetails: React.FC = () => {
 
         // Transform API data to match the RequestData interface
         const transformedData: RequestData = {
-          id: indentData.uniqueId,
+          id: formatPurchaseId(indentData.uniqueId, indentData.branch?.code), // Apply formatting here
           requestedBy: indentData.requestedBy?.name || 'Unknown',
           location: indentData.branch?.name || 'Unknown',
           date: indentData.requestDate,
@@ -790,7 +836,7 @@ const RequestDetails: React.FC = () => {
             : null);
 
         return {
-          id: indent.uniqueId,
+          id: formatPurchaseId(indent.uniqueId, indent.branch?.code), // Apply formatting here too
           date: indent.requestDate,
           materialName: firstItem?.material?.name || 'Unknown',
           quantity: firstItem ? `${firstItem.requestedQuantity}` : '0',
@@ -822,6 +868,323 @@ const RequestDetails: React.FC = () => {
         currentValue: item.totalValue || '0',
       }));
     }
+  };
+
+  // New function to handle approval with item and quotation selection
+  const handleApproveWithSelection = async () => {
+    if (!requestData || !requestData.apiData || !selectedItemId || !selectedQuotationId) {
+      toast({
+        title: 'Error',
+        description: 'Please select an item and quotation to approve.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const approvalData: ApproveRejectMaterialIndentRequest = {
+        status: 'approved',
+        itemId: selectedItemId,
+        quotationId: selectedQuotationId,
+      };
+
+      await materialIndentsApi.approve(requestData.apiData.id);
+      
+      toast({
+        title: 'Success',
+        description: 'Material indent approved successfully.',
+      });
+
+      setIsApprovalDialogOpen(false);
+      setSelectedItemId(null);
+      setSelectedQuotationId(null);
+      
+      // Refresh the request data
+      const updatedIndent = await materialIndentsApi.getById(requestData.apiData.id);
+      setRequestData(prev => prev ? { ...prev, apiData: updatedIndent, status: updatedIndent.status } : null);
+    } catch (error) {
+      console.error('Error approving indent:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to approve material indent. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // New function to handle rejection with reason
+  const handleRejectWithReason = async () => {
+    if (!requestData || !requestData.apiData || !rejectionReason.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please provide a rejection reason.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await materialIndentsApi.reject(requestData.apiData.id, rejectionReason);
+      
+      toast({
+        title: 'Success',
+        description: 'Material indent rejected successfully.',
+      });
+
+      setIsRejectionDialogOpen(false);
+      setRejectionReason('');
+      
+      // Refresh the request data
+      const updatedIndent = await materialIndentsApi.getById(requestData.apiData.id);
+      setRequestData(prev => prev ? { ...prev, apiData: updatedIndent, status: updatedIndent.status } : null);
+    } catch (error) {
+      console.error('Error rejecting indent:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reject material indent. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // New function to create purchase order
+  const handleCreatePurchaseOrder = async () => {
+    if (!requestData || !requestData.apiData) {
+      toast({
+        title: 'Error',
+        description: 'No indent data available for ordering.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const purchaseData = {
+        purchaseOrderNumber: `PO-${requestData.apiData.uniqueId}`,
+        orderDate: new Date().toISOString().split('T')[0],
+        totalValue: requestData.apiData.items.reduce((total, item) => {
+          const quotation = item.selectedQuotation || item.quotations[0];
+          return total + (quotation ? Number(quotation.quotationAmount) * item.requestedQuantity : 0);
+        }, 0).toString(),
+        additionalNotes: requestData.apiData.additionalNotes || '',
+        items: requestData.apiData.items.map(item => ({
+          materialId: item.material.id,
+          orderedQuantity: item.requestedQuantity,
+          unitPrice: item.selectedQuotation?.quotationAmount || item.quotations[0]?.quotationAmount || '0',
+          notes: item.notes || ''
+        }))
+      };
+
+      const createdPurchase = await materialPurchasesApi.create(purchaseData);
+      
+      // Update indent status to ordered
+      const updatedIndent = await materialIndentsApi.update(requestData.apiData.id, {
+        status: IndentStatus.ORDERED,
+        additionalNotes: `Purchase order created: ${createdPurchase.purchaseOrderNumber}`
+      });
+      
+      toast({
+        title: 'Success',
+        description: 'Purchase order created successfully.',
+      });
+
+      setIsOrderDialogOpen(false);
+      setRequestData(prev => prev ? { ...prev, apiData: updatedIndent, status: updatedIndent.status } : null);
+    } catch (error) {
+      console.error('Error creating purchase order:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create purchase order. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // New function to handle material receipt
+  const handleReceiveMaterial = async () => {
+    if (!selectedPurchase || !receiveData.receivedQuantity || !receiveData.receivedDate) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // For now, we'll assume we're receiving the first item
+      const firstItem = selectedPurchase.items[0];
+      if (!firstItem) {
+        toast({
+          title: 'Error',
+          description: 'No items found in this purchase order.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      await materialPurchasesApi.receiveItem(
+        selectedPurchase.id,
+        firstItem.id,
+        receiveData
+      );
+      
+      toast({
+        title: 'Success',
+        description: 'Material received successfully.',
+      });
+
+      setIsReceiveDialogOpen(false);
+      setSelectedPurchase(null);
+      setReceiveData({
+        receivedQuantity: 0,
+        receivedDate: new Date().toISOString().split('T')[0],
+        notes: ''
+      });
+      
+      // Refresh the request data
+      if (requestData?.apiData) {
+        const updatedIndent = await materialIndentsApi.getById(requestData.apiData.id);
+        setRequestData(prev => prev ? { ...prev, apiData: updatedIndent, status: updatedIndent.status } : null);
+      }
+    } catch (error) {
+      console.error('Error receiving material:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to receive material. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Enhanced action buttons for different workflow stages
+  const renderWorkflowActions = () => {
+    if (!requestData || !requestData.apiData) return null;
+
+    const canApprove = hasPermission('inventory:material-indents:approve') && 
+                      requestData.status === 'pending_approval';
+    const canReject = hasPermission('inventory:material-indents:approve') && 
+                     requestData.status === 'pending_approval';
+    const canOrder = hasPermission('inventory:material-indents:update') && 
+                    requestData.status === 'approved';
+    const canReceive = hasPermission('inventory:material-purchases:receive') && 
+                      (requestData.status === 'ordered' || requestData.status === 'partially_received');
+
+    return (
+      <div className='flex flex-wrap gap-2'>
+        {canApprove && (
+          <Button
+            variant='outline'
+            className='gap-2 text-green-600 border-green-600 hover:bg-green-50'
+            onClick={() => setIsApprovalDialogOpen(true)}
+          >
+            <CheckCircle className='w-4 h-4' />
+            Approve
+          </Button>
+        )}
+
+        {canReject && (
+          <Button
+            variant='outline'
+            className='gap-2 text-red-600 border-red-600 hover:bg-red-50'
+            onClick={() => setIsRejectionDialogOpen(true)}
+          >
+            <XCircle className='w-4 h-4' />
+            Reject
+          </Button>
+        )}
+
+        {canOrder && (
+          <Button
+            variant='outline'
+            className='gap-2 text-blue-600 border-blue-600 hover:bg-blue-50'
+            onClick={() => setIsOrderDialogOpen(true)}
+          >
+            <ShoppingCart className='w-4 h-4' />
+            Create Order
+          </Button>
+        )}
+
+        {canReceive && (
+          <Button
+            variant='outline'
+            className='gap-2 text-orange-600 border-orange-600 hover:bg-orange-50'
+            onClick={() => {
+              // Create a mock purchase object for demonstration
+              // In a real implementation, you'd fetch the actual purchase order
+              setSelectedPurchase({
+                id: 1,
+                uniqueId: requestData.id,
+                orderDate: requestData.date,
+                totalValue: requestData.items.reduce((total, item) => {
+                  const quotation = item.vendorQuotations.find(vq => selectedVendors[item.id] === vq.id);
+                  return total + (quotation ? parseFloat(quotation.quotedPrice.replace('₹', '')) : 0);
+                }, 0).toString(),
+                purchaseOrderNumber: `PO-${requestData.id}`,
+                status: 'pending',
+                additionalNotes: '',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                items: requestData.items.map(item => ({
+                  id: parseInt(item.id),
+                  materialId: parseInt(item.id),
+                  materialName: item.productName,
+                  specifications: item.specifications,
+                  orderedQuantity: parseInt(item.reqQuantity),
+                  receivedQuantity: 0,
+                  pendingQuantity: parseInt(item.reqQuantity),
+                  unitPrice: item.vendorQuotations.find(vq => selectedVendors[item.id] === vq.id)?.quotedPrice || '0',
+                  totalPrice: item.vendorQuotations.find(vq => selectedVendors[item.id] === vq.id)?.quotedPrice || '0',
+                  status: 'pending',
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  material: {
+                    id: parseInt(item.id),
+                    name: item.productName,
+                    specifications: item.specifications,
+                    makerBrand: '',
+                    currentStock: item.oldStock,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  }
+                })),
+                branch: {
+                  id: 1,
+                  name: requestData.location,
+                  location: '',
+                  contactPhone: null,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
+                createdBy: {
+                  id: 1,
+                  name: requestData.requestedBy,
+                  email: '',
+                  company: {} as any,
+                  branch: {} as any,
+                  userType: {} as any,
+                  roles: [],
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                }
+              });
+              setIsReceiveDialogOpen(true);
+            }}
+          >
+            <Package className='w-4 h-4' />
+            Receive Material
+          </Button>
+        )}
+      </div>
+    );
+  };
+
+  // Update the back button navigation
+  const handleBackNavigation = () => {
+    // Navigate back to the MaterialOrderBookTab (materials-inventory with material-order-book tab)
+    navigate('/materials-inventory', { 
+      state: { activeTab: 'material-order-book' } 
+    });
   };
 
   if (loading) {
@@ -880,7 +1243,9 @@ const RequestDetails: React.FC = () => {
           <Button
             variant='outline'
             size='sm'
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/materials-inventory', { 
+              state: { activeTab: 'material-order-book' } 
+            })}
             className='gap-2'
           >
             <ArrowLeft className='w-4 h-4' />
@@ -912,6 +1277,9 @@ const RequestDetails: React.FC = () => {
               Save Changes
             </Button>
           )}
+
+          {/* Enhanced workflow actions */}
+          {renderWorkflowActions()}
 
           {shouldShowStatusDropdown() &&
             !hasPermission('inventory:material-indents:approve') && (
@@ -1015,9 +1383,10 @@ const RequestDetails: React.FC = () => {
       <div className='mt-8 space-y-6'>
         {/* Request Status Card */}
 
-        {/* History Section */}
-        {isLoadingHistory &&
-        hasPermission('inventory:material-indents:read:all') ? (
+        {/* History Section - Only for Company Owners */}
+        {hasPermission('inventory:material-indents:read:all') && (
+          <>
+            {isLoadingHistory ? (
           <Card>
             <CardHeader>
               <CardTitle>Recent Requests History</CardTitle>
@@ -1027,8 +1396,7 @@ const RequestDetails: React.FC = () => {
               <p className='ml-2 text-muted-foreground'>Loading history...</p>
             </CardContent>
           </Card>
-        ) : historyError &&
-          hasPermission('inventory:material-indents:read:all') ? (
+            ) : historyError ? (
           <Card>
             <CardHeader>
               <CardTitle>Recent Requests History</CardTitle>
@@ -1061,16 +1429,255 @@ const RequestDetails: React.FC = () => {
           </Card>
         ) : (
           <HistoryView
-            userRole={
-              hasPermission('inventory:material-indents:approve')
-                ? 'company_owner'
-                : 'supervisor'
-            }
+                userRole='company_owner'
             historyData={getHistoryData()}
             requestId={requestData.id}
           />
+            )}
+          </>
         )}
       </div>
+
+      {/* Approval Dialog */}
+      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Approve Material Indent</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {requestData?.apiData && (
+              <div className='space-y-4'>
+                <div className='p-4 bg-green-50 border border-green-200 rounded-lg'>
+                  <h3 className='font-semibold text-green-800 mb-2'>Indent Details</h3>
+                  <p><strong>ID:</strong> {requestData.apiData.uniqueId}</p>
+                  <p><strong>Requested By:</strong> {requestData.apiData.requestedBy?.name}</p>
+                  <p><strong>Date:</strong> {new Date(requestData.apiData.requestDate).toLocaleDateString()}</p>
+                </div>
+                
+                <div className='space-y-3'>
+                  <Label>Select Item to Approve</Label>
+                  <select 
+                    className='w-full p-2 border rounded'
+                    onChange={(e) => setSelectedItemId(parseInt(e.target.value))}
+                  >
+                    <option value=''>Select an item</option>
+                    {requestData.apiData.items.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.material.name} - Qty: {item.requestedQuantity}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedItemId && (
+                  <div className='space-y-3'>
+                    <Label>Select Quotation</Label>
+                    <select 
+                      className='w-full p-2 border rounded'
+                      onChange={(e) => setSelectedQuotationId(parseInt(e.target.value))}
+                    >
+                      <option value=''>Select a quotation</option>
+                      {requestData.apiData.items
+                        .find(item => item.id === selectedItemId)
+                        ?.quotations.map((quotation) => (
+                          <option key={quotation.id} value={quotation.id}>
+                            {quotation.vendorName} - ₹{quotation.quotationAmount}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className='flex justify-end gap-2'>
+                  <Button variant='outline' onClick={() => setIsApprovalDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleApproveWithSelection}
+                    disabled={!selectedItemId || !selectedQuotationId}
+                    className='bg-green-600 hover:bg-green-700'
+                  >
+                    <CheckCircle className='w-4 h-4 mr-2' />
+                    Approve
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rejection Dialog */}
+      <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Reject Material Indent</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {requestData?.apiData && (
+              <div className='space-y-4'>
+                <div className='p-4 bg-red-50 border border-red-200 rounded-lg'>
+                  <h3 className='font-semibold text-red-800 mb-2'>Indent Details</h3>
+                  <p><strong>ID:</strong> {requestData.apiData.uniqueId}</p>
+                  <p><strong>Requested By:</strong> {requestData.apiData.requestedBy?.name}</p>
+                  <p><strong>Date:</strong> {new Date(requestData.apiData.requestDate).toLocaleDateString()}</p>
+                </div>
+                
+                <div className='space-y-3'>
+                  <Label htmlFor='rejectionReason'>Rejection Reason *</Label>
+                  <Textarea
+                    id='rejectionReason'
+                    placeholder='Please provide a reason for rejection...'
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    className='min-h-[100px]'
+                  />
+                </div>
+
+                <div className='flex justify-end gap-2'>
+                  <Button variant='outline' onClick={() => setIsRejectionDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleRejectWithReason}
+                    disabled={!rejectionReason.trim()}
+                    className='bg-red-600 hover:bg-red-700'
+                  >
+                    <XCircle className='w-4 h-4 mr-2' />
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Creation Dialog */}
+      <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Create Purchase Order</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {requestData?.apiData && (
+              <div className='space-y-4'>
+                <div className='p-4 bg-blue-50 border border-blue-200 rounded-lg'>
+                  <h3 className='font-semibold text-blue-800 mb-2'>Indent Details</h3>
+                  <p><strong>ID:</strong> {requestData.apiData.uniqueId}</p>
+                  <p><strong>Requested By:</strong> {requestData.apiData.requestedBy?.name}</p>
+                  <p><strong>Date:</strong> {new Date(requestData.apiData.requestDate).toLocaleDateString()}</p>
+                </div>
+                
+                <div className='space-y-3'>
+                  <h4 className='font-semibold'>Items to Order:</h4>
+                  <div className='space-y-2'>
+                    {requestData.apiData.items.map((item) => (
+                      <div key={item.id} className='p-3 bg-gray-50 rounded border'>
+                        <p><strong>{item.material.name}</strong></p>
+                        <p>Quantity: {item.requestedQuantity}</p>
+                        <p>Selected Quotation: {item.selectedQuotation?.vendorName || 'None selected'}</p>
+                        <p>Amount: ₹{item.selectedQuotation?.quotationAmount || '0'}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className='flex justify-end gap-2'>
+                  <Button variant='outline' onClick={() => setIsOrderDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleCreatePurchaseOrder}
+                    className='bg-blue-600 hover:bg-blue-700'
+                  >
+                    <ShoppingCart className='w-4 h-4 mr-2' />
+                    Create Order
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Material Receipt Dialog */}
+      <Dialog open={isReceiveDialogOpen} onOpenChange={setIsReceiveDialogOpen}>
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Receive Material</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {selectedPurchase && (
+              <div className='space-y-4'>
+                <div className='p-4 bg-orange-50 border border-orange-200 rounded-lg'>
+                  <h3 className='font-semibold text-orange-800 mb-2'>Purchase Order Details</h3>
+                  <p><strong>PO Number:</strong> {selectedPurchase.purchaseOrderNumber}</p>
+                  <p><strong>Order Date:</strong> {new Date(selectedPurchase.orderDate).toLocaleDateString()}</p>
+                  <p><strong>Total Value:</strong> ₹{selectedPurchase.totalValue}</p>
+                </div>
+                
+                <div className='space-y-3'>
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div>
+                      <Label htmlFor='receivedQuantity'>Received Quantity *</Label>
+                      <Input
+                        id='receivedQuantity'
+                        type='number'
+                        value={receiveData.receivedQuantity}
+                        onChange={(e) => setReceiveData(prev => ({
+                          ...prev,
+                          receivedQuantity: parseInt(e.target.value) || 0
+                        }))}
+                        min='1'
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor='receivedDate'>Received Date *</Label>
+                      <Input
+                        id='receivedDate'
+                        type='date'
+                        value={receiveData.receivedDate}
+                        onChange={(e) => setReceiveData(prev => ({
+                          ...prev,
+                          receivedDate: e.target.value
+                        }))}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor='receiveNotes'>Notes</Label>
+                    <Textarea
+                      id='receiveNotes'
+                      placeholder='Any additional notes about the received material...'
+                      value={receiveData.notes}
+                      onChange={(e) => setReceiveData(prev => ({
+                        ...prev,
+                        notes: e.target.value
+                      }))}
+                    />
+                  </div>
+                </div>
+
+                <div className='flex justify-end gap-2'>
+                  <Button variant='outline' onClick={() => setIsReceiveDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleReceiveMaterial}
+                    disabled={!receiveData.receivedQuantity || !receiveData.receivedDate}
+                    className='bg-orange-600 hover:bg-orange-700'
+                  >
+                    <Package className='w-4 h-4 mr-2' />
+                    Receive Material
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

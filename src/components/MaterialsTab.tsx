@@ -10,6 +10,13 @@ import {
   FileText,
   Building2,
   Loader2,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -30,11 +37,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import { Label } from './ui/label';
+import { Textarea } from './ui/textarea';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from './ui/pagination';
 import { AddMaterialForm } from './AddMaterialForm';
 import { useRole } from '../contexts/RoleContext';
-import { materialsApi, Material } from '../lib/api/materials';
+import { materialsApi } from '../lib/api/materials';
+import { Material, MaterialCategory, Unit } from '../lib/api/types';
 import { getUnits } from '../lib/api/common';
-import { Unit } from '../lib/api/types';
+import { getMaterialCategories } from '../lib/api/common';
+import { toast } from '../hooks/use-toast';
+
+type SortField = 'name' | 'specifications' | 'currentStock' | 'makerBrand' | 'createdAt';
+type SortOrder = 'ASC' | 'DESC';
 
 export const MaterialsTab = () => {
   const { currentUser, hasPermission } = useRole();
@@ -42,18 +70,22 @@ export const MaterialsTab = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterUnit, setFilterUnit] = useState('all');
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
+  const [isViewEditOpen, setIsViewEditOpen] = useState(false);
+  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
 
-  // API state management
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('ASC');
+
+  // API state management - updated to match MachinesTab structure
   const [materials, setMaterials] = useState<Material[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 0,
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5); // Changed default to 5 to match MachinesTab
+  const [materialsData, setMaterialsData] = useState<any>(null);
 
   // Fetch materials from API
   const fetchMaterials = async (page = 1, limit = 10) => {
@@ -64,24 +96,18 @@ export const MaterialsTab = () => {
       const params = {
         page,
         limit,
-        sortBy: 'id',
-        sortOrder: 'ASC' as const,
+        sortBy: sortField,
+        sortOrder: sortOrder,
         ...(searchQuery && { search: searchQuery }),
         ...(filterUnit !== 'all' &&
-          hasPermission('inventory:material-indents:read:all') && {
+          currentUser?.role === 'company_owner' && {
             unitId: filterUnit,
           }),
       };
 
       const response = await materialsApi.getMaterials(params);
-
+      setMaterialsData(response);
       setMaterials(response.data);
-      setPagination({
-        page: response.meta.page,
-        limit: response.meta.limit,
-        total: response.meta.itemCount,
-        totalPages: response.meta.pageCount,
-      });
     } catch (err) {
       console.error('Error fetching materials:', err);
       setError('Failed to load materials. Please try again.');
@@ -90,9 +116,9 @@ export const MaterialsTab = () => {
     }
   };
 
-  // Fetch units for filtering (only for users with global permissions)
+  // Fetch units for filtering (only for company owners)
   const fetchUnits = async () => {
-    if (!hasPermission('inventory:material-indents:read:all')) return;
+    if (currentUser?.role !== 'company_owner') return;
 
     try {
       const response = await getUnits({ limit: 100 });
@@ -102,24 +128,51 @@ export const MaterialsTab = () => {
     }
   };
 
+  // Handle column sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle sort order if same field
+      setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      // Set new field with ascending order
+      setSortField(field);
+      setSortOrder('ASC');
+    }
+  };
+
+  // Get sort icon for column header
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-4 h-4 text-muted-foreground" />;
+    }
+    return sortOrder === 'ASC' 
+      ? <ArrowUp className="w-4 h-4 text-primary" />
+      : <ArrowDown className="w-4 h-4 text-primary" />;
+  };
+
   // Initial data fetch
   useEffect(() => {
     fetchMaterials();
     fetchUnits();
   }, []);
 
-  // Refetch when search or filter changes
+  // Refetch when search, filter, or sorting changes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      fetchMaterials(1, pagination.limit);
+      fetchMaterials(1, itemsPerPage);
     }, 300); // Debounce search
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, filterUnit]);
+  }, [searchQuery, filterUnit, sortField, sortOrder]);
+
+  // Load materials when pagination changes
+  useEffect(() => {
+    fetchMaterials(currentPage, itemsPerPage);
+  }, [currentPage, itemsPerPage]);
 
   const handleAddMaterial = (materialData: Material) => {
     // Refresh the materials list after adding
-    fetchMaterials(pagination.page, pagination.limit);
+    fetchMaterials(currentPage, itemsPerPage);
   };
 
   const getStockStatus = (currentStock: number, minStockLevel: number) => {
@@ -143,9 +196,23 @@ export const MaterialsTab = () => {
     );
   };
 
-  // Handle pagination
-  const handlePageChange = (newPage: number) => {
-    fetchMaterials(newPage, pagination.limit);
+  const handleMaterialClick = (material: Material) => {
+    setSelectedMaterial(material);
+    setIsEditMode(false);
+    setIsViewEditOpen(true);
+  };
+
+  const handleEditClick = (e: React.MouseEvent, material: Material) => {
+    e.stopPropagation();
+    setSelectedMaterial(material);
+    setIsEditMode(true);
+    setIsViewEditOpen(true);
+  };
+
+  const handleViewEditClose = () => {
+    setIsViewEditOpen(false);
+    setSelectedMaterial(null);
+    setIsEditMode(false);
   };
 
   if (loading && materials.length === 0) {
@@ -210,7 +277,7 @@ export const MaterialsTab = () => {
           <div className='relative'>
             <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4' />
             <Input
-              placeholder='Search materials...'
+              placeholder='Search materials, specifications, make/brand...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className='pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64'
@@ -218,32 +285,31 @@ export const MaterialsTab = () => {
           </div>
 
           {/* Unit Filter - Only for Company Owner */}
-          {hasPermission('inventory:material-indents:read:all') &&
-            units.length > 0 && (
-              <Select value={filterUnit} onValueChange={setFilterUnit}>
-                <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0 h-10'>
-                  <SelectValue placeholder='Select Unit' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='all'>All Units</SelectItem>
-                  {units.map((unit) => (
-                    <SelectItem key={unit.id} value={unit.id.toString()}>
-                      <div className='flex items-center gap-2'>
-                        <Building2 className='w-4 h-4' />
-                        <div>
-                          <div className='font-medium'>{unit.name}</div>
-                          {unit.description && (
-                            <div className='text-xs text-muted-foreground'>
-                              {unit.description}
-                            </div>
-                          )}
-                        </div>
+          {currentUser?.role === 'company_owner' && units.length > 0 && (
+            <Select value={filterUnit} onValueChange={setFilterUnit}>
+              <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0 h-10'>
+                <SelectValue placeholder='Select Unit' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Units</SelectItem>
+                {units.map((unit) => (
+                  <SelectItem key={unit.id} value={unit.id.toString()}>
+                    <div className='flex items-center gap-2'>
+                      <Building2 className='w-4 h-4' />
+                      <div>
+                        <div className='font-medium'>{unit.name}</div>
+                        {unit.description && (
+                          <div className='text-xs text-muted-foreground'>
+                            {unit.description}
+                          </div>
+                        )}
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <Button
             className='btn-primary w-full sm:w-auto text-sm sm:text-base'
@@ -273,7 +339,8 @@ export const MaterialsTab = () => {
             return (
               <div
                 key={material.id}
-                className='card-friendly p-3 sm:p-4 hover:bg-secondary/30 transition-colors duration-200'
+                className='card-friendly p-3 sm:p-4 hover:bg-secondary/30 transition-colors duration-200 cursor-pointer'
+                onClick={() => handleMaterialClick(material)}
               >
                 <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
                   <div className='flex items-start gap-3 flex-1 min-w-0'>
@@ -283,7 +350,7 @@ export const MaterialsTab = () => {
 
                     <div className='flex-1 min-w-0'>
                       <div className='flex flex-col sm:flex-row sm:items-center gap-2 mb-2'>
-                        <h3 className='font-semibold text-foreground text-sm sm:text-base'>
+                        <h3 className='font-semibold text-foreground text-sm sm:text-base hover:text-primary transition-colors'>
                           {material.name}
                         </h3>
                         <Badge className={getStatusBadge(stockStatus)}>
@@ -309,25 +376,6 @@ export const MaterialsTab = () => {
                       </div>
                     </div>
                   </div>
-
-                  <div className='flex gap-2 sm:ml-4 justify-end sm:justify-start'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      className='h-8 px-2 sm:px-3'
-                    >
-                      <Edit className='w-3 h-3 sm:w-4 sm:h-4' />
-                      <span className='ml-1 sm:hidden text-xs'>Edit</span>
-                    </Button>
-                    <Button
-                      variant='ghost'
-                      size='sm'
-                      className='h-8 px-2 sm:px-3'
-                    >
-                      <Eye className='w-3 h-3 sm:w-4 sm:h-4' />
-                      <span className='ml-1 sm:hidden text-xs'>View</span>
-                    </Button>
-                  </div>
                 </div>
               </div>
             );
@@ -341,22 +389,47 @@ export const MaterialsTab = () => {
                 <TableHeader>
                   <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
                     <TableHead className='min-w-[150px] text-foreground font-semibold'>
-                      Material
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleSort('name')}
+                        className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                      >
+                        Material
+                        {getSortIcon('name')}
+                      </Button>
                     </TableHead>
                     <TableHead className='min-w-[200px] text-foreground font-semibold'>
-                      Specifications
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleSort('specifications')}
+                        className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                      >
+                        Specifications
+                        {getSortIcon('specifications')}
+                      </Button>
                     </TableHead>
                     <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                      Current Stock
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleSort('currentStock')}
+                        className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                      >
+                        Current Stock
+                        {getSortIcon('currentStock')}
+                      </Button>
                     </TableHead>
                     <TableHead className='min-w-[100px] text-foreground font-semibold'>
                       Stock Status
                     </TableHead>
                     <TableHead className='min-w-[120px] text-foreground font-semibold'>
-                      Make/Brand
-                    </TableHead>
-                    <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                      Actions
+                      <Button
+                        variant="ghost"
+                        onClick={() => handleSort('makerBrand')}
+                        className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                      >
+                        Make/Brand
+                        {getSortIcon('makerBrand')}
+                      </Button>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -369,14 +442,15 @@ export const MaterialsTab = () => {
                     return (
                       <TableRow
                         key={material.id}
-                        className='hover:bg-muted/30 border-b border-secondary/20'
+                        className='hover:bg-muted/30 border-b border-secondary/20 cursor-pointer'
+                        onClick={() => handleMaterialClick(material)}
                       >
                         <TableCell className='font-semibold text-foreground'>
-                          <span className='font-semibold text-foreground'>
+                          <span className='font-semibold text-foreground hover:text-primary transition-colors'>
                             {material.name}
                           </span>
                         </TableCell>
-                        <TableCell className='text-muted-foreground max-w-xs truncate'>
+                        <TableCell className='text-muted-foreground max-w-xs truncate hover:text-primary transition-colors'>
                           {material.specifications}
                         </TableCell>
                         <TableCell className='font-semibold text-foreground'>
@@ -387,26 +461,8 @@ export const MaterialsTab = () => {
                             {stockStatus}
                           </Badge>
                         </TableCell>
-                        <TableCell className='text-muted-foreground truncate max-w-32'>
+                        <TableCell className='text-muted-foreground truncate max-w-32 hover:text-primary transition-colors'>
                           {material.makerBrand}
-                        </TableCell>
-                        <TableCell>
-                          <div className='flex gap-1'>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              className='h-8 w-8 p-0'
-                            >
-                              <Edit className='w-4 h-4' />
-                            </Button>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              className='h-8 w-8 p-0'
-                            >
-                              <Eye className='w-4 h-4' />
-                            </Button>
-                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -418,31 +474,129 @@ export const MaterialsTab = () => {
         </Card>
       )}
 
-      {/* Pagination */}
-      {pagination.totalPages > 1 && (
-        <div className='flex items-center justify-between'>
+      {/* Pagination - Updated to match MachinesTab */}
+      {materialsData && materialsData.meta && (
+        <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
+          {/* Page Info */}
           <div className='text-sm text-muted-foreground'>
-            Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-            {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
-            {pagination.total} materials
+            Showing {((materialsData.meta.page - 1) * materialsData.meta.limit) + 1} to{' '}
+            {Math.min(materialsData.meta.page * materialsData.meta.limit, materialsData.meta.itemCount)} of{' '}
+            {materialsData.meta.itemCount} entries
           </div>
-          <div className='flex gap-2'>
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={() => handlePageChange(pagination.page - 1)}
-              disabled={pagination.page === 1}
-            >
-              Previous
-            </Button>
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={() => handlePageChange(pagination.page + 1)}
-              disabled={pagination.page === pagination.totalPages}
-            >
-              Next
-            </Button>
+
+          {/* Pagination Controls */}
+          <div className='flex items-center gap-2'>
+            {/* Items per page selector */}
+            <div className='flex items-center gap-2'>
+              <span className='text-sm text-muted-foreground'>Show:</span>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => {
+                  const newLimit = parseInt(value);
+                  setItemsPerPage(newLimit);
+                  setCurrentPage(1);
+                  fetchMaterials(1, newLimit);
+                }}
+              >
+                <SelectTrigger className='w-20 h-8'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='5'>5</SelectItem>
+                  <SelectItem value='10'>10</SelectItem>
+                  <SelectItem value='20'>20</SelectItem>
+                  <SelectItem value='50'>50</SelectItem>
+                  <SelectItem value='100'>100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className='text-sm text-muted-foreground'>per page</span>
+            </div>
+
+            {/* Page navigation */}
+            <div className='flex items-center gap-1'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setCurrentPage(1);
+                  fetchMaterials(1, itemsPerPage);
+                }}
+                disabled={!materialsData.meta.hasPreviousPage || materialsData.meta.page === 1}
+                className='h-8 w-8 p-0'
+              >
+                <ChevronsLeft className='w-4 h-4' />
+              </Button>
+              
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setCurrentPage(prev => prev - 1);
+                  fetchMaterials(currentPage - 1, itemsPerPage);
+                }}
+                disabled={!materialsData.meta.hasPreviousPage}
+                className='h-8 w-8 p-0'
+              >
+                <ChevronLeft className='w-4 h-4' />
+              </Button>
+
+              {/* Page numbers */}
+              <div className='flex items-center gap-1 mx-2'>
+                {Array.from({ length: Math.min(5, materialsData.meta.pageCount) }, (_, i) => {
+                  let pageNum;
+                  if (materialsData.meta.pageCount <= 5) {
+                    pageNum = i + 1;
+                  } else if (materialsData.meta.page <= 3) {
+                    pageNum = i + 1;
+                  } else if (materialsData.meta.page >= materialsData.meta.pageCount - 2) {
+                    pageNum = materialsData.meta.pageCount - 4 + i;
+                  } else {
+                    pageNum = materialsData.meta.page - 2 + i;
+                  }
+
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={materialsData.meta.page === pageNum ? 'default' : 'outline'}
+                      size='sm'
+                      onClick={() => {
+                        setCurrentPage(pageNum);
+                        fetchMaterials(pageNum, itemsPerPage);
+                      }}
+                      className='h-8 w-8 p-0'
+                  >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setCurrentPage(prev => prev + 1);
+                  fetchMaterials(currentPage + 1, itemsPerPage);
+                }}
+                disabled={!materialsData.meta.hasNextPage}
+                className='h-8 w-8 p-0'
+              >
+                <ChevronRight className='w-4 h-4' />
+              </Button>
+              
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setCurrentPage(materialsData.meta.pageCount);
+                  fetchMaterials(materialsData.meta.pageCount, itemsPerPage);
+                }}
+                disabled={!materialsData.meta.hasNextPage || materialsData.meta.page === materialsData.meta.pageCount}
+                className='h-8 w-8 p-0'
+              >
+                <ChevronsRight className='w-4 h-4' />
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -477,6 +631,169 @@ export const MaterialsTab = () => {
         onClose={() => setIsAddMaterialOpen(false)}
         onSubmit={handleAddMaterial}
       />
+
+      {/* View/Edit Material Dialog */}
+      <Dialog open={isViewEditOpen} onOpenChange={handleViewEditClose}>
+        <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle className='text-xl font-semibold'>
+              {isEditMode ? 'Edit Material' : 'View Material'}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedMaterial && (
+            <div className='space-y-6 py-4'>
+              {/* Material Information */}
+              <div className='space-y-4'>
+                {/* First Row */}
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+                  <div className='space-y-1'>
+                    <Label className='text-sm font-medium'>
+                      Material Name *
+                    </Label>
+                    {isEditMode ? (
+                      <Input
+                        defaultValue={selectedMaterial.name}
+                        className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                      />
+                    ) : (
+                      <p className='text-sm text-foreground py-2'>{selectedMaterial.name}</p>
+                    )}
+                  </div>
+
+                  <div className='space-y-1'>
+                    <Label className='text-sm font-medium'>
+                      Make/Brand
+                    </Label>
+                    {isEditMode ? (
+                      <Input
+                        defaultValue={selectedMaterial.makerBrand}
+                        className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                      />
+                    ) : (
+                      <p className='text-sm text-foreground py-2'>{selectedMaterial.makerBrand}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Second Row */}
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+                  <div className='space-y-1'>
+                    <Label className='text-sm font-medium'>
+                      Current Stock *
+                    </Label>
+                    <p className='text-sm text-foreground py-2 font-semibold'>
+                      {selectedMaterial.currentStock} {selectedMaterial.unit}
+                    </p>
+                    <p className='text-xs text-muted-foreground'>
+                      Current stock cannot be edited from here
+                    </p>
+                  </div>
+
+                  <div className='space-y-1'>
+                    <Label className='text-sm font-medium'>
+                      Measure Unit
+                    </Label>
+                    <p className='text-sm text-foreground py-2'>{selectedMaterial.unit}</p>
+                  </div>
+                </div>
+
+                {/* Third Row */}
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+                  <div className='space-y-1'>
+                    <Label className='text-sm font-medium'>
+                      Min Stock Level
+                    </Label>
+                    {isEditMode ? (
+                      <Input
+                        type='number'
+                        defaultValue={selectedMaterial.minStockLevel || ''}
+                        className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                      />
+                    ) : (
+                      <p className='text-sm text-foreground py-2'>
+                        {selectedMaterial.minStockLevel || 'Not set'}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className='space-y-1'>
+                    <Label className='text-sm font-medium'>
+                      Max Stock Level
+                    </Label>
+                    {isEditMode ? (
+                      <Input
+                        type='number'
+                        defaultValue={selectedMaterial.maxStockLevel || ''}
+                        className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                      />
+                    ) : (
+                      <p className='text-sm text-foreground py-2'>
+                        {selectedMaterial.maxStockLevel || 'Not set'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Specifications */}
+                <div className='space-y-1'>
+                  <Label className='text-sm font-medium'>
+                    Specifications *
+                  </Label>
+                  {isEditMode ? (
+                    <Textarea
+                      defaultValue={selectedMaterial.specifications}
+                      className='min-h-[80px] px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                    />
+                  ) : (
+                    <p className='text-sm text-foreground py-2 whitespace-pre-wrap'>
+                      {selectedMaterial.specifications}
+                    </p>
+                  )}
+                </div>
+
+                {/* Additional Notes */}
+                {selectedMaterial.additionalNotes && (
+                  <div className='space-y-1'>
+                    <Label className='text-sm font-medium'>
+                      Additional Notes
+                    </Label>
+                    {isEditMode ? (
+                      <Textarea
+                        defaultValue={selectedMaterial.additionalNotes}
+                        className='min-h-[60px] px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                      />
+                    ) : (
+                      <p className='text-sm text-foreground py-2 whitespace-pre-wrap'>
+                        {selectedMaterial.additionalNotes}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className='flex justify-end space-x-2 pt-4 border-t'>
+                <Button variant='outline' onClick={handleViewEditClose}>
+                  {isEditMode ? 'Cancel' : 'Close'}
+                </Button>
+                {!isEditMode && (
+                  <Button onClick={() => setIsEditMode(true)}>
+                    <Edit className='w-4 h-4 mr-2' />
+                    Edit Material
+                  </Button>
+                )}
+                {isEditMode && (
+                  <Button>
+                    <Edit className='w-4 h-4 mr-2' />
+                    Save Changes
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Generate Purchase ID in format: SSRFM/unit-IV/I-YYMMDDSQ
+// Generate Purchase ID in format: SSRFM/UNIT-I/I-YYMMDDSQ
 export function generatePurchaseId(location: string, sequence: number = 1): string {
   const now = new Date();
   const year = now.getFullYear().toString().slice(-2); // YY
@@ -13,8 +13,9 @@ export function generatePurchaseId(location: string, sequence: number = 1): stri
   const day = now.getDate().toString().padStart(2, '0'); // DD
   const seq = sequence.toString().padStart(3, '0'); // SQ (3 digits)
   
-  // Convert location to proper format (e.g., "Unit I" -> "unit-i", "Unit II" -> "unit-ii")
-  const locationCode = location.replace(/\s+/g, '-').toLowerCase();
+  // Convert location to proper format with uppercase Roman numerals
+  // e.g., "Unit I" -> "UNIT-I", "Unit II" -> "UNIT-II"
+  const locationCode = location.replace(/\s+/g, '-').toUpperCase();
   
   return `SSRFM/${locationCode}/I-${year}${month}${day}${seq}`;
 }

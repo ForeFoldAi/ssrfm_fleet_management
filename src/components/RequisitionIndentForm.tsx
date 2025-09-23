@@ -111,6 +111,18 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
     quotationFile: null,
   });
 
+  // Add state for image popup
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [isImagePopupOpen, setIsImagePopupOpen] = useState(false);
+  const [popupTitle, setPopupTitle] = useState('');
+
+  // Function to show images in popup
+  const showImagesInPopup = (images: string[], title: string) => {
+    setSelectedImages(images);
+    setPopupTitle(title);
+    setIsImagePopupOpen(true);
+  };
+
   const handleItemChange = (itemId: string, field: string, value: string) => {
     if (!isReadOnly && onItemChange) {
       onItemChange(itemId, field, value);
@@ -397,12 +409,18 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                             <Button
                               variant='outline'
                               size='sm'
-                              onClick={() =>
-                                onLoadItemImages(parseInt(item.id, 10))
+                              onClick={() => {
+                                onLoadItemImages(parseInt(item.id, 10));
+                                // Show images in popup if they exist
+                                if (itemImageUrlsMap[item.id] && itemImageUrlsMap[item.id].length > 0) {
+                                  showImagesInPopup(itemImageUrlsMap[item.id], `Item Images - ${item.productName}`);
                               }
+                              }}
                               disabled={!isReadOnly}
+                              className='gap-2'
                             >
-                              Load
+                              <Eye className='w-4 h-4' />
+                              View Images
                             </Button>
                           </div>
                         )}
@@ -465,12 +483,18 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                             <Button
                               variant='outline'
                               size='sm'
-                              onClick={() =>
-                                onLoadQuotationImages(parseInt(item.id, 10))
+                              onClick={() => {
+                                onLoadQuotationImages(parseInt(item.id, 10));
+                                // Show images in popup if they exist
+                                if (quotationImageUrlsMap[item.id] && quotationImageUrlsMap[item.id].length > 0) {
+                                  showImagesInPopup(quotationImageUrlsMap[item.id], `Quotation Images - ${item.productName}`);
                               }
+                              }}
                               disabled={!isReadOnly}
+                              className='gap-2'
                             >
-                              Load Images
+                              <Eye className='w-4 h-4' />
+                              View Images
                             </Button>
                           </div>
                         )}
@@ -859,6 +883,62 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Image Popup Modal */}
+      {isImagePopupOpen && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+          <div className='bg-white rounded-lg max-w-4xl max-h-[80vh] w-full overflow-hidden'>
+            {/* Header */}
+            <div className='flex items-center justify-between p-4 border-b border-gray-200'>
+              <h3 className='text-lg font-semibold'>{popupTitle}</h3>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={() => setIsImagePopupOpen(false)}
+                className='h-8 w-8 p-0'
+              >
+                <X className='w-4 h-4' />
+              </Button>
+            </div>
+            
+            {/* Content */}
+            <div className='p-4 overflow-y-auto max-h-[60vh]'>
+              {selectedImages.length > 0 ? (
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                  {selectedImages.map((imageUrl, index) => (
+                    <div key={index} className='relative group'>
+                      <img
+                        src={imageUrl}
+                        alt={`Image ${index + 1}`}
+                        className='w-full h-48 object-cover rounded-lg border border-gray-200 hover:border-primary transition-colors cursor-pointer'
+                        onClick={() => window.open(imageUrl, '_blank')}
+                      />
+                      <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center'>
+                        <div className='opacity-0 group-hover:opacity-100 transition-opacity'>
+                          <Button
+                            variant='secondary'
+                            size='sm'
+                            onClick={() => window.open(imageUrl, '_blank')}
+                            className='gap-2'
+                          >
+                            <Eye className='w-4 h-4' />
+                            View Full Size
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className='text-center py-8 text-muted-foreground'>
+                  <Eye className='w-12 h-12 mx-auto mb-4 opacity-50' />
+                  <p>No images available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

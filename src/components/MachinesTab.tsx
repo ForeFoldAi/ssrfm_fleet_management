@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   Search,
@@ -12,9 +13,14 @@ import {
   Building2,
   Loader2,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { Label } from './ui/label';
 import { Card, CardContent } from './ui/card';
 import {
   Table as TableComponent,
@@ -32,6 +38,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 import { AddMachineForm } from './AddMachineForm';
 import { useRole } from '../contexts/RoleContext';
 import { Machine, PaginatedResponse } from '../lib/api/types';
@@ -49,15 +61,18 @@ import {
 
 export const MachinesTab = () => {
   const { currentUser } = useRole();
+  const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddMachineOpen, setIsAddMachineOpen] = useState(false);
+  const [selectedMachine, setSelectedMachine] = useState<TransformedMachine | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [machinesData, setMachinesData] =
     useState<PaginatedResponse<Machine> | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(5); // Changed default to 5 to match MaterialOrderBookTab
   const [error, setError] = useState<string | null>(null);
 
   // Define interface for transformed machine data
@@ -68,6 +83,7 @@ export const MachinesTab = () => {
     status: string;
     createdDate: string;
     lastMaintenance: string;
+    nextMaintenanceDue: string;
     specifications: string;
     unit: string;
     unitName: string;
@@ -101,6 +117,9 @@ export const MachinesTab = () => {
           lastMaintenance: machine.lastService
             ? new Date(machine.lastService).toISOString().split('T')[0]
             : 'Not serviced',
+          nextMaintenanceDue: machine.nextMaintenanceDue
+            ? new Date(machine.nextMaintenanceDue).toISOString().split('T')[0]
+            : 'Not scheduled',
           specifications:
             machine.specifications || 'No specifications available',
           unit: `unit-${machine.unit?.id || 1}`,
@@ -167,6 +186,12 @@ export const MachinesTab = () => {
       badges[status as keyof typeof badges] ||
       'badge-status bg-muted text-muted-foreground'
     );
+  };
+
+  // Handle machine name click
+  const handleMachineClick = (machine: TransformedMachine) => {
+    setSelectedMachine(machine);
+    setIsViewModalOpen(true);
   };
 
   return (
@@ -251,9 +276,12 @@ export const MachinesTab = () => {
 
                   <div className='flex-1 min-w-0'>
                     <div className='flex flex-col sm:flex-row sm:items-center gap-2 mb-2'>
-                      <h3 className='font-semibold text-foreground text-sm sm:text-base'>
+                      <button
+                        onClick={() => handleMachineClick(machine)}
+                        className='font-semibold text-foreground text-sm sm:text-base text-left hover:text-primary hover:underline cursor-pointer transition-colors duration-200'
+                      >
                         {machine.name}
-                      </h3>
+                      </button>
                       <span className='text-primary font-semibold text-xs sm:text-sm'>
                         {machine.type}
                       </span>
@@ -274,7 +302,7 @@ export const MachinesTab = () => {
                     <p className='text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2'>
                       {machine.specifications}
                     </p>
-                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-1 sm:gap-6 text-xs sm:text-sm'>
+                    <div className='grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-6 text-xs sm:text-sm'>
                       <span className='text-muted-foreground'>
                         Added:{' '}
                         <span className='font-medium text-foreground'>
@@ -287,27 +315,14 @@ export const MachinesTab = () => {
                           {machine.lastMaintenance}
                         </span>
                       </span>
+                      <span className='text-muted-foreground'>
+                        Next Due:{' '}
+                        <span className='font-medium text-foreground'>
+                          {machine.nextMaintenanceDue}
+                        </span>
+                      </span>
                     </div>
                   </div>
-                </div>
-
-                <div className='flex gap-2 sm:ml-4 justify-end sm:justify-start'>
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    className='h-8 px-2 sm:px-3'
-                  >
-                    <Edit className='w-3 h-3 sm:w-4 sm:h-4' />
-                    <span className='ml-1 sm:hidden text-xs'>Edit</span>
-                  </Button>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    className='h-8 px-2 sm:px-3'
-                  >
-                    <Eye className='w-3 h-3 sm:w-4 sm:h-4' />
-                    <span className='ml-1 sm:hidden text-xs'>View</span>
-                  </Button>
                 </div>
               </div>
             </div>
@@ -335,8 +350,8 @@ export const MachinesTab = () => {
                     <TableHead className='min-w-[120px] text-foreground font-semibold'>
                       Last Service
                     </TableHead>
-                    <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                      Actions
+                    <TableHead className='min-w-[140px] text-foreground font-semibold'>
+                      Next Maintenance Due
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -347,9 +362,12 @@ export const MachinesTab = () => {
                       className='hover:bg-muted/30 border-b border-secondary/20'
                     >
                       <TableCell className='font-semibold text-foreground'>
-                        <span className='font-semibold text-foreground'>
+                        <button
+                          onClick={() => handleMachineClick(machine)}
+                          className='text-primary hover:text-primary/80 hover:underline font-semibold cursor-pointer transition-colors duration-200'
+                        >
                           {machine.name}
-                        </span>
+                        </button>
                       </TableCell>
                       <TableCell className='text-primary font-semibold'>
                         {machine.type}
@@ -374,23 +392,8 @@ export const MachinesTab = () => {
                       <TableCell className='text-muted-foreground'>
                         {machine.lastMaintenance}
                       </TableCell>
-                      <TableCell>
-                        <div className='flex gap-1'>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            className='h-8 w-8 p-0'
-                          >
-                            <Edit className='w-4 h-4' />
-                          </Button>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            className='h-8 w-8 p-0'
-                          >
-                            <Eye className='w-4 h-4' />
-                          </Button>
-                        </div>
+                      <TableCell className='text-muted-foreground'>
+                        {machine.nextMaintenanceDue}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -427,51 +430,219 @@ export const MachinesTab = () => {
 
       {/* Pagination */}
       {machinesData && machinesData.meta && (
-        <div className='mt-4 flex justify-center'>
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(prev - 1, 1))
-                  }
-                  className={
-                    !machinesData.meta.hasPreviousPage
-                      ? 'pointer-events-none opacity-50'
-                      : 'cursor-pointer'
-                  }
-                />
-              </PaginationItem>
+        <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
+          {/* Page Info */}
+          <div className='text-sm text-muted-foreground'>
+            Showing {((machinesData.meta.page - 1) * machinesData.meta.limit) + 1} to{' '}
+            {Math.min(machinesData.meta.page * machinesData.meta.limit, machinesData.meta.itemCount)} of{' '}
+            {machinesData.meta.itemCount} entries
+          </div>
 
-              {/* Show pages based on API metadata */}
-              {Array.from(
-                { length: machinesData.meta.pageCount },
-                (_, i) => i + 1
-              ).map((page) => (
-                <PaginationItem key={page}>
-                  <PaginationLink
-                    isActive={page === currentPage}
-                    onClick={() => setCurrentPage(page)}
-                    className='cursor-pointer'
+          {/* Pagination Controls */}
+          <div className='flex items-center gap-2'>
+            {/* Items per page selector */}
+            <div className='flex items-center gap-2'>
+              <span className='text-sm text-muted-foreground'>Show:</span>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => {
+                  const newLimit = parseInt(value);
+                  setItemsPerPage(newLimit);
+                  setCurrentPage(1);
+                  fetchMachines();
+                }}
+              >
+                <SelectTrigger className='w-20 h-8'>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='5'>5</SelectItem>
+                  <SelectItem value='10'>10</SelectItem>
+                  <SelectItem value='20'>20</SelectItem>
+                  <SelectItem value='50'>50</SelectItem>
+                  <SelectItem value='100'>100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className='text-sm text-muted-foreground'>per page</span>
+            </div>
+
+            {/* Page navigation */}
+            <div className='flex items-center gap-1'>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setCurrentPage(1);
+                  fetchMachines();
+                }}
+                disabled={!machinesData.meta.hasPreviousPage || machinesData.meta.page === 1}
+                className='h-8 w-8 p-0'
+              >
+                <ChevronsLeft className='w-4 h-4' />
+              </Button>
+              
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setCurrentPage(prev => prev - 1);
+                  fetchMachines();
+                }}
+                disabled={!machinesData.meta.hasPreviousPage}
+                className='h-8 w-8 p-0'
+              >
+                <ChevronLeft className='w-4 h-4' />
+              </Button>
+
+              {/* Page numbers */}
+              <div className='flex items-center gap-1 mx-2'>
+                {Array.from({ length: Math.min(5, machinesData.meta.pageCount) }, (_, i) => {
+                  let pageNum;
+                  if (machinesData.meta.pageCount <= 5) {
+                    pageNum = i + 1;
+                  } else if (machinesData.meta.page <= 3) {
+                    pageNum = i + 1;
+                  } else if (machinesData.meta.page >= machinesData.meta.pageCount - 2) {
+                    pageNum = machinesData.meta.pageCount - 4 + i;
+                  } else {
+                    pageNum = machinesData.meta.page - 2 + i;
+                  }
+
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={machinesData.meta.page === pageNum ? 'default' : 'outline'}
+                      size='sm'
+                      onClick={() => {
+                        setCurrentPage(pageNum);
+                        fetchMachines();
+                      }}
+                      className='h-8 w-8 p-0'
                   >
-                    {page}
-                  </PaginationLink>
-                </PaginationItem>
-              ))}
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
 
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setCurrentPage((prev) => prev + 1)}
-                  className={
-                    !machinesData.meta.hasNextPage
-                      ? 'pointer-events-none opacity-50'
-                      : 'cursor-pointer'
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setCurrentPage(prev => prev + 1);
+                  fetchMachines();
+                }}
+                disabled={!machinesData.meta.hasNextPage}
+                className='h-8 w-8 p-0'
+              >
+                <ChevronRight className='w-4 h-4' />
+              </Button>
+              
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => {
+                  setCurrentPage(machinesData.meta.pageCount);
+                  fetchMachines();
+                }}
+                disabled={!machinesData.meta.hasNextPage || machinesData.meta.page === machinesData.meta.pageCount}
+                className='h-8 w-8 p-0'
+              >
+                <ChevronsRight className='w-4 h-4' />
+              </Button>
+            </div>
+          </div>
         </div>
+      )}
+
+      {/* Machine View/Edit Modal */}
+      {selectedMachine && (
+        <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+          <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
+            <DialogHeader>
+              <DialogTitle className='flex items-center gap-3 text-xl'>
+                <div className='w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center'>
+                  <Settings className='w-6 h-6 text-primary' />
+                </div>
+                Machine Details - {selectedMachine.name}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className='space-y-6'>
+              {/* Basic Information */}
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                <div className='space-y-4'>
+                  <div>
+                    <Label className='text-sm font-medium text-muted-foreground'>Machine Name</Label>
+                    <p className='text-lg font-semibold text-foreground'>{selectedMachine.name}</p>
+                  </div>
+                  <div>
+                    <Label className='text-sm font-medium text-muted-foreground'>Type</Label>
+                    <p className='text-foreground'>{selectedMachine.type}</p>
+                  </div>
+                  <div>
+                    <Label className='text-sm font-medium text-muted-foreground'>Status</Label>
+                    <Badge className={`${getStatusBadge(selectedMachine.status)} text-xs`}>
+                      {selectedMachine.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <Label className='text-sm font-medium text-muted-foreground'>Unit</Label>
+                    <p className='text-foreground'>{selectedMachine.unitName}</p>
+                  </div>
+                </div>
+
+                <div className='space-y-4'>
+                  <div>
+                    <Label className='text-sm font-medium text-muted-foreground'>Branch</Label>
+                    <p className='text-foreground'>{selectedMachine.branch}</p>
+                  </div>
+                  <div>
+                    <Label className='text-sm font-medium text-muted-foreground'>Created Date</Label>
+                    <p className='text-foreground'>{selectedMachine.createdDate}</p>
+                  </div>
+                  <div>
+                    <Label className='text-sm font-medium text-muted-foreground'>Last Service</Label>
+                    <p className='text-foreground'>{selectedMachine.lastMaintenance}</p>
+                  </div>
+                  <div>
+                    <Label className='text-sm font-medium text-muted-foreground'>Next Maintenance Due</Label>
+                    <p className='text-foreground'>{selectedMachine.nextMaintenanceDue}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Specifications */}
+              <div>
+                <Label className='text-sm font-medium text-muted-foreground'>Specifications</Label>
+                <p className='text-foreground mt-2 p-4 bg-muted/30 rounded-lg'>
+                  {selectedMachine.specifications}
+                </p>
+              </div>
+            </div>
+
+            <div className='flex justify-end gap-4 pt-6 border-t'>
+              <Button
+                variant='outline'
+                onClick={() => {
+                  // Handle edit action - you can navigate to edit page or open edit modal
+                  console.log('Edit machine:', selectedMachine.id);
+                  // Example: navigate(`/machines/${selectedMachine.id}/edit`);
+                }}
+                className='gap-2'
+              >
+                <Edit className='w-4 h-4' />
+                Edit Machine
+              </Button>
+              <Button
+                variant='outline'
+                onClick={() => setIsViewModalOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Add Machine Form */}
