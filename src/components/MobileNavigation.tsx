@@ -74,7 +74,7 @@ export const MobileNavigation = () => {
     return [
       ...baseItems,
       ...items.filter(
-        (item) => item.permission === null || hasPermission(item.permission)
+        (item) => item.permission === null || hasPermission(item.permission as any)
       ),
     ];
   };

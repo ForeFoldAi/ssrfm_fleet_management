@@ -1,6 +1,5 @@
 import { useRole } from "../contexts/RoleContext";
 
-import InventoryManagerDashboard from "./dashboards/InventoryManagerDashboard";
 import CompanyOwnerDashboard from "./dashboards/CompanyOwnerDashboard";
 
 const Dashboard = () => {
@@ -17,9 +16,7 @@ const Dashboard = () => {
     return <CompanyOwnerDashboard />;
   }
 
-  if (hasPermission('inventory:materials:read')) {
-    return <InventoryManagerDashboard />;
-  }
+ 
 
   return <div>Loading...</div>;
 };

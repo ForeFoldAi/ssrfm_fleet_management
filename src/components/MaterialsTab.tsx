@@ -15,6 +15,7 @@ import {
   ArrowDown,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   ChevronsLeft,
   ChevronsRight,
 } from 'lucide-react';
@@ -69,6 +70,7 @@ export const MaterialsTab = () => {
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterUnit, setFilterUnit] = useState('all');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
   const [isViewEditOpen, setIsViewEditOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
@@ -148,6 +150,16 @@ export const MaterialsTab = () => {
     return sortOrder === 'ASC' 
       ? <ArrowUp className="w-4 h-4 text-primary" />
       : <ArrowDown className="w-4 h-4 text-primary" />;
+  };
+
+  const toggleRowExpansion = (id: string) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(id)) {
+      newExpandedRows.delete(id);
+    } else {
+      newExpandedRows.add(id);
+    }
+    setExpandedRows(newExpandedRows);
   };
 
   // Initial data fetch
@@ -330,57 +342,93 @@ export const MaterialsTab = () => {
 
       {/* Content */}
       {viewMode === 'list' ? (
-        <div className='space-y-3'>
-          {materials.map((material) => {
-            const stockStatus = getStockStatus(
-              material.currentStock,
-              material.minStockLevel
-            );
-            return (
-              <div
-                key={material.id}
-                className='card-friendly p-3 sm:p-4 hover:bg-secondary/30 transition-colors duration-200 cursor-pointer'
-                onClick={() => handleMaterialClick(material)}
-              >
-                <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
-                  <div className='flex items-start gap-3 flex-1 min-w-0'>
-                    <div className='w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0'>
-                      <Package className='w-4 h-4 sm:w-5 sm:h-5 text-primary' />
-                    </div>
-
-                    <div className='flex-1 min-w-0'>
-                      <div className='flex flex-col sm:flex-row sm:items-center gap-2 mb-2'>
-                        <h3 className='font-semibold text-foreground text-sm sm:text-base hover:text-primary transition-colors'>
-                          {material.name}
-                        </h3>
-                        <Badge className={getStatusBadge(stockStatus)}>
-                          {stockStatus}
-                        </Badge>
-                      </div>
-                      <p className='text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2'>
-                        {material.specifications}
-                      </p>
-                      <div className='grid grid-cols-1 sm:grid-cols-2 gap-1 sm:gap-6 text-xs sm:text-sm'>
-                        <span className='text-muted-foreground'>
-                          Stock:{' '}
-                          <span className='font-medium text-foreground'>
+        // List View for Materials - Matching MaterialIssuesTab structure
+        <Card className='rounded-lg shadow-sm'>
+          <CardContent className='p-0'>
+            <div className='overflow-x-auto'>
+              <TableComponent>
+                <TableHeader>
+                  <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
+                    <TableHead className='w-12'></TableHead>
+                    <TableHead className='min-w-[150px] text-foreground font-semibold'>
+                      Material Name
+                    </TableHead>
+                    <TableHead className='min-w-[200px] text-foreground font-semibold'>
+                      Specifications
+                    </TableHead>
+                    <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                      Current Stock
+                    </TableHead>
+                    <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                      Stock Status
+                    </TableHead>
+                    <TableHead className='min-w-[120px] text-foreground font-semibold'>
+                      Make/Brand
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {materials.map((material) => {
+                    const stockStatus = getStockStatus(
+                      material.currentStock,
+                      material.minStockLevel
+                    );
+                    return (
+                      <TableRow
+                        key={material.id}
+                        className='hover:bg-muted/30 border-b border-secondary/20 cursor-pointer'
+                        onClick={() => handleMaterialClick(material)}
+                      >
+                        <TableCell>
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            className='h-6 w-6 p-0'
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleRowExpansion(material.id.toString());
+                            }}
+                          >
+                            {expandedRows.has(material.id.toString()) ? (
+                              <ChevronDown className='w-4 h-4' />
+                            ) : (
+                              <ChevronRight className='w-4 h-4' />
+                            )}
+                          </Button>
+                        </TableCell>
+                        <TableCell className='font-medium'>
+                          <span className='font-medium text-foreground hover:text-primary transition-colors'>
+                            {material.name}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className='text-sm text-muted-foreground truncate max-w-40'>
+                            {material.specifications}
+                          </div>
+                        </TableCell>
+                        <TableCell className='text-sm'>
+                          <div className='font-semibold text-foreground'>
                             {material.currentStock} {material.unit}
-                          </span>
-                        </span>
-                        <span className='text-muted-foreground'>
-                          Make/Brand:{' '}
-                          <span className='font-medium text-foreground'>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusBadge(stockStatus)}>
+                            {stockStatus}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className='text-sm text-muted-foreground'>
                             {material.makerBrand}
-                          </span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </TableComponent>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <Card className='rounded-lg shadow-sm'>
           <CardContent className='p-0'>

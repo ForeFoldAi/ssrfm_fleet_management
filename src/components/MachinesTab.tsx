@@ -90,6 +90,15 @@ export const MachinesTab = () => {
     branch: string;
   }
 
+  // Helper function to format date to dd-mm-yyyy
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
   // Transformed machines data for UI - initialize with empty array to avoid showing dummy data
   const [machines, setMachines] = useState<TransformedMachine[]>([]);
 
@@ -113,12 +122,12 @@ export const MachinesTab = () => {
           name: machine.name,
           type: machine.type?.name || 'Unknown Type',
           status: machine.status,
-          createdDate: new Date(machine.createdAt).toISOString().split('T')[0],
+          createdDate: formatDate(machine.createdAt),
           lastMaintenance: machine.lastService
-            ? new Date(machine.lastService).toISOString().split('T')[0]
+            ? formatDate(machine.lastService)
             : 'Not serviced',
           nextMaintenanceDue: machine.nextMaintenanceDue
-            ? new Date(machine.nextMaintenanceDue).toISOString().split('T')[0]
+            ? formatDate(machine.nextMaintenanceDue)
             : 'Not scheduled',
           specifications:
             machine.specifications || 'No specifications available',

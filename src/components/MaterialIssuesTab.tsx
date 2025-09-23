@@ -581,7 +581,7 @@ export const MaterialIssuesTab = () => {
         </Card>
       ) : filteredIssues.length > 0 ? (
         viewMode === 'table' ? (
-          // Table View for Material Issues
+          // Table View for Material Issues - Individual Items
           <Card className='rounded-lg shadow-sm'>
             <CardContent className='p-0'>
               <div className='overflow-x-auto'>
@@ -599,7 +599,10 @@ export const MaterialIssuesTab = () => {
                         </Button>
                       </TableHead>
                       <TableHead className='min-w-[150px] text-foreground font-semibold'>
-                        Issued Material
+                        Material Name
+                      </TableHead>
+                      <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                        Specifications
                       </TableHead>
                       <TableHead className='min-w-[100px] text-foreground font-semibold'>
                         Stock Info
@@ -637,14 +640,16 @@ export const MaterialIssuesTab = () => {
                           {getSortIcon('branch')}
                         </Button>
                       </TableHead>
+                      <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                        Purpose
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredIssues.map((issue) => (
-                      <>
-                        {/* Parent row showing issue information */}
+                    {filteredIssues.flatMap((issue) =>
+                      issue.items.map((item, itemIndex) => (
                         <TableRow
-                          key={issue.id}
+                          key={`${issue.id}-item-${itemIndex}`}
                           className='bg-secondary/10 hover:bg-secondary/20 border-b border-secondary/20 cursor-pointer'
                           onClick={() => handleViewIssue(issue)}
                         >
@@ -661,66 +666,20 @@ export const MaterialIssuesTab = () => {
                             </Button>
                             <div className='text-xs mt-1'>
                               <Badge variant='outline' className='text-xs'>
-                                {issue.items.length}{' '}
-                                {issue.items.length === 1 ? 'item' : 'items'}
+                                Item {itemIndex + 1}
                               </Badge>
                             </div>
                           </TableCell>
-                          <TableCell colSpan={2}>
-                            <div className='font-semibold'>
-                              Multiple Materials
-                            </div>
-                            <div className='text-xs text-muted-foreground'>
-                              Click to view all {issue.items.length} items
-                            </div>
-                          </TableCell>
-                          <TableCell className='text-sm'>
-                            {new Date(issue.issuedDate).toLocaleDateString()}
-                          </TableCell>
                           <TableCell>
                             <div>
-                              <div className='font-medium'>
-                                {issue.items.length > 0
-                                  ? issue.items[0].recipientName
-                                  : 'N/A'}
+                              <div className='font-medium capitalize'>
+                                {item.materialName}
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div>
-                              <div className='font-medium'>
-                                {issue.issuingPersonName}
-                              </div>
-                              <div className='text-xs text-muted-foreground'>
-                                {issue.issuingPersonDesignation}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className='text-sm'>
-                            <Badge variant='outline'>{issue.unitName}</Badge>
-                          </TableCell>
-                        </TableRow>
-
-                        {/* Expanded rows showing individual items */}
-                        {expandedRows.has(issue.id) &&
-                          issue.items.map((item, index) => (
-                            <TableRow
-                              key={`${issue.id}-item-${index}`}
-                              className='hover:bg-muted/30 border-b border-secondary/10'
-                            >
-                              <TableCell className='pl-8'>
-                                <div className='text-xs text-muted-foreground'>
-                                  Item {index + 1}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div>
-                                  <div className='font-medium capitalize'>
-                                    {item.materialName}
-                                  </div>
-                                  <div className='text-xs text-muted-foreground truncate max-w-40'>
+                            <div className='text-sm text-muted-foreground truncate max-w-40'>
                                     {item.specifications}
-                                  </div>
                                 </div>
                               </TableCell>
                               <TableCell className='text-sm'>
@@ -745,28 +704,44 @@ export const MaterialIssuesTab = () => {
                                   </div>
                                 </div>
                               </TableCell>
-                              <TableCell></TableCell>
+                          <TableCell className='text-sm'>
+                            {new Date(issue.issuedDate).toLocaleDateString()}
+                          </TableCell>
                               <TableCell>
+                            <div>
                                 <div className='font-medium'>
                                   {item.recipientName}
                                 </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className='font-medium'>
+                                {issue.issuingPersonName}
+                              </div>
                                 <div className='text-xs text-muted-foreground'>
+                                {issue.issuingPersonDesignation}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className='text-sm'>
+                            <Badge variant='outline'>{issue.unitName}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className='text-sm'>
                                   {item.purpose}
                                 </div>
                               </TableCell>
-                              <TableCell></TableCell>
-                              <TableCell></TableCell>
                             </TableRow>
-                          ))}
-                      </>
-                    ))}
+                      ))
+                    )}
                   </TableBody>
                 </TableComponent>
               </div>
             </CardContent>
           </Card>
         ) : (
-          // List View for Material Issues - Matching Table View
+          // List View for Material Issues - Individual Items
           <Card className='rounded-lg shadow-sm'>
             <CardContent className='p-0'>
               <div className='overflow-x-auto'>
@@ -775,13 +750,16 @@ export const MaterialIssuesTab = () => {
                     <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
                       <TableHead className='w-12'></TableHead>
                       <TableHead className='min-w-[120px] text-foreground font-semibold'>
-                        Issued ID
+                        Issue ID
                       </TableHead>
                       <TableHead className='min-w-[150px] text-foreground font-semibold'>
-                        Issued Materials
+                        Material Name
                       </TableHead>
                       <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                        Items
+                        Specifications
+                      </TableHead>
+                      <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                        Stock Info
                       </TableHead>
                       <TableHead className='min-w-[120px] text-foreground font-semibold'>
                         Issued To
@@ -798,10 +776,10 @@ export const MaterialIssuesTab = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredIssues.map((issue) => (
-                      <>
+                    {filteredIssues.flatMap((issue) =>
+                      issue.items.map((item, itemIndex) => (
                         <TableRow
-                          key={issue.id}
+                          key={`${issue.id}-item-${itemIndex}`}
                           className='hover:bg-muted/30 border-b border-secondary/20 cursor-pointer'
                           onClick={() => handleViewIssue(issue)}
                         >
@@ -812,10 +790,10 @@ export const MaterialIssuesTab = () => {
                               className='h-6 w-6 p-0'
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleRowExpansion(issue.id);
+                                toggleRowExpansion(`${issue.id}-item-${itemIndex}`);
                               }}
                             >
-                              {expandedRows.has(issue.id) ? (
+                              {expandedRows.has(`${issue.id}-item-${itemIndex}`) ? (
                                 <ChevronDown className='w-4 h-4' />
                               ) : (
                                 <ChevronRight className='w-4 h-4' />
@@ -833,36 +811,51 @@ export const MaterialIssuesTab = () => {
                             >
                               {issue.id}
                             </Button>
+                            <div className='text-xs mt-1'>
+                              <Badge variant='outline' className='text-xs'>
+                                Item {itemIndex + 1}
+                              </Badge>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div>
                               <div className='font-medium capitalize'>
-                                {issue.items.length > 0
-                                  ? issue.items[0].materialName
-                                  : 'No materials'}
+                                {item.materialName}
                               </div>
-                              <div className='text-xs text-muted-foreground'>
-                                {issue.items.length > 1
-                                  ? `+${issue.items.length - 1} more`
-                                  : ''}
                               </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className='text-sm text-muted-foreground truncate max-w-40'>
+                              {item.specifications}
                             </div>
                           </TableCell>
                           <TableCell className='text-sm'>
-                            <Badge>{issue.items.length}</Badge>
+                            <div className='space-y-1'>
+                              <div className='text-xs'>
+                                <span className='text-muted-foreground'>
+                                  Existing:
+                                </span>{' '}
+                                {item.existingStock}
+                              </div>
+                              <div className='text-xs font-medium'>
+                                <span className='text-muted-foreground'>
+                                  Issued:
+                                </span>{' '}
+                                {item.issuedQuantity}
+                              </div>
+                              <div className='text-xs'>
+                                <span className='text-muted-foreground'>
+                                  After:
+                                </span>{' '}
+                                {item.stockAfterIssue}
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div>
                               <div className='font-medium'>
-                                {issue.items.length > 0
-                                  ? issue.items[0].recipientName
-                                  : 'N/A'}
+                                {item.recipientName}
                               </div>
-                              {issue.items.length > 1 && (
-                                <div className='text-xs text-muted-foreground'>
-                                  Multiple recipients
-                                </div>
-                              )}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -882,138 +875,8 @@ export const MaterialIssuesTab = () => {
                             {new Date(issue.issuedDate).toLocaleDateString()}
                           </TableCell>
                         </TableRow>
-
-                        {/* Expanded Detail Row */}
-                        {expandedRows.has(issue.id) && (
-                          <TableRow>
-                            <TableCell colSpan={8} className='p-0'>
-                              <div className='bg-muted/30 p-6 border-t'>
-                                <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-                                  {/* Left Column - Issue Details */}
-                                  <div className='space-y-4'>
-                                    <div>
-                                      <h3 className='font-semibold text-lg mb-3'>
-                                        Issue Details
-                                      </h3>
-                                      <div className='space-y-3'>
-                                        <div className='grid grid-cols-2 gap-4 text-sm'>
-                                          <div>
-                                            <span className='font-medium text-muted-foreground'>
-                                              Issue ID:
-                                            </span>
-                                            <div className='font-medium uppercase'>
-                                              {issue.id}
-                                            </div>
-                                          </div>
-                                          <div>
-                                            <span className='font-medium text-muted-foreground'>
-                                              Issue Date:
-                                            </span>
-                                            <div className='font-medium'>
-                                              {new Date(
-                                                issue.issuedDate
-                                              ).toLocaleDateString()}
-                                            </div>
-                                          </div>
-                                          <div>
-                                            <span className='font-medium text-muted-foreground'>
-                                              Items Count:
-                                            </span>
-                                            <div className='font-medium'>
-                                              {issue.items.length}
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        {issue.additionalNotes && (
-                                          <div>
-                                            <span className='font-medium text-muted-foreground'>
-                                              Additional Notes:
-                                            </span>
-                                            <div className='text-sm mt-1 p-3 bg-background rounded border'>
-                                              {issue.additionalNotes}
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Right Column - Personnel & Status */}
-                                  <div className='space-y-4'>
-                                    <div>
-                                      <h3 className='font-semibold text-lg mb-3'>
-                                        Personnel & Status
-                                      </h3>
-
-                                      {/* Status Information */}
-                                      <div className='space-y-3'>
-                                        <div className='p-3 bg-background rounded border'>
-                                          <div className='text-sm font-medium mb-2'>
-                                            Current Status
-                                          </div>
-                                          <div className='text-sm text-muted-foreground'>
-                                            Material successfully issued and
-                                            delivered
-                                          </div>
-                                        </div>
-
-                                        {/* Issuing Person Info */}
-                                        <div className='bg-primary/10 border border-primary/20 rounded-lg p-3'>
-                                          <div className='text-sm'>
-                                            <strong className='text-primary'>
-                                              Issued By:
-                                            </strong>{' '}
-                                            {issue.issuingPersonName}
-                                          </div>
-                                          <div className='text-xs text-primary/80 mt-1'>
-                                            {issue.issuingPersonDesignation}
-                                          </div>
-                                        </div>
-
-                                        {/* Unit Info */}
-                                        <div className='bg-secondary/10 border border-secondary rounded-lg p-3'>
-                                          <div className='text-sm space-y-1'>
-                                            <div>
-                                              <strong className='text-foreground'>
-                                                Unit:
-                                              </strong>{' '}
-                                              {issue.unitName}
-                                            </div>
-                                            <div>
-                                              <strong className='text-foreground'>
-                                                Code:
-                                              </strong>{' '}
-                                              {issue.unit}
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Action Buttons */}
-                                <div className='flex gap-3 pt-4 border-t mt-6'>
-                                  <Button
-                                    variant='outline'
-                                    className='gap-2'
-                                    onClick={() => handleViewIssue(issue)}
-                                  >
-                                    <Eye className='w-4 h-4' />
-                                    View Issue Details
-                                  </Button>
-                                  <Button variant='outline' className='gap-2'>
-                                    <FileText className='w-4 h-4' />
-                                    Print Receipt
-                                  </Button>
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </>
-                    ))}
+                      ))
+                    )}
                   </TableBody>
                 </TableComponent>
               </div>
