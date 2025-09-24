@@ -10,33 +10,16 @@ import {
 } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Package, User, Settings, Shield } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useRole, UserRole, deriveUserRole } from '../contexts/RoleContext';
 import { toast } from '../hooks/use-toast';
 import { authService } from '../lib/api/auth';
 
-const DEMO_USERS = [
-  {
-    name: 'John Martinez',
-    email: 'john@demo.com',
-    password: 'supervisor123',
-    role: 'supervisor' as UserRole,
-    icon: User,
-    color: 'bg-secondary/100',
-  },
-  {
-    name: 'Robert Williams',
-    email: 'robert@demo.com',
-    password: 'owner123',
-    role: 'company_owner' as UserRole,
-    icon: Shield,
-    color: 'bg-purple-500',
-  },
-];
-
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { setCurrentUser } = useRole();
 
@@ -54,6 +37,7 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
 
     try {
       const apiResp = await authService.login({ email, password });
@@ -89,25 +73,15 @@ const Login = () => {
         description: 'Invalid credentials',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const handleDemoLogin = (user: (typeof DEMO_USERS)[0]) => {
-    setCurrentUser({
-      id: 1,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      department: 'Demo Department',
-    });
-    toast({ title: 'Demo Login', description: `Logged in as ${user.name}` });
-    navigate(getRoleRedirectPath(user.role));
   };
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4'>
-      <div className='w-full max-w-4xl grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2 lg:gap-8'>
-        <Card className='w-full max-w-sm md:max-w-md mx-auto'>
+      <div className='w-full max-w-md'>
+        <Card className='w-full mx-auto'>
           <CardHeader className='text-center'>
             <div className='w-20 h-20 flex items-center justify-center mx-auto mb-4'>
               <img
@@ -134,68 +108,49 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={isLoading}
                 />
               </div>
               <div className='space-y-2'>
                 <Label htmlFor='password'>Password</Label>
-                <Input
-                  id='password'
-                  type='password'
-                  placeholder='Enter your password'
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <div className='relative'>
+                  <Input
+                    id='password'
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder='Enter your password'
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className='pr-10'
+                  />
+                  <button
+                    type='button'
+                    onClick={() => setShowPassword(!showPassword)}
+                    className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none'
+                    disabled={isLoading}
+                  >
+                    {showPassword ? (
+                      <EyeOff className='h-4 w-4' />
+                    ) : (
+                      <Eye className='h-4 w-4' />
+                    )}
+                  </button>
+                </div>
               </div>
-              <Button type='submit' className='w-full'>
-                Sign In
+              <Button type='submit' className='w-full' disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign In'
+                )}
               </Button>
             </form>
           </CardContent>
         </Card>
-
-        <div className='space-y-4'>
-          <div>
-            <h2 className='text-3xl font-bold text-foreground mb-2'>
-              Try Demo Accounts
-            </h2>
-            <p className='text-lg text-muted-foreground'>
-              Experience different user roles
-            </p>
-          </div>
-          {DEMO_USERS.map((user) => {
-            const Icon = user.icon;
-            return (
-              <Card
-                key={user.email}
-                className='cursor-pointer hover:shadow-md transition-shadow'
-                onClick={() => handleDemoLogin(user)}
-              >
-                <CardContent className='p-4'>
-                  <div className='flex items-center space-x-4'>
-                    <div
-                      className={`w-10 h-10 ${user.color} rounded-lg flex items-center justify-center`}
-                    >
-                      <Icon className='w-5 h-5 text-white' />
-                    </div>
-                    <div className='flex-1'>
-                      <h3 className='font-semibold'>{user.name}</h3>
-                      <p className='text-sm text-muted-foreground'>
-                        {user.role.replace('_', ' ')}
-                      </p>
-                      <p className='text-xs text-muted-foreground'>
-                        {user.email} / {user.password}
-                      </p>
-                    </div>
-                    <Button variant='outline' size='sm'>
-                      Login
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
       </div>
     </div>
   );
