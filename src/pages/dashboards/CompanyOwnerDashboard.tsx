@@ -1,42 +1,81 @@
-import { IndianRupee } from "lucide-react";
+import { useState } from "react";
+import { IndianRupee, TrendingUp, TrendingDown, Minus, Calendar, Filter, Clock, AlertCircle } from "lucide-react";
 import { StatsCard } from "../../components/StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend } from "../../components/ui/chart";
-import { BarChart as ReBarChart, Bar, CartesianGrid, XAxis, YAxis, PieChart, Pie, Cell } from "recharts";
+import { BarChart as ReBarChart, Bar, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Badge } from "../../components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
+import { Button } from "../../components/ui/button";
 
 const CompanyOwnerDashboard = () => {
-  // Example/demo data. Replace with live API data later if needed.
+  const [selectedPeriod, setSelectedPeriod] = useState("1m");
 
-  const materialExpensesByUnit = [
-    { material: "Bearings", "Unit-I": 220000, "Unit-II": 200000 },
-    { material: "Belts", "Unit-I": 160000, "Unit-II": 140000 },
-    { material: "Fevicol", "Unit-I": 120000, "Unit-II": 100000 },
-    { material: "Repairs", "Unit-I": 80000, "Unit-II": 70000 },
-    { material: "Other Works", "Unit-I": 60000, "Unit-II": 55000 },
+  // Time period options
+  const timePeriods = [
+    { value: "1m", label: "1 Month", months: 1 },
+    { value: "3m", label: "3 Months", months: 3 },
+    { value: "6m", label: "6 Months", months: 6 },
+    { value: "1y", label: "1 Year", months: 12 },
   ];
 
-  const expensesTable = [
-    { machine: "CNC", "Unit-1": 32000, "Unit-2": 21000, "Unit-3": 12000 },
-    { machine: "Lathe", "Unit-1": 18000, "Unit-2": 11000, "Unit-3": 6000 },
-    { machine: "Milling", "Unit-1": 15000, "Unit-2": 9000, "Unit-3": 4000 },
-    { machine: "Drill", "Unit-1": 8000, "Unit-2": 6000, "Unit-3": 4000 },
-  ];
+  // Mock data for pending approvals (would come from API)
+  const getPendingApprovalsData = (period: string) => {
+    const baseCount = {
+      "1m": 8,
+      "3m": 24,
+      "6m": 45,
+      "1y": 89,
+    }[period] || 8;
+
+    return {
+      pendingApprovals: baseCount,
+      averageApprovalTime: "2.5 days",
+      approvalTrend: period === "1m" ? 15.2 : period === "3m" ? 8.7 : period === "6m" ? -5.3 : -12.1,
+    };
+  };
+
+  // Mock data that would change based on selected period
+  const getDataForPeriod = (period: string) => {
+    const multiplier = {
+      "1m": 1,
+      "3m": 2.8,
+      "6m": 5.5,
+      "1y": 11.2,
+    }[period] || 1;
+
+    return {
+      materialExpensesByUnit: [
+        { material: "Bearings", "Unit-I": Math.round(220000 * multiplier), "Unit-II": Math.round(200000 * multiplier) },
+        { material: "Belts", "Unit-I": Math.round(160000 * multiplier), "Unit-II": Math.round(140000 * multiplier) },
+        { material: "Fevicol", "Unit-I": Math.round(120000 * multiplier), "Unit-II": Math.round(100000 * multiplier) },
+        { material: "Repairs", "Unit-I": Math.round(80000 * multiplier), "Unit-II": Math.round(70000 * multiplier) },
+        { material: "Other Works", "Unit-I": Math.round(60000 * multiplier), "Unit-II": Math.round(55000 * multiplier) },
+      ],
+      expensesTable: [
+        { machine: "CNC", "Unit-1": Math.round(32000 * multiplier), "Unit-2": Math.round(21000 * multiplier), "Unit-3": Math.round(12000 * multiplier) },
+        { machine: "Lathe", "Unit-1": Math.round(18000 * multiplier), "Unit-2": Math.round(11000 * multiplier), "Unit-3": Math.round(6000 * multiplier) },
+        { machine: "Milling", "Unit-1": Math.round(15000 * multiplier), "Unit-2": Math.round(9000 * multiplier), "Unit-3": Math.round(4000 * multiplier) },
+        { machine: "Drill", "Unit-1": Math.round(8000 * multiplier), "Unit-2": Math.round(6000 * multiplier), "Unit-3": Math.round(4000 * multiplier) },
+      ],
+      percentageChanges: {
+        allUnits: period === "1m" ? 12.5 : period === "3m" ? 8.3 : period === "6m" ? 15.2 : 22.1,
+        unit1: period === "1m" ? 8.3 : period === "3m" ? 5.2 : period === "6m" ? 12.8 : 18.5,
+        unit2: period === "1m" ? -2.1 : period === "3m" ? 3.4 : period === "6m" ? 7.9 : 14.2,
+      }
+    };
+  };
+
+  const currentData = getDataForPeriod(selectedPeriod);
+  const pendingApprovalsData = getPendingApprovalsData(selectedPeriod);
+  const { materialExpensesByUnit, expensesTable, percentageChanges } = currentData;
 
   const machineExpensesByUnit = expensesTable.map((row) => ({
     machine: row.machine,
     "Unit-I": row["Unit-1"],
     "Unit-II": row["Unit-2"],
   }));
-
-  // Calculate total expenses by machine for pie chart
-  const machineExpensesForPie = expensesTable.map((row) => ({
-    name: row.machine,
-    value: row["Unit-1"] + row["Unit-2"] + row["Unit-3"],
-  }));
-
-  // Colors for pie chart segments
-  const COLORS = ['#2563eb', '#f59e0b', '#10b981', '#ef4444'];
 
   const totals = expensesTable.reduce(
     (acc, row) => {
@@ -49,144 +88,334 @@ const CompanyOwnerDashboard = () => {
   );
   const allUnitsTotal = totals.unit1 + totals.unit2 + totals.unit3;
 
+  const getTrendIcon = (value: number) => {
+    if (value > 0) return <TrendingUp className="h-4 w-4 text-primary" />;
+    if (value < 0) return <TrendingDown className="h-4 w-4 text-red-500" />;
+    return <Minus className="h-4 w-4 text-muted-foreground" />;
+  };
+
+  const getTrendColor = (value: number) => {
+    if (value > 0) return "text-primary";
+    if (value < 0) return "text-red-500";
+    return "text-muted-foreground";
+  };
+
+  const getPeriodLabel = () => {
+    return timePeriods.find(p => p.value === selectedPeriod)?.label || "1 Month";
+  };
+
   return (
-    <div className="space-y-6 p-4 sm:p-0">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Expenses Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Overview of total and category-wise expenses</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <div className="space-y-8 p-6 max-w-7xl mx-auto">
+        {/* Header Section - Left/Right Layout */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          {/* Left Side - Title and Description */}
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              Expenses Dashboard
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl">
+              Comprehensive overview of total and category-wise expenses across all units
+            </p>
+          </div>
+          
+          {/* Right Side - Time Period Filter */}
+          <Card className="p-4 bg-card shadow-lg border border-border">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Calendar className="h-4 w-4" />
+                Time Period:
+              </div>
+              <div className="flex gap-2">
+                {timePeriods.map((period) => (
+                  <Button
+                    key={period.value}
+                    variant={selectedPeriod === period.value ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedPeriod(period.value)}
+                    className={`transition-all duration-200 ${
+                      selectedPeriod === period.value
+                        ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
+                        : "hover:bg-secondary/10 border-border text-foreground"
+                    }`}
+                  >
+                    {period.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </Card>
+        </div>
 
-      {/* Total Expenses for Units and All Units */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatsCard
-          title="Total Expenses - All Units"
-          value={`₹${allUnitsTotal.toLocaleString()}`}
-          description="This month"
-          icon={IndianRupee}
-          trend="vs last month"
-          color="success"
-        />
-        <StatsCard
-          title="Total Expenses - Unit-I"
-          value={`₹${totals.unit1.toLocaleString()}`}
-          description="This month"
-          icon={IndianRupee}
-          trend="vs last month"
-          color="primary"
-        />
-        <StatsCard
-          title="Total Expenses - Unit-II"
-          value={`₹${totals.unit2.toLocaleString()}`}
-          description="This month"
-          icon={IndianRupee}
-          trend="vs last month"
-          color="warning"
-        />
-      </div>
+        {/* Stats Cards - Back to 3 cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="relative">
+            <StatsCard
+              title="Total Expenses - All Units"
+              value={`₹${allUnitsTotal.toLocaleString()}`}
+              description={`${getPeriodLabel()} period`}
+              icon={IndianRupee}
+              trend="vs previous period"
+              color="success"
+            />
+            <div className="absolute -top-2 -right-2">
+              <Badge variant="secondary" className="flex items-center gap-1 px-2 py-1 bg-secondary/20 text-foreground">
+                {getTrendIcon(percentageChanges.allUnits)}
+                <span className={`text-xs font-medium ${getTrendColor(percentageChanges.allUnits)}`}>
+                  {Math.abs(percentageChanges.allUnits)}%
+                </span>
+              </Badge>
+            </div>
+          </div>
+          
+          <div className="relative">
+            <StatsCard
+              title="Total Expenses - Unit-I"
+              value={`₹${totals.unit1.toLocaleString()}`}
+              description={`${getPeriodLabel()} period`}
+              icon={IndianRupee}
+              trend="vs previous period"
+              color="primary"
+            />
+            <div className="absolute -top-2 -right-2">
+              <Badge variant="secondary" className="flex items-center gap-1 px-2 py-1 bg-secondary/20 text-foreground">
+                {getTrendIcon(percentageChanges.unit1)}
+                <span className={`text-xs font-medium ${getTrendColor(percentageChanges.unit1)}`}>
+                  {Math.abs(percentageChanges.unit1)}%
+                </span>
+              </Badge>
+            </div>
+          </div>
+          
+          <div className="relative">
+            <StatsCard
+              title="Total Expenses - Unit-II"
+              value={`₹${totals.unit2.toLocaleString()}`}
+              description={`${getPeriodLabel()} period`}
+              icon={IndianRupee}
+              trend="vs previous period"
+              color="warning"
+            />
+            <div className="absolute -top-2 -right-2">
+              <Badge variant="secondary" className="flex items-center gap-1 px-2 py-1 bg-secondary/20 text-foreground">
+                {getTrendIcon(percentageChanges.unit2)}
+                <span className={`text-xs font-medium ${getTrendColor(percentageChanges.unit2)}`}>
+                  {Math.abs(percentageChanges.unit2)}%
+                </span>
+              </Badge>
+            </div>
+          </div>
+        </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Machine Expenses (Vertical Grouped Bar) */}
-        <Card className="card-friendly">
-          <CardHeader className="pb-2">
-            <CardTitle>Machine Expenses by Unit</CardTitle>
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          {/* Machine Expenses Chart */}
+          <Card className="card-friendly shadow-lg border-0 bg-card border border-border">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                <div className="w-3 h-3 bg-primary rounded-full"></div>
+                Machine Expenses by Unit
+                <Badge variant="outline" className="ml-auto text-xs bg-secondary/20 text-foreground border-border">
+                  {getPeriodLabel()}
+                </Badge>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Comparative analysis of machine expenses across different units
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={{}} className="w-full h-80">
+                <ReBarChart data={machineExpensesByUnit} margin={{ left: 20, right: 20, bottom: 20, top: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="machine" 
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                    tickFormatter={(value) => `₹${(value / 1000)}k`}
+                  />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value) => [`₹${Number(value).toLocaleString()}`, '']}
+                    />} 
+                  />
+                  <ChartLegend />
+                  <Bar 
+                    dataKey="Unit-I" 
+                    fill="hsl(var(--primary))" 
+                    barSize={24} 
+                    radius={[6, 6, 0, 0]}
+                    name="Unit-I"
+                  />
+                  <Bar 
+                    dataKey="Unit-II" 
+                    fill="hsl(var(--secondary))" 
+                    barSize={24} 
+                    radius={[6, 6, 0, 0]}
+                    name="Unit-II"
+                  />
+                </ReBarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          {/* Material Expenses Chart */}
+          <Card className="card-friendly shadow-lg border-0 bg-card border border-border">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-semibold flex items-center gap-2">
+                <div className="w-3 h-3 bg-secondary rounded-full"></div>
+                Material Expenses
+                <Badge variant="outline" className="ml-auto text-xs bg-secondary/20 text-foreground border-border">
+                  {getPeriodLabel()}
+                </Badge>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Material-wise expense breakdown across units
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={{}} className="w-full h-80">
+                <ReBarChart data={materialExpensesByUnit} layout="vertical" margin={{ left: 40, right: 20, bottom: 20, top: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    type="number" 
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                    tickFormatter={(value) => `₹${(value / 1000)}k`}
+                  />
+                  <YAxis 
+                    type="category" 
+                    dataKey="material" 
+                    width={100}
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                  />
+                  <ChartTooltip 
+                    content={<ChartTooltipContent 
+                      formatter={(value) => [`₹${Number(value).toLocaleString()}`, '']}
+                    />} 
+                  />
+                  <ChartLegend />
+                  <Bar 
+                    dataKey="Unit-I" 
+                    fill="hsl(var(--primary))" 
+                    barSize={20} 
+                    radius={[0, 6, 6, 0]}
+                    name="Unit-I"
+                  />
+                  <Bar 
+                    dataKey="Unit-II" 
+                    fill="hsl(var(--secondary))" 
+                    barSize={20} 
+                    radius={[0, 6, 6, 0]}
+                    name="Unit-II"
+                  />
+                </ReBarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Enhanced Table Section */}
+        <Card className="card-friendly shadow-lg border-0 bg-card border border-border">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-semibold flex items-center gap-2">
+              <div className="w-3 h-3 bg-primary rounded-full"></div>
+              Detailed Expenses by Machine and Unit
+              <Badge variant="outline" className="ml-auto text-xs bg-secondary/20 text-foreground border-border">
+                {getPeriodLabel()}
+              </Badge>
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Complete breakdown of expenses across all machines and units
+            </p>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={{}} className="w-full">
-              <ReBarChart data={machineExpensesByUnit} margin={{ left: 0, right: 8, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="machine" />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <ChartLegend />
-                <Bar dataKey="Unit-I" fill="#2563eb" barSize={16} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Unit-II" fill="#f59e0b" barSize={16} radius={[4, 4, 0, 0]} />
-              </ReBarChart>
-            </ChartContainer>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b-2 border-border">
+                    <TableHead className="font-semibold text-foreground">Machine</TableHead>
+                    <TableHead className="text-right font-semibold text-foreground">Unit-I</TableHead>
+                    <TableHead className="text-right font-semibold text-foreground">Unit-II</TableHead>
+                    <TableHead className="text-right font-semibold text-foreground">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {expensesTable.map((row, index) => {
+                    const total = row["Unit-1"] + row["Unit-2"] + row["Unit-3"];
+                    return (
+                      <TableRow key={row.machine} className="hover:bg-muted/50 transition-colors">
+                        <TableCell className="font-medium text-foreground">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${
+                              index === 0 ? 'bg-primary' : 
+                              index === 1 ? 'bg-secondary' : 
+                              index === 2 ? 'bg-primary/70' : 'bg-secondary/70'
+                            }`}></div>
+                            {row.machine}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">₹{row["Unit-1"].toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-medium">₹{row["Unit-2"].toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-medium">₹{row["Unit-3"].toLocaleString()}</TableCell>
+                        <TableCell className="text-right font-bold text-foreground">₹{total.toLocaleString()}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {/* Total Row */}
+                  <TableRow className="border-t-2 border-border bg-muted/30">
+                    <TableCell className="font-bold text-foreground">Total</TableCell>
+                    <TableCell className="text-right font-bold text-foreground">₹{totals.unit1.toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-bold text-foreground">₹{totals.unit2.toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-bold text-foreground">₹{totals.unit3.toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-bold text-lg text-primary">₹{allUnitsTotal.toLocaleString()}</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Total Machine Expenses Pie Chart */}
-        <Card className="card-friendly">
-          <CardHeader className="pb-2">
-            <CardTitle>Total Machine Expenses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{}} className="w-full">
-              <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-                <Pie
-                  data={machineExpensesForPie}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {machineExpensesForPie.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <ChartTooltip 
-                  content={<ChartTooltipContent 
-                    formatter={(value) => [`₹${Number(value).toLocaleString()}`, 'Total Expenses']}
-                  />} 
-                />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Material Expenses (Horizontal Grouped Bar) */}
-        <Card className="card-friendly">
-          <CardHeader className="pb-2">
-            <CardTitle>Material Expenses</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={{}} className="w-full">
-              <ReBarChart data={materialExpensesByUnit} layout="vertical" margin={{ left: 12 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis type="category" dataKey="material" width={120} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <ChartLegend />
-                <Bar dataKey="Unit-I" fill="#2563eb" barSize={16} radius={[0, 4, 4, 0]} />
-                <Bar dataKey="Unit-II" fill="#f59e0b" barSize={16} radius={[0, 4, 4, 0]} />
-              </ReBarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+        {/* Pending Approvals Details Card - Moved to last position */}
+        {pendingApprovalsData.pendingApprovals > 0 && (
+          <Card className="card-friendly shadow-lg border-0 bg-gradient-to-r from-secondary/10 to-primary/10 border-l-4 border-primary">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
+                <Clock className="h-5 w-5 text-primary" />
+                Pending Approvals Overview
+                <Badge variant="outline" className="ml-auto text-xs bg-secondary/20 text-foreground border-border">
+                  {getPeriodLabel()}
+                </Badge>
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Action required for pending material requests and approvals
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="text-center p-4 bg-card/60 rounded-lg border border-border">
+                  <div className="text-3xl font-bold text-primary mb-2">
+                    {pendingApprovalsData.pendingApprovals}
+                  </div>
+                  <div className="text-sm font-medium text-foreground">Total Pending</div>
+                  <div className="text-xs text-muted-foreground mt-1">Material Requests</div>
+                </div>
+                <div className="text-center p-4 bg-card/60 rounded-lg border border-border">
+                  <div className="text-3xl font-bold text-secondary mb-2">
+                    {pendingApprovalsData.averageApprovalTime}
+                  </div>
+                  <div className="text-sm font-medium text-foreground">Avg. Time</div>
+                  <div className="text-xs text-muted-foreground mt-1">To Approve</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
-
-      {/* Table of expenses: Machine, Unit-1, Unit-2, Unit-3 */}
-      <Card className="card-friendly">
-        <CardHeader className="pb-2">
-          <CardTitle>Expenses by Machine and Unit</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Machine</TableHead>
-                <TableHead className="text-right">Unit-1</TableHead>
-                <TableHead className="text-right">Unit-2</TableHead>
-                <TableHead className="text-right">Unit-3</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {expensesTable.map((row) => (
-                <TableRow key={row.machine}>
-                  <TableCell className="font-medium">{row.machine}</TableCell>
-                  <TableCell className="text-right">₹{row["Unit-1"].toLocaleString()}</TableCell>
-                  <TableCell className="text-right">₹{row["Unit-2"].toLocaleString()}</TableCell>
-                  <TableCell className="text-right">₹{row["Unit-3"].toLocaleString()}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
     </div>
   );
 };
