@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { IndianRupee, TrendingUp, TrendingDown, Minus, Calendar, Filter, Clock, AlertCircle } from "lucide-react";
+import { IndianRupee, TrendingUp, TrendingDown, Minus, Calendar, Filter, Clock, AlertCircle, CheckCircle, Users, Building2 } from "lucide-react";
 import { StatsCard } from "../../components/StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
@@ -59,17 +59,13 @@ const CompanyOwnerDashboard = () => {
         { machine: "Milling", "Unit-1": Math.round(15000 * multiplier), "Unit-2": Math.round(9000 * multiplier), "Unit-3": Math.round(4000 * multiplier) },
         { machine: "Drill", "Unit-1": Math.round(8000 * multiplier), "Unit-2": Math.round(6000 * multiplier), "Unit-3": Math.round(4000 * multiplier) },
       ],
-      percentageChanges: {
-        allUnits: period === "1m" ? 12.5 : period === "3m" ? 8.3 : period === "6m" ? 15.2 : 22.1,
-        unit1: period === "1m" ? 8.3 : period === "3m" ? 5.2 : period === "6m" ? 12.8 : 18.5,
-        unit2: period === "1m" ? -2.1 : period === "3m" ? 3.4 : period === "6m" ? 7.9 : 14.2,
-      }
+      
     };
   };
 
   const currentData = getDataForPeriod(selectedPeriod);
   const pendingApprovalsData = getPendingApprovalsData(selectedPeriod);
-  const { materialExpensesByUnit, expensesTable, percentageChanges } = currentData;
+  const { materialExpensesByUnit, expensesTable } = currentData;
 
   const machineExpensesByUnit = expensesTable.map((row) => ({
     machine: row.machine,
@@ -89,15 +85,15 @@ const CompanyOwnerDashboard = () => {
   const allUnitsTotal = totals.unit1 + totals.unit2 + totals.unit3;
 
   const getTrendIcon = (value: number) => {
-    if (value > 0) return <TrendingUp className="h-4 w-4 text-primary" />;
+    if (value > 0) return <TrendingUp className="h-4 w-4 text-green-600" />;
     if (value < 0) return <TrendingDown className="h-4 w-4 text-red-500" />;
-    return <Minus className="h-4 w-4 text-muted-foreground" />;
+    return <Minus className="h-4 w-4 text-gray-400" />;
   };
 
   const getTrendColor = (value: number) => {
-    if (value > 0) return "text-primary";
+    if (value > 0) return "text-green-600";
     if (value < 0) return "text-red-500";
-    return "text-muted-foreground";
+    return "text-gray-400";
   };
 
   const getPeriodLabel = () => {
@@ -111,19 +107,16 @@ const CompanyOwnerDashboard = () => {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           {/* Left Side - Title and Description */}
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold text-primary">
               Expenses Dashboard
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl">
-              Comprehensive overview of total and category-wise expenses across all units
-            </p>
           </div>
           
           {/* Right Side - Time Period Filter */}
-          <Card className="p-4 bg-card shadow-lg border border-border">
+          <Card className="p-4 bg-card shadow-lg border border-primary/20">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Calendar className="h-4 w-4" />
+                <Calendar className="h-4 w-4 text-primary" />
                 Time Period:
               </div>
               <div className="flex gap-2">
@@ -136,7 +129,7 @@ const CompanyOwnerDashboard = () => {
                     className={`transition-all duration-200 ${
                       selectedPeriod === period.value
                         ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
-                        : "hover:bg-secondary/10 border-border text-foreground"
+                        : "hover:bg-primary/10 border-primary/30 text-foreground"
                     }`}
                   >
                     {period.label}
@@ -147,75 +140,66 @@ const CompanyOwnerDashboard = () => {
           </Card>
         </div>
 
-        {/* Stats Cards - Back to 3 cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="relative">
-            <StatsCard
-              title="Total Expenses - All Units"
-              value={`₹${allUnitsTotal.toLocaleString()}`}
-              description={`${getPeriodLabel()} period`}
-              icon={IndianRupee}
-              trend="vs previous period"
-              color="success"
-            />
-            <div className="absolute -top-2 -right-2">
-              <Badge variant="secondary" className="flex items-center gap-1 px-2 py-1 bg-secondary/20 text-foreground">
-                {getTrendIcon(percentageChanges.allUnits)}
-                <span className={`text-xs font-medium ${getTrendColor(percentageChanges.allUnits)}`}>
-                  {Math.abs(percentageChanges.allUnits)}%
-                </span>
-              </Badge>
+        {/* Stats Cards with Colored Borders */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Total Expenses - All Units */}
+          <Card className="p-6 border-l-4 border-l-green-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Expenses - All Units</p>
+                <p className="text-2xl font-bold">₹{allUnitsTotal.toLocaleString()}</p>
+                
+              </div>
+              <IndianRupee className="h-8 w-8 text-green-500" />
             </div>
-          </div>
-          
-          <div className="relative">
-            <StatsCard
-              title="Total Expenses - Unit-I"
-              value={`₹${totals.unit1.toLocaleString()}`}
-              description={`${getPeriodLabel()} period`}
-              icon={IndianRupee}
-              trend="vs previous period"
-              color="primary"
-            />
-            <div className="absolute -top-2 -right-2">
-              <Badge variant="secondary" className="flex items-center gap-1 px-2 py-1 bg-secondary/20 text-foreground">
-                {getTrendIcon(percentageChanges.unit1)}
-                <span className={`text-xs font-medium ${getTrendColor(percentageChanges.unit1)}`}>
-                  {Math.abs(percentageChanges.unit1)}%
-                </span>
-              </Badge>
+          </Card>
+
+          {/* Total Expenses - Unit-I */}
+          <Card className="p-6 border-l-4 border-l-blue-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Expenses - Unit-I</p>
+                <p className="text-2xl font-bold">₹{totals.unit1.toLocaleString()}</p>
+                
+              </div>
+              <Building2 className="h-8 w-8 text-blue-500" />
             </div>
-          </div>
-          
-          <div className="relative">
-            <StatsCard
-              title="Total Expenses - Unit-II"
-              value={`₹${totals.unit2.toLocaleString()}`}
-              description={`${getPeriodLabel()} period`}
-              icon={IndianRupee}
-              trend="vs previous period"
-              color="warning"
-            />
-            <div className="absolute -top-2 -right-2">
-              <Badge variant="secondary" className="flex items-center gap-1 px-2 py-1 bg-secondary/20 text-foreground">
-                {getTrendIcon(percentageChanges.unit2)}
-                <span className={`text-xs font-medium ${getTrendColor(percentageChanges.unit2)}`}>
-                  {Math.abs(percentageChanges.unit2)}%
-                </span>
-              </Badge>
+          </Card>
+
+          {/* Total Expenses - Unit-II */}
+          <Card className="p-6 border-l-4 border-l-orange-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Expenses - Unit-II</p>
+                <p className="text-2xl font-bold">₹{totals.unit2.toLocaleString()}</p>
+                
+              </div>
+              <Building2 className="h-8 w-8 text-orange-500" />
             </div>
-          </div>
+          </Card>
+
+          {/* Pending Approvals */}
+          <Card className="p-6 border-l-4 border-l-amber-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Pending Approvals</p>
+                <p className="text-2xl font-bold">{pendingApprovalsData.pendingApprovals}</p>
+                <p className="text-sm text-muted-foreground mt-1">Material Requests</p>
+              </div>
+              <AlertCircle className="h-8 w-8 text-amber-500" />
+            </div>
+          </Card>
         </div>
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {/* Machine Expenses Chart */}
-          <Card className="card-friendly shadow-lg border-0 bg-card border border-border">
+          <Card className="card-friendly shadow-lg border border-primary/20">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-semibold flex items-center gap-2">
                 <div className="w-3 h-3 bg-primary rounded-full"></div>
                 Machine Expenses by Unit
-                <Badge variant="outline" className="ml-auto text-xs bg-secondary/20 text-foreground border-border">
+                <Badge variant="outline" className="ml-auto text-xs bg-primary/10 text-primary border-primary/30">
                   {getPeriodLabel()}
                 </Badge>
               </CardTitle>
@@ -245,14 +229,14 @@ const CompanyOwnerDashboard = () => {
                   <ChartLegend />
                   <Bar 
                     dataKey="Unit-I" 
-                    fill="hsl(var(--primary))" 
+                    fill="#3B82F6" 
                     barSize={24} 
                     radius={[6, 6, 0, 0]}
                     name="Unit-I"
                   />
                   <Bar 
                     dataKey="Unit-II" 
-                    fill="hsl(var(--secondary))" 
+                    fill="#F59E0B" 
                     barSize={24} 
                     radius={[6, 6, 0, 0]}
                     name="Unit-II"
@@ -263,12 +247,12 @@ const CompanyOwnerDashboard = () => {
           </Card>
 
           {/* Material Expenses Chart */}
-          <Card className="card-friendly shadow-lg border-0 bg-card border border-border">
+          <Card className="card-friendly shadow-lg border border-primary/20">
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                <div className="w-3 h-3 bg-secondary rounded-full"></div>
+                <div className="w-3 h-3 bg-primary rounded-full"></div>
                 Material Expenses
-                <Badge variant="outline" className="ml-auto text-xs bg-secondary/20 text-foreground border-border">
+                <Badge variant="outline" className="ml-auto text-xs bg-primary/10 text-primary border-primary/30">
                   {getPeriodLabel()}
                 </Badge>
               </CardTitle>
@@ -301,14 +285,14 @@ const CompanyOwnerDashboard = () => {
                   <ChartLegend />
                   <Bar 
                     dataKey="Unit-I" 
-                    fill="hsl(var(--primary))" 
+                    fill="#10B981" 
                     barSize={20} 
                     radius={[0, 6, 6, 0]}
                     name="Unit-I"
                   />
                   <Bar 
                     dataKey="Unit-II" 
-                    fill="hsl(var(--secondary))" 
+                    fill="#EF4444" 
                     barSize={20} 
                     radius={[0, 6, 6, 0]}
                     name="Unit-II"
@@ -320,12 +304,12 @@ const CompanyOwnerDashboard = () => {
         </div>
 
         {/* Enhanced Table Section */}
-        <Card className="card-friendly shadow-lg border-0 bg-card border border-border">
+        <Card className="card-friendly shadow-lg border border-primary/20">
           <CardHeader className="pb-4">
             <CardTitle className="text-xl font-semibold flex items-center gap-2">
               <div className="w-3 h-3 bg-primary rounded-full"></div>
               Detailed Expenses by Machine and Unit
-              <Badge variant="outline" className="ml-auto text-xs bg-secondary/20 text-foreground border-border">
+              <Badge variant="outline" className="ml-auto text-xs bg-primary/10 text-primary border-primary/30">
                 {getPeriodLabel()}
               </Badge>
             </CardTitle>
@@ -337,7 +321,7 @@ const CompanyOwnerDashboard = () => {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-b-2 border-border">
+                  <TableRow className="border-b-2 border-primary/20">
                     <TableHead className="font-semibold text-foreground">Machine</TableHead>
                     <TableHead className="text-right font-semibold text-foreground">Unit-I</TableHead>
                     <TableHead className="text-right font-semibold text-foreground">Unit-II</TableHead>
@@ -348,13 +332,13 @@ const CompanyOwnerDashboard = () => {
                   {expensesTable.map((row, index) => {
                     const total = row["Unit-1"] + row["Unit-2"] + row["Unit-3"];
                     return (
-                      <TableRow key={row.machine} className="hover:bg-muted/50 transition-colors">
+                      <TableRow key={row.machine} className="hover:bg-primary/5 transition-colors">
                         <TableCell className="font-medium text-foreground">
                           <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${
-                              index === 0 ? 'bg-primary' : 
-                              index === 1 ? 'bg-secondary' : 
-                              index === 2 ? 'bg-primary/70' : 'bg-secondary/70'
+                              index === 0 ? 'bg-blue-500' : 
+                              index === 1 ? 'bg-amber-500' : 
+                              index === 2 ? 'bg-green-500' : 'bg-red-500'
                             }`}></div>
                             {row.machine}
                           </div>
@@ -367,7 +351,7 @@ const CompanyOwnerDashboard = () => {
                     );
                   })}
                   {/* Total Row */}
-                  <TableRow className="border-t-2 border-border bg-muted/30">
+                  <TableRow className="border-t-2 border-primary/20 bg-primary/5">
                     <TableCell className="font-bold text-foreground">Total</TableCell>
                     <TableCell className="text-right font-bold text-foreground">₹{totals.unit1.toLocaleString()}</TableCell>
                     <TableCell className="text-right font-bold text-foreground">₹{totals.unit2.toLocaleString()}</TableCell>
@@ -379,45 +363,11 @@ const CompanyOwnerDashboard = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Pending Approvals Details Card - Moved to last position */}
-        {pendingApprovalsData.pendingApprovals > 0 && (
-          <Card className="card-friendly shadow-lg border-0 bg-gradient-to-r from-secondary/10 to-primary/10 border-l-4 border-primary">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl font-semibold flex items-center gap-2 text-foreground">
-                <Clock className="h-5 w-5 text-primary" />
-                Pending Approvals Overview
-                <Badge variant="outline" className="ml-auto text-xs bg-secondary/20 text-foreground border-border">
-                  {getPeriodLabel()}
-                </Badge>
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Action required for pending material requests and approvals
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="text-center p-4 bg-card/60 rounded-lg border border-border">
-                  <div className="text-3xl font-bold text-primary mb-2">
-                    {pendingApprovalsData.pendingApprovals}
-                  </div>
-                  <div className="text-sm font-medium text-foreground">Total Pending</div>
-                  <div className="text-xs text-muted-foreground mt-1">Material Requests</div>
-                </div>
-                <div className="text-center p-4 bg-card/60 rounded-lg border border-border">
-                  <div className="text-3xl font-bold text-secondary mb-2">
-                    {pendingApprovalsData.averageApprovalTime}
-                  </div>
-                  <div className="text-sm font-medium text-foreground">Avg. Time</div>
-                  <div className="text-xs text-muted-foreground mt-1">To Approve</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
 };
 
 export default CompanyOwnerDashboard;
+
+

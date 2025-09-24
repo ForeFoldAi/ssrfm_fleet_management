@@ -619,11 +619,11 @@ export const MaterialIssuesTab = () => {
           // Table View for Material Issues - Individual Items
           <Card className='rounded-lg shadow-sm'>
             <CardContent className='p-0'>
-              <div className='overflow-x-auto'>
+              <div className='overflow-hidden'>
                 <TableComponent>
                   <TableHeader>
                     <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
-                      <TableHead className='min-w-[120px] text-foreground font-semibold'>
+                      <TableHead className='w-[80px] text-foreground font-semibold'>
                         <Button
                           variant='ghost'
                           onClick={() => handleSort('uniqueId')}
@@ -633,29 +633,29 @@ export const MaterialIssuesTab = () => {
                           {getSortIcon('uniqueId')}
                         </Button>
                       </TableHead>
-                      <TableHead className='min-w-[150px] text-foreground font-semibold'>
-                        Material Name
+                      <TableHead className='w-[120px] text-foreground font-semibold'>
+                        Material
                       </TableHead>
-                      <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                        Specifications
+                      <TableHead className='w-[80px] text-foreground font-semibold'>
+                        Specs
                       </TableHead>
-                      <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                        Stock Info
+                      <TableHead className='w-[90px] text-foreground font-semibold'>
+                        Stock
                       </TableHead>
-                      <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                      <TableHead className='w-[80px] text-foreground font-semibold'>
                         <Button
                           variant='ghost'
                           onClick={() => handleSort('issueDate')}
                           className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                         >
-                          Issued Date
+                          Date
                           {getSortIcon('issueDate')}
                         </Button>
                       </TableHead>
-                      <TableHead className='min-w-[120px] text-foreground font-semibold'>
+                      <TableHead className='w-[100px] text-foreground font-semibold'>
                         Issued To
                       </TableHead>
-                      <TableHead className='min-w-[120px] text-foreground font-semibold'>
+                      <TableHead className='w-[100px] text-foreground font-semibold'>
                         <Button
                           variant='ghost'
                           onClick={() => handleSort('issuedBy')}
@@ -665,7 +665,7 @@ export const MaterialIssuesTab = () => {
                           {getSortIcon('issuedBy')}
                         </Button>
                       </TableHead>
-                      <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                      <TableHead className='w-[70px] text-foreground font-semibold'>
                         <Button
                           variant='ghost'
                           onClick={() => handleSort('branch')}
@@ -675,7 +675,7 @@ export const MaterialIssuesTab = () => {
                           {getSortIcon('branch')}
                         </Button>
                       </TableHead>
-                      <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                      <TableHead className='w-[80px] text-foreground font-semibold'>
                         Purpose
                       </TableHead>
                     </TableRow>
@@ -688,10 +688,10 @@ export const MaterialIssuesTab = () => {
                           className='bg-secondary/10 hover:bg-secondary/20 border-b border-secondary/20 cursor-pointer'
                           onClick={() => handleViewIssue(issue)}
                         >
-                          <TableCell className='font-medium'>
+                          <TableCell className='font-medium text-xs'>
                             <Button
                               variant='link'
-                              className='p-0 h-auto text-left font-medium text-primary hover:text-primary/80 uppercase'
+                              className='p-0 h-auto text-left font-medium text-primary hover:text-primary/80 uppercase text-xs'
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleViewIssue(issue);
@@ -700,65 +700,50 @@ export const MaterialIssuesTab = () => {
                               {issue.id}
                             </Button>
                           </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className='font-medium capitalize'>
-                                {item.materialName}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className='text-sm text-muted-foreground truncate max-w-40'>
-                              {item.specifications}
-                            </div>
-                          </TableCell>
                           <TableCell className='text-sm'>
-                            <div className='space-y-1'>
-                              <div className='text-xs'>
-                                <span className='text-muted-foreground'>
-                                  Existing:
-                                </span>{' '}
-                                {item.existingStock}
+                            <div className='font-medium capitalize truncate'>
+                              {item.materialName}
+                            </div>
+                          </TableCell>
+                          <TableCell className='text-xs text-muted-foreground truncate'>
+                            {item.specifications}
+                          </TableCell>
+                          <TableCell className='text-xs'>
+                            <div className='space-y-0.5'>
+                              <div>
+                                <span className='text-muted-foreground'>Existing:</span> {item.existingStock}
                               </div>
-                              <div className='text-xs font-medium'>
-                                <span className='text-muted-foreground'>
-                                  Issued:
-                                </span>{' '}
-                                {item.issuedQuantity}
+                              <div className='font-medium text-primary'>
+                                <span className='text-muted-foreground'>Issued:</span> {item.issuedQuantity}
                               </div>
-                              <div className='text-xs'>
-                                <span className='text-muted-foreground'>
-                                  After:
-                                </span>{' '}
-                                {item.stockAfterIssue}
+                              <div>
+                                <span className='text-muted-foreground'>After:</span> {item.stockAfterIssue}
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className='text-sm'>
+                          <TableCell className='text-xs'>
                             {new Date(issue.issuedDate).toLocaleDateString()}
                           </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className='font-medium'>
-                                {item.recipientName}
-                              </div>
+                          <TableCell className='text-sm'>
+                            <div className='font-medium truncate'>
+                              {item.recipientName}
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className='text-sm'>
                             <div>
-                              <div className='font-medium'>
+                              <div className='font-medium truncate'>
                                 {issue.issuingPersonName}
                               </div>
-                              <div className='text-xs text-muted-foreground'>
+                              <div className='text-xs text-muted-foreground truncate'>
                                 {issue.issuingPersonDesignation}
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className='text-sm'>
-                            <Badge variant='outline'>{issue.unitName}</Badge>
+                          <TableCell className='text-xs'>
+                            <Badge variant='outline' className='text-xs'>{issue.unitName}</Badge>
                           </TableCell>
-                          <TableCell>
-                            <div className='text-sm'>{item.purpose}</div>
+                          <TableCell className='text-xs truncate'>
+                            {item.purpose}
                           </TableCell>
                         </TableRow>
                       ))
@@ -772,143 +757,130 @@ export const MaterialIssuesTab = () => {
           // List View for Material Issues - Individual Items
           <Card className='rounded-lg shadow-sm'>
             <CardContent className='p-0'>
-              <div className='overflow-x-auto'>
+              <div className='overflow-hidden'>
                 <TableComponent>
                   <TableHeader>
                     <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
-                      <TableHead className='w-12'></TableHead>
-                      <TableHead className='min-w-[120px] text-foreground font-semibold'>
+                      <TableHead className='w-8'></TableHead>
+                      <TableHead className='w-[80px] text-foreground font-semibold'>
                         Issue ID
                       </TableHead>
-                      <TableHead className='min-w-[150px] text-foreground font-semibold'>
-                        Material Name
+                      <TableHead className='w-[120px] text-foreground font-semibold'>
+                        Material
                       </TableHead>
-                      <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                        Specifications
+                      <TableHead className='w-[80px] text-foreground font-semibold'>
+                        Specs
                       </TableHead>
-                      <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                        Stock Info
+                      <TableHead className='w-[90px] text-foreground font-semibold'>
+                        Stock
                       </TableHead>
-                      <TableHead className='min-w-[120px] text-foreground font-semibold'>
+                      <TableHead className='w-[100px] text-foreground font-semibold'>
                         Issued To
                       </TableHead>
-                      <TableHead className='min-w-[120px] text-foreground font-semibold'>
+                      <TableHead className='w-[100px] text-foreground font-semibold'>
                         Issuing Person
                       </TableHead>
-                      <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                      <TableHead className='w-[70px] text-foreground font-semibold'>
                         Unit
                       </TableHead>
-                      <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                      <TableHead className='w-[80px] text-foreground font-semibold'>
                         Date
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredIssues.flatMap((issue) =>
-                      issue.items.map((item, itemIndex) => (
-                        <TableRow
-                          key={`${issue.id}-item-${itemIndex}`}
-                          className='hover:bg-muted/30 border-b border-secondary/20 cursor-pointer'
-                          onClick={() => handleViewIssue(issue)}
-                        >
-                          <TableCell>
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              className='h-6 w-6 p-0'
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleRowExpansion(
+                    {filteredIssues
+                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                      .flatMap((issue) =>
+                        issue.items.map((item, itemIndex) => (
+                          <TableRow
+                            key={`${issue.id}-item-${itemIndex}`}
+                            className='hover:bg-muted/30 border-b border-secondary/20 cursor-pointer'
+                            onClick={() => handleViewIssue(issue)}
+                          >
+                            <TableCell>
+                              <Button
+                                variant='ghost'
+                                size='sm'
+                                className='h-6 w-6 p-0'
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleRowExpansion(
+                                    `${issue.id}-item-${itemIndex}`
+                                  );
+                                }}
+                              >
+                                {expandedRows.has(
                                   `${issue.id}-item-${itemIndex}`
-                                );
-                              }}
-                            >
-                              {expandedRows.has(
-                                `${issue.id}-item-${itemIndex}`
-                              ) ? (
-                                <ChevronDown className='w-4 h-4' />
-                              ) : (
-                                <ChevronRight className='w-4 h-4' />
-                              )}
-                            </Button>
-                          </TableCell>
-                          <TableCell className='font-medium'>
-                            <Button
-                              variant='link'
-                              className='p-0 h-auto text-left font-medium text-primary hover:text-primary/80 uppercase'
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewIssue(issue);
-                              }}
-                            >
-                              {issue.id}
-                            </Button>
-                            <div className='text-xs mt-1'>
-                              <Badge variant='outline' className='text-xs'>
-                                Item {itemIndex + 1}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className='font-medium capitalize'>
+                                ) ? (
+                                  <ChevronDown className='w-4 h-4' />
+                                ) : (
+                                  <ChevronRight className='w-4 h-4' />
+                                )}
+                              </Button>
+                            </TableCell>
+                            <TableCell className='font-medium text-xs'>
+                              <Button
+                                variant='link'
+                                className='p-0 h-auto text-left font-medium text-primary hover:text-primary/80 uppercase text-xs'
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleViewIssue(issue);
+                                }}
+                              >
+                                {issue.id}
+                              </Button>
+                              <div className='text-xs mt-1'>
+                                <Badge variant='outline' className='text-xs'>
+                                  Item {itemIndex + 1}
+                                </Badge>
+                              </div>
+                            </TableCell>
+                            <TableCell className='text-sm'>
+                              <div className='font-medium capitalize truncate'>
                                 {item.materialName}
                               </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className='text-sm text-muted-foreground truncate max-w-40'>
+                            </TableCell>
+                            <TableCell className='text-xs text-muted-foreground truncate'>
                               {item.specifications}
-                            </div>
-                          </TableCell>
-                          <TableCell className='text-sm'>
-                            <div className='space-y-1'>
-                              <div className='text-xs'>
-                                <span className='text-muted-foreground'>
-                                  Existing:
-                                </span>{' '}
-                                {item.existingStock}
+                            </TableCell>
+                            <TableCell className='text-xs'>
+                              <div className='space-y-0.5'>
+                                <div>
+                                  <span className='text-muted-foreground'>Existing:</span> {item.existingStock}
+                                </div>
+                                <div className='font-medium text-primary'>
+                                  <span className='text-muted-foreground'>Issued:</span> {item.issuedQuantity}
+                                </div>
+                                <div>
+                                  <span className='text-muted-foreground'>After:</span> {item.stockAfterIssue}
+                                </div>
                               </div>
-                              <div className='text-xs font-medium'>
-                                <span className='text-muted-foreground'>
-                                  Issued:
-                                </span>{' '}
-                                {item.issuedQuantity}
-                              </div>
-                              <div className='text-xs'>
-                                <span className='text-muted-foreground'>
-                                  After:
-                                </span>{' '}
-                                {item.stockAfterIssue}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className='font-medium'>
+                            </TableCell>
+                            <TableCell className='text-sm'>
+                              <div className='font-medium truncate'>
                                 {item.recipientName}
                               </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className='font-medium'>
-                                {issue.issuingPersonName}
+                            </TableCell>
+                            <TableCell className='text-sm'>
+                              <div>
+                                <div className='font-medium truncate'>
+                                  {issue.issuingPersonName}
+                                </div>
+                                <div className='text-xs text-muted-foreground truncate'>
+                                  {issue.issuingPersonDesignation}
+                                </div>
                               </div>
-                              <div className='text-xs text-muted-foreground'>
-                                {issue.issuingPersonDesignation}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className='text-sm'>
-                            <Badge variant='outline'>{issue.unitName}</Badge>
-                          </TableCell>
-                          <TableCell className='text-sm'>
-                            {new Date(issue.issuedDate).toLocaleDateString()}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
+                            </TableCell>
+                            <TableCell className='text-xs'>
+                              <Badge variant='outline' className='text-xs'>{issue.unitName}</Badge>
+                            </TableCell>
+                            <TableCell className='text-xs'>
+                              {new Date(issue.issuedDate).toLocaleDateString()}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                   </TableBody>
                 </TableComponent>
               </div>

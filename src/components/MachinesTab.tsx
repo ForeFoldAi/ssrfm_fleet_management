@@ -48,6 +48,8 @@ import { AddMachineForm } from './AddMachineForm';
 import { useRole } from '../contexts/RoleContext';
 import { Machine, PaginatedResponse } from '../lib/api/types';
 import { machinesApi } from '../lib/api/machines';
+import { branchesApi } from '../lib/api/branches';
+import { Branch } from '../lib/api/types';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import {
   Pagination,
@@ -58,12 +60,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from './ui/pagination';
+import { toast } from '../hooks/use-toast';
 
 export const MachinesTab = () => {
   const { currentUser } = useRole();
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterUnit, setFilterUnit] = useState('all');
   const [isAddMachineOpen, setIsAddMachineOpen] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState<TransformedMachine | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -74,6 +78,10 @@ export const MachinesTab = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5); // Changed default to 5 to match MaterialOrderBookTab
   const [error, setError] = useState<string | null>(null);
+
+  // Available branches (units) for company owner - fetched from API
+  const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
 
   // Define interface for transformed machine data
   interface TransformedMachine {
@@ -102,17 +110,47 @@ export const MachinesTab = () => {
   // Transformed machines data for UI - initialize with empty array to avoid showing dummy data
   const [machines, setMachines] = useState<TransformedMachine[]>([]);
 
+  // Fetch branches for company owner
+  useEffect(() => {
+    const fetchBranches = async () => {
+      if (currentUser?.role !== 'company_owner') return;
+      setIsLoadingBranches(true);
+      try {
+        const response = await branchesApi.getAll({ limit: 100 });
+        setAvailableBranches(response.data);
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load units. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoadingBranches(false);
+      }
+    };
+
+    fetchBranches();
+  }, [currentUser?.role]);
+
   // Fetch machines from API
   const fetchMachines = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await machinesApi.getAll({
+      const params = {
         page: currentPage,
         limit: itemsPerPage,
         sortBy: 'id',
-        sortOrder: 'ASC',
-      });
+        sortOrder: 'ASC' as const,
+        ...(searchQuery && { search: searchQuery }),
+        ...(filterUnit !== 'all' &&
+          currentUser?.role === 'company_owner' && {
+            branchId: filterUnit,
+          }),
+      };
+
+      const response = await machinesApi.getAll(params);
       setMachinesData(response);
 
       // Transform API data to match component data structure
@@ -164,7 +202,7 @@ export const MachinesTab = () => {
   useEffect(() => {
     fetchMachines();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, itemsPerPage, searchQuery, filterUnit]);
 
   const handleAddMachine = (machineData: Machine) => {
     // After successfully adding a machine, refresh the data
@@ -243,6 +281,35 @@ export const MachinesTab = () => {
               className='pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64'
             />
           </div>
+
+          {/* Unit Filter - Only for Company Owner */}
+          {currentUser?.role === 'company_owner' && (
+            <Select value={filterUnit} onValueChange={setFilterUnit}>
+              <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
+                <SelectValue placeholder='Select Unit'>
+                  {isLoadingBranches ? 'Loading...' : 'Select Unit'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Units</SelectItem>
+                {availableBranches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id.toString()}>
+                    <div className='flex items-center gap-2'>
+                      <Building2 className='w-4 h-4' />
+                      <div>
+                        <div className='font-medium'>{branch.name}</div>
+                        {branch.location && (
+                          <div className='text-xs text-muted-foreground'>
+                            {branch.location}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <Button
             className='btn-primary w-full sm:w-auto text-sm sm:text-base'

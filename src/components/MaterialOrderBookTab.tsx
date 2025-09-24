@@ -202,9 +202,15 @@ export const MaterialOrderBookTab = () => {
           sortOrder,
         };
 
-        // Add status filter if not 'all'
-        if (filterStatus !== 'all') {
-          params.status = filterStatus;
+        // For company owners, only show pending approval and reverted statuses
+        if (currentUser?.role === 'company_owner') {
+          // Override the status filter for company owners
+          params.status = 'pending_approval,reverted';
+        } else {
+          // Add status filter if not 'all' for other roles
+          if (filterStatus !== 'all') {
+            params.status = filterStatus;
+          }
         }
 
         // Add branch filter if not 'all'
@@ -247,7 +253,7 @@ export const MaterialOrderBookTab = () => {
         setIsLoading(false);
       }
     },
-    [filterStatus, filterUnit, sortBy, sortOrder] // Added sortBy and sortOrder to dependencies
+    [filterStatus, filterUnit, sortBy, sortOrder, currentUser?.role] // Added currentUser?.role to dependencies
   );
 
   // Handle column sorting
@@ -2123,29 +2129,31 @@ export const MaterialOrderBookTab = () => {
             </Select>
           )}
 
-          {/* Status Filter */}
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-              <SelectValue placeholder='All Status' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>All Status</SelectItem>
-              <SelectItem value={IndentStatus.DRAFT}>Draft</SelectItem>
-              <SelectItem value={IndentStatus.PENDING_APPROVAL}>
-                Pending Approval
-              </SelectItem>
-              <SelectItem value={IndentStatus.APPROVED}>Approved</SelectItem>
-              <SelectItem value={IndentStatus.ORDERED}>Ordered</SelectItem>
-              <SelectItem value={IndentStatus.PARTIALLY_RECEIVED}>
-                Partially Received
-              </SelectItem>
-              <SelectItem value={IndentStatus.FULLY_RECEIVED}>
-                Fully Received
-              </SelectItem>
-              <SelectItem value={IndentStatus.CLOSED}>Closed</SelectItem>
-              <SelectItem value={IndentStatus.REJECTED}>Rejected</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Status Filter - Hide for company owners since they only see pending/reverted */}
+          {currentUser?.role !== 'company_owner' && (
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
+                <SelectValue placeholder='All Status' />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Status</SelectItem>
+                <SelectItem value={IndentStatus.DRAFT}>Draft</SelectItem>
+                <SelectItem value={IndentStatus.PENDING_APPROVAL}>
+                  Pending Approval
+                </SelectItem>
+                <SelectItem value={IndentStatus.APPROVED}>Approved</SelectItem>
+                <SelectItem value={IndentStatus.ORDERED}>Ordered</SelectItem>
+                <SelectItem value={IndentStatus.PARTIALLY_RECEIVED}>
+                  Partially Received
+                </SelectItem>
+                <SelectItem value={IndentStatus.FULLY_RECEIVED}>
+                  Fully Received
+                </SelectItem>
+                <SelectItem value={IndentStatus.CLOSED}>Closed</SelectItem>
+                <SelectItem value={IndentStatus.REJECTED}>Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
 
           {/* Action Buttons */}
           <div className='flex gap-2'>
