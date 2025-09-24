@@ -412,9 +412,15 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                               onClick={() => {
                                 onLoadItemImages(parseInt(item.id, 10));
                                 // Show images in popup if they exist
-                                if (itemImageUrlsMap[item.id] && itemImageUrlsMap[item.id].length > 0) {
-                                  showImagesInPopup(itemImageUrlsMap[item.id], `Item Images - ${item.productName}`);
-                              }
+                                if (
+                                  itemImageUrlsMap[item.id] &&
+                                  itemImageUrlsMap[item.id].length > 0
+                                ) {
+                                  showImagesInPopup(
+                                    itemImageUrlsMap[item.id],
+                                    `Item Images - ${item.productName}`
+                                  );
+                                }
                               }}
                               disabled={!isReadOnly}
                               className='gap-2'
@@ -424,55 +430,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                             </Button>
                           </div>
                         )}
-                        {/* Remote thumbnails */}
-                        {itemImageUrlsMap[item.id] &&
-                        itemImageUrlsMap[item.id].length > 0 ? (
-                          <div className='flex flex-wrap gap-1'>
-                            {itemImageUrlsMap[item.id]
-                              .slice(0, 6)
-                              .map((url) => (
-                                <a
-                                  key={url}
-                                  href={url}
-                                  target='_blank'
-                                  rel='noreferrer'
-                                >
-                                  <img
-                                    src={url}
-                                    alt='Item'
-                                    className='w-8 h-8 object-cover rounded border'
-                                  />
-                                </a>
-                              ))}
-                          </div>
-                        ) : item.imagePreviews &&
-                          item.imagePreviews.length > 0 ? (
-                          <div className='flex flex-wrap gap-1'>
-                            {item.imagePreviews
-                              .slice(0, 3)
-                              .map((preview, index) => (
-                                <div
-                                  key={index}
-                                  className='relative w-8 h-8 rounded border overflow-hidden'
-                                >
-                                  <img
-                                    src={preview}
-                                    alt={`Preview ${index + 1}`}
-                                    className='w-full h-full object-cover'
-                                  />
-                                </div>
-                              ))}
-                            {item.imagePreviews.length > 3 && (
-                              <div className='w-8 h-8 rounded border flex items-center justify-center bg-gray-100 text-xs'>
-                                +{item.imagePreviews.length - 3}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className='text-xs text-muted-foreground'>
-                            No images
-                          </div>
-                        )}
+                        {/* Thumbnails hidden per requirements */}
                       </div>
                     </TableCell>
                     <TableCell className='border border-gray-300'>
@@ -486,9 +444,15 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                               onClick={() => {
                                 onLoadQuotationImages(parseInt(item.id, 10));
                                 // Show images in popup if they exist
-                                if (quotationImageUrlsMap[item.id] && quotationImageUrlsMap[item.id].length > 0) {
-                                  showImagesInPopup(quotationImageUrlsMap[item.id], `Quotation Images - ${item.productName}`);
-                              }
+                                if (
+                                  quotationImageUrlsMap[item.id] &&
+                                  quotationImageUrlsMap[item.id].length > 0
+                                ) {
+                                  showImagesInPopup(
+                                    quotationImageUrlsMap[item.id],
+                                    `Quotation Images - ${item.productName}`
+                                  );
+                                }
                               }}
                               disabled={!isReadOnly}
                               className='gap-2'
@@ -498,28 +462,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                             </Button>
                           </div>
                         )}
-                        {/* Remote quotation thumbnails */}
-                        {quotationImageUrlsMap[item.id] &&
-                          quotationImageUrlsMap[item.id].length > 0 && (
-                            <div className='flex flex-wrap gap-1 mb-2'>
-                              {quotationImageUrlsMap[item.id]
-                                .slice(0, 6)
-                                .map((url) => (
-                                  <a
-                                    key={url}
-                                    href={url}
-                                    target='_blank'
-                                    rel='noreferrer'
-                                  >
-                                    <img
-                                      src={url}
-                                      alt='Quotation'
-                                      className='w-8 h-8 object-cover rounded border'
-                                    />
-                                  </a>
-                                ))}
-                            </div>
-                          )}
+                        {/* Quotation thumbnails hidden per requirements */}
                         {!isReadOnly && (
                           <div className='flex gap-1'>
                             <Button
@@ -900,7 +843,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                 <X className='w-4 h-4' />
               </Button>
             </div>
-            
+
             {/* Content */}
             <div className='p-4 overflow-y-auto max-h-[60vh]'>
               {selectedImages.length > 0 ? (

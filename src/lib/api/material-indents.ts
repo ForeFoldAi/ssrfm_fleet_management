@@ -1,5 +1,9 @@
 import api from './axios';
-import { PaginatedResponse, QueryParams } from './types';
+import {
+  ApproveRejectMaterialIndentRequest,
+  PaginatedResponse,
+  QueryParams,
+} from './types';
 import { MaterialIndent } from './types';
 
 export enum IndentStatus {
@@ -99,9 +103,13 @@ export const materialIndentsApi = {
   /**
    * Approve a material indent
    */
-  approve: async (id: number): Promise<MaterialIndent> => {
+  approve: async (
+    id: number,
+    payload: ApproveRejectMaterialIndentRequest
+  ): Promise<MaterialIndent> => {
     const response = await api.post<MaterialIndent>(
-      `/inventory/material-indents/${id}/approve`
+      `/inventory/material-indents/${id}/approve`,
+      payload
     );
     return response.data;
   },

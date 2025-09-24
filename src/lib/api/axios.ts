@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 // Base API URL
-const API_URL = import.meta.env.VITE_APP_API_BASE_URL;
+const API_URL =
+  import.meta.env.VITE_APP_API_BASE_URL ||
+  'https://0ehawyo6gg.execute-api.ap-south-1.amazonaws.com/dev';
 
 // Create axios instance with custom config
 const api = axios.create({

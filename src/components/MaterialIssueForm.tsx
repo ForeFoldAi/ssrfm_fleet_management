@@ -313,9 +313,9 @@ export const MaterialIssueForm = ({
       }
 
       if (!item.machineId) {
-        newErrors[`machineId_${index}`] = `Machine selection is required for item ${
-          index + 1
-        }`;
+        newErrors[
+          `machineId_${index}`
+        ] = `Machine selection is required for item ${index + 1}`;
       }
     });
 
@@ -330,44 +330,69 @@ export const MaterialIssueForm = ({
     setIsSubmitting(true);
 
     try {
-      // Create a FormData object for the API request
-      const formDataObj = new FormData();
+      // Prepare valid items
+      const validItems = formData.items.filter(
+        (item) => item.nameOfMaterial && item.issuedQty
+      );
 
-      // Add additional notes and date
-      formDataObj.append('additionalNotes', formData.additionalNotes);
-      formDataObj.append('issueDate', formData.date);
+      let successCount = 0;
+      let failureCount = 0;
+      let lastSuccessResponse: MaterialIssue | null = null;
 
-      // Prepare items data as JSON string
-      const itemsData = formData.items
-        .filter((item) => item.nameOfMaterial && item.issuedQty)
-        .map((item) => ({
-          materialId: item.materialId,
-          issuedQuantity: parseInt(item.issuedQty),
-          receiverName: item.receiverName,
-          purpose: item.purpose,
-          machineId: item.machineId,
-        }));
+      // Submit one API request per item (sequentially)
+      for (let i = 0; i < validItems.length; i++) {
+        const item = validItems[i];
 
-      formDataObj.append('items', JSON.stringify(itemsData));
-
-      // Add image files
-      formData.items.forEach((item) => {
+        const singleItemForm = new FormData();
+        singleItemForm.append('additionalNotes', formData.additionalNotes);
+        singleItemForm.append('issueDate', formData.date);
+        singleItemForm.append(
+          'items',
+          JSON.stringify([
+            {
+              materialId: item.materialId,
+              issuedQuantity: parseInt(item.issuedQty),
+              receiverName: item.receiverName,
+              purpose: item.purpose,
+              machineId: item.machineId,
+            },
+          ])
+        );
         if (item.image) {
-          formDataObj.append('files', item.image);
+          singleItemForm.append('files', item.image);
         }
-      });
 
-      // Submit to API
-      const response = await materialIssuesApi.create(formDataObj);
+        try {
+          const resp = await materialIssuesApi.create(singleItemForm);
+          lastSuccessResponse = resp;
+          successCount++;
+        } catch (err) {
+          console.error('Error issuing item:', err);
+          failureCount++;
+        }
+      }
 
-      // Call the onSubmit callback with the API response
-      onSubmit(response);
+      // Notify parent with last successful response (if any)
+      if (lastSuccessResponse) {
+        onSubmit(lastSuccessResponse);
+      }
 
-      const issuedItemsCount = itemsData.length;
-      toast({
-        title: 'Material Issue Created',
-        description: `${issuedItemsCount} material item(s) issued successfully`,
-      });
+      // Toast summary
+      const total = validItems.length;
+      if (successCount === total) {
+        toast({
+          title: 'Material Issues Created',
+          description: `${successCount} material item(s) issued successfully`,
+        });
+      } else if (successCount > 0) {
+        toast({
+          title: 'Partial Success',
+          description: `${successCount} succeeded, ${failureCount} failed.`,
+          variant: 'default',
+        });
+      } else {
+        throw new Error('All item submissions failed.');
+      }
 
       // Reset form
       setFormData({

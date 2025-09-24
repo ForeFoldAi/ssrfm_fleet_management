@@ -80,15 +80,18 @@ import { useRequestWorkflow } from '../hooks/useRequestWorkflow';
 import { HistoryView } from '../components/HistoryView';
 import { generatePurchaseId, parseLocationFromId } from '../lib/utils';
 import materialIndentsApi, { IndentStatus } from '../lib/api/material-indents';
-import { materialPurchasesApi, MaterialPurchaseStatus } from '../lib/api/materials-purchases';
+import {
+  materialPurchasesApi,
+  MaterialPurchaseStatus,
+} from '../lib/api/materials-purchases';
 import { branchesApi } from '../lib/api/branches';
-import { 
-  Branch, 
-  MaterialIndent, 
+import {
+  Branch,
+  MaterialIndent,
   PaginationMeta,
   MaterialPurchase,
   ApproveRejectMaterialIndentRequest,
-  ReceiveMaterialPurchaseItemRequest
+  ReceiveMaterialPurchaseItemRequest,
 } from '../lib/api/types';
 import { toast } from '../hooks/use-toast';
 
@@ -110,23 +113,29 @@ export const MaterialOrderBookTab = () => {
   const [isResubmitFormOpen, setIsResubmitFormOpen] = useState(false);
 
   // New state for approval/rejection workflow
-  const [selectedIndentForApproval, setSelectedIndentForApproval] = useState<MaterialIndent | null>(null);
+  const [selectedIndentForApproval, setSelectedIndentForApproval] =
+    useState<MaterialIndent | null>(null);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
-  const [selectedQuotationId, setSelectedQuotationId] = useState<number | null>(null);
+  const [selectedQuotationId, setSelectedQuotationId] = useState<number | null>(
+    null
+  );
 
   // New state for material purchase workflow
-  const [selectedIndentForOrder, setSelectedIndentForOrder] = useState<MaterialIndent | null>(null);
+  const [selectedIndentForOrder, setSelectedIndentForOrder] =
+    useState<MaterialIndent | null>(null);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
-  const [selectedPurchase, setSelectedPurchase] = useState<MaterialPurchase | null>(null);
+  const [selectedPurchase, setSelectedPurchase] =
+    useState<MaterialPurchase | null>(null);
   const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
-  const [receiveData, setReceiveData] = useState<ReceiveMaterialPurchaseItemRequest>({
-    receivedQuantity: 0,
-    receivedDate: new Date().toISOString().split('T')[0],
-    notes: ''
-  });
+  const [receiveData, setReceiveData] =
+    useState<ReceiveMaterialPurchaseItemRequest>({
+      receivedQuantity: 0,
+      receivedDate: new Date().toISOString().split('T')[0],
+      notes: '',
+    });
 
   // Sorting state
   const [sortBy, setSortBy] = useState<string>('id');
@@ -173,7 +182,8 @@ export const MaterialOrderBookTab = () => {
 
   // Fetch material indents
   const fetchMaterialIndents = useCallback(
-    async (page = 1, limit = 5) => { // Changed default to 5
+    async (page = 1, limit = 5) => {
+      // Changed default to 5
       setIsLoading(true);
       setError(null);
 
@@ -257,9 +267,11 @@ export const MaterialOrderBookTab = () => {
     if (sortBy !== column) {
       return <ArrowUpDown className='w-4 h-4 text-muted-foreground' />;
     }
-    return sortOrder === 'ASC' ? 
-      <ChevronUp className='w-4 h-4 text-primary' /> : 
-      <ChevronDown className='w-4 h-4 text-primary' />;
+    return sortOrder === 'ASC' ? (
+      <ChevronUp className='w-4 h-4 text-primary' />
+    ) : (
+      <ChevronDown className='w-4 h-4 text-primary' />
+    );
   };
 
   // Workflow management
@@ -779,8 +791,11 @@ export const MaterialOrderBookTab = () => {
         quotationId: selectedQuotationId,
       };
 
-      await materialIndentsApi.approve(selectedIndentForApproval.id);
-      
+      await materialIndentsApi.approve(
+        selectedIndentForApproval.id,
+        approvalData
+      );
+
       toast({
         title: 'Success',
         description: 'Material indent approved successfully.',
@@ -813,8 +828,11 @@ export const MaterialOrderBookTab = () => {
     }
 
     try {
-      await materialIndentsApi.reject(selectedIndentForApproval.id, rejectionReason);
-      
+      await materialIndentsApi.reject(
+        selectedIndentForApproval.id,
+        rejectionReason
+      );
+
       toast({
         title: 'Success',
         description: 'Material indent rejected successfully.',
@@ -850,24 +868,37 @@ export const MaterialOrderBookTab = () => {
       const purchaseData = {
         purchaseOrderNumber: `PO-${selectedIndentForOrder.uniqueId}`,
         orderDate: new Date().toISOString().split('T')[0],
-        totalValue: selectedIndentForOrder.items.reduce((total, item) => {
-          const quotation = item.selectedQuotation || item.quotations[0];
-          return total + (quotation ? Number(quotation.quotationAmount) * item.requestedQuantity : 0);
-        }, 0).toString(),
+        totalValue: selectedIndentForOrder.items
+          .reduce((total, item) => {
+            const quotation = item.selectedQuotation || item.quotations[0];
+            return (
+              total +
+              (quotation
+                ? Number(quotation.quotationAmount) * item.requestedQuantity
+                : 0)
+            );
+          }, 0)
+          .toString(),
         additionalNotes: selectedIndentForOrder.additionalNotes || '',
-        items: selectedIndentForOrder.items.map(item => ({
+        items: selectedIndentForOrder.items.map((item) => ({
           materialId: item.material.id,
           orderedQuantity: item.requestedQuantity,
-          unitPrice: item.selectedQuotation?.quotationAmount || item.quotations[0]?.quotationAmount || '0',
-          notes: item.notes || ''
-        }))
+          unitPrice:
+            item.selectedQuotation?.quotationAmount ||
+            item.quotations[0]?.quotationAmount ||
+            '0',
+          notes: item.notes || '',
+        })),
       };
 
-      await materialPurchasesApi.create(purchaseData);
-      
+      await materialPurchasesApi.create({
+        ...purchaseData,
+        indentId: selectedIndentForOrder.id,
+      });
+
       // Update indent status to ordered
       // Note: You might need to add an update status API call here
-      
+
       toast({
         title: 'Success',
         description: 'Purchase order created successfully.',
@@ -888,7 +919,11 @@ export const MaterialOrderBookTab = () => {
 
   // New function to handle material receipt
   const handleReceiveMaterial = async () => {
-    if (!selectedPurchase || !receiveData.receivedQuantity || !receiveData.receivedDate) {
+    if (
+      !selectedPurchase ||
+      !receiveData.receivedQuantity ||
+      !receiveData.receivedDate
+    ) {
       toast({
         title: 'Error',
         description: 'Please fill in all required fields.',
@@ -915,7 +950,7 @@ export const MaterialOrderBookTab = () => {
         firstItem.id,
         receiveData
       );
-      
+
       toast({
         title: 'Success',
         description: 'Material received successfully.',
@@ -926,7 +961,7 @@ export const MaterialOrderBookTab = () => {
       setReceiveData({
         receivedQuantity: 0,
         receivedDate: new Date().toISOString().split('T')[0],
-        notes: ''
+        notes: '',
       });
       fetchMaterialIndents(pagination.page, pagination.limit);
     } catch (error) {
@@ -943,14 +978,26 @@ export const MaterialOrderBookTab = () => {
   const formatPurchaseId = (uniqueId: string, branchCode?: string) => {
     // Convert to uppercase
     let formattedId = uniqueId.toUpperCase();
-    
+
     // Convert unit numbers to Roman numerals (UNIT1 -> UNIT-I, UNIT2 -> UNIT-II, etc.)
     formattedId = formattedId.replace(/UNIT(\d+)/g, (match, unitNumber) => {
       const num = parseInt(unitNumber, 10);
-      const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+      const romanNumerals = [
+        '',
+        'I',
+        'II',
+        'III',
+        'IV',
+        'V',
+        'VI',
+        'VII',
+        'VIII',
+        'IX',
+        'X',
+      ];
       return `UNIT-${romanNumerals[num] || unitNumber}`;
     });
-    
+
     return formattedId;
   };
 
@@ -1145,75 +1192,75 @@ export const MaterialOrderBookTab = () => {
             <TableHeader>
               <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
                 <TableHead className='w-12 text-foreground font-semibold'></TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[120px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('uniqueId')}
                 >
                   <div className='flex items-center gap-2'>
-                  Purchase ID
+                    Purchase ID
                     {getSortIcon('uniqueId')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[150px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('materialName')}
                 >
                   <div className='flex items-center gap-2'>
-                  Materials
+                    Materials
                     {getSortIcon('materialName')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('quantity')}
                 >
                   <div className='flex items-center gap-2'>
-                  Quantity
+                    Quantity
                     {getSortIcon('quantity')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('unitPrice')}
                 >
                   <div className='flex items-center gap-2'>
-                  Price
+                    Price
                     {getSortIcon('unitPrice')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('value')}
                 >
                   <div className='flex items-center gap-2'>
-                  Total Value
+                    Total Value
                     {getSortIcon('value')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('status')}
                 >
                   <div className='flex items-center gap-2'>
-                  Status
+                    Status
                     {getSortIcon('status')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('requestDate')}
                 >
                   <div className='flex items-center gap-2'>
-                  Purchased Date
+                    Purchased Date
                     {getSortIcon('requestDate')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('machineName')}
                 >
                   <div className='flex items-center gap-2'>
-                  Purchased For
+                    Purchased For
                     {getSortIcon('machineName')}
                   </div>
                 </TableHead>
@@ -1686,75 +1733,75 @@ export const MaterialOrderBookTab = () => {
           <Table>
             <TableHeader>
               <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
-                <TableHead 
+                <TableHead
                   className='min-w-[120px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('uniqueId')}
                 >
                   <div className='flex items-center gap-2'>
-                  Purchase ID
+                    Purchase ID
                     {getSortIcon('uniqueId')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[150px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('materialName')}
                 >
                   <div className='flex items-center gap-2'>
-                  Materials
+                    Materials
                     {getSortIcon('materialName')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('quantity')}
                 >
                   <div className='flex items-center gap-2'>
-                  Quantity
+                    Quantity
                     {getSortIcon('quantity')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('unitPrice')}
                 >
                   <div className='flex items-center gap-2'>
-                  Price
+                    Price
                     {getSortIcon('unitPrice')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('value')}
                 >
                   <div className='flex items-center gap-2'>
-                  Total Value
+                    Total Value
                     {getSortIcon('value')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('status')}
                 >
                   <div className='flex items-center gap-2'>
-                  Status
+                    Status
                     {getSortIcon('status')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('requestDate')}
                 >
                   <div className='flex items-center gap-2'>
-                  Purchased Date
+                    Purchased Date
                     {getSortIcon('requestDate')}
                   </div>
                 </TableHead>
-                <TableHead 
+                <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('machineName')}
                 >
                   <div className='flex items-center gap-2'>
-                  Purchased For
+                    Purchased For
                     {getSortIcon('machineName')}
                   </div>
                 </TableHead>
@@ -1815,25 +1862,29 @@ export const MaterialOrderBookTab = () => {
 
   // Add pagination handlers
   const handlePageChange = (newPage: number) => {
-    setPagination(prev => ({ ...prev, page: newPage }));
+    setPagination((prev) => ({ ...prev, page: newPage }));
     fetchMaterialIndents(newPage, pagination.limit);
   };
 
   const handleLimitChange = (newLimit: number) => {
-    setPagination(prev => ({ ...prev, limit: newLimit, page: 1 }));
+    setPagination((prev) => ({ ...prev, limit: newLimit, page: 1 }));
     fetchMaterialIndents(1, newLimit);
   };
 
   // Enhanced action buttons in the expanded detail row
   const renderActionButtons = (request: any) => {
-    const canApprove = hasPermission('inventory:material-indents:approve') && 
-                      request.status === 'pending_approval';
-    const canReject = hasPermission('inventory:material-indents:approve') && 
-                     request.status === 'pending_approval';
-    const canOrder = hasPermission('inventory:material-indents:update') && 
-                    request.status === 'approved';
-    const canReceive = hasPermission('inventory:material-purchases:receive') && 
-                      (request.status === 'ordered' || request.status === 'partially_received');
+    const canApprove =
+      hasPermission('inventory:material-indents:approve') &&
+      request.status === 'pending_approval';
+    const canReject =
+      hasPermission('inventory:material-indents:approve') &&
+      request.status === 'pending_approval';
+    const canOrder =
+      hasPermission('inventory:material-indents:update') &&
+      request.status === 'approved';
+    const canReceive =
+      hasPermission('inventory:material-purchases:receive') &&
+      (request.status === 'ordered' || request.status === 'partially_received');
 
     return (
       <div className='flex flex-wrap gap-2 pt-4 border-t mt-6'>
@@ -1905,29 +1956,31 @@ export const MaterialOrderBookTab = () => {
                 additionalNotes: '',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
-                items: [{
-                  id: 1,
-                  materialId: 1,
-                  materialName: request.materialName,
-                  specifications: request.specifications,
-                  orderedQuantity: parseInt(request.quantity),
-                  receivedQuantity: 0,
-                  pendingQuantity: parseInt(request.quantity),
-                  unitPrice: request.unitPrice,
-                  totalPrice: request.value,
-                  status: 'pending',
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                  material: {
+                items: [
+                  {
                     id: 1,
-                    name: request.materialName,
+                    materialId: 1,
+                    materialName: request.materialName,
                     specifications: request.specifications,
-                    makerBrand: request.maker,
-                    currentStock: 0,
+                    orderedQuantity: parseInt(request.quantity),
+                    receivedQuantity: 0,
+                    pendingQuantity: parseInt(request.quantity),
+                    unitPrice: request.unitPrice,
+                    totalPrice: request.value,
+                    status: 'pending',
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                  }
-                }],
+                    material: {
+                      id: 1,
+                      name: request.materialName,
+                      specifications: request.specifications,
+                      makerBrand: request.maker,
+                      currentStock: 0,
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    },
+                  },
+                ],
                 branch: {
                   id: 1,
                   name: request.unitName,
@@ -1946,7 +1999,7 @@ export const MaterialOrderBookTab = () => {
                   roles: [],
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
-                }
+                },
               });
               setIsReceiveDialogOpen(true);
             }}
@@ -1974,9 +2027,7 @@ export const MaterialOrderBookTab = () => {
             variant='outline'
             className='gap-2 rounded-lg'
             onClick={() =>
-              request.status === 'reverted'
-                ? openResubmitForm(request)
-                : null
+              request.status === 'reverted' ? openResubmitForm(request) : null
             }
           >
             <Plus className='w-4 h-4' />
@@ -2152,18 +2203,21 @@ export const MaterialOrderBookTab = () => {
           ) : filteredRequests.length > 0 ? (
             <>
               {viewMode === 'table' ? (
-              <TableView requests={filteredRequests} />
-            ) : (
-              <ListView requests={filteredRequests} />
+                <TableView requests={filteredRequests} />
+              ) : (
+                <ListView requests={filteredRequests} />
               )}
-              
+
               {/* Pagination Controls */}
               <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
                 {/* Page Info */}
                 <div className='text-sm text-muted-foreground'>
-                  Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
-                  {Math.min(pagination.page * pagination.limit, pagination.itemCount)} of{' '}
-                  {pagination.itemCount} entries
+                  Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
+                  {Math.min(
+                    pagination.page * pagination.limit,
+                    pagination.itemCount
+                  )}{' '}
+                  of {pagination.itemCount} entries
                 </div>
 
                 {/* Pagination Controls */}
@@ -2173,7 +2227,9 @@ export const MaterialOrderBookTab = () => {
                     <span className='text-sm text-muted-foreground'>Show:</span>
                     <Select
                       value={pagination.limit.toString()}
-                      onValueChange={(value) => handleLimitChange(parseInt(value))}
+                      onValueChange={(value) =>
+                        handleLimitChange(parseInt(value))
+                      }
                     >
                       <SelectTrigger className='w-20 h-8'>
                         <SelectValue />
@@ -2186,7 +2242,9 @@ export const MaterialOrderBookTab = () => {
                         <SelectItem value='100'>100</SelectItem>
                       </SelectContent>
                     </Select>
-                    <span className='text-sm text-muted-foreground'>per page</span>
+                    <span className='text-sm text-muted-foreground'>
+                      per page
+                    </span>
                   </div>
 
                   {/* Page navigation */}
@@ -2195,13 +2253,14 @@ export const MaterialOrderBookTab = () => {
                       variant='outline'
                       size='sm'
                       onClick={() => handlePageChange(1)}
-                      disabled={!pagination.hasPreviousPage || pagination.page === 1}
+                      disabled={
+                        !pagination.hasPreviousPage || pagination.page === 1
+                      }
                       className='h-8 w-8 p-0'
                     >
                       <ChevronsLeft className='w-4 h-4' />
-                   
                     </Button>
-                    
+
                     <Button
                       variant='outline'
                       size='sm'
@@ -2214,30 +2273,40 @@ export const MaterialOrderBookTab = () => {
 
                     {/* Page numbers */}
                     <div className='flex items-center gap-1 mx-2'>
-                      {Array.from({ length: Math.min(5, pagination.pageCount) }, (_, i) => {
-                        let pageNum;
-                        if (pagination.pageCount <= 5) {
-                          pageNum = i + 1;
-                        } else if (pagination.page <= 3) {
-                          pageNum = i + 1;
-                        } else if (pagination.page >= pagination.pageCount - 2) {
-                          pageNum = pagination.pageCount - 4 + i;
-                        } else {
-                          pageNum = pagination.page - 2 + i;
-                        }
+                      {Array.from(
+                        { length: Math.min(5, pagination.pageCount) },
+                        (_, i) => {
+                          let pageNum;
+                          if (pagination.pageCount <= 5) {
+                            pageNum = i + 1;
+                          } else if (pagination.page <= 3) {
+                            pageNum = i + 1;
+                          } else if (
+                            pagination.page >=
+                            pagination.pageCount - 2
+                          ) {
+                            pageNum = pagination.pageCount - 4 + i;
+                          } else {
+                            pageNum = pagination.page - 2 + i;
+                          }
 
-                        return (
-                          <Button
-                            key={pageNum}
-                            variant={pagination.page === pageNum ? 'default' : 'outline'}
-                            size='sm'
-                            onClick={() => handlePageChange(pageNum)}
-                            className='h-8 w-8 p-0'
-                          >
-                            {pageNum}
-                          </Button>
-                        );
-                      })}
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={
+                                pagination.page === pageNum
+                                  ? 'default'
+                                  : 'outline'
+                              }
+                              size='sm'
+                              onClick={() => handlePageChange(pageNum)}
+                              className='h-8 w-8 p-0'
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        }
+                      )}
                     </div>
 
                     <Button
@@ -2249,16 +2318,18 @@ export const MaterialOrderBookTab = () => {
                     >
                       <ChevronRight className='w-4 h-4' />
                     </Button>
-                    
+
                     <Button
                       variant='outline'
                       size='sm'
                       onClick={() => handlePageChange(pagination.pageCount)}
-                      disabled={!pagination.hasNextPage || pagination.page === pagination.pageCount}
+                      disabled={
+                        !pagination.hasNextPage ||
+                        pagination.page === pagination.pageCount
+                      }
                       className='h-8 w-8 p-0'
                     >
                       <ChevronsRight className='w-4 h-4' />
-                     
                     </Button>
                   </div>
                 </div>
@@ -2320,7 +2391,10 @@ export const MaterialOrderBookTab = () => {
       )}
 
       {/* Approval Dialog */}
-      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+      <Dialog
+        open={isApprovalDialogOpen}
+        onOpenChange={setIsApprovalDialogOpen}
+      >
         <DialogContent className='max-w-2xl'>
           <DialogHeader>
             <DialogTitle>Approve Material Indent</DialogTitle>
@@ -2329,15 +2403,31 @@ export const MaterialOrderBookTab = () => {
             {selectedIndentForApproval && (
               <div className='space-y-4'>
                 <div className='p-4 bg-green-50 border border-green-200 rounded-lg'>
-                  <h3 className='font-semibold text-green-800 mb-2'>Indent Details</h3>
-                  <p><strong>ID:</strong> {selectedIndentForApproval.uniqueId}</p>
-                  <p><strong>Requested By:</strong> {selectedIndentForApproval.requestedBy?.name}</p>
-                  <p><strong>Date:</strong> {new Date(selectedIndentForApproval.requestDate).toLocaleDateString()}</p>
+                  <h3 className='font-semibold text-green-800 mb-2'>
+                    Indent Details
+                  </h3>
+                  <p>
+                    <strong>ID:</strong> {selectedIndentForApproval.uniqueId}
+                  </p>
+                  <p>
+                    <strong>Requested By:</strong>{' '}
+                    {selectedIndentForApproval.requestedBy?.name}
+                  </p>
+                  <p>
+                    <strong>Date:</strong>{' '}
+                    {new Date(
+                      selectedIndentForApproval.requestDate
+                    ).toLocaleDateString()}
+                  </p>
                 </div>
-                
+
                 <div className='space-y-3'>
                   <Label>Select Item to Approve</Label>
-                  <Select onValueChange={(value) => setSelectedItemId(parseInt(value))}>
+                  <Select
+                    onValueChange={(value) =>
+                      setSelectedItemId(parseInt(value))
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder='Select an item' />
                     </SelectTrigger>
@@ -2354,16 +2444,24 @@ export const MaterialOrderBookTab = () => {
                 {selectedItemId && (
                   <div className='space-y-3'>
                     <Label>Select Quotation</Label>
-                    <Select onValueChange={(value) => setSelectedQuotationId(parseInt(value))}>
+                    <Select
+                      onValueChange={(value) =>
+                        setSelectedQuotationId(parseInt(value))
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder='Select a quotation' />
                       </SelectTrigger>
                       <SelectContent>
                         {selectedIndentForApproval.items
-                          .find(item => item.id === selectedItemId)
+                          .find((item) => item.id === selectedItemId)
                           ?.quotations.map((quotation) => (
-                            <SelectItem key={quotation.id} value={quotation.id.toString()}>
-                              {quotation.vendorName} - ₹{quotation.quotationAmount}
+                            <SelectItem
+                              key={quotation.id}
+                              value={quotation.id.toString()}
+                            >
+                              {quotation.vendorName} - ₹
+                              {quotation.quotationAmount}
                             </SelectItem>
                           ))}
                       </SelectContent>
@@ -2372,10 +2470,13 @@ export const MaterialOrderBookTab = () => {
                 )}
 
                 <div className='flex justify-end gap-2'>
-                  <Button variant='outline' onClick={() => setIsApprovalDialogOpen(false)}>
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsApprovalDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleApproveIndent}
                     disabled={!selectedItemId || !selectedQuotationId}
                     className='bg-green-600 hover:bg-green-700'
@@ -2391,7 +2492,10 @@ export const MaterialOrderBookTab = () => {
       </Dialog>
 
       {/* Rejection Dialog */}
-      <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
+      <Dialog
+        open={isRejectionDialogOpen}
+        onOpenChange={setIsRejectionDialogOpen}
+      >
         <DialogContent className='max-w-2xl'>
           <DialogHeader>
             <DialogTitle>Reject Material Indent</DialogTitle>
@@ -2400,12 +2504,24 @@ export const MaterialOrderBookTab = () => {
             {selectedIndentForApproval && (
               <div className='space-y-4'>
                 <div className='p-4 bg-red-50 border border-red-200 rounded-lg'>
-                  <h3 className='font-semibold text-red-800 mb-2'>Indent Details</h3>
-                  <p><strong>ID:</strong> {selectedIndentForApproval.uniqueId}</p>
-                  <p><strong>Requested By:</strong> {selectedIndentForApproval.requestedBy?.name}</p>
-                  <p><strong>Date:</strong> {new Date(selectedIndentForApproval.requestDate).toLocaleDateString()}</p>
+                  <h3 className='font-semibold text-red-800 mb-2'>
+                    Indent Details
+                  </h3>
+                  <p>
+                    <strong>ID:</strong> {selectedIndentForApproval.uniqueId}
+                  </p>
+                  <p>
+                    <strong>Requested By:</strong>{' '}
+                    {selectedIndentForApproval.requestedBy?.name}
+                  </p>
+                  <p>
+                    <strong>Date:</strong>{' '}
+                    {new Date(
+                      selectedIndentForApproval.requestDate
+                    ).toLocaleDateString()}
+                  </p>
                 </div>
-                
+
                 <div className='space-y-3'>
                   <Label htmlFor='rejectionReason'>Rejection Reason *</Label>
                   <Textarea
@@ -2418,10 +2534,13 @@ export const MaterialOrderBookTab = () => {
                 </div>
 
                 <div className='flex justify-end gap-2'>
-                  <Button variant='outline' onClick={() => setIsRejectionDialogOpen(false)}>
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsRejectionDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleRejectIndent}
                     disabled={!rejectionReason.trim()}
                     className='bg-red-600 hover:bg-red-700'
@@ -2446,31 +2565,58 @@ export const MaterialOrderBookTab = () => {
             {selectedIndentForOrder && (
               <div className='space-y-4'>
                 <div className='p-4 bg-blue-50 border border-blue-200 rounded-lg'>
-                  <h3 className='font-semibold text-blue-800 mb-2'>Indent Details</h3>
-                  <p><strong>ID:</strong> {selectedIndentForOrder.uniqueId}</p>
-                  <p><strong>Requested By:</strong> {selectedIndentForOrder.requestedBy?.name}</p>
-                  <p><strong>Date:</strong> {new Date(selectedIndentForOrder.requestDate).toLocaleDateString()}</p>
+                  <h3 className='font-semibold text-blue-800 mb-2'>
+                    Indent Details
+                  </h3>
+                  <p>
+                    <strong>ID:</strong> {selectedIndentForOrder.uniqueId}
+                  </p>
+                  <p>
+                    <strong>Requested By:</strong>{' '}
+                    {selectedIndentForOrder.requestedBy?.name}
+                  </p>
+                  <p>
+                    <strong>Date:</strong>{' '}
+                    {new Date(
+                      selectedIndentForOrder.requestDate
+                    ).toLocaleDateString()}
+                  </p>
                 </div>
-                
+
                 <div className='space-y-3'>
                   <h4 className='font-semibold'>Items to Order:</h4>
                   <div className='space-y-2'>
                     {selectedIndentForOrder.items.map((item) => (
-                      <div key={item.id} className='p-3 bg-gray-50 rounded border'>
-                        <p><strong>{item.material.name}</strong></p>
+                      <div
+                        key={item.id}
+                        className='p-3 bg-gray-50 rounded border'
+                      >
+                        <p>
+                          <strong>{item.material.name}</strong>
+                        </p>
                         <p>Quantity: {item.requestedQuantity}</p>
-                        <p>Selected Quotation: {item.selectedQuotation?.vendorName || 'None selected'}</p>
-                        <p>Amount: ₹{item.selectedQuotation?.quotationAmount || '0'}</p>
+                        <p>
+                          Selected Quotation:{' '}
+                          {item.selectedQuotation?.vendorName ||
+                            'None selected'}
+                        </p>
+                        <p>
+                          Amount: ₹
+                          {item.selectedQuotation?.quotationAmount || '0'}
+                        </p>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 <div className='flex justify-end gap-2'>
-                  <Button variant='outline' onClick={() => setIsOrderDialogOpen(false)}>
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsOrderDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleCreatePurchaseOrder}
                     className='bg-blue-600 hover:bg-blue-700'
                   >
@@ -2494,24 +2640,38 @@ export const MaterialOrderBookTab = () => {
             {selectedPurchase && (
               <div className='space-y-4'>
                 <div className='p-4 bg-orange-50 border border-orange-200 rounded-lg'>
-                  <h3 className='font-semibold text-orange-800 mb-2'>Purchase Order Details</h3>
-                  <p><strong>PO Number:</strong> {selectedPurchase.purchaseOrderNumber}</p>
-                  <p><strong>Order Date:</strong> {new Date(selectedPurchase.orderDate).toLocaleDateString()}</p>
-                  <p><strong>Total Value:</strong> ₹{selectedPurchase.totalValue}</p>
+                  <h3 className='font-semibold text-orange-800 mb-2'>
+                    Purchase Order Details
+                  </h3>
+                  <p>
+                    <strong>PO Number:</strong>{' '}
+                    {selectedPurchase.purchaseOrderNumber}
+                  </p>
+                  <p>
+                    <strong>Order Date:</strong>{' '}
+                    {new Date(selectedPurchase.orderDate).toLocaleDateString()}
+                  </p>
+                  <p>
+                    <strong>Total Value:</strong> ₹{selectedPurchase.totalValue}
+                  </p>
                 </div>
-                
+
                 <div className='space-y-3'>
                   <div className='grid grid-cols-2 gap-4'>
                     <div>
-                      <Label htmlFor='receivedQuantity'>Received Quantity *</Label>
+                      <Label htmlFor='receivedQuantity'>
+                        Received Quantity *
+                      </Label>
                       <Input
                         id='receivedQuantity'
                         type='number'
                         value={receiveData.receivedQuantity}
-                        onChange={(e) => setReceiveData(prev => ({
-                          ...prev,
-                          receivedQuantity: parseInt(e.target.value) || 0
-                        }))}
+                        onChange={(e) =>
+                          setReceiveData((prev) => ({
+                            ...prev,
+                            receivedQuantity: parseInt(e.target.value) || 0,
+                          }))
+                        }
                         min='1'
                       />
                     </div>
@@ -2521,35 +2681,44 @@ export const MaterialOrderBookTab = () => {
                         id='receivedDate'
                         type='date'
                         value={receiveData.receivedDate}
-                        onChange={(e) => setReceiveData(prev => ({
-                          ...prev,
-                          receivedDate: e.target.value
-                        }))}
+                        onChange={(e) =>
+                          setReceiveData((prev) => ({
+                            ...prev,
+                            receivedDate: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor='receiveNotes'>Notes</Label>
                     <Textarea
                       id='receiveNotes'
                       placeholder='Any additional notes about the received material...'
                       value={receiveData.notes}
-                      onChange={(e) => setReceiveData(prev => ({
-                        ...prev,
-                        notes: e.target.value
-                      }))}
+                      onChange={(e) =>
+                        setReceiveData((prev) => ({
+                          ...prev,
+                          notes: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                 </div>
 
                 <div className='flex justify-end gap-2'>
-                  <Button variant='outline' onClick={() => setIsReceiveDialogOpen(false)}>
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsReceiveDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleReceiveMaterial}
-                    disabled={!receiveData.receivedQuantity || !receiveData.receivedDate}
+                    disabled={
+                      !receiveData.receivedQuantity || !receiveData.receivedDate
+                    }
                     className='bg-orange-600 hover:bg-orange-700'
                   >
                     <Package className='w-4 h-4 mr-2' />
@@ -2561,8 +2730,6 @@ export const MaterialOrderBookTab = () => {
           </div>
         </DialogContent>
       </Dialog>
-
-      
     </div>
   );
 };

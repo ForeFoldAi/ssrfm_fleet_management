@@ -38,12 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import {
@@ -58,11 +53,17 @@ import { AddMaterialForm } from './AddMaterialForm';
 import { useRole } from '../contexts/RoleContext';
 import { materialsApi } from '../lib/api/materials';
 import { Material, MaterialCategory, Unit } from '../lib/api/types';
-import { getUnits } from '../lib/api/common';
 import { getMaterialCategories } from '../lib/api/common';
+import { branchesApi } from '../lib/api/branches';
+import { Branch } from '../lib/api/types';
 import { toast } from '../hooks/use-toast';
 
-type SortField = 'name' | 'specifications' | 'currentStock' | 'makerBrand' | 'createdAt';
+type SortField =
+  | 'name'
+  | 'specifications'
+  | 'currentStock'
+  | 'makerBrand'
+  | 'createdAt';
 type SortOrder = 'ASC' | 'DESC';
 
 export const MaterialsTab = () => {
@@ -73,7 +74,9 @@ export const MaterialsTab = () => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
   const [isViewEditOpen, setIsViewEditOpen] = useState(false);
-  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(null);
+  const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(
+    null
+  );
   const [isEditMode, setIsEditMode] = useState(false);
 
   // Sorting state
@@ -82,12 +85,23 @@ export const MaterialsTab = () => {
 
   // API state management - updated to match MachinesTab structure
   const [materials, setMaterials] = useState<Material[]>([]);
-  const [units, setUnits] = useState<Unit[]>([]);
+  const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5); // Changed default to 5 to match MachinesTab
-  const [materialsData, setMaterialsData] = useState<any>(null);
+  const [materialsData, setMaterialsData] = useState<{
+    data?: unknown;
+    meta?: {
+      page: number;
+      limit: number;
+      itemCount: number;
+      pageCount: number;
+      hasPreviousPage: boolean;
+      hasNextPage: boolean;
+    };
+  } | null>(null);
 
   // Fetch materials from API
   const fetchMaterials = async (page = 1, limit = 10) => {
@@ -103,7 +117,7 @@ export const MaterialsTab = () => {
         ...(searchQuery && { search: searchQuery }),
         ...(filterUnit !== 'all' &&
           currentUser?.role === 'company_owner' && {
-            unitId: filterUnit,
+            branchId: filterUnit,
           }),
       };
 
@@ -118,15 +132,23 @@ export const MaterialsTab = () => {
     }
   };
 
-  // Fetch units for filtering (only for company owners)
-  const fetchUnits = async () => {
+  // Fetch branches for filtering (only for company owners)
+  const fetchBranches = async () => {
     if (currentUser?.role !== 'company_owner') return;
 
     try {
-      const response = await getUnits({ limit: 100 });
-      setUnits(response.data);
+      setIsLoadingBranches(true);
+      const response = await branchesApi.getAll({ limit: 100 });
+      setAvailableBranches(response.data);
     } catch (err) {
       console.error('Error fetching units:', err);
+      toast({
+        title: 'Error',
+        description: 'Failed to load units. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingBranches(false);
     }
   };
 
@@ -145,11 +167,13 @@ export const MaterialsTab = () => {
   // Get sort icon for column header
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="w-4 h-4 text-muted-foreground" />;
+      return <ArrowUpDown className='w-4 h-4 text-muted-foreground' />;
     }
-    return sortOrder === 'ASC' 
-      ? <ArrowUp className="w-4 h-4 text-primary" />
-      : <ArrowDown className="w-4 h-4 text-primary" />;
+    return sortOrder === 'ASC' ? (
+      <ArrowUp className='w-4 h-4 text-primary' />
+    ) : (
+      <ArrowDown className='w-4 h-4 text-primary' />
+    );
   };
 
   const toggleRowExpansion = (id: string) => {
@@ -165,7 +189,8 @@ export const MaterialsTab = () => {
   // Initial data fetch
   useEffect(() => {
     fetchMaterials();
-    fetchUnits();
+    fetchBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Refetch when search, filter, or sorting changes
@@ -175,11 +200,13 @@ export const MaterialsTab = () => {
     }, 300); // Debounce search
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, filterUnit, sortField, sortOrder]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, filterUnit, sortField, sortOrder, itemsPerPage]);
 
   // Load materials when pagination changes
   useEffect(() => {
     fetchMaterials(currentPage, itemsPerPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, itemsPerPage]);
 
   const handleAddMaterial = (materialData: Material) => {
@@ -297,22 +324,24 @@ export const MaterialsTab = () => {
           </div>
 
           {/* Unit Filter - Only for Company Owner */}
-          {currentUser?.role === 'company_owner' && units.length > 0 && (
+          {currentUser?.role === 'company_owner' && (
             <Select value={filterUnit} onValueChange={setFilterUnit}>
               <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0 h-10'>
-                <SelectValue placeholder='Select Unit' />
+                <SelectValue placeholder='Select Unit'>
+                  {isLoadingBranches ? 'Loading...' : 'Select Unit'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='all'>All Units</SelectItem>
-                {units.map((unit) => (
-                  <SelectItem key={unit.id} value={unit.id.toString()}>
+                {availableBranches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id.toString()}>
                     <div className='flex items-center gap-2'>
                       <Building2 className='w-4 h-4' />
                       <div>
-                        <div className='font-medium'>{unit.name}</div>
-                        {unit.description && (
+                        <div className='font-medium'>{branch.name}</div>
+                        {branch.location && (
                           <div className='text-xs text-muted-foreground'>
-                            {unit.description}
+                            {branch.location}
                           </div>
                         )}
                       </div>
@@ -438,9 +467,9 @@ export const MaterialsTab = () => {
                   <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
                     <TableHead className='min-w-[150px] text-foreground font-semibold'>
                       <Button
-                        variant="ghost"
+                        variant='ghost'
                         onClick={() => handleSort('name')}
-                        className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
                         Material
                         {getSortIcon('name')}
@@ -448,9 +477,9 @@ export const MaterialsTab = () => {
                     </TableHead>
                     <TableHead className='min-w-[200px] text-foreground font-semibold'>
                       <Button
-                        variant="ghost"
+                        variant='ghost'
                         onClick={() => handleSort('specifications')}
-                        className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
                         Specifications
                         {getSortIcon('specifications')}
@@ -458,9 +487,9 @@ export const MaterialsTab = () => {
                     </TableHead>
                     <TableHead className='min-w-[100px] text-foreground font-semibold'>
                       <Button
-                        variant="ghost"
+                        variant='ghost'
                         onClick={() => handleSort('currentStock')}
-                        className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
                         Current Stock
                         {getSortIcon('currentStock')}
@@ -471,9 +500,9 @@ export const MaterialsTab = () => {
                     </TableHead>
                     <TableHead className='min-w-[120px] text-foreground font-semibold'>
                       <Button
-                        variant="ghost"
+                        variant='ghost'
                         onClick={() => handleSort('makerBrand')}
-                        className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
                         Make/Brand
                         {getSortIcon('makerBrand')}
@@ -527,9 +556,13 @@ export const MaterialsTab = () => {
         <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
           {/* Page Info */}
           <div className='text-sm text-muted-foreground'>
-            Showing {((materialsData.meta.page - 1) * materialsData.meta.limit) + 1} to{' '}
-            {Math.min(materialsData.meta.page * materialsData.meta.limit, materialsData.meta.itemCount)} of{' '}
-            {materialsData.meta.itemCount} entries
+            Showing{' '}
+            {(materialsData.meta.page - 1) * materialsData.meta.limit + 1} to{' '}
+            {Math.min(
+              materialsData.meta.page * materialsData.meta.limit,
+              materialsData.meta.itemCount
+            )}{' '}
+            of {materialsData.meta.itemCount} entries
           </div>
 
           {/* Pagination Controls */}
@@ -569,17 +602,20 @@ export const MaterialsTab = () => {
                   setCurrentPage(1);
                   fetchMaterials(1, itemsPerPage);
                 }}
-                disabled={!materialsData.meta.hasPreviousPage || materialsData.meta.page === 1}
+                disabled={
+                  !materialsData.meta.hasPreviousPage ||
+                  materialsData.meta.page === 1
+                }
                 className='h-8 w-8 p-0'
               >
                 <ChevronsLeft className='w-4 h-4' />
               </Button>
-              
+
               <Button
                 variant='outline'
                 size='sm'
                 onClick={() => {
-                  setCurrentPage(prev => prev - 1);
+                  setCurrentPage((prev) => prev - 1);
                   fetchMaterials(currentPage - 1, itemsPerPage);
                 }}
                 disabled={!materialsData.meta.hasPreviousPage}
@@ -590,40 +626,50 @@ export const MaterialsTab = () => {
 
               {/* Page numbers */}
               <div className='flex items-center gap-1 mx-2'>
-                {Array.from({ length: Math.min(5, materialsData.meta.pageCount) }, (_, i) => {
-                  let pageNum;
-                  if (materialsData.meta.pageCount <= 5) {
-                    pageNum = i + 1;
-                  } else if (materialsData.meta.page <= 3) {
-                    pageNum = i + 1;
-                  } else if (materialsData.meta.page >= materialsData.meta.pageCount - 2) {
-                    pageNum = materialsData.meta.pageCount - 4 + i;
-                  } else {
-                    pageNum = materialsData.meta.page - 2 + i;
-                  }
+                {Array.from(
+                  { length: Math.min(5, materialsData.meta.pageCount) },
+                  (_, i) => {
+                    let pageNum;
+                    if (materialsData.meta.pageCount <= 5) {
+                      pageNum = i + 1;
+                    } else if (materialsData.meta.page <= 3) {
+                      pageNum = i + 1;
+                    } else if (
+                      materialsData.meta.page >=
+                      materialsData.meta.pageCount - 2
+                    ) {
+                      pageNum = materialsData.meta.pageCount - 4 + i;
+                    } else {
+                      pageNum = materialsData.meta.page - 2 + i;
+                    }
 
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={materialsData.meta.page === pageNum ? 'default' : 'outline'}
-                      size='sm'
-                      onClick={() => {
-                        setCurrentPage(pageNum);
-                        fetchMaterials(pageNum, itemsPerPage);
-                      }}
-                      className='h-8 w-8 p-0'
-                  >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={
+                          materialsData.meta.page === pageNum
+                            ? 'default'
+                            : 'outline'
+                        }
+                        size='sm'
+                        onClick={() => {
+                          setCurrentPage(pageNum);
+                          fetchMaterials(pageNum, itemsPerPage);
+                        }}
+                        className='h-8 w-8 p-0'
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  }
+                )}
               </div>
 
               <Button
                 variant='outline'
                 size='sm'
                 onClick={() => {
-                  setCurrentPage(prev => prev + 1);
+                  setCurrentPage((prev) => prev + 1);
                   fetchMaterials(currentPage + 1, itemsPerPage);
                 }}
                 disabled={!materialsData.meta.hasNextPage}
@@ -631,7 +677,7 @@ export const MaterialsTab = () => {
               >
                 <ChevronRight className='w-4 h-4' />
               </Button>
-              
+
               <Button
                 variant='outline'
                 size='sm'
@@ -639,7 +685,10 @@ export const MaterialsTab = () => {
                   setCurrentPage(materialsData.meta.pageCount);
                   fetchMaterials(materialsData.meta.pageCount, itemsPerPage);
                 }}
-                disabled={!materialsData.meta.hasNextPage || materialsData.meta.page === materialsData.meta.pageCount}
+                disabled={
+                  !materialsData.meta.hasNextPage ||
+                  materialsData.meta.page === materialsData.meta.pageCount
+                }
                 className='h-8 w-8 p-0'
               >
                 <ChevronsRight className='w-4 h-4' />
@@ -705,21 +754,23 @@ export const MaterialsTab = () => {
                         className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
                       />
                     ) : (
-                      <p className='text-sm text-foreground py-2'>{selectedMaterial.name}</p>
+                      <p className='text-sm text-foreground py-2'>
+                        {selectedMaterial.name}
+                      </p>
                     )}
                   </div>
 
                   <div className='space-y-1'>
-                    <Label className='text-sm font-medium'>
-                      Make/Brand
-                    </Label>
+                    <Label className='text-sm font-medium'>Make/Brand</Label>
                     {isEditMode ? (
                       <Input
                         defaultValue={selectedMaterial.makerBrand}
                         className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
                       />
                     ) : (
-                      <p className='text-sm text-foreground py-2'>{selectedMaterial.makerBrand}</p>
+                      <p className='text-sm text-foreground py-2'>
+                        {selectedMaterial.makerBrand}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -739,10 +790,10 @@ export const MaterialsTab = () => {
                   </div>
 
                   <div className='space-y-1'>
-                    <Label className='text-sm font-medium'>
-                      Measure Unit
-                    </Label>
-                    <p className='text-sm text-foreground py-2'>{selectedMaterial.unit}</p>
+                    <Label className='text-sm font-medium'>Measure Unit</Label>
+                    <p className='text-sm text-foreground py-2'>
+                      {selectedMaterial.unit}
+                    </p>
                   </div>
                 </div>
 

@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, FileEdit, Package, Loader2, ShoppingCart, CheckCircle, XCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  Save,
+  FileEdit,
+  Package,
+  Loader2,
+  ShoppingCart,
+  CheckCircle,
+  XCircle,
+} from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
   Card,
@@ -20,19 +29,21 @@ import { Textarea } from '../components/ui/textarea';
 import { useRole } from '../contexts/RoleContext';
 import { toast } from '../hooks/use-toast';
 import { RequisitionIndentForm } from '../components/RequisitionIndentForm';
-import { CompanyOwnerRequestForm } from '../components/CompanyOwnerRequestForm';
 import { SupervisorRequestForm } from '../components/SupervisorRequestForm';
-import { VendorQuotationSelector } from '../components/VendorQuotationSelector';
 import { StatusDropdown } from '../components/StatusDropdown';
 import { HistoryView } from '../components/HistoryView';
 import { generatePurchaseId, parseLocationFromId } from '../lib/utils';
 import materialIndentsApi, { IndentStatus } from '../lib/api/material-indents';
-import { materialPurchasesApi, MaterialPurchaseStatus } from '../lib/api/materials-purchases';
-import { 
-  MaterialIndent, 
+import {
+  materialPurchasesApi,
+  MaterialPurchaseStatus,
+} from '../lib/api/materials-purchases';
+import {
+  MaterialIndent,
   MaterialPurchase,
   ApproveRejectMaterialIndentRequest,
-  ReceiveMaterialPurchaseItemRequest
+  ReceiveMaterialPurchaseItemRequest,
+  MaterialPurchaseItem,
 } from '../lib/api/types';
 
 interface VendorQuotation {
@@ -80,6 +91,7 @@ interface RequestData {
     totalValue?: string;
     notes?: string;
     status: string;
+    items?: MaterialPurchaseItem[];
   }>;
   apiData?: MaterialIndent; // Store the original API data
 }
@@ -93,9 +105,7 @@ const RequestDetails: React.FC = () => {
   const decodedRequestId = requestId ? decodeURIComponent(requestId) : null;
 
   const [requestData, setRequestData] = useState<RequestData | null>(null);
-  const [selectedVendors, setSelectedVendors] = useState<
-    Record<string, string>
-  >({});
+  // Removed vendor selection state in favor of dialog-based approval per item
   const [selectedStatuses, setSelectedStatuses] = useState<
     Record<string, string>
   >({});
@@ -105,18 +115,22 @@ const RequestDetails: React.FC = () => {
 
   // New state for enhanced workflow
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
-  const [selectedQuotationId, setSelectedQuotationId] = useState<number | null>(null);
+  const [selectedQuotationId, setSelectedQuotationId] = useState<number | null>(
+    null
+  );
   const [rejectionReason, setRejectionReason] = useState('');
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
-  const [selectedPurchase, setSelectedPurchase] = useState<MaterialPurchase | null>(null);
-  const [receiveData, setReceiveData] = useState<ReceiveMaterialPurchaseItemRequest>({
-    receivedQuantity: 0,
-    receivedDate: new Date().toISOString().split('T')[0],
-    notes: ''
-  });
+  const [selectedPurchase, setSelectedPurchase] =
+    useState<MaterialPurchase | null>(null);
+  const [receiveData, setReceiveData] =
+    useState<ReceiveMaterialPurchaseItemRequest>({
+      receivedQuantity: 0,
+      receivedDate: new Date().toISOString().split('T')[0],
+      notes: '',
+    });
 
   // Available materials and machines will be populated from API data
   const [availableMaterials, setAvailableMaterials] = useState<
@@ -133,14 +147,26 @@ const RequestDetails: React.FC = () => {
   const formatPurchaseId = (uniqueId: string, branchCode?: string) => {
     // Convert to uppercase
     let formattedId = uniqueId.toUpperCase();
-    
+
     // Convert unit numbers to Roman numerals (UNIT1 -> UNIT-I, UNIT2 -> UNIT-II, etc.)
     formattedId = formattedId.replace(/UNIT(\d+)/g, (match, unitNumber) => {
       const num = parseInt(unitNumber, 10);
-      const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+      const romanNumerals = [
+        '',
+        'I',
+        'II',
+        'III',
+        'IV',
+        'V',
+        'VI',
+        'VII',
+        'VIII',
+        'IX',
+        'X',
+      ];
       return `UNIT-${romanNumerals[num] || unitNumber}`;
     });
-    
+
     return formattedId;
   };
 
@@ -210,19 +236,11 @@ const RequestDetails: React.FC = () => {
             totalValue: purchase.totalValue,
             notes: purchase.additionalNotes,
             status: 'purchased',
+            items: purchase.items,
           })),
         };
 
-        // Set initial selected vendors based on API data
-        const initialSelectedVendors: Record<string, string> = {};
-        indentData.items.forEach((item) => {
-          if (item.selectedQuotation) {
-            initialSelectedVendors[item.id.toString()] =
-              item.selectedQuotation.id.toString();
-          }
-        });
-
-        setSelectedVendors(initialSelectedVendors);
+        // Removed initial selected vendors; handled via approval dialog
         setRequestData(transformedData);
 
         // Extract available materials and machines from the API data
@@ -261,12 +279,7 @@ const RequestDetails: React.FC = () => {
     }));
   };
 
-  const handleVendorSelect = (itemId: string, vendorId: string) => {
-    setSelectedVendors((prev) => ({
-      ...prev,
-      [itemId]: vendorId,
-    }));
-  };
+  // Vendor selection handled via approval dialog; removed separate selector
 
   const handleStatusSelect = (itemId: string, status: string) => {
     setSelectedStatuses((prev) => ({
@@ -275,97 +288,7 @@ const RequestDetails: React.FC = () => {
     }));
   };
 
-  const handleCompanyOwnerSubmit = async () => {
-    if (!requestData || !requestData.apiData) return;
-
-    try {
-      // Extract numeric ID from the request ID
-      const numericId = parseInt(
-        requestData.id.split('/').pop()?.split('-').pop() || '0',
-        10
-      );
-
-      if (isNaN(numericId) || numericId <= 0) {
-        throw new Error('Invalid request ID format');
-      }
-
-      // Process the decisions
-      const decisions = requestData.items.map((item) => ({
-        itemId: parseInt(item.id),
-        materialName: item.productName,
-        selectedVendor: selectedVendors[item.id],
-        status: selectedStatuses[item.id],
-      }));
-
-      // Count different statuses
-      const approvedItems = decisions.filter(
-        (d) => d.status === IndentStatus.APPROVED
-      );
-      const rejectedItems = decisions.filter(
-        (d) => d.status === IndentStatus.REJECTED
-      );
-      const revertedItems = decisions.filter((d) => d.status === 'reverted'); // Custom status
-
-      // Determine the overall status
-      let finalStatus: IndentStatus;
-      let updatedIndent;
-
-      if (approvedItems.length === decisions.length) {
-        // If all items are approved, approve the entire indent
-        updatedIndent = await materialIndentsApi.approve(numericId);
-        finalStatus = IndentStatus.APPROVED;
-      } else if (rejectedItems.length === decisions.length) {
-        // If all items are rejected, reject the entire indent
-        updatedIndent = await materialIndentsApi.reject(
-          numericId,
-          'Rejected by Company Owner'
-        );
-        finalStatus = IndentStatus.REJECTED;
-      } else {
-        // For mixed decisions or other cases, update with the appropriate status
-        finalStatus = IndentStatus.PENDING_APPROVAL; // Default
-
-        // Update the material indent with selected quotations and status
-        const updateData: Partial<MaterialIndent> = {
-          status: finalStatus,
-          // We're only updating the selectedQuotation property, not the entire item
-          // The API will handle partial updates correctly
-        };
-
-        updatedIndent = await materialIndentsApi.update(numericId, updateData);
-      }
-
-      // Update local state with API response
-      const updatedData = {
-        ...requestData,
-        status: finalStatus,
-        apiData: updatedIndent,
-        selectedVendors,
-      };
-
-      setRequestData(updatedData);
-
-      // Show success message
-      const successMessage = `Successfully processed ${decisions.length} item${
-        decisions.length > 1 ? 's' : ''
-      }: ${approvedItems.length} approved, ${rejectedItems.length} rejected, ${
-        revertedItems.length
-      } reverted`;
-
-      toast({
-        title: 'Request Processed',
-        description: successMessage,
-      });
-    } catch (error) {
-      console.error('Error processing company owner decisions:', error);
-
-      toast({
-        title: 'Processing Failed',
-        description: 'Failed to process the request. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
+  // Removed duplicate company owner bulk submit; approval now via dialog only
 
   const handleSupervisorSubmit = async () => {
     if (!requestData || !requestData.apiData) return;
@@ -502,9 +425,10 @@ const RequestDetails: React.FC = () => {
 
       let updatedIndent;
 
-      // Call the appropriate API based on the status
+      // Handle approve by opening dialog to choose item and quotation
       if (newStatus === IndentStatus.APPROVED) {
-        updatedIndent = await materialIndentsApi.approve(numericId);
+        setIsApprovalDialogOpen(true);
+        return;
       } else if (
         newStatus === IndentStatus.REJECTED &&
         additionalData?.rejectionReason
@@ -529,10 +453,6 @@ const RequestDetails: React.FC = () => {
         ...requestData,
         status: updatedIndent.status,
         apiData: updatedIndent,
-        selectedVendors:
-          newStatus === IndentStatus.APPROVED
-            ? selectedVendors
-            : requestData.selectedVendors,
       };
 
       // Update receipt history if needed
@@ -727,13 +647,7 @@ const RequestDetails: React.FC = () => {
     return true;
   };
 
-  const shouldShowVendorSelector = () => {
-    return (
-      hasPermission('inventory:material-indents:select-quotation') &&
-      requestData?.status === 'pending_approval' &&
-      requestData.items.some((item) => item.vendorQuotations.length > 0)
-    );
-  };
+  // Removed separate vendor selector in favor of approval dialog
 
   const shouldShowStatusDropdown = () => {
     if (!requestData) return false;
@@ -872,7 +786,12 @@ const RequestDetails: React.FC = () => {
 
   // New function to handle approval with item and quotation selection
   const handleApproveWithSelection = async () => {
-    if (!requestData || !requestData.apiData || !selectedItemId || !selectedQuotationId) {
+    if (
+      !requestData ||
+      !requestData.apiData ||
+      !selectedItemId ||
+      !selectedQuotationId
+    ) {
       toast({
         title: 'Error',
         description: 'Please select an item and quotation to approve.',
@@ -888,8 +807,8 @@ const RequestDetails: React.FC = () => {
         quotationId: selectedQuotationId,
       };
 
-      await materialIndentsApi.approve(requestData.apiData.id);
-      
+      await materialIndentsApi.approve(requestData.apiData.id, approvalData);
+
       toast({
         title: 'Success',
         description: 'Material indent approved successfully.',
@@ -898,10 +817,16 @@ const RequestDetails: React.FC = () => {
       setIsApprovalDialogOpen(false);
       setSelectedItemId(null);
       setSelectedQuotationId(null);
-      
+
       // Refresh the request data
-      const updatedIndent = await materialIndentsApi.getById(requestData.apiData.id);
-      setRequestData(prev => prev ? { ...prev, apiData: updatedIndent, status: updatedIndent.status } : null);
+      const updatedIndent = await materialIndentsApi.getById(
+        requestData.apiData.id
+      );
+      setRequestData((prev) =>
+        prev
+          ? { ...prev, apiData: updatedIndent, status: updatedIndent.status }
+          : null
+      );
     } catch (error) {
       console.error('Error approving indent:', error);
       toast({
@@ -925,7 +850,7 @@ const RequestDetails: React.FC = () => {
 
     try {
       await materialIndentsApi.reject(requestData.apiData.id, rejectionReason);
-      
+
       toast({
         title: 'Success',
         description: 'Material indent rejected successfully.',
@@ -933,10 +858,16 @@ const RequestDetails: React.FC = () => {
 
       setIsRejectionDialogOpen(false);
       setRejectionReason('');
-      
+
       // Refresh the request data
-      const updatedIndent = await materialIndentsApi.getById(requestData.apiData.id);
-      setRequestData(prev => prev ? { ...prev, apiData: updatedIndent, status: updatedIndent.status } : null);
+      const updatedIndent = await materialIndentsApi.getById(
+        requestData.apiData.id
+      );
+      setRequestData((prev) =>
+        prev
+          ? { ...prev, apiData: updatedIndent, status: updatedIndent.status }
+          : null
+      );
     } catch (error) {
       console.error('Error rejecting indent:', error);
       toast({
@@ -962,34 +893,21 @@ const RequestDetails: React.FC = () => {
       const purchaseData = {
         purchaseOrderNumber: `PO-${requestData.apiData.uniqueId}`,
         orderDate: new Date().toISOString().split('T')[0],
-        totalValue: requestData.apiData.items.reduce((total, item) => {
-          const quotation = item.selectedQuotation || item.quotations[0];
-          return total + (quotation ? Number(quotation.quotationAmount) * item.requestedQuantity : 0);
-        }, 0).toString(),
         additionalNotes: requestData.apiData.additionalNotes || '',
-        items: requestData.apiData.items.map(item => ({
-          materialId: item.material.id,
-          orderedQuantity: item.requestedQuantity,
-          unitPrice: item.selectedQuotation?.quotationAmount || item.quotations[0]?.quotationAmount || '0',
-          notes: item.notes || ''
-        }))
+        indentId: requestData.apiData.id,
       };
 
       const createdPurchase = await materialPurchasesApi.create(purchaseData);
-      
-      // Update indent status to ordered
-      const updatedIndent = await materialIndentsApi.update(requestData.apiData.id, {
-        status: IndentStatus.ORDERED,
-        additionalNotes: `Purchase order created: ${createdPurchase.purchaseOrderNumber}`
-      });
-      
+
       toast({
         title: 'Success',
         description: 'Purchase order created successfully.',
       });
 
       setIsOrderDialogOpen(false);
-      setRequestData(prev => prev ? { ...prev, apiData: updatedIndent, status: updatedIndent.status } : null);
+      setRequestData((prev) =>
+        prev ? { ...prev, status: createdPurchase.status } : null
+      );
     } catch (error) {
       console.error('Error creating purchase order:', error);
       toast({
@@ -1002,18 +920,10 @@ const RequestDetails: React.FC = () => {
 
   // New function to handle material receipt
   const handleReceiveMaterial = async () => {
-    if (!selectedPurchase || !receiveData.receivedQuantity || !receiveData.receivedDate) {
-      toast({
-        title: 'Error',
-        description: 'Please fill in all required fields.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     try {
-      // For now, we'll assume we're receiving the first item
-      const firstItem = selectedPurchase.items[0];
+      //  take from receipt history of the request
+      const firstItem = requestData.receiptHistory[0].items?.[0];
+      const selectedPurchase = requestData.receiptHistory[0];
       if (!firstItem) {
         toast({
           title: 'Error',
@@ -1024,11 +934,11 @@ const RequestDetails: React.FC = () => {
       }
 
       await materialPurchasesApi.receiveItem(
-        selectedPurchase.id,
+        Number(selectedPurchase.id),
         firstItem.id,
         receiveData
       );
-      
+
       toast({
         title: 'Success',
         description: 'Material received successfully.',
@@ -1039,13 +949,19 @@ const RequestDetails: React.FC = () => {
       setReceiveData({
         receivedQuantity: 0,
         receivedDate: new Date().toISOString().split('T')[0],
-        notes: ''
+        notes: '',
       });
-      
+
       // Refresh the request data
       if (requestData?.apiData) {
-        const updatedIndent = await materialIndentsApi.getById(requestData.apiData.id);
-        setRequestData(prev => prev ? { ...prev, apiData: updatedIndent, status: updatedIndent.status } : null);
+        const updatedIndent = await materialIndentsApi.getById(
+          requestData.apiData.id
+        );
+        setRequestData((prev) =>
+          prev
+            ? { ...prev, apiData: updatedIndent, status: updatedIndent.status }
+            : null
+        );
       }
     } catch (error) {
       console.error('Error receiving material:', error);
@@ -1061,14 +977,19 @@ const RequestDetails: React.FC = () => {
   const renderWorkflowActions = () => {
     if (!requestData || !requestData.apiData) return null;
 
-    const canApprove = hasPermission('inventory:material-indents:approve') && 
-                      requestData.status === 'pending_approval';
-    const canReject = hasPermission('inventory:material-indents:approve') && 
-                     requestData.status === 'pending_approval';
-    const canOrder = hasPermission('inventory:material-indents:update') && 
-                    requestData.status === 'approved';
-    const canReceive = hasPermission('inventory:material-purchases:receive') && 
-                      (requestData.status === 'ordered' || requestData.status === 'partially_received');
+    const canApprove =
+      hasPermission('inventory:material-indents:approve') &&
+      requestData.status === 'pending_approval';
+    const canReject =
+      hasPermission('inventory:material-indents:approve') &&
+      requestData.status === 'pending_approval';
+    const canOrder =
+      hasPermission('inventory:material-indents:update') &&
+      requestData.status === 'approved';
+    const canReceive =
+      hasPermission('inventory:material-purchases:receive') &&
+      (requestData.status === 'ordered' ||
+        requestData.status === 'partially_received');
 
     return (
       <div className='flex flex-wrap gap-2'>
@@ -1112,62 +1033,6 @@ const RequestDetails: React.FC = () => {
             onClick={() => {
               // Create a mock purchase object for demonstration
               // In a real implementation, you'd fetch the actual purchase order
-              setSelectedPurchase({
-                id: 1,
-                uniqueId: requestData.id,
-                orderDate: requestData.date,
-                totalValue: requestData.items.reduce((total, item) => {
-                  const quotation = item.vendorQuotations.find(vq => selectedVendors[item.id] === vq.id);
-                  return total + (quotation ? parseFloat(quotation.quotedPrice.replace('₹', '')) : 0);
-                }, 0).toString(),
-                purchaseOrderNumber: `PO-${requestData.id}`,
-                status: 'pending',
-                additionalNotes: '',
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                items: requestData.items.map(item => ({
-                  id: parseInt(item.id),
-                  materialId: parseInt(item.id),
-                  materialName: item.productName,
-                  specifications: item.specifications,
-                  orderedQuantity: parseInt(item.reqQuantity),
-                  receivedQuantity: 0,
-                  pendingQuantity: parseInt(item.reqQuantity),
-                  unitPrice: item.vendorQuotations.find(vq => selectedVendors[item.id] === vq.id)?.quotedPrice || '0',
-                  totalPrice: item.vendorQuotations.find(vq => selectedVendors[item.id] === vq.id)?.quotedPrice || '0',
-                  status: 'pending',
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                  material: {
-                    id: parseInt(item.id),
-                    name: item.productName,
-                    specifications: item.specifications,
-                    makerBrand: '',
-                    currentStock: item.oldStock,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                  }
-                })),
-                branch: {
-                  id: 1,
-                  name: requestData.location,
-                  location: '',
-                  contactPhone: null,
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                },
-                createdBy: {
-                  id: 1,
-                  name: requestData.requestedBy,
-                  email: '',
-                  company: {} as any,
-                  branch: {} as any,
-                  userType: {} as any,
-                  roles: [],
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                }
-              });
               setIsReceiveDialogOpen(true);
             }}
           >
@@ -1182,8 +1047,8 @@ const RequestDetails: React.FC = () => {
   // Update the back button navigation
   const handleBackNavigation = () => {
     // Navigate back to the MaterialOrderBookTab (materials-inventory with material-order-book tab)
-    navigate('/materials-inventory', { 
-      state: { activeTab: 'material-order-book' } 
+    navigate('/materials-inventory', {
+      state: { activeTab: 'material-order-book' },
     });
   };
 
@@ -1243,9 +1108,11 @@ const RequestDetails: React.FC = () => {
           <Button
             variant='outline'
             size='sm'
-            onClick={() => navigate('/materials-inventory', { 
-              state: { activeTab: 'material-order-book' } 
-            })}
+            onClick={() =>
+              navigate('/materials-inventory', {
+                state: { activeTab: 'material-order-book' },
+              })
+            }
             className='gap-2'
           >
             <ArrowLeft className='w-4 h-4' />
@@ -1292,10 +1159,7 @@ const RequestDetails: React.FC = () => {
                 }
                 onStatusChange={handleStatusChange}
                 requestId={requestData.id}
-                hasVendorSelected={
-                  Object.keys(selectedVendors).length ===
-                  requestData.items.length
-                }
+                hasVendorSelected={true}
               />
             )}
 
@@ -1313,18 +1177,8 @@ const RequestDetails: React.FC = () => {
       <div className='w-full'>
         {/* Request Form - Full Width */}
         <div className='space-y-6'>
-          {currentUser?.role === 'company_owner' &&
-          requestData.status === 'pending_approval' ? (
-            <CompanyOwnerRequestForm
-              requestData={requestData}
-              selectedVendors={selectedVendors}
-              onVendorSelect={handleVendorSelect}
-              selectedStatuses={selectedStatuses}
-              onStatusSelect={handleStatusSelect}
-              onSubmit={handleCompanyOwnerSubmit}
-            />
-          ) : currentUser?.role === 'supervisor' &&
-            requestData.status === 'reverted' ? (
+          {currentUser?.role === 'supervisor' &&
+          requestData.status === 'reverted' ? (
             // For reverted requests, show full editable form like MaterialRequest.tsx
             <RequisitionIndentForm
               requestData={requestData}
@@ -1367,13 +1221,7 @@ const RequestDetails: React.FC = () => {
                 quotationImageUrlsMap={quotationImageUrls}
               />
 
-              {shouldShowVendorSelector() && (
-                <VendorQuotationSelector
-                  requestItems={requestData.items}
-                  onVendorSelect={handleVendorSelect}
-                  selectedVendors={selectedVendors}
-                />
-              )}
+              {null}
             </>
           )}
         </div>
@@ -1387,59 +1235,64 @@ const RequestDetails: React.FC = () => {
         {hasPermission('inventory:material-indents:read:all') && (
           <>
             {isLoadingHistory ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Requests History</CardTitle>
-            </CardHeader>
-            <CardContent className='flex justify-center items-center py-8'>
-              <Loader2 className='h-8 w-8 animate-spin text-primary' />
-              <p className='ml-2 text-muted-foreground'>Loading history...</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Requests History</CardTitle>
+                </CardHeader>
+                <CardContent className='flex justify-center items-center py-8'>
+                  <Loader2 className='h-8 w-8 animate-spin text-primary' />
+                  <p className='ml-2 text-muted-foreground'>
+                    Loading history...
+                  </p>
+                </CardContent>
+              </Card>
             ) : historyError ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Requests History</CardTitle>
-            </CardHeader>
-            <CardContent className='py-6'>
-              <div className='text-center'>
-                <p className='text-muted-foreground mb-2'>{historyError}</p>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => {
-                    setIsLoadingHistory(true);
-                    setHistoryError(null);
-                    materialIndentsApi
-                      .getLastFive()
-                      .then((indents) => setLastFiveIndents(indents))
-                      .catch((err) => {
-                        console.error('Error fetching history:', err);
-                        setHistoryError(
-                          'Failed to load recent requests history.'
-                        );
-                      })
-                      .finally(() => setIsLoadingHistory(false));
-                  }}
-                >
-                  Retry
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <HistoryView
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Requests History</CardTitle>
+                </CardHeader>
+                <CardContent className='py-6'>
+                  <div className='text-center'>
+                    <p className='text-muted-foreground mb-2'>{historyError}</p>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => {
+                        setIsLoadingHistory(true);
+                        setHistoryError(null);
+                        materialIndentsApi
+                          .getLastFive()
+                          .then((indents) => setLastFiveIndents(indents))
+                          .catch((err) => {
+                            console.error('Error fetching history:', err);
+                            setHistoryError(
+                              'Failed to load recent requests history.'
+                            );
+                          })
+                          .finally(() => setIsLoadingHistory(false));
+                      }}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <HistoryView
                 userRole='company_owner'
-            historyData={getHistoryData()}
-            requestId={requestData.id}
-          />
+                historyData={getHistoryData()}
+                requestId={requestData.id}
+              />
             )}
           </>
         )}
       </div>
 
       {/* Approval Dialog */}
-      <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
+      <Dialog
+        open={isApprovalDialogOpen}
+        onOpenChange={setIsApprovalDialogOpen}
+      >
         <DialogContent className='max-w-2xl'>
           <DialogHeader>
             <DialogTitle>Approve Material Indent</DialogTitle>
@@ -1448,17 +1301,31 @@ const RequestDetails: React.FC = () => {
             {requestData?.apiData && (
               <div className='space-y-4'>
                 <div className='p-4 bg-green-50 border border-green-200 rounded-lg'>
-                  <h3 className='font-semibold text-green-800 mb-2'>Indent Details</h3>
-                  <p><strong>ID:</strong> {requestData.apiData.uniqueId}</p>
-                  <p><strong>Requested By:</strong> {requestData.apiData.requestedBy?.name}</p>
-                  <p><strong>Date:</strong> {new Date(requestData.apiData.requestDate).toLocaleDateString()}</p>
+                  <h3 className='font-semibold text-green-800 mb-2'>
+                    Indent Details
+                  </h3>
+                  <p>
+                    <strong>ID:</strong> {requestData.apiData.uniqueId}
+                  </p>
+                  <p>
+                    <strong>Requested By:</strong>{' '}
+                    {requestData.apiData.requestedBy?.name}
+                  </p>
+                  <p>
+                    <strong>Date:</strong>{' '}
+                    {new Date(
+                      requestData.apiData.requestDate
+                    ).toLocaleDateString()}
+                  </p>
                 </div>
-                
+
                 <div className='space-y-3'>
                   <Label>Select Item to Approve</Label>
-                  <select 
+                  <select
                     className='w-full p-2 border rounded'
-                    onChange={(e) => setSelectedItemId(parseInt(e.target.value))}
+                    onChange={(e) =>
+                      setSelectedItemId(parseInt(e.target.value))
+                    }
                   >
                     <option value=''>Select an item</option>
                     {requestData.apiData.items.map((item) => (
@@ -1472,16 +1339,19 @@ const RequestDetails: React.FC = () => {
                 {selectedItemId && (
                   <div className='space-y-3'>
                     <Label>Select Quotation</Label>
-                    <select 
+                    <select
                       className='w-full p-2 border rounded'
-                      onChange={(e) => setSelectedQuotationId(parseInt(e.target.value))}
+                      onChange={(e) =>
+                        setSelectedQuotationId(parseInt(e.target.value))
+                      }
                     >
                       <option value=''>Select a quotation</option>
                       {requestData.apiData.items
-                        .find(item => item.id === selectedItemId)
+                        .find((item) => item.id === selectedItemId)
                         ?.quotations.map((quotation) => (
                           <option key={quotation.id} value={quotation.id}>
-                            {quotation.vendorName} - ₹{quotation.quotationAmount}
+                            {quotation.vendorName} - ₹
+                            {quotation.quotationAmount}
                           </option>
                         ))}
                     </select>
@@ -1489,10 +1359,13 @@ const RequestDetails: React.FC = () => {
                 )}
 
                 <div className='flex justify-end gap-2'>
-                  <Button variant='outline' onClick={() => setIsApprovalDialogOpen(false)}>
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsApprovalDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleApproveWithSelection}
                     disabled={!selectedItemId || !selectedQuotationId}
                     className='bg-green-600 hover:bg-green-700'
@@ -1508,7 +1381,10 @@ const RequestDetails: React.FC = () => {
       </Dialog>
 
       {/* Rejection Dialog */}
-      <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
+      <Dialog
+        open={isRejectionDialogOpen}
+        onOpenChange={setIsRejectionDialogOpen}
+      >
         <DialogContent className='max-w-2xl'>
           <DialogHeader>
             <DialogTitle>Reject Material Indent</DialogTitle>
@@ -1517,12 +1393,24 @@ const RequestDetails: React.FC = () => {
             {requestData?.apiData && (
               <div className='space-y-4'>
                 <div className='p-4 bg-red-50 border border-red-200 rounded-lg'>
-                  <h3 className='font-semibold text-red-800 mb-2'>Indent Details</h3>
-                  <p><strong>ID:</strong> {requestData.apiData.uniqueId}</p>
-                  <p><strong>Requested By:</strong> {requestData.apiData.requestedBy?.name}</p>
-                  <p><strong>Date:</strong> {new Date(requestData.apiData.requestDate).toLocaleDateString()}</p>
+                  <h3 className='font-semibold text-red-800 mb-2'>
+                    Indent Details
+                  </h3>
+                  <p>
+                    <strong>ID:</strong> {requestData.apiData.uniqueId}
+                  </p>
+                  <p>
+                    <strong>Requested By:</strong>{' '}
+                    {requestData.apiData.requestedBy?.name}
+                  </p>
+                  <p>
+                    <strong>Date:</strong>{' '}
+                    {new Date(
+                      requestData.apiData.requestDate
+                    ).toLocaleDateString()}
+                  </p>
                 </div>
-                
+
                 <div className='space-y-3'>
                   <Label htmlFor='rejectionReason'>Rejection Reason *</Label>
                   <Textarea
@@ -1535,10 +1423,13 @@ const RequestDetails: React.FC = () => {
                 </div>
 
                 <div className='flex justify-end gap-2'>
-                  <Button variant='outline' onClick={() => setIsRejectionDialogOpen(false)}>
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsRejectionDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleRejectWithReason}
                     disabled={!rejectionReason.trim()}
                     className='bg-red-600 hover:bg-red-700'
@@ -1563,31 +1454,58 @@ const RequestDetails: React.FC = () => {
             {requestData?.apiData && (
               <div className='space-y-4'>
                 <div className='p-4 bg-blue-50 border border-blue-200 rounded-lg'>
-                  <h3 className='font-semibold text-blue-800 mb-2'>Indent Details</h3>
-                  <p><strong>ID:</strong> {requestData.apiData.uniqueId}</p>
-                  <p><strong>Requested By:</strong> {requestData.apiData.requestedBy?.name}</p>
-                  <p><strong>Date:</strong> {new Date(requestData.apiData.requestDate).toLocaleDateString()}</p>
+                  <h3 className='font-semibold text-blue-800 mb-2'>
+                    Indent Details
+                  </h3>
+                  <p>
+                    <strong>ID:</strong> {requestData.apiData.uniqueId}
+                  </p>
+                  <p>
+                    <strong>Requested By:</strong>{' '}
+                    {requestData.apiData.requestedBy?.name}
+                  </p>
+                  <p>
+                    <strong>Date:</strong>{' '}
+                    {new Date(
+                      requestData.apiData.requestDate
+                    ).toLocaleDateString()}
+                  </p>
                 </div>
-                
+
                 <div className='space-y-3'>
                   <h4 className='font-semibold'>Items to Order:</h4>
                   <div className='space-y-2'>
                     {requestData.apiData.items.map((item) => (
-                      <div key={item.id} className='p-3 bg-gray-50 rounded border'>
-                        <p><strong>{item.material.name}</strong></p>
+                      <div
+                        key={item.id}
+                        className='p-3 bg-gray-50 rounded border'
+                      >
+                        <p>
+                          <strong>{item.material.name}</strong>
+                        </p>
                         <p>Quantity: {item.requestedQuantity}</p>
-                        <p>Selected Quotation: {item.selectedQuotation?.vendorName || 'None selected'}</p>
-                        <p>Amount: ₹{item.selectedQuotation?.quotationAmount || '0'}</p>
+                        <p>
+                          Selected Quotation:{' '}
+                          {item.selectedQuotation?.vendorName ||
+                            'None selected'}
+                        </p>
+                        <p>
+                          Amount: ₹
+                          {item.selectedQuotation?.quotationAmount || '0'}
+                        </p>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 <div className='flex justify-end gap-2'>
-                  <Button variant='outline' onClick={() => setIsOrderDialogOpen(false)}>
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsOrderDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleCreatePurchaseOrder}
                     className='bg-blue-600 hover:bg-blue-700'
                   >
@@ -1608,27 +1526,44 @@ const RequestDetails: React.FC = () => {
             <DialogTitle>Receive Material</DialogTitle>
           </DialogHeader>
           <div className='space-y-4'>
-            {selectedPurchase && (
+            {requestData.receiptHistory[0] && (
               <div className='space-y-4'>
                 <div className='p-4 bg-orange-50 border border-orange-200 rounded-lg'>
-                  <h3 className='font-semibold text-orange-800 mb-2'>Purchase Order Details</h3>
-                  <p><strong>PO Number:</strong> {selectedPurchase.purchaseOrderNumber}</p>
-                  <p><strong>Order Date:</strong> {new Date(selectedPurchase.orderDate).toLocaleDateString()}</p>
-                  <p><strong>Total Value:</strong> ₹{selectedPurchase.totalValue}</p>
+                  <h3 className='font-semibold text-orange-800 mb-2'>
+                    Purchase Order Details
+                  </h3>
+                  <p>
+                    <strong>PO Number:</strong>{' '}
+                    {requestData.receiptHistory[0].purchaseOrderNumber}
+                  </p>
+                  <p>
+                    <strong>Order Date:</strong>{' '}
+                    {new Date(
+                      requestData.receiptHistory[0].date
+                    ).toLocaleDateString()}
+                  </p>
+                  <p>
+                    <strong>Total Value:</strong> ₹
+                    {requestData.receiptHistory[0].totalValue}
+                  </p>
                 </div>
-                
+
                 <div className='space-y-3'>
                   <div className='grid grid-cols-2 gap-4'>
                     <div>
-                      <Label htmlFor='receivedQuantity'>Received Quantity *</Label>
+                      <Label htmlFor='receivedQuantity'>
+                        Received Quantity *
+                      </Label>
                       <Input
                         id='receivedQuantity'
                         type='number'
                         value={receiveData.receivedQuantity}
-                        onChange={(e) => setReceiveData(prev => ({
-                          ...prev,
-                          receivedQuantity: parseInt(e.target.value) || 0
-                        }))}
+                        onChange={(e) =>
+                          setReceiveData((prev) => ({
+                            ...prev,
+                            receivedQuantity: parseInt(e.target.value) || 0,
+                          }))
+                        }
                         min='1'
                       />
                     </div>
@@ -1638,35 +1573,44 @@ const RequestDetails: React.FC = () => {
                         id='receivedDate'
                         type='date'
                         value={receiveData.receivedDate}
-                        onChange={(e) => setReceiveData(prev => ({
-                          ...prev,
-                          receivedDate: e.target.value
-                        }))}
+                        onChange={(e) =>
+                          setReceiveData((prev) => ({
+                            ...prev,
+                            receivedDate: e.target.value,
+                          }))
+                        }
                       />
                     </div>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor='receiveNotes'>Notes</Label>
                     <Textarea
                       id='receiveNotes'
                       placeholder='Any additional notes about the received material...'
                       value={receiveData.notes}
-                      onChange={(e) => setReceiveData(prev => ({
-                        ...prev,
-                        notes: e.target.value
-                      }))}
+                      onChange={(e) =>
+                        setReceiveData((prev) => ({
+                          ...prev,
+                          notes: e.target.value,
+                        }))
+                      }
                     />
                   </div>
                 </div>
 
                 <div className='flex justify-end gap-2'>
-                  <Button variant='outline' onClick={() => setIsReceiveDialogOpen(false)}>
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsReceiveDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleReceiveMaterial}
-                    disabled={!receiveData.receivedQuantity || !receiveData.receivedDate}
+                    disabled={
+                      !receiveData.receivedQuantity || !receiveData.receivedDate
+                    }
                     className='bg-orange-600 hover:bg-orange-700'
                   >
                     <Package className='w-4 h-4 mr-2' />

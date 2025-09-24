@@ -22,7 +22,6 @@ import {
   ArrowDown,
   X,
   ChevronLeft,
-  
   ChevronsLeft,
   ChevronsRight,
 } from 'lucide-react';
@@ -58,6 +57,8 @@ import { MaterialIssueForm } from './MaterialIssueForm';
 import { toast } from '../hooks/use-toast';
 import { useRole } from '../contexts/RoleContext';
 import { Label } from './ui/label';
+import { branchesApi } from '../lib/api/branches';
+import { Branch } from '../lib/api/types';
 
 type SortField = 'id' | 'issueDate' | 'issuedBy' | 'branch' | 'uniqueId';
 type SortOrder = 'ASC' | 'DESC';
@@ -117,15 +118,43 @@ export const MaterialIssuesTab = () => {
   const [materialIssues, setMaterialIssues] = useState<MaterialIssue[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5); // Changed default to 5 to match MachinesTab
-  const [materialIssuesData, setMaterialIssuesData] = useState<any>(null);
+  const [materialIssuesData, setMaterialIssuesData] = useState<{
+    data?: unknown;
+    meta?: {
+      page: number;
+      limit: number;
+      itemCount: number;
+      pageCount: number;
+      hasPreviousPage: boolean;
+      hasNextPage: boolean;
+    };
+  } | null>(null);
 
-  // Available units for company owner
-  const availableUnits = [
-    { id: 'unit-1', name: 'SSRFM Unit 1', location: 'Mumbai' },
-    { id: 'unit-2', name: 'SSRFM Unit 2', location: 'Delhi' },
-    { id: 'unit-3', name: 'SSRFM Unit 3', location: 'Bangalore' },
-    { id: 'unit-4', name: 'SSRFM Unit 4', location: 'Chennai' },
-  ];
+  // Available branches (units) for company owner - fetched from API
+  const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+
+  useEffect(() => {
+    const fetchBranches = async () => {
+      if (currentUser?.role !== 'company_owner') return;
+      setIsLoadingBranches(true);
+      try {
+        const response = await branchesApi.getAll({ limit: 100 });
+        setAvailableBranches(response.data);
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load units. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoadingBranches(false);
+      }
+    };
+
+    fetchBranches();
+  }, [currentUser?.role]);
 
   // Fetch material issues from API
   const fetchMaterialIssues = async (page = 1, limit = 10) => {
@@ -146,7 +175,7 @@ export const MaterialIssuesTab = () => {
       };
 
       const response = await materialIssuesApi.getAll(params);
-      
+
       // Validate response structure
       if (!response || !response.data || !response.meta) {
         throw new Error('Invalid response format from API');
@@ -208,11 +237,13 @@ export const MaterialIssuesTab = () => {
   // Get sort icon for column header
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
-      return <ArrowUpDown className="w-4 h-4 text-muted-foreground" />;
+      return <ArrowUpDown className='w-4 h-4 text-muted-foreground' />;
     }
-    return sortOrder === 'ASC' 
-      ? <ArrowUp className="w-4 h-4 text-primary" />
-      : <ArrowDown className="w-4 h-4 text-primary" />;
+    return sortOrder === 'ASC' ? (
+      <ArrowUp className='w-4 h-4 text-primary' />
+    ) : (
+      <ArrowDown className='w-4 h-4 text-primary' />
+    );
   };
 
   // Transform API response to UI format
@@ -235,13 +266,10 @@ export const MaterialIssuesTab = () => {
       originalItem: item,
     }));
 
-    // Generate formatted Issue ID: SSRMF/UNIT-I/YYMMDDSQ
-    const formattedIssueId = generateFormattedIssueId(issue);
-
     // Create a transformed issue with all items
     return {
-      id: formattedIssueId,
-      materialIssueFormSrNo: formattedIssueId,
+      id: issue.uniqueId.toString(),
+      materialIssueFormSrNo: issue.uniqueId.toString(),
       issuingPersonName:
         issue.issuedBy?.name || `User ID: ${issue.issuedBy?.id || 'Unknown'}`,
       issuingPersonDesignation: issue.issuedBy?.email || '',
@@ -258,20 +286,20 @@ export const MaterialIssuesTab = () => {
   // Generate formatted Issue ID: SSRMF/UNIT-I/YYMMDDSQ
   const generateFormattedIssueId = (issue: MaterialIssue): string => {
     const date = new Date(issue.issueDate);
-    
+
     // Format date as YYMMDD
     const year = date.getFullYear().toString().slice(-2);
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
     const dateStr = `${year}${month}${day}`;
-    
+
     // Get unit number and convert to Roman numeral
     const unitNumber = issue.branch?.id || 1;
     const unitRoman = convertToRoman(unitNumber);
-    
+
     // Generate sequence number (using issue ID as sequence)
     const sequence = issue.id.toString().padStart(2, '0');
-    
+
     // Format: SSRMF/UNIT-I/YYMMDDSQ
     return `SSRMF/UNIT-${unitRoman}/${dateStr}${sequence}`;
   };
@@ -283,7 +311,7 @@ export const MaterialIssuesTab = () => {
       { value: 9, numeral: 'IX' },
       { value: 5, numeral: 'V' },
       { value: 4, numeral: 'IV' },
-      { value: 1, numeral: 'I' }
+      { value: 1, numeral: 'I' },
     ];
 
     let result = '';
@@ -299,6 +327,7 @@ export const MaterialIssuesTab = () => {
   // Load material issues on component mount
   useEffect(() => {
     fetchMaterialIssues();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Refetch when search, filter, or sorting changes
@@ -308,11 +337,13 @@ export const MaterialIssuesTab = () => {
     }, 300); // Debounce search
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, filterUnit, sortField, sortOrder]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, filterUnit, sortField, sortOrder, itemsPerPage]);
 
   // Load material issues when pagination changes
   useEffect(() => {
     fetchMaterialIssues(currentPage, itemsPerPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, itemsPerPage]);
 
   // Helper function to check if issue can be edited (within 7 days)
@@ -351,7 +382,7 @@ export const MaterialIssuesTab = () => {
           machineName: item.machineName,
         })),
       };
-      
+
       setEditingIssue(editingData as unknown as TransformedIssue);
       setIsIssueFormOpen(true);
     } else {
@@ -531,19 +562,23 @@ export const MaterialIssuesTab = () => {
           {currentUser?.role === 'company_owner' && (
             <Select value={filterUnit} onValueChange={setFilterUnit}>
               <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-                <SelectValue placeholder='Select Unit' />
+                <SelectValue placeholder='Select Unit'>
+                  {isLoadingBranches ? 'Loading...' : 'Select Unit'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='all'>All Units</SelectItem>
-                {availableUnits.map((unit) => (
-                  <SelectItem key={unit.id} value={unit.id}>
+                {availableBranches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id.toString()}>
                     <div className='flex items-center gap-2'>
                       <Building2 className='w-4 h-4' />
                       <div>
-                        <div className='font-medium'>{unit.name}</div>
-                        <div className='text-xs text-muted-foreground'>
-                          {unit.location}
-                        </div>
+                        <div className='font-medium'>{branch.name}</div>
+                        {branch.location && (
+                          <div className='text-xs text-muted-foreground'>
+                            {branch.location}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </SelectItem>
@@ -590,9 +625,9 @@ export const MaterialIssuesTab = () => {
                     <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
                       <TableHead className='min-w-[120px] text-foreground font-semibold'>
                         <Button
-                          variant="ghost"
+                          variant='ghost'
                           onClick={() => handleSort('uniqueId')}
-                          className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                         >
                           Issue ID
                           {getSortIcon('uniqueId')}
@@ -609,9 +644,9 @@ export const MaterialIssuesTab = () => {
                       </TableHead>
                       <TableHead className='min-w-[100px] text-foreground font-semibold'>
                         <Button
-                          variant="ghost"
+                          variant='ghost'
                           onClick={() => handleSort('issueDate')}
-                          className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                         >
                           Issued Date
                           {getSortIcon('issueDate')}
@@ -622,9 +657,9 @@ export const MaterialIssuesTab = () => {
                       </TableHead>
                       <TableHead className='min-w-[120px] text-foreground font-semibold'>
                         <Button
-                          variant="ghost"
+                          variant='ghost'
                           onClick={() => handleSort('issuedBy')}
-                          className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                         >
                           Issued By
                           {getSortIcon('issuedBy')}
@@ -632,9 +667,9 @@ export const MaterialIssuesTab = () => {
                       </TableHead>
                       <TableHead className='min-w-[100px] text-foreground font-semibold'>
                         <Button
-                          variant="ghost"
+                          variant='ghost'
                           onClick={() => handleSort('branch')}
-                          className="h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2"
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                         >
                           Unit
                           {getSortIcon('branch')}
@@ -664,11 +699,6 @@ export const MaterialIssuesTab = () => {
                             >
                               {issue.id}
                             </Button>
-                            <div className='text-xs mt-1'>
-                              <Badge variant='outline' className='text-xs'>
-                                Item {itemIndex + 1}
-                              </Badge>
-                            </div>
                           </TableCell>
                           <TableCell>
                             <div>
@@ -679,39 +709,39 @@ export const MaterialIssuesTab = () => {
                           </TableCell>
                           <TableCell>
                             <div className='text-sm text-muted-foreground truncate max-w-40'>
-                                    {item.specifications}
-                                </div>
-                              </TableCell>
-                              <TableCell className='text-sm'>
-                                <div className='space-y-1'>
-                                  <div className='text-xs'>
-                                    <span className='text-muted-foreground'>
-                                      Existing:
-                                    </span>{' '}
-                                    {item.existingStock}
-                                  </div>
-                                  <div className='text-xs font-medium'>
-                                    <span className='text-muted-foreground'>
-                                      Issued:
-                                    </span>{' '}
-                                    {item.issuedQuantity}
-                                  </div>
-                                  <div className='text-xs'>
-                                    <span className='text-muted-foreground'>
-                                      After:
-                                    </span>{' '}
-                                    {item.stockAfterIssue}
-                                  </div>
-                                </div>
-                              </TableCell>
+                              {item.specifications}
+                            </div>
+                          </TableCell>
+                          <TableCell className='text-sm'>
+                            <div className='space-y-1'>
+                              <div className='text-xs'>
+                                <span className='text-muted-foreground'>
+                                  Existing:
+                                </span>{' '}
+                                {item.existingStock}
+                              </div>
+                              <div className='text-xs font-medium'>
+                                <span className='text-muted-foreground'>
+                                  Issued:
+                                </span>{' '}
+                                {item.issuedQuantity}
+                              </div>
+                              <div className='text-xs'>
+                                <span className='text-muted-foreground'>
+                                  After:
+                                </span>{' '}
+                                {item.stockAfterIssue}
+                              </div>
+                            </div>
+                          </TableCell>
                           <TableCell className='text-sm'>
                             {new Date(issue.issuedDate).toLocaleDateString()}
                           </TableCell>
-                              <TableCell>
+                          <TableCell>
                             <div>
-                                <div className='font-medium'>
-                                  {item.recipientName}
-                                </div>
+                              <div className='font-medium'>
+                                {item.recipientName}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -719,7 +749,7 @@ export const MaterialIssuesTab = () => {
                               <div className='font-medium'>
                                 {issue.issuingPersonName}
                               </div>
-                                <div className='text-xs text-muted-foreground'>
+                              <div className='text-xs text-muted-foreground'>
                                 {issue.issuingPersonDesignation}
                               </div>
                             </div>
@@ -728,11 +758,9 @@ export const MaterialIssuesTab = () => {
                             <Badge variant='outline'>{issue.unitName}</Badge>
                           </TableCell>
                           <TableCell>
-                            <div className='text-sm'>
-                                  {item.purpose}
-                                </div>
-                              </TableCell>
-                            </TableRow>
+                            <div className='text-sm'>{item.purpose}</div>
+                          </TableCell>
+                        </TableRow>
                       ))
                     )}
                   </TableBody>
@@ -790,10 +818,14 @@ export const MaterialIssuesTab = () => {
                               className='h-6 w-6 p-0'
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toggleRowExpansion(`${issue.id}-item-${itemIndex}`);
+                                toggleRowExpansion(
+                                  `${issue.id}-item-${itemIndex}`
+                                );
                               }}
                             >
-                              {expandedRows.has(`${issue.id}-item-${itemIndex}`) ? (
+                              {expandedRows.has(
+                                `${issue.id}-item-${itemIndex}`
+                              ) ? (
                                 <ChevronDown className='w-4 h-4' />
                               ) : (
                                 <ChevronRight className='w-4 h-4' />
@@ -822,7 +854,7 @@ export const MaterialIssuesTab = () => {
                               <div className='font-medium capitalize'>
                                 {item.materialName}
                               </div>
-                              </div>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className='text-sm text-muted-foreground truncate max-w-40'>
@@ -902,9 +934,16 @@ export const MaterialIssuesTab = () => {
         <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
           {/* Page Info */}
           <div className='text-sm text-muted-foreground'>
-            Showing {((materialIssuesData.meta.page - 1) * materialIssuesData.meta.limit) + 1} to{' '}
-            {Math.min(materialIssuesData.meta.page * materialIssuesData.meta.limit, materialIssuesData.meta.itemCount)} of{' '}
-            {materialIssuesData.meta.itemCount} entries
+            Showing{' '}
+            {(materialIssuesData.meta.page - 1) *
+              materialIssuesData.meta.limit +
+              1}{' '}
+            to{' '}
+            {Math.min(
+              materialIssuesData.meta.page * materialIssuesData.meta.limit,
+              materialIssuesData.meta.itemCount
+            )}{' '}
+            of {materialIssuesData.meta.itemCount} entries
           </div>
 
           {/* Pagination Controls */}
@@ -944,17 +983,20 @@ export const MaterialIssuesTab = () => {
                   setCurrentPage(1);
                   fetchMaterialIssues(1, itemsPerPage);
                 }}
-                disabled={!materialIssuesData.meta.hasPreviousPage || materialIssuesData.meta.page === 1}
+                disabled={
+                  !materialIssuesData.meta.hasPreviousPage ||
+                  materialIssuesData.meta.page === 1
+                }
                 className='h-8 w-8 p-0'
               >
                 <ChevronsLeft className='w-4 h-4' />
               </Button>
-              
+
               <Button
                 variant='outline'
                 size='sm'
                 onClick={() => {
-                  setCurrentPage(prev => prev - 1);
+                  setCurrentPage((prev) => prev - 1);
                   fetchMaterialIssues(currentPage - 1, itemsPerPage);
                 }}
                 disabled={!materialIssuesData.meta.hasPreviousPage}
@@ -965,40 +1007,50 @@ export const MaterialIssuesTab = () => {
 
               {/* Page numbers */}
               <div className='flex items-center gap-1 mx-2'>
-                {Array.from({ length: Math.min(5, materialIssuesData.meta.pageCount) }, (_, i) => {
-                  let pageNum;
-                  if (materialIssuesData.meta.pageCount <= 5) {
-                    pageNum = i + 1;
-                  } else if (materialIssuesData.meta.page <= 3) {
-                    pageNum = i + 1;
-                  } else if (materialIssuesData.meta.page >= materialIssuesData.meta.pageCount - 2) {
-                    pageNum = materialIssuesData.meta.pageCount - 4 + i;
-                  } else {
-                    pageNum = materialIssuesData.meta.page - 2 + i;
-                  }
+                {Array.from(
+                  { length: Math.min(5, materialIssuesData.meta.pageCount) },
+                  (_, i) => {
+                    let pageNum;
+                    if (materialIssuesData.meta.pageCount <= 5) {
+                      pageNum = i + 1;
+                    } else if (materialIssuesData.meta.page <= 3) {
+                      pageNum = i + 1;
+                    } else if (
+                      materialIssuesData.meta.page >=
+                      materialIssuesData.meta.pageCount - 2
+                    ) {
+                      pageNum = materialIssuesData.meta.pageCount - 4 + i;
+                    } else {
+                      pageNum = materialIssuesData.meta.page - 2 + i;
+                    }
 
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={materialIssuesData.meta.page === pageNum ? 'default' : 'outline'}
-                      size='sm'
-                      onClick={() => {
-                        setCurrentPage(pageNum);
-                        fetchMaterialIssues(pageNum, itemsPerPage);
-                      }}
-                      className='h-8 w-8 p-0'
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={
+                          materialIssuesData.meta.page === pageNum
+                            ? 'default'
+                            : 'outline'
+                        }
+                        size='sm'
+                        onClick={() => {
+                          setCurrentPage(pageNum);
+                          fetchMaterialIssues(pageNum, itemsPerPage);
+                        }}
+                        className='h-8 w-8 p-0'
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  }
+                )}
               </div>
 
               <Button
                 variant='outline'
                 size='sm'
                 onClick={() => {
-                  setCurrentPage(prev => prev + 1);
+                  setCurrentPage((prev) => prev + 1);
                   fetchMaterialIssues(currentPage + 1, itemsPerPage);
                 }}
                 disabled={!materialIssuesData.meta.hasNextPage}
@@ -1006,15 +1058,22 @@ export const MaterialIssuesTab = () => {
               >
                 <ChevronRight className='w-4 h-4' />
               </Button>
-              
+
               <Button
                 variant='outline'
                 size='sm'
                 onClick={() => {
                   setCurrentPage(materialIssuesData.meta.pageCount);
-                  fetchMaterialIssues(materialIssuesData.meta.pageCount, itemsPerPage);
+                  fetchMaterialIssues(
+                    materialIssuesData.meta.pageCount,
+                    itemsPerPage
+                  );
                 }}
-                disabled={!materialIssuesData.meta.hasNextPage || materialIssuesData.meta.page === materialIssuesData.meta.pageCount}
+                disabled={
+                  !materialIssuesData.meta.hasNextPage ||
+                  materialIssuesData.meta.page ===
+                    materialIssuesData.meta.pageCount
+                }
                 className='h-8 w-8 p-0'
               >
                 <ChevronsRight className='w-4 h-4' />
@@ -1053,7 +1112,7 @@ export const MaterialIssuesTab = () => {
                             SR.NO.
                           </TableHead>
                           <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                           ISSUING MATERIAL
+                            ISSUING MATERIAL
                           </TableHead>
                           <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
                             CURRENT STOCK
@@ -1065,7 +1124,7 @@ export const MaterialIssuesTab = () => {
                             STOCK AFTER ISSUE
                           </TableHead>
                           <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                             ISSUING TO
+                            ISSUING TO
                           </TableHead>
                           <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
                             UPLOAD IMAGE
@@ -1083,7 +1142,9 @@ export const MaterialIssuesTab = () => {
                             </TableCell>
                             <TableCell className='border border-gray-300 px-2 py-1'>
                               <div className='flex flex-col'>
-                                <span className='font-medium'>{item.materialName}</span>
+                                <span className='font-medium'>
+                                  {item.materialName}
+                                </span>
                                 {item.specifications && (
                                   <span className='text-xs text-muted-foreground'>
                                     {item.specifications}
@@ -1127,9 +1188,7 @@ export const MaterialIssuesTab = () => {
                               )}
                             </TableCell>
                             <TableCell className='border border-gray-300 px-2 py-1'>
-                              <div className='text-xs'>
-                                {item.purpose}
-                              </div>
+                              <div className='text-xs'>{item.purpose}</div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1160,7 +1219,9 @@ export const MaterialIssuesTab = () => {
                     <div className='space-y-1'>
                       <Label className='text-xs'>Date</Label>
                       <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs'>
-                        {new Date(selectedIssue.issuedDate).toLocaleDateString()}
+                        {new Date(
+                          selectedIssue.issuedDate
+                        ).toLocaleDateString()}
                       </div>
                     </div>
 
@@ -1189,7 +1250,9 @@ export const MaterialIssuesTab = () => {
                   }
                 >
                   <Edit className='w-4 h-4' />
-                  {canEditIssue(selectedIssue.issuedDate) ? 'Edit Form' : 'Cannot Edit (7+ days)'}
+                  {canEditIssue(selectedIssue.issuedDate)
+                    ? 'Edit Form'
+                    : 'Cannot Edit (7+ days)'}
                 </Button>
                 <Button
                   variant='outline'

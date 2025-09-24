@@ -308,9 +308,8 @@ export interface MaterialPurchase {
 export interface CreateMaterialPurchaseRequest {
   purchaseOrderNumber: string;
   orderDate: string;
-  totalValue: string;
   additionalNotes?: string;
-  items: CreateMaterialPurchaseItemInput[];
+  indentId: number;
 }
 
 export interface CreateMaterialPurchaseItemInput {

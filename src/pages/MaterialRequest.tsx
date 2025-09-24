@@ -63,6 +63,7 @@ import {
   Machine,
   CreateMaterialIndentRequest,
   CreateMaterialIndentItemInput,
+  MaterialIndent,
 } from '../lib/api/types';
 import materialIndentsApi from '../lib/api/material-indents';
 
@@ -482,71 +483,118 @@ const MaterialRequest = () => {
         }
       );
 
-      const payload: CreateMaterialIndentRequest = {
-        additionalNotes,
-        items: itemsPayload,
-        status: 'pending_approval',
-      };
+      const successFullResponse: MaterialIndent[] = [];
+      const failedItems: string[] = [];
 
-      const form = new FormData();
-      if (payload.additionalNotes)
-        form.append('additionalNotes', payload.additionalNotes);
-      form.append('items', JSON.stringify(payload.items));
-      form.append('status', payload.status || 'pending_approval');
+      // Submit each item individually
+      for (let i = 0; i < itemsPayload.length; i++) {
+        const item = itemsPayload[i];
+        const payload: CreateMaterialIndentRequest = {
+          additionalNotes,
+          items: [item],
+          status: 'pending_approval',
+        };
 
-      // Append item files
-      requestItems.forEach((item) => {
-        (item.images || []).forEach((file) => {
+        const form = new FormData();
+        if (payload.additionalNotes)
+          form.append('additionalNotes', payload.additionalNotes);
+        form.append('items', JSON.stringify(payload.items));
+        form.append('status', payload.status || 'pending_approval');
+
+        // Append item files for this specific item
+        requestItems[i].images?.forEach((file) => {
           form.append('itemFiles', file as File);
         });
-      });
 
-      // Append vendor quotation files
-      requestItems.forEach((item) => {
-        (item.vendorQuotations || []).forEach((v) => {
+        // Append vendor quotation files for this specific item
+        requestItems[i].vendorQuotations.forEach((v) => {
           if (v.quotationFile) {
             form.append('quotationFiles', v.quotationFile);
           }
         });
-      });
 
-      // Submit via API
-      const created = await materialIndentsApi.create(
-        form as unknown as FormData
-      );
+        // Submit via API
+        try {
+          const created = await materialIndentsApi.create(
+            form as unknown as FormData
+          );
 
-      toast({
-        title: 'Material Indent Created',
-        description: created.uniqueId || 'Request created successfully',
-      });
+          successFullResponse.push(created);
 
-      // Reset form
-      setRequestItems([
-        {
-          id: '1',
-          srNo: 1,
-          productName: '',
-          machineName: '',
-          specifications: '',
-          oldStock: 0,
-          reqQuantity: '',
-          measureUnit: '',
-          images: [],
-          imagePreviews: [],
-          notes: '',
-          vendorQuotations: [],
-        },
-      ]);
-      setAdditionalNotes('');
-      setErrors({});
-      navigate('/materials-inventory');
+          // Show progress toast for each successful submission
+          toast({
+            title: 'Item Submitted',
+            description: `${requestItems[i].productName} submitted successfully`,
+          });
+        } catch (itemError) {
+          const axiosError = itemError as {
+            response?: { data?: { message?: string } };
+          };
+          const message =
+            axiosError.response?.data?.message ||
+            `Failed to submit ${requestItems[i].productName}`;
+
+          failedItems.push(
+            `${requestItems[i].productName} (Item ${i + 1}): ${message}`
+          );
+
+          toast({
+            title: 'Item Submission Failed',
+            description: `Failed to submit ${requestItems[i].productName}`,
+            variant: 'destructive',
+          });
+        }
+      }
+
+      // Show final summary
+      if (successFullResponse.length > 0 && failedItems.length === 0) {
+        toast({
+          title: 'All Items Submitted Successfully',
+          description: `${successFullResponse.length} item(s) submitted successfully`,
+        });
+      } else if (successFullResponse.length > 0 && failedItems.length > 0) {
+        toast({
+          title: 'Partial Success',
+          description: `${successFullResponse.length} item(s) submitted, ${failedItems.length} failed`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'All Submissions Failed',
+          description: 'No items were submitted successfully',
+          variant: 'destructive',
+        });
+      }
+
+      // Reset form only if all items were submitted successfully
+      if (failedItems.length === 0) {
+        setRequestItems([
+          {
+            id: '1',
+            srNo: 1,
+            productName: '',
+            machineName: '',
+            specifications: '',
+            oldStock: 0,
+            reqQuantity: '',
+            measureUnit: '',
+            images: [],
+            imagePreviews: [],
+            notes: '',
+            vendorQuotations: [],
+          },
+        ]);
+        setAdditionalNotes('');
+        setErrors({});
+        navigate('/materials-inventory');
+      }
     } catch (err) {
-      console.error('Error creating material indent:', err);
-      const axiosError = err as { response?: { data?: { message?: string } } };
-      const message =
-        axiosError.response?.data?.message ||
-        'Failed to create material indent';
-      toast({ title: 'Error', description: message, variant: 'destructive' });
+      console.error('Error in submission process:', err);
+      toast({
+        title: 'Submission Error',
+        description: 'An unexpected error occurred during submission',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -882,7 +930,9 @@ const MaterialRequest = () => {
                 </div>
 
                 <div className='space-y-2'>
-                  <Label className='text-sm font-medium'>Machine Name (Optional)</Label>
+                  <Label className='text-sm font-medium'>
+                    Machine Name (Optional)
+                  </Label>
                   <Select
                     value={item.machineName}
                     onValueChange={(value) =>
