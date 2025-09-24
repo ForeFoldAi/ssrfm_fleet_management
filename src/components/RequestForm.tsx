@@ -239,7 +239,7 @@ export const RequestForm = ({ formData, onUpdate, onNext }: RequestFormProps) =>
         {/* Maker */}
         <div className="space-y-2">
           <Label htmlFor="maker" className="text-lg font-semibold">
-            Maker/Brand *
+            Maker/Brand 
           </Label>
           <Input
             id="maker"

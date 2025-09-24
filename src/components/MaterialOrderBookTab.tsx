@@ -1,44 +1,279 @@
-import { useState } from "react";
-import { Clock, CheckCircle, XCircle, Eye, FileText, Plus, AlertTriangle, User, Calendar, Package, Truck, CheckSquare, List, Table as TableIcon, ChevronRight, ChevronDown, MoreVertical, Send, Search, FileEdit, Building2 } from "lucide-react";
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Input } from "../components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
-import { Link, useNavigate } from "react-router-dom";
-import { useRole } from "../contexts/RoleContext";
-import { MaterialIssueForm } from "../components/MaterialIssueForm";
-import { RequestStatusManager } from "../components/RequestStatusManager";
-import { ResubmitForm } from "../components/ResubmitForm";
-import { useRequestWorkflow } from "../hooks/useRequestWorkflow";
-import { HistoryView } from "../components/HistoryView";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  Eye,
+  FileText,
+  Plus,
+  AlertTriangle,
+  User,
+  Calendar,
+  Package,
+  Truck,
+  CheckSquare,
+  List,
+  Table as TableIcon,
+  ChevronRight,
+  ChevronDown,
+  MoreVertical,
+  Send,
+  Search,
+  FileEdit,
+  Building2,
+  Loader2,
+  ChevronUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight,
+  ShoppingCart,
+  CheckCircle2,
+  X,
+} from 'lucide-react';
+import { Button } from '../components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../components/ui/tabs';
+import { Input } from '../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../components/ui/dialog';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import { Link, useNavigate } from 'react-router-dom';
+import { useRole } from '../contexts/RoleContext';
+import { MaterialIssueForm } from '../components/MaterialIssueForm';
+import { RequestStatusManager } from '../components/RequestStatusManager';
+import { ResubmitForm } from '../components/ResubmitForm';
+import { useRequestWorkflow } from '../hooks/useRequestWorkflow';
+import { HistoryView } from '../components/HistoryView';
 import { generatePurchaseId, parseLocationFromId } from '../lib/utils';
+import materialIndentsApi, { IndentStatus } from '../lib/api/material-indents';
+import {
+  materialPurchasesApi,
+  MaterialPurchaseStatus,
+} from '../lib/api/materials-purchases';
+import { branchesApi } from '../lib/api/branches';
+import {
+  Branch,
+  MaterialIndent,
+  PaginationMeta,
+  MaterialPurchase,
+  ApproveRejectMaterialIndentRequest,
+  ReceiveMaterialPurchaseItemRequest,
+} from '../lib/api/types';
+import { toast } from '../hooks/use-toast';
 
 export const MaterialOrderBookTab = () => {
-  const { currentUser } = useRole();
+  const { currentUser, hasPermission } = useRole();
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterPriority, setFilterPriority] = useState("all");
-  const [filterUnit, setFilterUnit] = useState("all");
-  const [viewMode, setViewMode] = useState<"list" | "table">("table");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterPriority, setFilterPriority] = useState('all');
+  const [filterUnit, setFilterUnit] = useState('all');
+  const [viewMode, setViewMode] = useState<'list' | 'table'>('table');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isIssueFormOpen, setIsIssueFormOpen] = useState(false);
-  const [selectedRequestForStatus, setSelectedRequestForStatus] = useState<any>(null);
+  const [selectedRequestForStatus, setSelectedRequestForStatus] =
+    useState<MaterialIndent | null>(null);
   const [isStatusManagerOpen, setIsStatusManagerOpen] = useState(false);
-  const [selectedRequestForResubmit, setSelectedRequestForResubmit] = useState<any>(null);
+  const [selectedRequestForResubmit, setSelectedRequestForResubmit] =
+    useState<MaterialIndent | null>(null);
   const [isResubmitFormOpen, setIsResubmitFormOpen] = useState(false);
-  
-  // Available units for company owner
-  const availableUnits = [
-    { id: "unit-1", name: "SSRFM Unit 1", location: "Mumbai" },
-    { id: "unit-2", name: "SSRFM Unit 2", location: "Delhi" },
-    { id: "unit-3", name: "SSRFM Unit 3", location: "Bangalore" },
-    { id: "unit-4", name: "SSRFM Unit 4", location: "Chennai" }
-  ];
-  
+
+  // New state for approval/rejection workflow
+  const [selectedIndentForApproval, setSelectedIndentForApproval] =
+    useState<MaterialIndent | null>(null);
+  const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
+  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+  const [selectedQuotationId, setSelectedQuotationId] = useState<number | null>(
+    null
+  );
+
+  // New state for material purchase workflow
+  const [selectedIndentForOrder, setSelectedIndentForOrder] =
+    useState<MaterialIndent | null>(null);
+  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
+  const [selectedPurchase, setSelectedPurchase] =
+    useState<MaterialPurchase | null>(null);
+  const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
+  const [receiveData, setReceiveData] =
+    useState<ReceiveMaterialPurchaseItemRequest>({
+      receivedQuantity: 0,
+      receivedDate: new Date().toISOString().split('T')[0],
+      notes: '',
+    });
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState<string>('id');
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+
+  // API state
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [materialIndents, setMaterialIndents] = useState<MaterialIndent[]>([]);
+  const [pagination, setPagination] = useState<PaginationMeta>({
+    page: 1,
+    limit: 5, // Changed default to 5
+    itemCount: 0,
+    pageCount: 0,
+    hasPreviousPage: false,
+    hasNextPage: false,
+  });
+
+  // Available branches
+  const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+
+  // Fetch branches
+  useEffect(() => {
+    const fetchBranches = async () => {
+      setIsLoadingBranches(true);
+      try {
+        const response = await branchesApi.getAll({ limit: 100 });
+        setAvailableBranches(response.data);
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load branches. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoadingBranches(false);
+      }
+    };
+
+    fetchBranches();
+  }, []);
+
+  // Fetch material indents
+  const fetchMaterialIndents = useCallback(
+    async (page = 1, limit = 5) => {
+      // Changed default to 5
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const params: {
+          page: number;
+          limit: number;
+          sortBy: string;
+          sortOrder: 'ASC' | 'DESC';
+          status?: string;
+          branchId?: string;
+        } = {
+          page,
+          limit,
+          sortBy,
+          sortOrder,
+        };
+
+        // Add status filter if not 'all'
+        if (filterStatus !== 'all') {
+          params.status = filterStatus;
+        }
+
+        // Add branch filter if not 'all'
+        if (filterUnit !== 'all') {
+          params.branchId = filterUnit;
+        }
+
+        const response = await materialIndentsApi.getAll(params);
+
+        setPagination({
+          page: response.meta.page,
+          limit: response.meta.limit,
+          itemCount: response.meta.itemCount,
+          pageCount: response.meta.pageCount,
+          hasPreviousPage: response.meta.hasPreviousPage,
+          hasNextPage: response.meta.hasNextPage,
+        });
+
+        setMaterialIndents(response.data);
+      } catch (error) {
+        console.error('Error fetching material indents:', error);
+
+        let errorMessage = 'Failed to load material indents. Please try again.';
+
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        // Check for Axios error response
+        const axiosError = error as {
+          response?: { data?: { message?: string } };
+        };
+        if (axiosError.response?.data?.message) {
+          errorMessage = axiosError.response.data.message;
+        }
+
+        setError(errorMessage);
+        setMaterialIndents([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [filterStatus, filterUnit, sortBy, sortOrder] // Added sortBy and sortOrder to dependencies
+  );
+
+  // Handle column sorting
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      // Toggle sort order if same column
+      setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      // Set new column and default to ASC
+      setSortBy(column);
+      setSortOrder('ASC');
+    }
+  };
+
+  // Get sort icon for column
+  const getSortIcon = (column: string) => {
+    if (sortBy !== column) {
+      return <ArrowUpDown className='w-4 h-4 text-muted-foreground' />;
+    }
+    return sortOrder === 'ASC' ? (
+      <ChevronUp className='w-4 h-4 text-primary' />
+    ) : (
+      <ChevronDown className='w-4 h-4 text-primary' />
+    );
+  };
+
   // Workflow management
   const {
     initializeRequest,
@@ -47,886 +282,442 @@ export const MaterialOrderBookTab = () => {
     revertRequest,
     updateMaterialReceipt,
     getRequestWorkflow,
-    canPerformAction
+    canPerformAction,
   } = useRequestWorkflow();
-  const [issuedMaterials, setIssuedMaterials] = useState<any[]>([
+  interface IssuedMaterial {
+    id: string;
+    materialId: string;
+    materialName: string;
+    specifications: string;
+    MeasureUnit: string;
+    existingStock: number;
+    issuedQuantity: string;
+    stockAfterIssue: number;
+    recipientName: string;
+    recipientId: string;
+    recipientDesignation: string;
+    department: string;
+    machineId: string;
+    machineName: string;
+    purpose: string;
+    issuingPersonName: string;
+    issuingPersonDesignation: string;
+    issuedBy: string;
+    issuedDate: string;
+    materialIssueFormSrNo: string;
+    reqFormSrNo: string;
+    indFormSrNo: string;
+    status: string;
+    type: string;
+    timestamp: string;
+    unit: string;
+    unitName: string;
+    [key: string]: unknown; // For other properties
+  }
+
+  const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>([
     // Recent Material Issues - Including items from physical form
     {
-      id: "ISS-2024-012",
-      materialId: "MAT-001",
-      materialName: "fevicol",
-      specifications: "SH adhesive, MARINE brand",
-      MeasureUnit: "KG",
+      id: 'ISS-2024-012',
+      materialId: 'MAT-001',
+      materialName: 'fevicol',
+      specifications: 'SH adhesive, MARINE brand',
+      MeasureUnit: 'KG',
       existingStock: 1,
-      issuedQuantity: "1",
+      issuedQuantity: '1',
       stockAfterIssue: 0,
-      recipientName: "DBLU KUMAR (AJEET)",
-      recipientId: "EMP-CH001",
-      recipientDesignation: "CH-MISTRI",
-      department: "Maintenance",
-      machineId: "GENERAL",
-      machineName: "General Maintenance",
-      purpose: "Adhesive work for equipment repair",
-      issuingPersonName: "SHARWAN",
-      issuingPersonDesignation: "MAINTANCE -SUPERVISOR",
-      issuedBy: "SHARWAN",
-      issuedDate: "2024-01-22",
-      materialIssueFormSrNo: "SSFM/IISFN/007",
-      reqFormSrNo: "SSFM/MNT/RQ/0012",
-      indFormSrNo: "SSFM/MNT/IND./0012",
-      status: "issued",
-      type: "material_issue",
-      timestamp: "2024-01-22T09:15:00Z",
-      unit: "unit-1",
-      unitName: "SSRFM Unit 1"
+      recipientName: 'DBLU KUMAR (AJEET)',
+      recipientId: 'EMP-CH001',
+      recipientDesignation: 'CH-MISTRI',
+      department: 'Maintenance',
+      machineId: 'GENERAL',
+      machineName: 'General Maintenance',
+      purpose: 'Adhesive work for equipment repair',
+      issuingPersonName: 'SHARWAN',
+      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
+      issuedBy: 'SHARWAN',
+      issuedDate: '2024-01-22',
+      materialIssueFormSrNo: 'SSFM/IISFN/007',
+      reqFormSrNo: 'SSFM/MNT/RQ/0012',
+      indFormSrNo: 'SSFM/MNT/IND./0012',
+      status: 'issued',
+      type: 'material_issue',
+      timestamp: '2024-01-22T09:15:00Z',
+      unit: 'unit-1',
+      unitName: 'SSRFM Unit 1',
     },
     {
-      id: "ISS-2024-011",
-      materialId: "MAT-002",
-      materialName: "wire brush",
-      specifications: "0.01 mm thickness of wire, INDUSTRIAL",
-      MeasureUnit: "pieces",
+      id: 'ISS-2024-011',
+      materialId: 'MAT-002',
+      materialName: 'wire brush',
+      specifications: '0.01 mm thickness of wire, INDUSTRIAL',
+      MeasureUnit: 'pieces',
       existingStock: 2,
-      issuedQuantity: "2",
+      issuedQuantity: '2',
       stockAfterIssue: 0,
-      recipientName: "RAVI SHARMA",
-      recipientId: "EMP-MT002",
-      recipientDesignation: "MAINTENANCE TECHNICIAN",
-      department: "Maintenance",
-      machineId: "MACHINE-003",
-      machineName: "Flour Sifter #01",
-      purpose: "Cleaning and maintenance of sifter components",
-      issuingPersonName: "SHARWAN",
-      issuingPersonDesignation: "MAINTANCE -SUPERVISOR",
-      issuedBy: "SHARWAN",
-      issuedDate: "2024-01-21",
-      materialIssueFormSrNo: "SSFM/IISFN/006",
-      reqFormSrNo: "SSFM/MNT/RQ/0011",
-      indFormSrNo: "SSFM/MNT/IND./0011",
-      status: "issued",
-      type: "material_issue",
-      timestamp: "2024-01-21T14:30:00Z",
-      unit: "unit-2",
-      unitName: "SSRFM Unit 2"
+      recipientName: 'RAVI SHARMA',
+      recipientId: 'EMP-MT002',
+      recipientDesignation: 'MAINTENANCE TECHNICIAN',
+      department: 'Maintenance',
+      machineId: 'MACHINE-003',
+      machineName: 'Flour Sifter #01',
+      purpose: 'Cleaning and maintenance of sifter components',
+      issuingPersonName: 'SHARWAN',
+      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
+      issuedBy: 'SHARWAN',
+      issuedDate: '2024-01-21',
+      materialIssueFormSrNo: 'SSFM/IISFN/006',
+      reqFormSrNo: 'SSFM/MNT/RQ/0011',
+      indFormSrNo: 'SSFM/MNT/IND./0011',
+      status: 'issued',
+      type: 'material_issue',
+      timestamp: '2024-01-21T14:30:00Z',
+      unit: 'unit-2',
+      unitName: 'SSRFM Unit 2',
     },
     {
-      id: "ISS-2024-010",
-      materialId: "MAT-003",
-      materialName: "dholak ball",
-      specifications: "PVC transparent, INDUSTRIAL",
-      MeasureUnit: "pieces",
+      id: 'ISS-2024-010',
+      materialId: 'MAT-003',
+      materialName: 'dholak ball',
+      specifications: 'PVC transparent, INDUSTRIAL',
+      MeasureUnit: 'pieces',
       existingStock: 200,
-      issuedQuantity: "200",
+      issuedQuantity: '200',
       stockAfterIssue: 0,
-      recipientName: "SURESH KUMAR",
-      recipientId: "EMP-OP003",
-      recipientDesignation: "MACHINE OPERATOR",
-      department: "Production Floor A",
-      machineId: "MACHINE-001",
-      machineName: "Main Flour Mill #01",
-      purpose: "Production line component replacement",
-      issuingPersonName: "SHARWAN",
-      issuingPersonDesignation: "MAINTANCE -SUPERVISOR",
-      issuedBy: "SHARWAN",
-      issuedDate: "2024-01-20",
-      materialIssueFormSrNo: "SSFM/IISFN/005",
-      reqFormSrNo: "SSFM/MNT/RQ/0010",
-      indFormSrNo: "SSFM/MNT/IND./0010",
-      status: "issued",
-      type: "material_issue",
-      timestamp: "2024-01-20T11:45:00Z",
-      unit: "unit-1",
-      unitName: "SSRFM Unit 1"
+      recipientName: 'SURESH KUMAR',
+      recipientId: 'EMP-OP003',
+      recipientDesignation: 'MACHINE OPERATOR',
+      department: 'Production Floor A',
+      machineId: 'MACHINE-001',
+      machineName: 'Main Flour Mill #01',
+      purpose: 'Production line component replacement',
+      issuingPersonName: 'SHARWAN',
+      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
+      issuedBy: 'SHARWAN',
+      issuedDate: '2024-01-20',
+      materialIssueFormSrNo: 'SSFM/IISFN/005',
+      reqFormSrNo: 'SSFM/MNT/RQ/0010',
+      indFormSrNo: 'SSFM/MNT/IND./0010',
+      status: 'issued',
+      type: 'material_issue',
+      timestamp: '2024-01-20T11:45:00Z',
+      unit: 'unit-1',
+      unitName: 'SSRFM Unit 1',
     },
     {
-      id: "ISS-2024-009",
-      materialId: "MAT-004",
-      materialName: "triangle brush",
-      specifications: "Cleaning brush, INDUSTRIAL",
-      MeasureUnit: "pieces",
+      id: 'ISS-2024-009',
+      materialId: 'MAT-004',
+      materialName: 'triangle brush',
+      specifications: 'Cleaning brush, INDUSTRIAL',
+      MeasureUnit: 'pieces',
       existingStock: 130,
-      issuedQuantity: "60",
+      issuedQuantity: '60',
       stockAfterIssue: 70,
-      recipientName: "MOHAN LAL",
-      recipientId: "EMP-CL001",
-      recipientDesignation: "CLEANING SUPERVISOR",
-      department: "Housekeeping",
-      machineId: "ALL-MACHINES",
-      machineName: "General Cleaning Operations",
-      purpose: "Daily cleaning and maintenance of all equipment",
-      issuingPersonName: "SHARWAN",
-      issuingPersonDesignation: "MAINTANCE -SUPERVISOR",
-      issuedBy: "SHARWAN",
-      issuedDate: "2024-01-19",
-      materialIssueFormSrNo: "SSFM/IISFN/004",
-      reqFormSrNo: "SSFM/MNT/RQ/0009",
-      indFormSrNo: "SSFM/MNT/IND./0009",
-      status: "issued",
-      type: "material_issue",
-      timestamp: "2024-01-19T16:20:00Z",
-      unit: "unit-2",
-      unitName: "SSRFM Unit 2"
+      recipientName: 'MOHAN LAL',
+      recipientId: 'EMP-CL001',
+      recipientDesignation: 'CLEANING SUPERVISOR',
+      department: 'Housekeeping',
+      machineId: 'ALL-MACHINES',
+      machineName: 'General Cleaning Operations',
+      purpose: 'Daily cleaning and maintenance of all equipment',
+      issuingPersonName: 'SHARWAN',
+      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
+      issuedBy: 'SHARWAN',
+      issuedDate: '2024-01-19',
+      materialIssueFormSrNo: 'SSFM/IISFN/004',
+      reqFormSrNo: 'SSFM/MNT/RQ/0009',
+      indFormSrNo: 'SSFM/MNT/IND./0009',
+      status: 'issued',
+      type: 'material_issue',
+      timestamp: '2024-01-19T16:20:00Z',
+      unit: 'unit-2',
+      unitName: 'SSRFM Unit 2',
     },
     {
-      id: "ISS-2024-008",
-      materialId: "MAT-005",
-      materialName: "gum tape",
-      specifications: "1 inch width adhesive tape, INDUSTRIAL",
-      MeasureUnit: "pieces",
+      id: 'ISS-2024-008',
+      materialId: 'MAT-005',
+      materialName: 'gum tape',
+      specifications: '1 inch width adhesive tape, INDUSTRIAL',
+      MeasureUnit: 'pieces',
       existingStock: 14,
-      issuedQuantity: "2",
+      issuedQuantity: '2',
       stockAfterIssue: 12,
-      recipientName: "PRAKASH SINGH",
-      recipientId: "EMP-PK001",
-      recipientDesignation: "PACKAGING SUPERVISOR",
-      department: "Packaging",
-      machineId: "MACHINE-004",
-      machineName: "Main Conveyor #01",
-      purpose: "Packaging and sealing operations",
-      issuingPersonName: "SHARWAN",
-      issuingPersonDesignation: "MAINTANCE -SUPERVISOR",
-      issuedBy: "SHARWAN",
-      issuedDate: "2024-01-18",
-      materialIssueFormSrNo: "SSFM/IISFN/003",
-      reqFormSrNo: "SSFM/MNT/RQ/0008",
-      indFormSrNo: "SSFM/MNT/IND./0008",
-      status: "issued",
-      type: "material_issue",
-      timestamp: "2024-01-18T13:10:00Z",
-      unit: "unit-3",
-      unitName: "SSRFM Unit 3"
+      recipientName: 'PRAKASH SINGH',
+      recipientId: 'EMP-PK001',
+      recipientDesignation: 'PACKAGING SUPERVISOR',
+      department: 'Packaging',
+      machineId: 'MACHINE-004',
+      machineName: 'Main Conveyor #01',
+      purpose: 'Packaging and sealing operations',
+      issuingPersonName: 'SHARWAN',
+      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
+      issuedBy: 'SHARWAN',
+      issuedDate: '2024-01-18',
+      materialIssueFormSrNo: 'SSFM/IISFN/003',
+      reqFormSrNo: 'SSFM/MNT/RQ/0008',
+      indFormSrNo: 'SSFM/MNT/IND./0008',
+      status: 'issued',
+      type: 'material_issue',
+      timestamp: '2024-01-18T13:10:00Z',
+      unit: 'unit-3',
+      unitName: 'SSRFM Unit 3',
     },
     {
-      id: "ISS-2024-007",
-      materialId: "MAT-006",
-      materialName: "Bearings (SKF 6205-2RS)",
-      specifications: "Deep Grove Ball Bearing, Inner: 25mm, Outer: 52mm",
-      MeasureUnit: "pieces",
+      id: 'ISS-2024-007',
+      materialId: 'MAT-006',
+      materialName: 'Bearings (SKF 6205-2RS)',
+      specifications: 'Deep Grove Ball Bearing, Inner: 25mm, Outer: 52mm',
+      MeasureUnit: 'pieces',
       existingStock: 24,
-      issuedQuantity: "4",
+      issuedQuantity: '4',
       stockAfterIssue: 20,
-      recipientName: "RAJESH KUMAR",
-      recipientId: "EMP-ME001",
-      recipientDesignation: "MECHANICAL ENGINEER",
-      department: "Production Floor A",
-      machineId: "MACHINE-001",
-      machineName: "Main Flour Mill #01",
-      purpose: "Replace worn bearings in main grinding unit",
-      issuingPersonName: "SHARWAN",
-      issuingPersonDesignation: "MAINTANCE -SUPERVISOR",
-      issuedBy: "SHARWAN",
-      issuedDate: "2024-01-17",
-      materialIssueFormSrNo: "SSFM/IISFN/002",
-      reqFormSrNo: "SSFM/MNT/RQ/0007",
-      indFormSrNo: "SSFM/MNT/IND./0007",
-      status: "issued",
-      type: "material_issue",
-      timestamp: "2024-01-17T10:30:00Z",
-      unit: "unit-4",
-      unitName: "SSRFM Unit 4"
+      recipientName: 'RAJESH KUMAR',
+      recipientId: 'EMP-ME001',
+      recipientDesignation: 'MECHANICAL ENGINEER',
+      department: 'Production Floor A',
+      machineId: 'MACHINE-001',
+      machineName: 'Main Flour Mill #01',
+      purpose: 'Replace worn bearings in main grinding unit',
+      issuingPersonName: 'SHARWAN',
+      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
+      issuedBy: 'SHARWAN',
+      issuedDate: '2024-01-17',
+      materialIssueFormSrNo: 'SSFM/IISFN/002',
+      reqFormSrNo: 'SSFM/MNT/RQ/0007',
+      indFormSrNo: 'SSFM/MNT/IND./0007',
+      status: 'issued',
+      type: 'material_issue',
+      timestamp: '2024-01-17T10:30:00Z',
+      unit: 'unit-4',
+      unitName: 'SSRFM Unit 4',
     },
     {
-      id: "ISS-2024-006",
-      materialId: "MAT-007",
-      materialName: "Motor Oil (SAE 10W-30)",
-      specifications: "Industrial grade lubricant for machinery",
-      MeasureUnit: "liters",
+      id: 'ISS-2024-006',
+      materialId: 'MAT-007',
+      materialName: 'Motor Oil (SAE 10W-30)',
+      specifications: 'Industrial grade lubricant for machinery',
+      MeasureUnit: 'liters',
       existingStock: 65,
-      issuedQuantity: "15",
+      issuedQuantity: '15',
       stockAfterIssue: 50,
-      recipientName: "VIKRAM SINGH",
-      recipientId: "EMP-MT003",
-      recipientDesignation: "MAINTENANCE TECHNICIAN",
-      department: "Maintenance",
-      machineId: "MACHINE-002",
-      machineName: "Secondary Mill #02",
-      purpose: "Scheduled maintenance and lubrication",
-      issuingPersonName: "SHARWAN",
-      issuingPersonDesignation: "MAINTANCE -SUPERVISOR",
-      issuedBy: "SHARWAN",
-      issuedDate: "2024-01-16",
-      materialIssueFormSrNo: "SSFM/IISFN/001",
-      reqFormSrNo: "SSFM/MNT/RQ/0006",
-      indFormSrNo: "SSFM/MNT/IND./0006",
-      status: "issued",
-      type: "material_issue",
-      timestamp: "2024-01-16T14:45:00Z",
-      unit: "unit-1",
-      unitName: "SSRFM Unit 1"
+      recipientName: 'VIKRAM SINGH',
+      recipientId: 'EMP-MT003',
+      recipientDesignation: 'MAINTENANCE TECHNICIAN',
+      department: 'Maintenance',
+      machineId: 'MACHINE-002',
+      machineName: 'Secondary Mill #02',
+      purpose: 'Scheduled maintenance and lubrication',
+      issuingPersonName: 'SHARWAN',
+      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
+      issuedBy: 'SHARWAN',
+      issuedDate: '2024-01-16',
+      materialIssueFormSrNo: 'SSFM/IISFN/001',
+      reqFormSrNo: 'SSFM/MNT/RQ/0006',
+      indFormSrNo: 'SSFM/MNT/IND./0006',
+      status: 'issued',
+      type: 'material_issue',
+      timestamp: '2024-01-16T14:45:00Z',
+      unit: 'unit-1',
+      unitName: 'SSRFM Unit 1',
     },
     {
-      id: "ISS-2024-005",
-      materialId: "MAT-008",
-      materialName: "Conveyor Belts",
-      specifications: "Rubber belt, 600mm width, food grade",
-      MeasureUnit: "meters",
+      id: 'ISS-2024-005',
+      materialId: 'MAT-008',
+      materialName: 'Conveyor Belts',
+      specifications: 'Rubber belt, 600mm width, food grade',
+      MeasureUnit: 'meters',
       existingStock: 45,
-      issuedQuantity: "8",
+      issuedQuantity: '8',
       stockAfterIssue: 37,
-      recipientName: "ANIL KUMAR",
-      recipientId: "EMP-CV001",
-      recipientDesignation: "CONVEYOR TECHNICIAN",
-      department: "Production Line",
-      machineId: "MACHINE-004",
-      machineName: "Main Conveyor #01",
-      purpose: "Conveyor belt maintenance and repair",
-      issuingPersonName: "SHARWAN",
-      issuingPersonDesignation: "MAINTANCE -SUPERVISOR",
-      issuedBy: "SHARWAN",
-      issuedDate: "2024-01-15",
-      materialIssueFormSrNo: "SSFM/IISFN/000",
-      reqFormSrNo: "SSFM/MNT/RQ/0005",
-      indFormSrNo: "SSFM/MNT/IND./0005",
-      status: "issued",
-      type: "material_issue",
-      timestamp: "2024-01-15T11:20:00Z",
-      unit: "unit-2",
-      unitName: "SSRFM Unit 2"
-    }
+      recipientName: 'ANIL KUMAR',
+      recipientId: 'EMP-CV001',
+      recipientDesignation: 'CONVEYOR TECHNICIAN',
+      department: 'Production Line',
+      machineId: 'MACHINE-004',
+      machineName: 'Main Conveyor #01',
+      purpose: 'Conveyor belt maintenance and repair',
+      issuingPersonName: 'SHARWAN',
+      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
+      issuedBy: 'SHARWAN',
+      issuedDate: '2024-01-15',
+      materialIssueFormSrNo: 'SSFM/IISFN/000',
+      reqFormSrNo: 'SSFM/MNT/RQ/0005',
+      indFormSrNo: 'SSFM/MNT/IND./0005',
+      status: 'issued',
+      type: 'material_issue',
+      timestamp: '2024-01-15T11:20:00Z',
+      unit: 'unit-2',
+      unitName: 'SSRFM Unit 2',
+    },
   ]);
 
-  // Update allRequests to include unit information
-  const [allRequests, setAllRequests] = useState([
-    {
-      id: "SSRFM/unit-I/I-250120001",
-      materialName: "Industrial Bearings",
-      specifications: "SKF Deep Grove Ball Bearing 6205-2RS, Inner Dia: 25mm, Outer Dia: 52mm, Sealed Design",
-      maker: "SKF",
-      quantity: "6 pieces",
-      unitPrice: "₹700",
-      value: "₹4,200",
-      priority: "high",
-      materialPurpose: "Emergency replacement for critical bearing failure in main grinding unit",
-      machineId: "MACHINE-001",
-      machineName: "Primary Flour Mill #1",
-      date: "2024-01-20",
-      status: "pending_approval",
-      statusDescription: "Awaiting supervisor approval - urgent replacement needed",
-      currentStage: "Pending Approval",
-      progressStage: 1,
-      requestedBy: "John Martinez",
-      department: "Production",
-      urgencyLevel: "Critical",
-      estimatedDowntime: "4-6 hours",
-      additionalNotes: "Machine currently running on backup bearing. Immediate replacement required to prevent production halt.",
-      unit: "unit-1",
-      unitName: "SSRFM Unit 1"
-    },
-    {
-      id: "SSRFM/unit-II/I-250119002",
-      materialName: "Hydraulic Oil",
-      specifications: "ISO VG 46 Hydraulic Oil, Anti-wear properties, 20L container",
-      maker: "Shell",
-      quantity: "40 liters",
-      unitPrice: "₹170",
-      value: "₹6,800",
-      priority: "medium",
-      materialPurpose: "Scheduled maintenance for hydraulic systems",
-      machineId: "MACHINE-003",
-      machineName: "Hydraulic Press Unit",
-      date: "2024-01-19",
-      status: "pending_approval",
-      statusDescription: "Routine maintenance request pending approval",
-      currentStage: "Pending Approval",
-      progressStage: 1,
-      requestedBy: "Sarah Wilson",
-      department: "Maintenance",
-      maintenanceType: "Preventive",
-      scheduledDate: "2024-01-25",
-      additionalNotes: "Part of quarterly maintenance schedule. Oil level currently at minimum threshold.",
-      unit: "unit-2",
-      unitName: "SSRFM Unit 2"
-    },
-    {
-      id: "SSRFM/unit-III/I-250118003",
-      materialName: "Safety Sensors",
-      specifications: "Proximity Sensors M18, PNP Output, 8mm sensing distance, IP67 rated",
-      maker: "Omron",
-      quantity: "8 pieces",
-      value: "₹12,400",
-      priority: "medium",
-      materialPurpose: "Replace faulty safety sensors in packaging line",
-      machineId: "MACHINE-007",
-      machineName: "Automated Packaging Line",
-      date: "2024-01-18",
-      status: "pending_approval",
-      statusDescription: "Safety upgrade request under review",
-      currentStage: "Pending Approval",
-      progressStage: 1,
-      requestedBy: "Mike Johnson",
-      department: "Safety & Quality",
-      safetyImplications: "High - affects emergency stop functionality",
-      additionalNotes: "Two sensors currently malfunctioning, compromising safety protocols.",
-      unit: "unit-3",
-      unitName: "SSRFM Unit 3"
-    },
+  // Fetch material indents when filters change
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchMaterialIndents(pagination.page, pagination.limit);
+    }, 300); // Debounce search
 
-    // Approved Requests
-    {
-      id: "SSRFM/unit-I/I-250115004",
-      materialName: "Conveyor Belts",
-      specifications: "Rubber Conveyor Belt, Width: 800mm, Length: 25m, Food Grade, Heat Resistant",
-      maker: "Continental Belting",
-      quantity: "25 meters",
-      value: "₹32,500",
-      priority: "high",
-      materialPurpose: "Replace worn conveyor belt in main production line",
-      machineId: "MACHINE-002",
-      machineName: "Main Production Conveyor",
-      date: "2024-01-15",
-      status: "approved",
-      statusDescription: "Approved by management, ready for procurement",
-      currentStage: "Approved",
-      progressStage: 2,
-      requestedBy: "John Martinez",
-      approvedBy: "Robert Williams",
-      approvedDate: "2024-01-17",
-      department: "Production",
-      procurementTeam: "Industrial Supplies Division",
-      expectedProcurementTime: "5-7 business days",
-      additionalNotes: "High priority for production continuity. Current belt showing significant wear.",
-      unit: "unit-1",
-      unitName: "SSRFM Unit 1"
-    },
-    {
-      id: "SSRFM/unit-II/I-250114005",
-      materialName: "Air Filters",
-      specifications: "HEPA Air Filters, 610x610x292mm, 99.97% efficiency, Aluminum frame",
-      maker: "Camfil",
-      quantity: "12 pieces",
-      value: "₹18,600",
-      priority: "medium",
-      materialPurpose: "Replace air filtration system filters",
-      machineId: "HVAC-001",
-      machineName: "Production Area HVAC System",
-      date: "2024-01-14",
-      status: "approved",
-      statusDescription: "Approved for procurement - air quality maintenance",
-      currentStage: "Approved",
-      progressStage: 2,
-      requestedBy: "Lisa Anderson",
-      approvedBy: "Robert Williams",
-      approvedDate: "2024-01-16",
-      department: "Facilities",
-      environmentalImpact: "Improves air quality and worker safety",
-      additionalNotes: "Current filters at 80% capacity. Replacement will ensure optimal air quality.",
-      unit: "unit-2",
-      unitName: "SSRFM Unit 2"
-    },
-
-    // Partially Received Requests
-    {
-      id: "SSRFM/unit-I/I-250112006",
-      materialName: "Steel Bolts",
-      specifications: "M12x50mm Hex Head Bolts, Grade 8.8, Zinc Plated",
-      maker: "Fastener Industries",
-      quantity: "100 pieces",
-      value: "₹2,500",
-      priority: "medium",
-      materialPurpose: "Assembly and maintenance work",
-      machineId: "MACHINE-005",
-      machineName: "Assembly Station #2",
-      date: "2024-01-12",
-      status: "partially_received",
-      statusDescription: "Partially received: 60 of 100 pieces delivered",
-      currentStage: "Partially Received",
-      progressStage: 4,
-      requestedBy: "John Martinez",
-      approvedBy: "Robert Williams",
-      approvedDate: "2024-01-13",
-      orderedDate: "2024-01-14",
-      receivedDate: "2024-01-18",
-      receivedBy: "John Martinez",
-      department: "Production",
-      purchasedPrice: 1500,
-      purchasedQuantity: 60,
-      purchasedFrom: "Fastener Industries Ltd",
-      invoiceNumber: "FI-2024-0156",
-      qualityCheck: "passed",
-      notes: "First batch received. Remaining 40 pieces expected by Jan 25th",
-      additionalNotes: "Partial delivery due to supplier stock shortage. Balance quantity confirmed for next week.",
-      unit: "unit-1",
-      unitName: "SSRFM Unit 1"
-    },
-    {
-      id: "SSRFM/unit-II/I-250111007",
-      materialName: "Electrical Cables",
-      specifications: "3 Core Copper Cable, 2.5mm², PVC Insulated, IS 694 Standard",
-      maker: "Havells",
-      quantity: "50 meters",
-      value: "₹3,200",
-      priority: "high",
-      materialPurpose: "Electrical panel rewiring project",
-      machineId: "ELECTRICAL-PANEL-02",
-      machineName: "Production Line 2 Control Panel",
-      date: "2024-01-11",
-      status: "partially_received",
-      statusDescription: "Partially received: 30 of 50 meters delivered",
-      currentStage: "Partially Received",
-      progressStage: 4,
-      requestedBy: "Mike Johnson",
-      approvedBy: "Robert Williams",
-      approvedDate: "2024-01-12",
-      orderedDate: "2024-01-13",
-      receivedDate: "2024-01-17",
-      receivedBy: "Mike Johnson",
-      department: "Electrical",
-      purchasedPrice: 1920,
-      purchasedQuantity: 30,
-      purchasedFrom: "Havells Electrical Supplies",
-      invoiceNumber: "HES-2024-0089",
-      qualityCheck: "passed",
-      notes: "Partial delivery received. Quality inspection passed. Remaining cable expected soon.",
-      additionalNotes: "Project can proceed with received quantity. Balance required for completion.",
-      unit: "unit-2",
-      unitName: "SSRFM Unit 2"
-    },
-
-    // Material Received (Complete) Requests
-    {
-      id: "SSRFM/unit-I/I-250108008",
-      materialName: "Industrial Lubricants",
-      specifications: "Multi-purpose Lithium Grease, High Temperature Grade, 400g Cartridges",
-      maker: "Mobil",
-      quantity: "20 cartridges",
-      value: "₹4,800",
-      priority: "medium",
-      materialPurpose: "Routine maintenance lubrication for all machinery",
-      machineId: "ALL-MACHINES",
-      machineName: "General Machinery Maintenance",
-      date: "2024-01-08",
-      status: "material_received",
-      statusDescription: "Materials completely received and stored in inventory",
-      currentStage: "Material Received",
-      progressStage: 5,
-      requestedBy: "Sarah Wilson",
-      approvedBy: "Robert Williams",
-      approvedDate: "2024-01-09",
-      orderedDate: "2024-01-10",
-      receivedDate: "2024-01-16",
-      receivedBy: "Sarah Wilson",
-      department: "Maintenance",
-      purchasedPrice: 4800,
-      purchasedQuantity: 20,
-      purchasedFrom: "Mobil Industrial Lubricants",
-      invoiceNumber: "MIL-2024-0234",
-      qualityCheck: "passed",
-      notes: "Complete order received. All cartridges in good condition. Stored in maintenance inventory.",
-      additionalNotes: "Monthly maintenance supply fully restocked. Quality certification received.",
-      unit: "unit-1",
-      unitName: "SSRFM Unit 1"
-    },
-    {
-      id: "SSRFM/unit-II/I-250107009",
-      materialName: "Safety Gloves",
-      specifications: "Cut Resistant Gloves, Level 5 Protection, Nitrile Coated Palm",
-      maker: "Ansell",
-      quantity: "50 pairs",
-      value: "₹7,500",
-      priority: "high",
-      materialPurpose: "Worker safety equipment replacement",
-      machineId: "GENERAL",
-      machineName: "General Safety Requirements",
-      date: "2024-01-07",
-      status: "material_received",
-      statusDescription: "Safety equipment completely received and distributed",
-      currentStage: "Material Received",
-      progressStage: 5,
-      requestedBy: "John Martinez",
-      approvedBy: "Robert Williams",
-      approvedDate: "2024-01-08",
-      orderedDate: "2024-01-09",
-      receivedDate: "2024-01-15",
-      receivedBy: "John Martinez",
-      department: "Safety",
-      purchasedPrice: 7500,
-      purchasedQuantity: 50,
-      purchasedFrom: "Ansell Safety Solutions",
-      invoiceNumber: "ASS-2024-0167",
-      qualityCheck: "passed",
-      notes: "Complete order received. All gloves meet safety standards. Distributed to production teams.",
-      additionalNotes: "Safety compliance maintained. All workers equipped with new protective gear.",
-      unit: "unit-2",
-      unitName: "SSRFM Unit 2"
-    },
-
-    // Ordered Requests
-    {
-      id: "SSRFM/unit-III/I-250110010",
-      materialName: "Motor Oil",
-      specifications: "SAE 20W-50 Heavy Duty Motor Oil, API CF-4/SG Grade, Synthetic blend",
-      maker: "Castrol",
-      quantity: "60 liters",
-      value: "₹9,600",
-      priority: "medium",
-      materialPurpose: "Routine maintenance for all grinding motors",
-      machineId: "MACHINE-GROUP-A",
-      machineName: "Primary Grinding Motors",
-      date: "2024-01-10",
-      status: "ordered",
-      statusDescription: "Order placed with supplier, awaiting delivery",
-      currentStage: "Ordered",
-      progressStage: 3,
-      requestedBy: "John Martinez",
-      approvedBy: "Robert Williams",
-      approvedDate: "2024-01-12",
-      orderedDate: "2024-01-14",
-      orderNumber: "PO-2024-0875",
-      expectedDelivery: "2024-01-22",
-      supplierName: "Industrial Lubricants Co.",
-      supplierContact: "+91-9876543210",
-      trackingNumber: "TRK-IL-240114-001",
-      additionalNotes: "Bulk order for quarterly maintenance cycle. Includes all motor grades.",
-      unit: "unit-3",
-      unitName: "SSRFM Unit 3"
-    },
-    {
-      id: "SSRFM/unit-IV/I-250109011",
-      materialName: "Grinding Wheels",
-      specifications: "Aluminum Oxide Grinding Wheel, 350mm diameter, 40mm width, 32mm bore",
-      maker: "Norton",
-      quantity: "8 pieces",
-      value: "₹15,200",
-      priority: "high",
-      materialPurpose: "Replace worn grinding wheels in finishing department",
-      machineId: "MACHINE-008",
-      machineName: "Surface Grinding Machine",
-      date: "2024-01-09",
-      status: "ordered",
-      statusDescription: "Expedited order placed due to high priority",
-      currentStage: "Ordered",
-      progressStage: 3,
-      requestedBy: "David Chen",
-      approvedBy: "Robert Williams",
-      approvedDate: "2024-01-11",
-      orderedDate: "2024-01-13",
-      orderNumber: "PO-2024-0876",
-      expectedDelivery: "2024-01-20",
-      supplierName: "Precision Tools & Abrasives",
-      supplierContact: "+91-9876543211",
-      expeditedShipping: true,
-      additionalNotes: "Express delivery requested. Current wheels at 15% remaining life.",
-      unit: "unit-4",
-      unitName: "SSRFM Unit 4"
-    },
-
-    // Issued Requests
-    {
-      id: "SSRFM/unit-I/I-250105012",
-      materialName: "Grinding Stones",
-      specifications: "Natural Grinding Stone, Diameter: 1200mm, Thickness: 150mm, Premium Grade",
-      maker: "Stone Craft Industries",
-      quantity: "2 pieces",
-      value: "₹45,000",
-      priority: "high",
-      materialPurpose: "Replace worn grinding stones in main flour mill",
-      machineId: "MACHINE-004",
-      machineName: "Main Flour Mill",
-      date: "2024-01-05",
-      status: "issued",
-      statusDescription: "Materials delivered and issued to maintenance team",
-      currentStage: "Issued",
-      progressStage: 4,
-      requestedBy: "John Martinez",
-      approvedBy: "Robert Williams",
-      approvedDate: "2024-01-07",
-      orderedDate: "2024-01-08",
-      orderNumber: "PO-2024-0850",
-      deliveredDate: "2024-01-15",
-      issuedDate: "2024-01-16",
-      issuedBy: "Store Manager",
-      receivedBy: "Maintenance Team Lead",
-      installationScheduled: "2024-01-18",
-      additionalNotes: "Installation planned during weekend shutdown. Quality inspection completed.",
-      unit: "unit-1",
-      unitName: "SSRFM Unit 1"
-    },
-    {
-      id: "SSRFM/unit-II/I-250104013",
-      materialName: "Industrial Lubricants",
-      specifications: "Multi-purpose Industrial Grease, Lithium based, High temperature grade",
-      maker: "Mobil",
-      quantity: "24 cartridges",
-      value: "₹7,200",
-      priority: "medium",
-      materialPurpose: "Lubrication maintenance for all machinery",
-      machineId: "ALL-MACHINES",
-      machineName: "General Machinery Maintenance",
-      date: "2024-01-04",
-      status: "issued",
-      statusDescription: "Bulk lubricants issued for maintenance schedule",
-      currentStage: "Issued",
-      progressStage: 4,
-      requestedBy: "Sarah Wilson",
-      approvedBy: "Robert Williams",
-      approvedDate: "2024-01-06",
-      orderedDate: "2024-01-07",
-      deliveredDate: "2024-01-14",
-      issuedDate: "2024-01-15",
-      issuedBy: "Store Manager",
-      receivedBy: "Maintenance Department",
-      distributionPlan: "Allocated across all production lines",
-      additionalNotes: "Monthly maintenance supply. Distributed to all maintenance stations.",
-      unit: "unit-2",
-      unitName: "SSRFM Unit 2"
-    },
-
-    // Completed Requests
-    {
-      id: "SSRFM/unit-III/I-250102014",
-      materialName: "Safety Equipment",
-      specifications: "Safety Helmets Class A, Safety Goggles, Work Gloves, High-vis vests - Complete PPE Set",
-      maker: "3M Safety",
-      quantity: "25 sets",
-      value: "₹21,250",
-      priority: "high",
-      materialPurpose: "Annual safety equipment replacement for all production workers",
-      machineId: "GENERAL",
-      machineName: "General Safety Requirements",
-      date: "2024-01-02",
-      status: "completed",
-      statusDescription: "Request completed successfully with full documentation",
-      currentStage: "Completed",
-      progressStage: 5,
-      requestedBy: "John Martinez",
-      approvedBy: "Robert Williams",
-      approvedDate: "2024-01-03",
-      orderedDate: "2024-01-04",
-      deliveredDate: "2024-01-12",
-      issuedDate: "2024-01-13",
-      completedDate: "2024-01-15",
-      issuedBy: "Store Manager",
-      receivedBy: "HR Department",
-      distributedBy: "Safety Officer",
-      safetyTraining: "Completed for all recipients",
-      completionNotes: "All safety equipment distributed with proper training. Compliance certificates issued.",
-      additionalNotes: "100% compliance achieved. All workers equipped with new safety gear.",
-      unit: "unit-3",
-      unitName: "SSRFM Unit 3"
-    },
-    {
-      id: "SSRFM/unit-IV/I-250101015",
-      materialName: "Electrical Components",
-      specifications: "Circuit Breakers 32A, Contactors 25A, Cable glands M20, Terminal blocks",
-      maker: "Schneider Electric",
-      quantity: "1 set",
-      value: "₹14,800",
-      priority: "medium",
-      materialPurpose: "Electrical panel upgrade for improved safety and efficiency",
-      machineId: "ELECTRICAL-PANEL-03",
-      machineName: "Production Line 3 Control Panel",
-      date: "2024-01-01",
-      status: "completed",
-      statusDescription: "Electrical upgrade completed and tested successfully",
-      currentStage: "Completed",
-      progressStage: 5,
-      requestedBy: "Mike Johnson",
-      approvedBy: "Robert Williams",
-      approvedDate: "2024-01-02",
-      orderedDate: "2024-01-03",
-      deliveredDate: "2024-01-10",
-      issuedDate: "2024-01-11",
-      completedDate: "2024-01-14",
-      installedBy: "Electrical Maintenance Team",
-      testingCompleted: "2024-01-14",
-      certificationIssued: "Electrical Safety Certificate",
-      completionNotes: "Panel upgrade completed successfully. All safety tests passed. System operational.",
-      additionalNotes: "Improved electrical safety and added monitoring capabilities. 20% efficiency gain achieved.",
-      unit: "unit-4",
-      unitName: "SSRFM Unit 4"
-    },
-
-    // Reverted Requests
-    {
-      id: "SSRFM/unit-I/I-250116016",
-      materialName: "Industrial Pumps",
-      specifications: "Centrifugal Pump, 5HP, 3 Phase, Cast Iron Body, 2 inch inlet/outlet",
-      maker: "Kirloskar",
-      quantity: "2 pieces",
-      value: "₹45,000",
-      priority: "high",
-      materialPurpose: "Replace failed pumps in water circulation system",
-      machineId: "PUMP-SYSTEM-01",
-      machineName: "Water Circulation System",
-      date: "2024-01-16",
-      status: "reverted",
-      statusDescription: "Reverted by Owner - Specifications need clarification",
-      currentStage: "Reverted - Resubmission Required",
-      progressStage: 0,
-      requestedBy: "John Martinez",
-      department: "Maintenance",
-      revertedBy: "Robert Williams",
-      revertedDate: "2024-01-18",
-      revertReason: "Pump specifications are unclear. Please specify exact model number, flow rate (GPM), and head pressure requirements. Also provide justification for 5HP requirement vs existing 3HP pumps.",
-      additionalNotes: "Critical for production water supply. Current pumps showing signs of failure.",
-      unit: "unit-1",
-      unitName: "SSRFM Unit 1"
-    },
-    {
-      id: "SSRFM/unit-II/I-250114017",
-      materialName: "Electrical Transformers",
-      specifications: "Step-down Transformer, 440V to 220V, 10KVA, Oil Cooled",
-      maker: "Schneider Electric",
-      quantity: "1 piece",
-      value: "₹25,000",
-      priority: "medium",
-      materialPurpose: "Voltage regulation for new equipment installation",
-      machineId: "ELECTRICAL-PANEL-04",
-      machineName: "New Equipment Power Supply",
-      date: "2024-01-14",
-      status: "reverted",
-      statusDescription: "Reverted by Owner - Budget approval required",
-      currentStage: "Reverted - Resubmission Required",
-      progressStage: 0,
-      requestedBy: "Mike Johnson",
-      department: "Electrical",
-      revertedBy: "Robert Williams",
-      revertedDate: "2024-01-16",
-      revertReason: "Request exceeds department budget limit of ₹20,000. Please get budget approval from finance department or find alternative solution within budget. Also verify if existing transformers can be reconfigured.",
-      additionalNotes: "Required for new packaging line installation scheduled for next month.",
-      unit: "unit-2",
-      unitName: "SSRFM Unit 2"
-    },
-    {
-      id: "SSRFM/unit-III/I-250112018",
-      materialName: "Precision Measuring Tools",
-      specifications: "Digital Calipers 0-150mm, Micrometer Set 0-25mm, Dial Indicators",
-      maker: "Mitutoyo",
-      quantity: "1 set",
-      value: "₹18,500",
-      priority: "low",
-      materialPurpose: "Quality control and precision measurement in production",
-      machineId: "QC-STATION-01",
-      machineName: "Quality Control Station",
-      date: "2024-01-12",
-      status: "reverted",
-      statusDescription: "Reverted by Owner - Existing tools assessment needed",
-      currentStage: "Reverted - Resubmission Required",
-      progressStage: 0,
-      requestedBy: "Sarah Wilson",
-      department: "Quality Control",
-      revertedBy: "Robert Williams",
-      revertedDate: "2024-01-14",
-      revertReason: "Please conduct assessment of existing measuring tools first. Provide calibration reports and condition assessment. If existing tools can be repaired or recalibrated, that should be considered first before new purchase.",
-      additionalNotes: "Current tools showing accuracy issues during quality checks.",
-      unit: "unit-3",
-      unitName: "SSRFM Unit 3"
-    },
-
-    // Rejected Requests
-    {
-      id: "SSRFM/unit-IV/I-250108019",
-      materialName: "Electrical Wires",
-      specifications: "Copper Wire 2.5mm² XLPE Insulated, IS 694 Standard, Flame retardant",
-      maker: "Havells",
-      quantity: "100 meters",
-      value: "₹4,500",
-      priority: "low",
-      materialPurpose: "Electrical maintenance and rewiring of secondary systems",
-      machineId: "MACHINE-005",
-      machineName: "Secondary Control Panel Systems",
-      date: "2024-01-08",
-      status: "rejected",
-      statusDescription: "Rejected - insufficient justification and budget constraints",
-      currentStage: "Rejected",
-      progressStage: 0,
-      requestedBy: "John Martinez",
-      rejectedBy: "Sarah Chen",
-      rejectedDate: "2024-01-10",
-      rejectedAt: "manager_level",
-      reason: "Current wiring infrastructure is adequate for current operations. Defer to next fiscal year budget. Focus on critical maintenance items first.",
-      budgetConstraints: "Q1 electrical budget 85% utilized",
-      alternativeSuggestion: "Monitor current system performance and reassess in Q2",
-      additionalNotes: "Request can be resubmitted with detailed justification if system performance degrades.",
-      unit: "unit-4",
-      unitName: "SSRFM Unit 4"
-    },
-    {
-      id: "SSRFM/unit-I/I-250107020",
-      materialName: "Decorative Lighting",
-      specifications: "LED Strip Lights, RGB, 5m length, Remote controlled",
-      maker: "Philips",
-      quantity: "10 strips",
-      value: "₹8,900",
-      priority: "low",
-      materialPurpose: "Improve workplace ambiance in break areas",
-      machineId: "GENERAL",
-      machineName: "Employee Break Areas",
-      date: "2024-01-07",
-      status: "rejected",
-      statusDescription: "Rejected - non-essential item, not aligned with operational priorities",
-      currentStage: "Rejected",
-      progressStage: 0,
-      requestedBy: "Lisa Anderson",
-      rejectedBy: "Robert Williams",
-      rejectedDate: "2024-01-09",
-      rejectedAt: "supervisor_level",
-      reason: "Request does not align with operational priorities. Focus budget on production-critical items. Consider as part of facility improvement plan in future.",
-      policyViolation: "Non-production related expense outside approved categories",
-      alternativeSuggestion: "Submit as part of annual facility improvement proposal",
-      additionalNotes: "Consider energy-efficient lighting upgrades as part of comprehensive facility modernization plan.",
-      unit: "unit-1",
-      unitName: "SSRFM Unit 1"
-    }
+    return () => clearTimeout(timeoutId);
+  }, [
+    searchTerm,
+    filterStatus,
+    filterUnit,
+    pagination.page,
+    pagination.limit,
+    fetchMaterialIndents,
   ]);
+
+  // Legacy state for backward compatibility
+  interface LegacyRequest {
+    id: string;
+    originalId: number;
+    materialName: string;
+    specifications: string;
+    maker: string;
+    quantity: string;
+    unitPrice?: string;
+    value: string;
+    priority: string;
+    materialPurpose: string;
+    machineId: string;
+    machineName: string;
+    date: string;
+    status: string;
+    statusDescription: string;
+    currentStage: string;
+    progressStage: number;
+    requestedBy: string;
+    department?: string; // Make optional since some entries don't have it
+    unit: string;
+    unitName: string;
+    approvedBy?: string;
+    approvedDate?: string;
+    additionalNotes?: string;
+    rejectionReason?: string;
+    [key: string]: unknown; // For other legacy fields
+  }
+
+  const [allRequests, setAllRequests] = useState<LegacyRequest[]>([]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending_approval': return 'bg-yellow-500 text-white border-yellow-600 hover:bg-yellow-500 hover:text-white';
-      case 'approved': return 'bg-green-500 text-white border-green-600 hover:bg-green-500 hover:text-white';
-      case 'ordered': return 'bg-blue-500 text-white border-blue-600 hover:bg-blue-500 hover:text-white';
-      case 'partially_received': return 'bg-orange-500 text-white border-orange-600 hover:bg-orange-500 hover:text-white';
-      case 'material_received': return 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-500 hover:text-white';
-      case 'issued': return 'bg-purple-500 text-white border-purple-600 hover:bg-purple-500 hover:text-white';
-      case 'completed': return 'bg-green-600 text-white border-green-700 hover:bg-green-600 hover:text-white';
-      case 'rejected': return 'bg-red-500 text-white border-red-600 hover:bg-red-500 hover:text-white';
-      case 'reverted': return 'bg-black text-white border-gray-800 hover:bg-black hover:text-white';
-      default: return 'bg-gray-500 text-white border-gray-600 hover:bg-gray-500 hover:text-white';
+      case IndentStatus.DRAFT:
+        return 'bg-gray-500 text-white border-gray-600 hover:bg-gray-500 hover:text-white';
+      case IndentStatus.PENDING_APPROVAL:
+        return 'bg-yellow-500 text-white border-yellow-600 hover:bg-yellow-500 hover:text-white';
+      case IndentStatus.APPROVED:
+        return 'bg-green-500 text-white border-green-600 hover:bg-green-500 hover:text-white';
+      case IndentStatus.ORDERED:
+        return 'bg-blue-500 text-white border-blue-600 hover:bg-blue-500 hover:text-white';
+      case IndentStatus.PARTIALLY_RECEIVED:
+        return 'bg-orange-500 text-white border-orange-600 hover:bg-orange-500 hover:text-white';
+      case IndentStatus.FULLY_RECEIVED:
+        return 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-500 hover:text-white';
+      case IndentStatus.CLOSED:
+        return 'bg-green-600 text-white border-green-700 hover:bg-green-600 hover:text-white';
+      case IndentStatus.REJECTED:
+        return 'bg-red-500 text-white border-red-600 hover:bg-red-500 hover:text-white';
+      default:
+        return 'bg-gray-500 text-white border-gray-600 hover:bg-gray-500 hover:text-white';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-red-500 text-white';
-      case 'medium': return 'bg-yellow-500 text-white';
-      case 'low': return 'bg-secondary/100 text-white';
-      default: return 'bg-secondary text-secondary-foreground';
+      case 'high':
+        return 'bg-red-500 text-white';
+      case 'medium':
+        return 'bg-yellow-500 text-white';
+      case 'low':
+        return 'bg-secondary/100 text-white';
+      default:
+        return 'bg-secondary text-secondary-foreground';
     }
   };
 
   const getProgressColor = (stage: number) => {
     switch (stage) {
-      case 1: return 'bg-secondary/100';
-      case 2: return 'bg-secondary/100';
-      case 3: return 'bg-purple-500';
-      case 4: return 'bg-orange-500';
-      case 5: return 'bg-primary';
-      default: return 'bg-gray-300';
+      case 1: // DRAFT or PENDING_APPROVAL
+        return 'bg-secondary/100';
+      case 2: // APPROVED
+        return 'bg-secondary/100';
+      case 3: // ORDERED
+        return 'bg-purple-500';
+      case 4: // PARTIALLY_RECEIVED or FULLY_RECEIVED
+        return 'bg-orange-500';
+      case 5: // CLOSED
+        return 'bg-primary';
+      default:
+        return 'bg-gray-300';
+    }
+  };
+
+  const getProgressStage = (status: string): number => {
+    switch (status) {
+      case IndentStatus.DRAFT:
+        return 1;
+      case IndentStatus.PENDING_APPROVAL:
+        return 1;
+      case IndentStatus.APPROVED:
+        return 2;
+      case IndentStatus.ORDERED:
+        return 3;
+      case IndentStatus.PARTIALLY_RECEIVED:
+        return 4;
+      case IndentStatus.FULLY_RECEIVED:
+        return 4;
+      case IndentStatus.CLOSED:
+        return 5;
+      case IndentStatus.REJECTED:
+        return 0;
+      default:
+        return 0;
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending_approval':
-        return <Clock className="w-4 h-4" />;
-      case 'approved':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'ordered':
-        return <Package className="w-4 h-4" />;
-      case 'partially_received':
-        return <Truck className="w-4 h-4" />;
-      case 'material_received':
-        return <CheckSquare className="w-4 h-4" />;
-      case 'issued':
-        return <Truck className="w-4 h-4" />;
-      case 'completed':
-        return <CheckSquare className="w-4 h-4" />;
-      case 'rejected':
-        return <XCircle className="w-4 h-4" />;
-      case 'reverted':
-        return <XCircle className="w-4 h-4" />;
+      case IndentStatus.DRAFT:
+        return <FileEdit className='w-4 h-4' />;
+      case IndentStatus.PENDING_APPROVAL:
+        return <Clock className='w-4 h-4' />;
+      case IndentStatus.APPROVED:
+        return <CheckCircle className='w-4 h-4' />;
+      case IndentStatus.ORDERED:
+        return <Package className='w-4 h-4' />;
+      case IndentStatus.PARTIALLY_RECEIVED:
+        return <Truck className='w-4 h-4' />;
+      case IndentStatus.FULLY_RECEIVED:
+        return <CheckSquare className='w-4 h-4' />;
+      case IndentStatus.CLOSED:
+        return <CheckSquare className='w-4 h-4' />;
+      case IndentStatus.REJECTED:
+        return <XCircle className='w-4 h-4' />;
       default:
-        return <AlertTriangle className="w-4 h-4" />;
+        return <AlertTriangle className='w-4 h-4' />;
+    }
+  };
+
+  const getStatusLabel = (status: string): string => {
+    switch (status) {
+      case IndentStatus.DRAFT:
+        return 'Draft';
+      case IndentStatus.PENDING_APPROVAL:
+        return 'Pending Approval';
+      case IndentStatus.APPROVED:
+        return 'Approved';
+      case IndentStatus.ORDERED:
+        return 'Ordered';
+      case IndentStatus.PARTIALLY_RECEIVED:
+        return 'Partially Received';
+      case IndentStatus.FULLY_RECEIVED:
+        return 'Fully Received';
+      case IndentStatus.CLOSED:
+        return 'Closed';
+      case IndentStatus.REJECTED:
+        return 'Rejected';
+      default:
+        return 'Unknown';
     }
   };
 
@@ -940,77 +731,367 @@ export const MaterialOrderBookTab = () => {
     setExpandedRows(newExpandedRows);
   };
 
-  const handleMaterialIssue = (issueData: any) => {
-    setIssuedMaterials(prev => [...prev, issueData]);
+  const handleMaterialIssue = (issueData: Record<string, unknown>) => {
+    // Cast the issueData to IssuedMaterial to satisfy TypeScript
+    setIssuedMaterials((prev) => [
+      ...prev,
+      issueData as unknown as IssuedMaterial,
+    ]);
   };
 
   // Add missing functions
-  const openStatusManager = (request: any) => {
-    setSelectedRequestForStatus(request);
+  const openStatusManager = (request: MaterialIndent | LegacyRequest) => {
+    setSelectedRequestForStatus(request as MaterialIndent);
     setIsStatusManagerOpen(true);
   };
 
-  const openResubmitForm = (request: any) => {
-    setSelectedRequestForResubmit(request);
+  const openResubmitForm = (request: MaterialIndent | LegacyRequest) => {
+    setSelectedRequestForResubmit(request as MaterialIndent);
     setIsResubmitFormOpen(true);
   };
 
   const handleStatusUpdate = (requestId: string, newStatus: string) => {
-    setAllRequests(prev => prev.map(req => 
-      req.id === requestId ? { ...req, status: newStatus } : req
-    ));
+    setAllRequests((prev) =>
+      prev.map((req) =>
+        req.id === requestId ? { ...req, status: newStatus } : req
+      )
+    );
+
+    // In a real implementation, we would call the API to update the status
+    // materialIndentsApi.updateStatus(requestId, newStatus)
+    //   .then(() => fetchMaterialIndents())
+    //   .catch(error => console.error('Failed to update status:', error));
   };
 
-  const handleResubmitRequest = (requestData: any) => {
+  const handleResubmitRequest = (requestData: Record<string, unknown>) => {
     // Handle resubmit logic here
     console.log('Resubmitting request:', requestData);
+
+    // In a real implementation, we would call the API to resubmit the request
+    // materialIndentsApi.create(requestData)
+    //   .then(() => fetchMaterialIndents())
+    //   .catch(error => console.error('Failed to resubmit request:', error));
   };
 
-  // Role-based filtering function
-  const getFilteredRequestsByRole = () => {
-    let baseFilter = allRequests.filter(request => {
-      const matchesSearch = request.materialName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           request.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           request.maker.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = filterStatus === "all" || request.status === filterStatus;
-      const matchesPriority = filterPriority === "all" || request.priority === filterPriority;
-      
-      // Unit filtering logic
-      let matchesUnit = true;
-      if (currentUser?.role === 'company_owner') {
-        matchesUnit = filterUnit === "all" || request.unit === filterUnit;
-      } else {
-        // For supervisors, only show their unit's data
-        matchesUnit = request.unit === "unit-1"; // Assuming supervisor is from unit-1
+  // New function to handle approval
+  const handleApproveIndent = async () => {
+    if (!selectedIndentForApproval || !selectedItemId || !selectedQuotationId) {
+      toast({
+        title: 'Error',
+        description: 'Please select an item and quotation to approve.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const approvalData: ApproveRejectMaterialIndentRequest = {
+        status: 'approved',
+        itemId: selectedItemId,
+        quotationId: selectedQuotationId,
+      };
+
+      await materialIndentsApi.approve(
+        selectedIndentForApproval.id,
+        approvalData
+      );
+
+      toast({
+        title: 'Success',
+        description: 'Material indent approved successfully.',
+      });
+
+      setIsApprovalDialogOpen(false);
+      setSelectedIndentForApproval(null);
+      setSelectedItemId(null);
+      setSelectedQuotationId(null);
+      fetchMaterialIndents(pagination.page, pagination.limit);
+    } catch (error) {
+      console.error('Error approving indent:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to approve material indent. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // New function to handle rejection
+  const handleRejectIndent = async () => {
+    if (!selectedIndentForApproval || !rejectionReason.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please provide a rejection reason.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await materialIndentsApi.reject(
+        selectedIndentForApproval.id,
+        rejectionReason
+      );
+
+      toast({
+        title: 'Success',
+        description: 'Material indent rejected successfully.',
+      });
+
+      setIsRejectionDialogOpen(false);
+      setSelectedIndentForApproval(null);
+      setRejectionReason('');
+      fetchMaterialIndents(pagination.page, pagination.limit);
+    } catch (error) {
+      console.error('Error rejecting indent:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reject material indent. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // New function to create material purchase order
+  const handleCreatePurchaseOrder = async () => {
+    if (!selectedIndentForOrder) {
+      toast({
+        title: 'Error',
+        description: 'No indent selected for ordering.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Create purchase order from approved indent
+      const purchaseData = {
+        purchaseOrderNumber: `PO-${selectedIndentForOrder.uniqueId}`,
+        orderDate: new Date().toISOString().split('T')[0],
+        totalValue: selectedIndentForOrder.items
+          .reduce((total, item) => {
+            const quotation = item.selectedQuotation || item.quotations[0];
+            return (
+              total +
+              (quotation
+                ? Number(quotation.quotationAmount) * item.requestedQuantity
+                : 0)
+            );
+          }, 0)
+          .toString(),
+        additionalNotes: selectedIndentForOrder.additionalNotes || '',
+        items: selectedIndentForOrder.items.map((item) => ({
+          materialId: item.material.id,
+          orderedQuantity: item.requestedQuantity,
+          unitPrice:
+            item.selectedQuotation?.quotationAmount ||
+            item.quotations[0]?.quotationAmount ||
+            '0',
+          notes: item.notes || '',
+        })),
+      };
+
+      await materialPurchasesApi.create({
+        ...purchaseData,
+        indentId: selectedIndentForOrder.id,
+      });
+
+      // Update indent status to ordered
+      // Note: You might need to add an update status API call here
+
+      toast({
+        title: 'Success',
+        description: 'Purchase order created successfully.',
+      });
+
+      setIsOrderDialogOpen(false);
+      setSelectedIndentForOrder(null);
+      fetchMaterialIndents(pagination.page, pagination.limit);
+    } catch (error) {
+      console.error('Error creating purchase order:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create purchase order. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // New function to handle material receipt
+  const handleReceiveMaterial = async () => {
+    if (
+      !selectedPurchase ||
+      !receiveData.receivedQuantity ||
+      !receiveData.receivedDate
+    ) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // For now, we'll assume we're receiving the first item
+      // In a real implementation, you'd select which item to receive
+      const firstItem = selectedPurchase.items[0];
+      if (!firstItem) {
+        toast({
+          title: 'Error',
+          description: 'No items found in this purchase order.',
+          variant: 'destructive',
+        });
+        return;
       }
-      
-      return matchesSearch && matchesStatus && matchesPriority && matchesUnit;
+
+      await materialPurchasesApi.receiveItem(
+        selectedPurchase.id,
+        firstItem.id,
+        receiveData
+      );
+
+      toast({
+        title: 'Success',
+        description: 'Material received successfully.',
+      });
+
+      setIsReceiveDialogOpen(false);
+      setSelectedPurchase(null);
+      setReceiveData({
+        receivedQuantity: 0,
+        receivedDate: new Date().toISOString().split('T')[0],
+        notes: '',
+      });
+      fetchMaterialIndents(pagination.page, pagination.limit);
+    } catch (error) {
+      console.error('Error receiving material:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to receive material. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Helper function to format Purchase ID
+  const formatPurchaseId = (uniqueId: string, branchCode?: string) => {
+    // Convert to uppercase
+    let formattedId = uniqueId.toUpperCase();
+
+    // Convert unit numbers to Roman numerals (UNIT1 -> UNIT-I, UNIT2 -> UNIT-II, etc.)
+    formattedId = formattedId.replace(/UNIT(\d+)/g, (match, unitNumber) => {
+      const num = parseInt(unitNumber, 10);
+      const romanNumerals = [
+        '',
+        'I',
+        'II',
+        'III',
+        'IV',
+        'V',
+        'VI',
+        'VII',
+        'VIII',
+        'IX',
+        'X',
+      ];
+      return `UNIT-${romanNumerals[num] || unitNumber}`;
     });
 
-    // Role-based status filtering
-    if (currentUser?.role === 'company_owner') {
-      // Owner should only see: Pending Approval, Approved, Reverted
-      return baseFilter.filter(request => 
-        ['pending_approval', 'approved', 'reverted'].includes(request.status)
-      );
-    } else if (currentUser?.role === 'site_supervisor') {
-      // Supervisor can see all statuses but with different actions
-      return baseFilter;
-    }
-    
-    return baseFilter;
+    return formattedId;
   };
 
-  const filteredRequests = getFilteredRequestsByRole();
+  // Transform API data to UI format
+  const transformApiIndentToUiFormat = (indent: MaterialIndent) => {
+    // Get the first item for display purposes (if available)
+    const firstItem =
+      indent.items && indent.items.length > 0 ? indent.items[0] : null;
+    const firstQuotation =
+      firstItem?.selectedQuotation ||
+      (firstItem?.quotations && firstItem.quotations.length > 0
+        ? firstItem.quotations[0]
+        : null);
+
+    return {
+      id: formatPurchaseId(indent.uniqueId, indent.branch?.code),
+      originalId: indent.id,
+      materialName: firstItem?.material.name || 'N/A',
+      specifications:
+        firstItem?.specifications || firstItem?.material.specifications || '',
+      maker: firstItem?.material.makerBrand || 'N/A',
+      quantity: firstItem ? `${firstItem.requestedQuantity} units` : '0',
+      unitPrice: firstQuotation ? `₹${firstQuotation.quotationAmount}` : 'N/A',
+      value: firstQuotation
+        ? `₹${
+            Number(firstQuotation.quotationAmount) *
+            (firstItem?.requestedQuantity || 0)
+          }`
+        : 'N/A',
+      priority: 'medium', // Not available in API, using default
+      materialPurpose: firstItem?.notes || indent.additionalNotes || '',
+      machineId: firstItem?.machine?.id.toString() || 'N/A',
+      machineName: firstItem?.machine?.name || 'N/A',
+      date: new Date(indent.requestDate).toLocaleDateString(),
+      status: indent.status,
+      statusDescription: `${getStatusLabel(indent.status)} - ${
+        indent.additionalNotes || ''
+      }`,
+      currentStage: getStatusLabel(indent.status),
+      progressStage: getProgressStage(indent.status),
+      requestedBy: indent.requestedBy?.name || 'Unknown',
+      department: 'Production', // Not available in API, using default
+      unit: indent.branch?.code || '',
+      unitName: indent.branch?.name || '',
+      approvedBy: indent.approvedBy?.name,
+      approvedDate: indent.approvalDate
+        ? new Date(indent.approvalDate).toLocaleDateString()
+        : undefined,
+      additionalNotes: indent.additionalNotes,
+      rejectionReason: indent.rejectionReason,
+      // Include the original data for reference
+      originalIndent: indent,
+    };
+  };
+
+  // Client-side filtering for search
+  const filterIndents = (indents: MaterialIndent[]) => {
+    if (!searchTerm) return indents;
+
+    return indents.filter((indent) => {
+      // Search in indent uniqueId
+      if (indent.uniqueId.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return true;
+      }
+
+      // Search in items
+      return indent.items.some((item) => {
+        return (
+          item.material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.material.makerBrand
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          item.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      });
+    });
+  };
+
+  // Get filtered and transformed indents for UI
+  const getFilteredIndents = () => {
+    const filteredData = filterIndents(materialIndents);
+    return filteredData.map(transformApiIndentToUiFormat);
+  };
+
+  const filteredRequests = getFilteredIndents();
 
   // Get last 5 approved requests for Company Owner
   const getApprovedHistory = () => {
     if (currentUser?.role !== 'company_owner') return [];
-    
+
     return allRequests
-      .filter(req => req.status === 'approved')
+      .filter((req) => req.status === 'approved')
       .slice(0, 5)
-      .map(req => ({
+      .map((req) => ({
         id: req.id,
         date: req.date,
         materialName: req.materialName,
@@ -1021,7 +1102,7 @@ export const MaterialOrderBookTab = () => {
         requestedValue: req.value,
         currentValue: req.value,
         requestedBy: req.requestedBy,
-        status: req.status
+        status: req.status,
       }));
   };
 
@@ -1032,50 +1113,66 @@ export const MaterialOrderBookTab = () => {
     navigate(`/request-details/${encodedRequestId}`);
   };
 
-  const pendingRequests = filteredRequests.filter(req => 
-    req.status === 'pending_approval'
+  const pendingRequests = filteredRequests.filter(
+    (req) => req.status === 'pending_approval'
   );
-  const approvedRequests = filteredRequests.filter(req => 
-    req.status === 'approved' || req.status === 'ordered' || req.status === 'issued' || req.status === 'completed'
+  const approvedRequests = filteredRequests.filter(
+    (req) =>
+      req.status === 'approved' ||
+      req.status === 'ordered' ||
+      req.status === 'issued' ||
+      req.status === 'completed'
   );
-  const rejectedRequests = filteredRequests.filter(req => req.status === 'rejected');
+  const rejectedRequests = filteredRequests.filter(
+    (req) => req.status === 'rejected'
+  );
 
   // SSRFM Progress Bar: Submit → Approved → Ordered → Received → Complete
   const ProgressBar = ({ stage }: { stage: number }) => {
     const stages = ['Submit', 'Approved', 'Ordered', 'Received', 'Complete'];
     return (
-      <div className="my-3">
+      <div className='my-3'>
         {/* Desktop Progress Bar */}
-        <div className="hidden sm:flex items-center space-x-2">
-        {stages.map((stageName, index) => (
-          <div key={index} className="flex items-center">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white ${
-              index < stage ? getProgressColor(index + 1) : 'bg-gray-300'
-            }`}>
-              {index + 1}
+        <div className='hidden sm:flex items-center space-x-2'>
+          {stages.map((stageName, index) => (
+            <div key={index} className='flex items-center'>
+              <div
+                className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white ${
+                  index < stage ? getProgressColor(index + 1) : 'bg-gray-300'
+                }`}
+              >
+                {index + 1}
+              </div>
+              {index < stages.length - 1 && (
+                <div
+                  className={`w-12 h-1 mx-2 rounded-full ${
+                    index < stage - 1
+                      ? getProgressColor(index + 1)
+                      : 'bg-gray-300'
+                  }`}
+                />
+              )}
             </div>
-            {index < stages.length - 1 && (
-              <div className={`w-12 h-1 mx-2 rounded-full ${
-                index < stage - 1 ? getProgressColor(index + 1) : 'bg-gray-300'
-              }`} />
-            )}
-          </div>
-        ))}
+          ))}
         </div>
 
         {/* Mobile Progress Bar - Vertical */}
-        <div className="sm:hidden space-y-2">
+        <div className='sm:hidden space-y-2'>
           {stages.map((stageName, index) => (
-            <div key={index} className="flex items-center space-x-3">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white ${
-                index < stage ? getProgressColor(index + 1) : 'bg-gray-300'
-              }`}>
+            <div key={index} className='flex items-center space-x-3'>
+              <div
+                className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold text-white ${
+                  index < stage ? getProgressColor(index + 1) : 'bg-gray-300'
+                }`}
+              >
                 {index + 1}
               </div>
-              <div className="flex-1">
-                <span className={`text-xs font-medium ${
-                  index < stage ? 'text-foreground' : 'text-muted-foreground'
-                }`}>
+              <div className='flex-1'>
+                <span
+                  className={`text-xs font-medium ${
+                    index < stage ? 'text-foreground' : 'text-muted-foreground'
+                  }`}
+                >
                   {stageName}
                 </span>
               </div>
@@ -1088,45 +1185,112 @@ export const MaterialOrderBookTab = () => {
 
   // Enhanced List View Component - Table-like format with expandable details
   const ListView = ({ requests }: { requests: any[] }) => (
-    <Card className="rounded-lg shadow-sm">
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
+    <Card className='rounded-lg shadow-sm'>
+      <CardContent className='p-0'>
+        <div className='overflow-x-auto'>
           <Table>
             <TableHeader>
-              <TableRow className="bg-secondary/20 border-b-2 border-secondary/30">
-                <TableHead className="w-12 text-foreground font-semibold"></TableHead>
-                <TableHead className="min-w-[120px] text-foreground font-semibold">Purchase ID</TableHead>
-                <TableHead className="min-w-[150px] text-foreground font-semibold">Materials</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Quantity</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Price</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Total Value</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Status</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Purchased Date</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Purchased For</TableHead>
+              <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
+                <TableHead className='w-12 text-foreground font-semibold'></TableHead>
+                <TableHead
+                  className='min-w-[120px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('uniqueId')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Purchase ID
+                    {getSortIcon('uniqueId')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[150px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('materialName')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Materials
+                    {getSortIcon('materialName')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('quantity')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Quantity
+                    {getSortIcon('quantity')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('unitPrice')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Price
+                    {getSortIcon('unitPrice')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('value')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Total Value
+                    {getSortIcon('value')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('status')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Status
+                    {getSortIcon('status')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('requestDate')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Purchased Date
+                    {getSortIcon('requestDate')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('machineName')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Purchased For
+                    {getSortIcon('machineName')}
+                  </div>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {requests.map((request) => (
                 <>
-                  <TableRow key={request.id} className="hover:bg-muted/30 border-b border-secondary/20">
+                  <TableRow
+                    key={request.id}
+                    className='hover:bg-muted/30 border-b border-secondary/20'
+                  >
                     <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-6 w-6 p-0 rounded-lg"
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        className='h-6 w-6 p-0 rounded-lg'
                         onClick={() => toggleRowExpansion(request.id)}
                       >
                         {expandedRows.has(request.id) ? (
-                          <ChevronDown className="w-4 h-4" />
+                          <ChevronDown className='w-4 h-4' />
                         ) : (
-                          <ChevronRight className="w-4 h-4" />
+                          <ChevronRight className='w-4 h-4' />
                         )}
                       </Button>
                     </TableCell>
-                    <TableCell className="font-medium">
-                      <Button 
-                        variant="link" 
-                        className="p-0 h-auto font-medium text-primary hover:underline"
+                    <TableCell className='font-medium'>
+                      <Button
+                        variant='link'
+                        className='p-0 h-auto font-medium text-primary hover:underline'
                         onClick={() => handleRequestClick(request.id)}
                       >
                         {request.id}
@@ -1134,72 +1298,113 @@ export const MaterialOrderBookTab = () => {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{request.materialName}</div>
-                        <div className="text-xs text-muted-foreground">{request.maker}</div>
+                        <div className='font-medium'>
+                          {request.materialName}
+                        </div>
+                        <div className='text-xs text-muted-foreground'>
+                          {request.maker}
+                        </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">{request.quantity}</TableCell>
-                    <TableCell className="text-sm font-medium">{request.unitPrice || 'N/A'}</TableCell>
-                    <TableCell className="text-sm font-medium">{request.value}</TableCell>
+                    <TableCell className='text-sm'>
+                      {request.quantity}
+                    </TableCell>
+                    <TableCell className='text-sm font-medium'>
+                      {request.unitPrice || 'N/A'}
+                    </TableCell>
+                    <TableCell className='text-sm font-medium'>
+                      {request.value}
+                    </TableCell>
                     <TableCell>
-                      <Badge className={`${getStatusColor(request.status)} border`}>
-                        <span className="flex items-center gap-1">
+                      <Badge
+                        className={`${getStatusColor(request.status)} border`}
+                      >
+                        <span className='flex items-center gap-1'>
                           {getStatusIcon(request.status)}
-                          <span className="text-xs">{request.currentStage}</span>
+                          <span className='text-xs'>
+                            {request.currentStage}
+                          </span>
                         </span>
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm">{request.date}</TableCell>
-                    <TableCell className="text-sm">{request.machineName}</TableCell>
-                   
+                    <TableCell className='text-sm'>{request.date}</TableCell>
+                    <TableCell className='text-sm'>
+                      {request.machineName}
+                    </TableCell>
                   </TableRow>
-                  
+
                   {/* Expanded Detail Row */}
                   {expandedRows.has(request.id) && (
                     <TableRow>
-                      <TableCell colSpan={9} className="p-0">
-                        <div className="bg-muted/30 p-6 border-t">
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <TableCell colSpan={9} className='p-0'>
+                        <div className='bg-muted/30 p-6 border-t'>
+                          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
                             {/* Left Column - Request Details */}
-                            <div className="space-y-4">
+                            <div className='space-y-4'>
                               <div>
-                                <h3 className="font-semibold text-lg mb-3">Request Details</h3>
-                                <div className="space-y-3">
-                                  <div className="grid grid-cols-2 gap-4 text-sm">
+                                <h3 className='font-semibold text-lg mb-3'>
+                                  Request Details
+                                </h3>
+                                <div className='space-y-3'>
+                                  <div className='grid grid-cols-2 gap-4 text-sm'>
                                     <div>
-                                      <span className="font-medium text-muted-foreground">Purchase ID:</span>
-                                      <div className="font-medium">{request.id}</div>
+                                      <span className='font-medium text-muted-foreground'>
+                                        Purchase ID:
+                                      </span>
+                                      <div className='font-medium'>
+                                        {request.id}
+                                      </div>
                                     </div>
                                     <div>
-                                      <span className="font-medium text-muted-foreground">Quantity:</span>
-                                      <div className="font-medium">{request.quantity}</div>
+                                      <span className='font-medium text-muted-foreground'>
+                                        Quantity:
+                                      </span>
+                                      <div className='font-medium'>
+                                        {request.quantity}
+                                      </div>
                                     </div>
                                     <div>
-                                      <span className="font-medium text-muted-foreground">Total Value:</span>
-                                      <div className="font-medium">{request.value}</div>
+                                      <span className='font-medium text-muted-foreground'>
+                                        Total Value:
+                                      </span>
+                                      <div className='font-medium'>
+                                        {request.value}
+                                      </div>
                                     </div>
                                     <div>
-                                      <span className="font-medium text-muted-foreground">Purchased For:</span>
-                                      <div className="font-medium">{request.machineId}</div>
+                                      <span className='font-medium text-muted-foreground'>
+                                        Purchased For:
+                                      </span>
+                                      <div className='font-medium'>
+                                        {request.machineId}
+                                      </div>
                                     </div>
                                   </div>
-                                  
+
                                   <div>
-                                    <span className="font-medium text-muted-foreground">Specifications:</span>
-                                    <div className="text-sm mt-1 p-3 bg-background rounded border">
+                                    <span className='font-medium text-muted-foreground'>
+                                      Specifications:
+                                    </span>
+                                    <div className='text-sm mt-1 p-3 bg-background rounded border'>
                                       {request.specifications}
                                     </div>
                                   </div>
-                                  
+
                                   <div>
-                                    <span className="font-medium text-muted-foreground">Purpose:</span>
-                                    <div className="text-sm mt-1">{request.materialPurpose}</div>
+                                    <span className='font-medium text-muted-foreground'>
+                                      Purpose:
+                                    </span>
+                                    <div className='text-sm mt-1'>
+                                      {request.materialPurpose}
+                                    </div>
                                   </div>
-                                  
+
                                   {request.additionalNotes && (
                                     <div>
-                                      <span className="font-medium text-muted-foreground">Additional Notes:</span>
-                                      <div className="text-sm mt-1 p-3 bg-background rounded border">
+                                      <span className='font-medium text-muted-foreground'>
+                                        Additional Notes:
+                                      </span>
+                                      <div className='text-sm mt-1 p-3 bg-background rounded border'>
                                         {request.additionalNotes}
                                       </div>
                                     </div>
@@ -1207,97 +1412,216 @@ export const MaterialOrderBookTab = () => {
                                 </div>
                               </div>
                             </div>
-                            
+
                             {/* Right Column - Status & Progress */}
-                            <div className="space-y-4">
+                            <div className='space-y-4'>
                               <div>
-                                <h3 className="font-semibold text-lg mb-3">Status & Progress</h3>
-                                
+                                <h3 className='font-semibold text-lg mb-3'>
+                                  Status & Progress
+                                </h3>
+
                                 {/* Progress Bar */}
                                 <ProgressBar stage={request.progressStage} />
-                                
+
                                 {/* Status Information */}
-                                <div className="space-y-3">
-                                  <div className="p-3 bg-background rounded border">
-                                    <div className="text-sm font-medium mb-2">Current Status</div>
-                                    <div className="text-sm text-muted-foreground">{request.statusDescription}</div>
+                                <div className='space-y-3'>
+                                  <div className='p-3 bg-background rounded border'>
+                                    <div className='text-sm font-medium mb-2'>
+                                      Current Status
+                                    </div>
+                                    <div className='text-sm text-muted-foreground'>
+                                      {request.statusDescription}
+                                    </div>
                                   </div>
-                                  
+
                                   {/* Status-specific information */}
                                   {request.status === 'approved' && (
-                                    <div className="bg-secondary/10 border border-secondary rounded-lg p-3">
-                                      <div className="text-sm">
-                                        <strong className="text-foreground">Approved:</strong> {request.approvedBy} on {request.approvedDate}
+                                    <div className='bg-secondary/10 border border-secondary rounded-lg p-3'>
+                                      <div className='text-sm'>
+                                        <strong className='text-foreground'>
+                                          Approved:
+                                        </strong>{' '}
+                                        {request.approvedBy} on{' '}
+                                        {request.approvedDate}
                                       </div>
-                                      <div className="text-xs text-foreground mt-1">Ready for procurement</div>
+                                      <div className='text-xs text-foreground mt-1'>
+                                        Ready for procurement
+                                      </div>
                                     </div>
                                   )}
 
                                   {request.status === 'ordered' && (
-                                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                                      <div className="text-sm space-y-1">
-                                        <div><strong className="text-purple-800">Ordered:</strong> {request.orderedDate}</div>
-                                        <div><strong className="text-purple-800">Supplier:</strong> {request.supplierName}</div>
-                                        <div><strong className="text-purple-800">Expected Delivery:</strong> {request.expectedDelivery}</div>
+                                    <div className='bg-purple-50 border border-purple-200 rounded-lg p-3'>
+                                      <div className='text-sm space-y-1'>
+                                        <div>
+                                          <strong className='text-purple-800'>
+                                            Ordered:
+                                          </strong>{' '}
+                                          {request.orderedDate}
+                                        </div>
+                                        <div>
+                                          <strong className='text-purple-800'>
+                                            Supplier:
+                                          </strong>{' '}
+                                          {request.supplierName}
+                                        </div>
+                                        <div>
+                                          <strong className='text-purple-800'>
+                                            Expected Delivery:
+                                          </strong>{' '}
+                                          {request.expectedDelivery}
+                                        </div>
                                       </div>
                                     </div>
                                   )}
 
                                   {request.status === 'partially_received' && (
-                                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                                      <div className="text-sm space-y-1">
-                                        <div><strong className="text-orange-800">Partially Received:</strong> {request.receivedDate}</div>
-                                        <div><strong className="text-orange-800">Received Quantity:</strong> {request.purchasedQuantity} of {request.quantity}</div>
-                                        <div><strong className="text-orange-800">Supplier:</strong> {request.purchasedFrom}</div>
-                                        <div><strong className="text-orange-800">Invoice:</strong> {request.invoiceNumber}</div>
-                                        {request.notes && <div><strong className="text-orange-800">Notes:</strong> {request.notes}</div>}
+                                    <div className='bg-orange-50 border border-orange-200 rounded-lg p-3'>
+                                      <div className='text-sm space-y-1'>
+                                        <div>
+                                          <strong className='text-orange-800'>
+                                            Partially Received:
+                                          </strong>{' '}
+                                          {request.receivedDate}
+                                        </div>
+                                        <div>
+                                          <strong className='text-orange-800'>
+                                            Received Quantity:
+                                          </strong>{' '}
+                                          {request.purchasedQuantity} of{' '}
+                                          {request.quantity}
+                                        </div>
+                                        <div>
+                                          <strong className='text-orange-800'>
+                                            Supplier:
+                                          </strong>{' '}
+                                          {request.purchasedFrom}
+                                        </div>
+                                        <div>
+                                          <strong className='text-orange-800'>
+                                            Invoice:
+                                          </strong>{' '}
+                                          {request.invoiceNumber}
+                                        </div>
+                                        {request.notes && (
+                                          <div>
+                                            <strong className='text-orange-800'>
+                                              Notes:
+                                            </strong>{' '}
+                                            {request.notes}
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   )}
 
                                   {request.status === 'material_received' && (
-                                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                                      <div className="text-sm space-y-1">
-                                        <div><strong className="text-primary">Received:</strong> {request.receivedDate}</div>
-                                        <div><strong className="text-primary">Quantity:</strong> {request.purchasedQuantity} {request.quantity.split(' ').slice(1).join(' ')}</div>
-                                        <div><strong className="text-primary">Total Cost:</strong> ₹{request.purchasedPrice}</div>
-                                        <div><strong className="text-primary">Supplier:</strong> {request.purchasedFrom}</div>
-                                        <div><strong className="text-primary">Quality Check:</strong> {request.qualityCheck}</div>
+                                    <div className='bg-primary/5 border border-primary/20 rounded-lg p-3'>
+                                      <div className='text-sm space-y-1'>
+                                        <div>
+                                          <strong className='text-primary'>
+                                            Received:
+                                          </strong>{' '}
+                                          {request.receivedDate}
+                                        </div>
+                                        <div>
+                                          <strong className='text-primary'>
+                                            Quantity:
+                                          </strong>{' '}
+                                          {request.purchasedQuantity}{' '}
+                                          {request.quantity
+                                            .split(' ')
+                                            .slice(1)
+                                            .join(' ')}
+                                        </div>
+                                        <div>
+                                          <strong className='text-primary'>
+                                            Total Cost:
+                                          </strong>{' '}
+                                          ₹{request.purchasedPrice}
+                                        </div>
+                                        <div>
+                                          <strong className='text-primary'>
+                                            Supplier:
+                                          </strong>{' '}
+                                          {request.purchasedFrom}
+                                        </div>
+                                        <div>
+                                          <strong className='text-primary'>
+                                            Quality Check:
+                                          </strong>{' '}
+                                          {request.qualityCheck}
+                                        </div>
                                       </div>
                                     </div>
                                   )}
 
                                   {request.status === 'issued' && (
-                                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                                      <div className="text-sm space-y-1">
-                                        <div><strong className="text-orange-800">Issued:</strong> {request.issuedDate}</div>
-                                        <div><strong className="text-orange-800">Received By:</strong> {request.receivedBy}</div>
-                                        <div><strong className="text-orange-800">Delivered:</strong> {request.deliveredDate}</div>
+                                    <div className='bg-orange-50 border border-orange-200 rounded-lg p-3'>
+                                      <div className='text-sm space-y-1'>
+                                        <div>
+                                          <strong className='text-orange-800'>
+                                            Issued:
+                                          </strong>{' '}
+                                          {request.issuedDate}
+                                        </div>
+                                        <div>
+                                          <strong className='text-orange-800'>
+                                            Received By:
+                                          </strong>{' '}
+                                          {request.receivedBy}
+                                        </div>
+                                        <div>
+                                          <strong className='text-orange-800'>
+                                            Delivered:
+                                          </strong>{' '}
+                                          {request.deliveredDate}
+                                        </div>
                                       </div>
                                     </div>
                                   )}
 
                                   {request.status === 'completed' && (
-                                    <div className="bg-secondary/10 border border-secondary rounded-lg p-3">
-                                      <div className="text-sm space-y-1">
-                                        <div><strong className="text-foreground">Completed:</strong> {request.completedDate}</div>
-                                        <div><strong className="text-foreground">Received By:</strong> {request.receivedBy}</div>
+                                    <div className='bg-secondary/10 border border-secondary rounded-lg p-3'>
+                                      <div className='text-sm space-y-1'>
+                                        <div>
+                                          <strong className='text-foreground'>
+                                            Completed:
+                                          </strong>{' '}
+                                          {request.completedDate}
+                                        </div>
+                                        <div>
+                                          <strong className='text-foreground'>
+                                            Received By:
+                                          </strong>{' '}
+                                          {request.receivedBy}
+                                        </div>
                                         {request.completionNotes && (
-                                          <div><strong className="text-foreground">Notes:</strong> {request.completionNotes}</div>
+                                          <div>
+                                            <strong className='text-foreground'>
+                                              Notes:
+                                            </strong>{' '}
+                                            {request.completionNotes}
+                                          </div>
                                         )}
                                       </div>
                                     </div>
                                   )}
 
                                   {request.status === 'rejected' && (
-                                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                      <div className="flex items-start gap-2">
-                                        <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                                        <div className="min-w-0">
-                                          <strong className="text-red-800 text-sm">Rejected:</strong>
-                                          <p className="text-red-700 text-sm mt-1 break-words">{request.reason}</p>
-                                          <p className="text-red-600 text-xs mt-2">
-                                            Rejected by {request.rejectedBy} on {request.rejectedDate}
+                                    <div className='bg-red-50 border border-red-200 rounded-lg p-3'>
+                                      <div className='flex items-start gap-2'>
+                                        <AlertTriangle className='w-4 h-4 text-red-600 mt-0.5 flex-shrink-0' />
+                                        <div className='min-w-0'>
+                                          <strong className='text-red-800 text-sm'>
+                                            Rejected:
+                                          </strong>
+                                          <p className='text-red-700 text-sm mt-1 break-words'>
+                                            {request.reason}
+                                          </p>
+                                          <p className='text-red-600 text-xs mt-2'>
+                                            Rejected by {request.rejectedBy} on{' '}
+                                            {request.rejectedDate}
                                           </p>
                                         </div>
                                       </div>
@@ -1305,17 +1629,23 @@ export const MaterialOrderBookTab = () => {
                                   )}
 
                                   {request.status === 'reverted' && (
-                                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                      <div className="flex items-start gap-2">
-                                        <XCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                                        <div className="min-w-0">
-                                          <strong className="text-red-800 text-sm">Reverted:</strong>
-                                          <p className="text-red-700 text-sm mt-1 break-words">{request.revertReason}</p>
-                                          <p className="text-red-600 text-xs mt-2">
-                                            Reverted by {request.revertedBy} on {request.revertedDate}
+                                    <div className='bg-red-50 border border-red-200 rounded-lg p-3'>
+                                      <div className='flex items-start gap-2'>
+                                        <XCircle className='w-4 h-4 text-red-600 mt-0.5 flex-shrink-0' />
+                                        <div className='min-w-0'>
+                                          <strong className='text-red-800 text-sm'>
+                                            Reverted:
+                                          </strong>
+                                          <p className='text-red-700 text-sm mt-1 break-words'>
+                                            {request.revertReason}
                                           </p>
-                                          <p className="text-red-600 text-xs mt-1">
-                                            Indent form must be resubmitted with corrections.
+                                          <p className='text-red-600 text-xs mt-2'>
+                                            Reverted by {request.revertedBy} on{' '}
+                                            {request.revertedDate}
+                                          </p>
+                                          <p className='text-red-600 text-xs mt-1'>
+                                            Indent form must be resubmitted with
+                                            corrections.
                                           </p>
                                         </div>
                                       </div>
@@ -1325,39 +1655,59 @@ export const MaterialOrderBookTab = () => {
                               </div>
                             </div>
                           </div>
-                          
+
                           {/* Action Buttons */}
-                          <div className="flex gap-3 pt-4 border-t mt-6">
-                            <Button variant="outline" className="gap-2 rounded-lg">
-                              <Eye className="w-4 h-4" />
+                          <div className='flex gap-3 pt-4 border-t mt-6'>
+                            <Button
+                              variant='outline'
+                              className='gap-2 rounded-lg'
+                            >
+                              <Eye className='w-4 h-4' />
                               View Full Details
                             </Button>
-                            
+
                             {/* Status Management Button */}
-                            {(currentUser?.role === 'company_owner' || currentUser?.role === 'site_supervisor') && (
-                              <Button 
-                                variant="outline" 
-                                className="gap-2 rounded-lg"
+                            {(hasPermission(
+                              'inventory:material-indents:approve'
+                            ) ||
+                              hasPermission(
+                                'inventory:material-indents:update'
+                              )) && (
+                              <Button
+                                variant='outline'
+                                className='gap-2 rounded-lg'
                                 onClick={() => openStatusManager(request)}
                               >
-                                <CheckSquare className="w-4 h-4" />
+                                <CheckSquare className='w-4 h-4' />
                                 Manage Status
                               </Button>
                             )}
-                            
-                            {(request.status === 'rejected' || request.status === 'reverted') && (
-                              <Button 
-                                variant="outline" 
-                                className="gap-2 rounded-lg"
-                                onClick={() => request.status === 'reverted' ? openResubmitForm(request) : null}
+
+                            {(request.status === 'rejected' ||
+                              request.status === 'reverted') && (
+                              <Button
+                                variant='outline'
+                                className='gap-2 rounded-lg'
+                                onClick={() =>
+                                  request.status === 'reverted'
+                                    ? openResubmitForm(request)
+                                    : null
+                                }
                               >
-                                <Plus className="w-4 h-4" />
-                                {request.status === 'reverted' ? 'Resubmit Indent Form' : 'Resubmit Request'}
+                                <Plus className='w-4 h-4' />
+                                {request.status === 'reverted'
+                                  ? 'Resubmit Indent Form'
+                                  : 'Resubmit Request'}
                               </Button>
                             )}
-                            {(request.status === 'ordered' || request.status === 'issued' || request.status === 'completed') && (
-                              <Button variant="outline" className="gap-2 rounded-lg">
-                                <FileText className="w-4 h-4" />
+                            {(request.status === 'ordered' ||
+                              request.status === 'issued' ||
+                              request.status === 'completed') && (
+                              <Button
+                                variant='outline'
+                                className='gap-2 rounded-lg'
+                              >
+                                <FileText className='w-4 h-4' />
                                 Track Status
                               </Button>
                             )}
@@ -1377,54 +1727,130 @@ export const MaterialOrderBookTab = () => {
 
   // Compact Table View Component
   const TableView = ({ requests }: { requests: any[] }) => (
-    <Card className="rounded-lg shadow-sm">
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
+    <Card className='rounded-lg shadow-sm'>
+      <CardContent className='p-0'>
+        <div className='overflow-x-auto'>
           <Table>
             <TableHeader>
-              <TableRow className="bg-secondary/20 border-b-2 border-secondary/30">
-                <TableHead className="min-w-[120px] text-foreground font-semibold">Purchase ID</TableHead>
-                <TableHead className="min-w-[150px] text-foreground font-semibold">Materials</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Quantity</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Price</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Total Value</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Status</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Purchased Date</TableHead>
-                <TableHead className="min-w-[100px] text-foreground font-semibold">Purchased For</TableHead>
+              <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
+                <TableHead
+                  className='min-w-[120px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('uniqueId')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Purchase ID
+                    {getSortIcon('uniqueId')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[150px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('materialName')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Materials
+                    {getSortIcon('materialName')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('quantity')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Quantity
+                    {getSortIcon('quantity')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('unitPrice')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Price
+                    {getSortIcon('unitPrice')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('value')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Total Value
+                    {getSortIcon('value')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('status')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Status
+                    {getSortIcon('status')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('requestDate')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Purchased Date
+                    {getSortIcon('requestDate')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('machineName')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Purchased For
+                    {getSortIcon('machineName')}
+                  </div>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {requests.map((request) => (
-                <TableRow key={request.id} className="hover:bg-muted/30 border-b border-secondary/20">
-                  <TableCell className="font-medium">
-                    <Button 
-                      variant="link" 
-                      className="p-0 h-auto font-medium text-primary hover:underline"
-                      onClick={() => handleRequestClick(request.id)}
+                <TableRow
+                  key={request.id}
+                  className='hover:bg-muted/30 border-b border-secondary/20'
+                >
+                  <TableCell className='font-medium'>
+                    <Button
+                      variant='link'
+                      className='p-0 h-auto font-medium text-primary hover:underline'
+                      onClick={() => handleRequestClick(request.originalId)}
                     >
                       {request.id}
                     </Button>
                   </TableCell>
                   <TableCell>
                     <div>
-                      <div className="font-medium">{request.materialName}</div>
-                      <div className="text-xs text-muted-foreground">{request.maker}</div>
+                      <div className='font-medium'>{request.materialName}</div>
+                      <div className='text-xs text-muted-foreground'>
+                        {request.maker}
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{request.quantity}</TableCell>
-                  <TableCell className="text-sm font-medium">{request.unitPrice || 'N/A'}</TableCell>
-                  <TableCell className="text-sm font-medium">{request.value}</TableCell>
+                  <TableCell className='text-sm'>{request.quantity}</TableCell>
+                  <TableCell className='text-sm font-medium'>
+                    {request.unitPrice || 'N/A'}
+                  </TableCell>
+                  <TableCell className='text-sm font-medium'>
+                    {request.value}
+                  </TableCell>
                   <TableCell>
-                    <Badge className={`${getStatusColor(request.status)} border`}>
-                      <span className="flex items-center gap-1">
+                    <Badge
+                      className={`${getStatusColor(request.status)} border`}
+                    >
+                      <span className='flex items-center gap-1'>
                         {getStatusIcon(request.status)}
-                        <span className="text-xs">{request.currentStage}</span>
+                        <span className='text-xs'>{request.currentStage}</span>
                       </span>
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm">{request.date}</TableCell>
-                  <TableCell className="text-sm">{request.machineName}</TableCell>
-                  
+                  <TableCell className='text-sm'>{request.date}</TableCell>
+                  <TableCell className='text-sm'>
+                    {request.machineName}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -1434,74 +1860,261 @@ export const MaterialOrderBookTab = () => {
     </Card>
   );
 
+  // Add pagination handlers
+  const handlePageChange = (newPage: number) => {
+    setPagination((prev) => ({ ...prev, page: newPage }));
+    fetchMaterialIndents(newPage, pagination.limit);
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setPagination((prev) => ({ ...prev, limit: newLimit, page: 1 }));
+    fetchMaterialIndents(1, newLimit);
+  };
+
+  // Enhanced action buttons in the expanded detail row
+  const renderActionButtons = (request: any) => {
+    const canApprove =
+      hasPermission('inventory:material-indents:approve') &&
+      request.status === 'pending_approval';
+    const canReject =
+      hasPermission('inventory:material-indents:approve') &&
+      request.status === 'pending_approval';
+    const canOrder =
+      hasPermission('inventory:material-indents:update') &&
+      request.status === 'approved';
+    const canReceive =
+      hasPermission('inventory:material-purchases:receive') &&
+      (request.status === 'ordered' || request.status === 'partially_received');
+
+    return (
+      <div className='flex flex-wrap gap-2 pt-4 border-t mt-6'>
+        <Button
+          variant='outline'
+          className='gap-2 rounded-lg'
+          onClick={() => handleRequestClick(request.id)}
+        >
+          <Eye className='w-4 h-4' />
+          View Full Details
+        </Button>
+
+        {canApprove && (
+          <Button
+            variant='outline'
+            className='gap-2 rounded-lg text-green-600 border-green-600 hover:bg-green-50'
+            onClick={() => {
+              setSelectedIndentForApproval(request.originalIndent);
+              setIsApprovalDialogOpen(true);
+            }}
+          >
+            <CheckCircle className='w-4 h-4' />
+            Approve
+          </Button>
+        )}
+
+        {canReject && (
+          <Button
+            variant='outline'
+            className='gap-2 rounded-lg text-red-600 border-red-600 hover:bg-red-50'
+            onClick={() => {
+              setSelectedIndentForApproval(request.originalIndent);
+              setIsRejectionDialogOpen(true);
+            }}
+          >
+            <XCircle className='w-4 h-4' />
+            Reject
+          </Button>
+        )}
+
+        {canOrder && (
+          <Button
+            variant='outline'
+            className='gap-2 rounded-lg text-blue-600 border-blue-600 hover:bg-blue-50'
+            onClick={() => {
+              setSelectedIndentForOrder(request.originalIndent);
+              setIsOrderDialogOpen(true);
+            }}
+          >
+            <ShoppingCart className='w-4 h-4' />
+            Create Order
+          </Button>
+        )}
+
+        {canReceive && (
+          <Button
+            variant='outline'
+            className='gap-2 rounded-lg text-orange-600 border-orange-600 hover:bg-orange-50'
+            onClick={() => {
+              // In a real implementation, you'd fetch the purchase order
+              // For now, we'll create a mock purchase object
+              setSelectedPurchase({
+                id: 1,
+                uniqueId: request.id,
+                orderDate: request.date,
+                totalValue: request.value,
+                purchaseOrderNumber: `PO-${request.id}`,
+                status: 'pending',
+                additionalNotes: '',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                items: [
+                  {
+                    id: 1,
+                    materialId: 1,
+                    materialName: request.materialName,
+                    specifications: request.specifications,
+                    orderedQuantity: parseInt(request.quantity),
+                    receivedQuantity: 0,
+                    pendingQuantity: parseInt(request.quantity),
+                    unitPrice: request.unitPrice,
+                    totalPrice: request.value,
+                    status: 'pending',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    material: {
+                      id: 1,
+                      name: request.materialName,
+                      specifications: request.specifications,
+                      makerBrand: request.maker,
+                      currentStock: 0,
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                    },
+                  },
+                ],
+                branch: {
+                  id: 1,
+                  name: request.unitName,
+                  location: '',
+                  contactPhone: null,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
+                createdBy: {
+                  id: 1,
+                  name: request.requestedBy,
+                  email: '',
+                  company: {} as any,
+                  branch: {} as any,
+                  userType: {} as any,
+                  roles: [],
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                },
+              });
+              setIsReceiveDialogOpen(true);
+            }}
+          >
+            <Package className='w-4 h-4' />
+            Receive Material
+          </Button>
+        )}
+
+        {/* Status Management Button */}
+        {(hasPermission('inventory:material-indents:approve') ||
+          hasPermission('inventory:material-indents:update')) && (
+          <Button
+            variant='outline'
+            className='gap-2 rounded-lg'
+            onClick={() => openStatusManager(request)}
+          >
+            <CheckSquare className='w-4 h-4' />
+            Manage Status
+          </Button>
+        )}
+
+        {(request.status === 'rejected' || request.status === 'reverted') && (
+          <Button
+            variant='outline'
+            className='gap-2 rounded-lg'
+            onClick={() =>
+              request.status === 'reverted' ? openResubmitForm(request) : null
+            }
+          >
+            <Plus className='w-4 h-4' />
+            {request.status === 'reverted'
+              ? 'Resubmit Indent Form'
+              : 'Resubmit Request'}
+          </Button>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-6 p-4 sm:p-0">
+    <div className='space-y-6 p-4 sm:p-0'>
       {/* Main Heading */}
-      
 
       {/* Search, Views, Status and Actions Row */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-        <div className="flex items-center gap-4">
+      <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6'>
+        <div className='flex items-center gap-4'>
           {/* List/Table Toggle */}
-          <div className="flex rounded-lg border border-secondary overflow-hidden bg-secondary/10 w-fit shadow-sm">
+          <div className='flex rounded-lg border border-secondary overflow-hidden bg-secondary/10 w-fit shadow-sm'>
             <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("list")}
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size='sm'
+              onClick={() => setViewMode('list')}
               className={`rounded-none px-3 sm:px-4 ${
-                viewMode === "list" 
-                  ? "bg-primary text-white hover:bg-primary-hover" 
-                  : "text-foreground hover:text-foreground hover:bg-secondary/20"
+                viewMode === 'list'
+                  ? 'bg-primary text-white hover:bg-primary-hover'
+                  : 'text-foreground hover:text-foreground hover:bg-secondary/20'
               }`}
             >
-              <List className="w-4 h-4" />
-              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">List</span>
+              <List className='w-4 h-4' />
+              <span className='ml-1 sm:ml-2 text-xs sm:text-sm'>List</span>
             </Button>
             <Button
-              variant={viewMode === "table" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("table")}
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size='sm'
+              onClick={() => setViewMode('table')}
               className={`rounded-none px-3 sm:px-4 ${
-                viewMode === "table" 
-                  ? "bg-primary text-white hover:bg-primary-hover" 
-                  : "text-foreground hover:text-foreground hover:bg-secondary/20"
+                viewMode === 'table'
+                  ? 'bg-primary text-white hover:bg-primary-hover'
+                  : 'text-foreground hover:text-foreground hover:bg-secondary/20'
               }`}
             >
-              <TableIcon className="w-4 h-4" />
-              <span className="ml-1 sm:ml-2 text-xs sm:text-sm">Table</span>
+              <TableIcon className='w-4 h-4' />
+              <span className='ml-1 sm:ml-2 text-xs sm:text-sm'>Table</span>
             </Button>
           </div>
         </div>
-        
-        <div className="flex flex-col sm:flex-row gap-3 lg:flex-1 lg:max-w-4xl lg:justify-end">
+
+        <div className='flex flex-col sm:flex-row gap-3 lg:flex-1 lg:max-w-4xl lg:justify-end'>
           {/* Search Bar */}
-          <div className="flex-1 lg:max-w-md">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-primary/80 w-4 h-4" />
+          <div className='flex-1 lg:max-w-md'>
+            <div className='relative'>
+              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-primary/80 w-4 h-4' />
               <Input
-                placeholder="Search by materials, purchase ID, or maker..."
+                placeholder='Search by materials, purchase ID, or maker...'
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none"
+                className='w-full pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none'
               />
             </div>
           </div>
-          
-          {/* Unit Filter - Only for Company Owner */}
+
+          {/* Unit Filter - Only for company owners */}
           {currentUser?.role === 'company_owner' && (
-            <Select value={filterUnit} onValueChange={setFilterUnit}>
-              <SelectTrigger className="w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0">
-                <SelectValue placeholder="Select Unit" />
+            <Select
+              value={filterUnit}
+              onValueChange={setFilterUnit}
+              disabled={isLoadingBranches}
+            >
+              <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
+                <SelectValue placeholder='Select Unit'>
+                  {isLoadingBranches ? 'Loading...' : 'Select Unit'}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Units</SelectItem>
-                {availableUnits.map((unit) => (
-                  <SelectItem key={unit.id} value={unit.id}>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="w-4 h-4" />
+                <SelectItem value='all'>All Units</SelectItem>
+                {availableBranches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id.toString()}>
+                    <div className='flex items-center gap-2'>
+                      <Building2 className='w-4 h-4' />
                       <div>
-                        <div className="font-medium">{unit.name}</div>
-                        <div className="text-xs text-muted-foreground">{unit.location}</div>
+                        <div className='font-medium'>{branch.name}</div>
+                        <div className='text-xs text-muted-foreground'>
+                          {branch.location}
+                        </div>
                       </div>
                     </div>
                   </SelectItem>
@@ -1509,33 +2122,42 @@ export const MaterialOrderBookTab = () => {
               </SelectContent>
             </Select>
           )}
-          
+
           {/* Status Filter */}
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0">
-              <SelectValue placeholder="All Status" />
+            <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
+              <SelectValue placeholder='All Status' />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending_approval">Pending Approval</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="ordered">Ordered</SelectItem>
-              <SelectItem value="partially_received">Partially Received</SelectItem>
-              <SelectItem value="material_received">Material Received</SelectItem>
-              <SelectItem value="issued">Issued</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="rejected">Rejected</SelectItem>
-              <SelectItem value="reverted">Reverted</SelectItem>
+              <SelectItem value='all'>All Status</SelectItem>
+              <SelectItem value={IndentStatus.DRAFT}>Draft</SelectItem>
+              <SelectItem value={IndentStatus.PENDING_APPROVAL}>
+                Pending Approval
+              </SelectItem>
+              <SelectItem value={IndentStatus.APPROVED}>Approved</SelectItem>
+              <SelectItem value={IndentStatus.ORDERED}>Ordered</SelectItem>
+              <SelectItem value={IndentStatus.PARTIALLY_RECEIVED}>
+                Partially Received
+              </SelectItem>
+              <SelectItem value={IndentStatus.FULLY_RECEIVED}>
+                Fully Received
+              </SelectItem>
+              <SelectItem value={IndentStatus.CLOSED}>Closed</SelectItem>
+              <SelectItem value={IndentStatus.REJECTED}>Rejected</SelectItem>
             </SelectContent>
           </Select>
-          
+
           {/* Action Buttons */}
-          <div className="flex gap-2">
-            <Button asChild className="w-full sm:w-auto text-sm sm:text-base" size="sm">
-              <Link to="/material-request">
-                <Plus className="w-4 h-4" />
-                <span className="hidden sm:inline">INDENT FORM</span>
-                <span className="sm:hidden">INDENT FORM</span>
+          <div className='flex gap-2'>
+            <Button
+              asChild
+              className='w-full sm:w-auto text-sm sm:text-base'
+              size='sm'
+            >
+              <Link to='/materials-inventory/material-request'>
+                <Plus className='w-4 h-4' />
+                <span className='hidden sm:inline'>INDENT FORM</span>
+                <span className='sm:hidden'>INDENT FORM</span>
               </Link>
             </Button>
           </div>
@@ -1543,49 +2165,203 @@ export const MaterialOrderBookTab = () => {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="order-status" className="w-full">
-      
+      <Tabs defaultValue='order-status' className='w-full'>
         {/* All Requests Tab */}
-        <TabsContent value="all" className="space-y-3 sm:space-y-4">
-          {viewMode === "table" ? (
+        <TabsContent value='all' className='space-y-3 sm:space-y-4'>
+          {viewMode === 'table' ? (
             <TableView requests={filteredRequests} />
           ) : (
             <ListView requests={filteredRequests} />
           )}
         </TabsContent>
 
-                 {/* Order Request Status Tab */}
-         <TabsContent value="order-status" className="space-y-3 sm:space-y-4">
-           {/* Request List */}
-           {filteredRequests.length > 0 ? (
-             viewMode === "table" ? (
-               <TableView requests={filteredRequests} />
-             ) : (
-               <ListView requests={filteredRequests} />
-             )
-           ) : (
-             <Card className="rounded-lg shadow-sm p-8 text-center">
-               <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-               <h3 className="text-lg font-semibold text-foreground mb-2">No Order Requests</h3>
-               <p className="text-muted-foreground mb-4">
-                 You haven't submitted any order requests yet.
-               </p>
-               <Button asChild variant="outline">
-                 <Link to="/material-request">
-                   <FileEdit className="w-4 h-4 mr-2" />
-                   Create Order Request
-                 </Link>
-               </Button>
-             </Card>
-           )}
-         </TabsContent>
+        {/* Order Request Status Tab */}
+        <TabsContent value='order-status' className='space-y-3 sm:space-y-4'>
+          {/* Loading State */}
+          {isLoading ? (
+            <Card className='rounded-lg shadow-sm p-8 text-center'>
+              <Loader2 className='w-12 h-12 text-primary mx-auto mb-4 animate-spin' />
+              <h3 className='text-lg font-semibold text-foreground mb-2'>
+                Loading Material Indents
+              </h3>
+              <p className='text-muted-foreground mb-4'>
+                Please wait while we fetch the data...
+              </p>
+            </Card>
+          ) : error ? (
+            <Card className='rounded-lg shadow-sm p-8 text-center'>
+              <AlertTriangle className='w-12 h-12 text-red-500 mx-auto mb-4' />
+              <h3 className='text-lg font-semibold text-foreground mb-2'>
+                Error Loading Data
+              </h3>
+              <p className='text-muted-foreground mb-4'>{error}</p>
+              <Button variant='outline' onClick={() => fetchMaterialIndents()}>
+                <AlertTriangle className='w-4 h-4 mr-2' />
+                Try Again
+              </Button>
+            </Card>
+          ) : filteredRequests.length > 0 ? (
+            <>
+              {viewMode === 'table' ? (
+                <TableView requests={filteredRequests} />
+              ) : (
+                <ListView requests={filteredRequests} />
+              )}
+
+              {/* Pagination Controls */}
+              <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
+                {/* Page Info */}
+                <div className='text-sm text-muted-foreground'>
+                  Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
+                  {Math.min(
+                    pagination.page * pagination.limit,
+                    pagination.itemCount
+                  )}{' '}
+                  of {pagination.itemCount} entries
+                </div>
+
+                {/* Pagination Controls */}
+                <div className='flex items-center gap-2'>
+                  {/* Items per page selector */}
+                  <div className='flex items-center gap-2'>
+                    <span className='text-sm text-muted-foreground'>Show:</span>
+                    <Select
+                      value={pagination.limit.toString()}
+                      onValueChange={(value) =>
+                        handleLimitChange(parseInt(value))
+                      }
+                    >
+                      <SelectTrigger className='w-20 h-8'>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='5'>5</SelectItem>
+                        <SelectItem value='10'>10</SelectItem>
+                        <SelectItem value='20'>20</SelectItem>
+                        <SelectItem value='50'>50</SelectItem>
+                        <SelectItem value='100'>100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className='text-sm text-muted-foreground'>
+                      per page
+                    </span>
+                  </div>
+
+                  {/* Page navigation */}
+                  <div className='flex items-center gap-1'>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => handlePageChange(1)}
+                      disabled={
+                        !pagination.hasPreviousPage || pagination.page === 1
+                      }
+                      className='h-8 w-8 p-0'
+                    >
+                      <ChevronsLeft className='w-4 h-4' />
+                    </Button>
+
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={!pagination.hasPreviousPage}
+                      className='h-8 w-8 p-0'
+                    >
+                      <ChevronLeft className='w-4 h-4' />
+                    </Button>
+
+                    {/* Page numbers */}
+                    <div className='flex items-center gap-1 mx-2'>
+                      {Array.from(
+                        { length: Math.min(5, pagination.pageCount) },
+                        (_, i) => {
+                          let pageNum;
+                          if (pagination.pageCount <= 5) {
+                            pageNum = i + 1;
+                          } else if (pagination.page <= 3) {
+                            pageNum = i + 1;
+                          } else if (
+                            pagination.page >=
+                            pagination.pageCount - 2
+                          ) {
+                            pageNum = pagination.pageCount - 4 + i;
+                          } else {
+                            pageNum = pagination.page - 2 + i;
+                          }
+
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={
+                                pagination.page === pageNum
+                                  ? 'default'
+                                  : 'outline'
+                              }
+                              size='sm'
+                              onClick={() => handlePageChange(pageNum)}
+                              className='h-8 w-8 p-0'
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        }
+                      )}
+                    </div>
+
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={!pagination.hasNextPage}
+                      className='h-8 w-8 p-0'
+                    >
+                      <ChevronRight className='w-4 h-4' />
+                    </Button>
+
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => handlePageChange(pagination.pageCount)}
+                      disabled={
+                        !pagination.hasNextPage ||
+                        pagination.page === pagination.pageCount
+                      }
+                      className='h-8 w-8 p-0'
+                    >
+                      <ChevronsRight className='w-4 h-4' />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <Card className='rounded-lg shadow-sm p-8 text-center'>
+              <FileText className='w-12 h-12 text-muted-foreground mx-auto mb-4' />
+              <h3 className='text-lg font-semibold text-foreground mb-2'>
+                No Material Indents Found
+              </h3>
+              <p className='text-muted-foreground mb-4'>
+                No material indents match your current filters.
+              </p>
+              <Button asChild variant='outline'>
+                <Link to='/materials-inventory/material-request'>
+                  <FileEdit className='w-4 h-4 mr-2' />
+                  Create Material Indent
+                </Link>
+              </Button>
+            </Card>
+          )}
+        </TabsContent>
       </Tabs>
 
       {/* Material Issue Form */}
       <MaterialIssueForm
         isOpen={isIssueFormOpen}
         onClose={() => setIsIssueFormOpen(false)}
-        onSubmit={handleMaterialIssue}
+        onSubmit={(data) =>
+          handleMaterialIssue(data as unknown as Record<string, unknown>)
+        }
       />
 
       {/* Request Status Manager */}
@@ -1614,16 +2390,346 @@ export const MaterialOrderBookTab = () => {
         />
       )}
 
-      {/* Company Owner History Section */}
-      {currentUser?.role === 'company_owner' && (
-        <div className="mt-8">
-          <HistoryView
-            userRole="company_owner"
-            historyData={getApprovedHistory()}
-            title="Recently Approved Requests"
-          />
-        </div>
-      )}
+      {/* Approval Dialog */}
+      <Dialog
+        open={isApprovalDialogOpen}
+        onOpenChange={setIsApprovalDialogOpen}
+      >
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Approve Material Indent</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {selectedIndentForApproval && (
+              <div className='space-y-4'>
+                <div className='p-4 bg-green-50 border border-green-200 rounded-lg'>
+                  <h3 className='font-semibold text-green-800 mb-2'>
+                    Indent Details
+                  </h3>
+                  <p>
+                    <strong>ID:</strong> {selectedIndentForApproval.uniqueId}
+                  </p>
+                  <p>
+                    <strong>Requested By:</strong>{' '}
+                    {selectedIndentForApproval.requestedBy?.name}
+                  </p>
+                  <p>
+                    <strong>Date:</strong>{' '}
+                    {new Date(
+                      selectedIndentForApproval.requestDate
+                    ).toLocaleDateString()}
+                  </p>
+                </div>
+
+                <div className='space-y-3'>
+                  <Label>Select Item to Approve</Label>
+                  <Select
+                    onValueChange={(value) =>
+                      setSelectedItemId(parseInt(value))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder='Select an item' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedIndentForApproval.items.map((item) => (
+                        <SelectItem key={item.id} value={item.id.toString()}>
+                          {item.material.name} - Qty: {item.requestedQuantity}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedItemId && (
+                  <div className='space-y-3'>
+                    <Label>Select Quotation</Label>
+                    <Select
+                      onValueChange={(value) =>
+                        setSelectedQuotationId(parseInt(value))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder='Select a quotation' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedIndentForApproval.items
+                          .find((item) => item.id === selectedItemId)
+                          ?.quotations.map((quotation) => (
+                            <SelectItem
+                              key={quotation.id}
+                              value={quotation.id.toString()}
+                            >
+                              {quotation.vendorName} - ₹
+                              {quotation.quotationAmount}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className='flex justify-end gap-2'>
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsApprovalDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleApproveIndent}
+                    disabled={!selectedItemId || !selectedQuotationId}
+                    className='bg-green-600 hover:bg-green-700'
+                  >
+                    <CheckCircle className='w-4 h-4 mr-2' />
+                    Approve
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rejection Dialog */}
+      <Dialog
+        open={isRejectionDialogOpen}
+        onOpenChange={setIsRejectionDialogOpen}
+      >
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Reject Material Indent</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {selectedIndentForApproval && (
+              <div className='space-y-4'>
+                <div className='p-4 bg-red-50 border border-red-200 rounded-lg'>
+                  <h3 className='font-semibold text-red-800 mb-2'>
+                    Indent Details
+                  </h3>
+                  <p>
+                    <strong>ID:</strong> {selectedIndentForApproval.uniqueId}
+                  </p>
+                  <p>
+                    <strong>Requested By:</strong>{' '}
+                    {selectedIndentForApproval.requestedBy?.name}
+                  </p>
+                  <p>
+                    <strong>Date:</strong>{' '}
+                    {new Date(
+                      selectedIndentForApproval.requestDate
+                    ).toLocaleDateString()}
+                  </p>
+                </div>
+
+                <div className='space-y-3'>
+                  <Label htmlFor='rejectionReason'>Rejection Reason *</Label>
+                  <Textarea
+                    id='rejectionReason'
+                    placeholder='Please provide a reason for rejection...'
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    className='min-h-[100px]'
+                  />
+                </div>
+
+                <div className='flex justify-end gap-2'>
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsRejectionDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleRejectIndent}
+                    disabled={!rejectionReason.trim()}
+                    className='bg-red-600 hover:bg-red-700'
+                  >
+                    <XCircle className='w-4 h-4 mr-2' />
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Creation Dialog */}
+      <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Create Purchase Order</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {selectedIndentForOrder && (
+              <div className='space-y-4'>
+                <div className='p-4 bg-blue-50 border border-blue-200 rounded-lg'>
+                  <h3 className='font-semibold text-blue-800 mb-2'>
+                    Indent Details
+                  </h3>
+                  <p>
+                    <strong>ID:</strong> {selectedIndentForOrder.uniqueId}
+                  </p>
+                  <p>
+                    <strong>Requested By:</strong>{' '}
+                    {selectedIndentForOrder.requestedBy?.name}
+                  </p>
+                  <p>
+                    <strong>Date:</strong>{' '}
+                    {new Date(
+                      selectedIndentForOrder.requestDate
+                    ).toLocaleDateString()}
+                  </p>
+                </div>
+
+                <div className='space-y-3'>
+                  <h4 className='font-semibold'>Items to Order:</h4>
+                  <div className='space-y-2'>
+                    {selectedIndentForOrder.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className='p-3 bg-gray-50 rounded border'
+                      >
+                        <p>
+                          <strong>{item.material.name}</strong>
+                        </p>
+                        <p>Quantity: {item.requestedQuantity}</p>
+                        <p>
+                          Selected Quotation:{' '}
+                          {item.selectedQuotation?.vendorName ||
+                            'None selected'}
+                        </p>
+                        <p>
+                          Amount: ₹
+                          {item.selectedQuotation?.quotationAmount || '0'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className='flex justify-end gap-2'>
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsOrderDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleCreatePurchaseOrder}
+                    className='bg-blue-600 hover:bg-blue-700'
+                  >
+                    <ShoppingCart className='w-4 h-4 mr-2' />
+                    Create Order
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Material Receipt Dialog */}
+      <Dialog open={isReceiveDialogOpen} onOpenChange={setIsReceiveDialogOpen}>
+        <DialogContent className='max-w-2xl'>
+          <DialogHeader>
+            <DialogTitle>Receive Material</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            {selectedPurchase && (
+              <div className='space-y-4'>
+                <div className='p-4 bg-orange-50 border border-orange-200 rounded-lg'>
+                  <h3 className='font-semibold text-orange-800 mb-2'>
+                    Purchase Order Details
+                  </h3>
+                  <p>
+                    <strong>PO Number:</strong>{' '}
+                    {selectedPurchase.purchaseOrderNumber}
+                  </p>
+                  <p>
+                    <strong>Order Date:</strong>{' '}
+                    {new Date(selectedPurchase.orderDate).toLocaleDateString()}
+                  </p>
+                  <p>
+                    <strong>Total Value:</strong> ₹{selectedPurchase.totalValue}
+                  </p>
+                </div>
+
+                <div className='space-y-3'>
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div>
+                      <Label htmlFor='receivedQuantity'>
+                        Received Quantity *
+                      </Label>
+                      <Input
+                        id='receivedQuantity'
+                        type='number'
+                        value={receiveData.receivedQuantity}
+                        onChange={(e) =>
+                          setReceiveData((prev) => ({
+                            ...prev,
+                            receivedQuantity: parseInt(e.target.value) || 0,
+                          }))
+                        }
+                        min='1'
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor='receivedDate'>Received Date *</Label>
+                      <Input
+                        id='receivedDate'
+                        type='date'
+                        value={receiveData.receivedDate}
+                        onChange={(e) =>
+                          setReceiveData((prev) => ({
+                            ...prev,
+                            receivedDate: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor='receiveNotes'>Notes</Label>
+                    <Textarea
+                      id='receiveNotes'
+                      placeholder='Any additional notes about the received material...'
+                      value={receiveData.notes}
+                      onChange={(e) =>
+                        setReceiveData((prev) => ({
+                          ...prev,
+                          notes: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className='flex justify-end gap-2'>
+                  <Button
+                    variant='outline'
+                    onClick={() => setIsReceiveDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleReceiveMaterial}
+                    disabled={
+                      !receiveData.receivedQuantity || !receiveData.receivedDate
+                    }
+                    className='bg-orange-600 hover:bg-orange-700'
+                  >
+                    <Package className='w-4 h-4 mr-2' />
+                    Receive Material
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1258,7 +1258,7 @@ const SupervisorRequests = () => {
                             </Button>
                             
                             {/* Status Management Button */}
-                            {(currentUser?.role === 'company_owner' || currentUser?.role === 'site_supervisor') && (
+                            {(currentUser?.role === 'company_owner' || currentUser?.role === 'supervisor') && (
                               <Button 
                                 variant="outline" 
                                 className="gap-2 rounded-lg"
@@ -1346,7 +1346,7 @@ const SupervisorRequests = () => {
                       </Button>
                       
                       {/* Status Management Button */}
-                      {(currentUser?.role === 'company_owner' || currentUser?.role === 'site_supervisor') && (
+                      {(currentUser?.role === 'company_owner' || currentUser?.role === 'supervisor') && (
                         <Button 
                           variant="outline" 
                           size="sm" 

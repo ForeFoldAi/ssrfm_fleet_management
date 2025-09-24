@@ -1,24 +1,24 @@
 import { useRole } from "../contexts/RoleContext";
 
-import InventoryManagerDashboard from "./dashboards/InventoryManagerDashboard";
 import CompanyOwnerDashboard from "./dashboards/CompanyOwnerDashboard";
 
 const Dashboard = () => {
-  const { currentUser } = useRole();
+  const { currentUser, hasPermission } = useRole();
 
   if (!currentUser) {
     return <div>Loading...</div>;
   }
 
-  // Render role-specific dashboard
-  switch (currentUser.role) {
-    
-    case 'inventory_manager':
-      return <InventoryManagerDashboard />;
-    case 'company_owner':
-      return <CompanyOwnerDashboard />;
-    // Default fallback
+  // Permission-based selection
+  const isOwnerLike = hasPermission('inventory:material-indents:approve');
+
+  if (isOwnerLike) {
+    return <CompanyOwnerDashboard />;
   }
+
+ 
+
+  return <div>Loading...</div>;
 };
 
 export default Dashboard;
