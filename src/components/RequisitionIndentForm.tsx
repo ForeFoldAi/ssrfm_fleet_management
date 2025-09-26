@@ -32,10 +32,11 @@ import {
 import { Label } from './ui/label';
 import { toast } from '../hooks/use-toast';
 import { generateSrNo } from '../lib/utils';
+import { StatusDropdown } from './StatusDropdown';
 
 interface RequestItem {
   id: string;
-  srNo: number;
+  srNo: string; // Change from number to string
   productName: string;
   machineName: string;
   specifications: string;
@@ -84,6 +85,9 @@ interface RequisitionIndentFormProps {
   onLoadQuotationImages?: (itemId: number) => void;
   itemImageUrlsMap?: Record<string, string[]>;
   quotationImageUrlsMap?: Record<string, string[]>;
+  onStatusChange?: (newStatus: string, additionalData?: any) => void; // Add this prop
+  userRole?: 'company_owner' | 'supervisor'; // Add this prop
+  hasPermission?: (permission: string) => boolean; // Add this prop
 }
 
 export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
@@ -97,6 +101,9 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
   onLoadQuotationImages,
   itemImageUrlsMap = {},
   quotationImageUrlsMap = {},
+  onStatusChange,
+  userRole = 'supervisor',
+  hasPermission = () => false,
 }) => {
   // Vendor management state
   const [isVendorFormOpen, setIsVendorFormOpen] = useState(false);
@@ -217,42 +224,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
       {/* Form Header */}
       <Card className='border-0 shadow-sm'>
         <CardContent className='p-6'>
-          <div className='grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4'>
-            <div>
-              <Label className='text-sm font-medium text-muted-foreground'>
-                Purchase ID
-              </Label>
-              <div className='text-lg font-semibold'>{requestData.id}</div>
-            </div>
-            <div>
-              <Label className='text-sm font-medium text-muted-foreground'>
-                Requested By
-              </Label>
-              <div className='text-lg font-semibold'>
-                {requestData.requestedBy}
-              </div>
-            </div>
-            <div>
-              <Label className='text-sm font-medium text-muted-foreground'>
-                Location
-              </Label>
-              <div className='text-lg font-semibold'>
-                {requestData.location}
-              </div>
-            </div>
-            <div>
-              <Label className='text-sm font-medium text-muted-foreground'>
-                Date
-              </Label>
-              <div className='text-lg font-semibold'>{requestData.date}</div>
-            </div>
-            <div>
-              <Label className='text-sm font-medium text-muted-foreground'>
-                Status
-              </Label>
-              <Badge className='mt-1'>{requestData.status}</Badge>
-            </div>
-          </div>
+          {/* Removed Date and Status fields - they're now in the header */}
         </CardContent>
       </Card>
 
@@ -297,11 +269,11 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                   <TableRow key={item.id}>
                     <TableCell className='border border-gray-300 text-center font-semibold'>
                       {isReadOnly ? (
-                        generateSrNo(requestData.location, item.srNo)
+                        item.srNo
                       ) : (
                         <Input
                           type='text'
-                          value={generateSrNo(requestData.location, item.srNo)}
+                          value={item.srNo}
                           readOnly
                           className='border-0 focus:ring-0 focus:outline-none rounded-none bg-transparent'
                         />
@@ -393,7 +365,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                             }
                             placeholder='Qty'
                             min='0'
-                            className='border-0 p-0 h-auto w-20 focus:ring-0 focus:outline-none rounded-none'
+                            className='border border-gray-300 p-2 h-auto w-20 focus:ring-0 focus:outline-none rounded-md'
                           />
                         )}
                         <span className='text-sm text-gray-600'>

@@ -262,20 +262,17 @@ const CompanyOwnerDashboard = () => {
             </CardHeader>
             <CardContent>
               <ChartContainer config={{}} className="w-full h-80">
-                <ReBarChart data={materialExpensesByUnit} layout="vertical" margin={{ left: 40, right: 20, bottom: 20, top: 20 }}>
+                <ReBarChart data={materialExpensesByUnit} margin={{ left: 20, right: 20, bottom: 20, top: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis 
-                    type="number" 
+                    dataKey="material" 
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                  />
+                  <YAxis 
                     tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                     axisLine={{ stroke: "hsl(var(--border))" }}
                     tickFormatter={(value) => `₹${(value / 1000)}k`}
-                  />
-                  <YAxis 
-                    type="category" 
-                    dataKey="material" 
-                    width={100}
-                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                    axisLine={{ stroke: "hsl(var(--border))" }}
                   />
                   <ChartTooltip 
                     content={<ChartTooltipContent 
@@ -285,16 +282,16 @@ const CompanyOwnerDashboard = () => {
                   <ChartLegend />
                   <Bar 
                     dataKey="Unit-I" 
-                    fill="#10B981" 
-                    barSize={20} 
-                    radius={[0, 6, 6, 0]}
+                    fill="#3B82F6" 
+                    barSize={24} 
+                    radius={[6, 6, 0, 0]}
                     name="Unit-I"
                   />
                   <Bar 
                     dataKey="Unit-II" 
-                    fill="#EF4444" 
-                    barSize={20} 
-                    radius={[0, 6, 6, 0]}
+                    fill="#F59E0B" 
+                    barSize={24} 
+                    radius={[6, 6, 0, 0]}
                     name="Unit-II"
                   />
                 </ReBarChart>
@@ -303,66 +300,7 @@ const CompanyOwnerDashboard = () => {
           </Card>
         </div>
 
-        {/* Enhanced Table Section */}
-        <Card className="card-friendly shadow-lg border border-primary/20">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-semibold flex items-center gap-2">
-              <div className="w-3 h-3 bg-primary rounded-full"></div>
-              Detailed Expenses by Machine and Unit
-              <Badge variant="outline" className="ml-auto text-xs bg-primary/10 text-primary border-primary/30">
-                {getPeriodLabel()}
-              </Badge>
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Complete breakdown of expenses across all machines and units
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b-2 border-primary/20">
-                    <TableHead className="font-semibold text-foreground">Machine</TableHead>
-                    <TableHead className="text-right font-semibold text-foreground">Unit-I</TableHead>
-                    <TableHead className="text-right font-semibold text-foreground">Unit-II</TableHead>
-                    <TableHead className="text-right font-semibold text-foreground">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {expensesTable.map((row, index) => {
-                    const total = row["Unit-1"] + row["Unit-2"] + row["Unit-3"];
-                    return (
-                      <TableRow key={row.machine} className="hover:bg-primary/5 transition-colors">
-                        <TableCell className="font-medium text-foreground">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${
-                              index === 0 ? 'bg-blue-500' : 
-                              index === 1 ? 'bg-amber-500' : 
-                              index === 2 ? 'bg-green-500' : 'bg-red-500'
-                            }`}></div>
-                            {row.machine}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">₹{row["Unit-1"].toLocaleString()}</TableCell>
-                        <TableCell className="text-right font-medium">₹{row["Unit-2"].toLocaleString()}</TableCell>
-                        <TableCell className="text-right font-medium">₹{row["Unit-3"].toLocaleString()}</TableCell>
-                        <TableCell className="text-right font-bold text-foreground">₹{total.toLocaleString()}</TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {/* Total Row */}
-                  <TableRow className="border-t-2 border-primary/20 bg-primary/5">
-                    <TableCell className="font-bold text-foreground">Total</TableCell>
-                    <TableCell className="text-right font-bold text-foreground">₹{totals.unit1.toLocaleString()}</TableCell>
-                    <TableCell className="text-right font-bold text-foreground">₹{totals.unit2.toLocaleString()}</TableCell>
-                    <TableCell className="text-right font-bold text-foreground">₹{totals.unit3.toLocaleString()}</TableCell>
-                    <TableCell className="text-right font-bold text-lg text-primary">₹{allUnitsTotal.toLocaleString()}</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+       
       </div>
     </div>
   );

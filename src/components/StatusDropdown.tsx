@@ -86,8 +86,8 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
             requiresAdditionalData: true,
           },
           {
-            value: 'material_received',
-            label: 'Material Received',
+            value: 'fully_received',
+            label: 'Fully Received',
             icon: <CheckCircle className='w-4 h-4' />,
             requiresAdditionalData: true,
           },
@@ -95,8 +95,8 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
       case 'partially_received':
         return [
           {
-            value: 'material_received',
-            label: 'Material Received',
+            value: 'fully_received',
+            label: 'Fully Received',
             icon: <CheckCircle className='w-4 h-4' />,
             requiresAdditionalData: true,
           },
@@ -151,6 +151,22 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
 
   return (
     <>
+      <Select onValueChange={handleStatusSelect}>
+        <SelectTrigger className='w-[200px]'>
+          <SelectValue placeholder={currentStatus.replace('_', ' ').toUpperCase()} />
+        </SelectTrigger>
+        <SelectContent>
+          {statusOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              <div className='flex items-center gap-2'>
+                {option.icon}
+                {option.label}
+              </div>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
       {/* Additional Data Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className='max-w-md'>
@@ -159,7 +175,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
               {selectedStatus === 'reverted' && 'Revert Request'}
               {selectedStatus === 'rejected' && 'Reject Request'}
               {(selectedStatus === 'partially_received' ||
-                selectedStatus === 'material_received') &&
+                selectedStatus === 'fully_received') &&
                 'Material Receipt'}
             </DialogTitle>
           </DialogHeader>
@@ -202,7 +218,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
             )}
 
             {(selectedStatus === 'partially_received' ||
-              selectedStatus === 'material_received') && (
+              selectedStatus === 'fully_received') && (
               <>
                 <div className='grid grid-cols-2 gap-4'>
                   <div className='space-y-2'>
@@ -268,14 +284,14 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
                 (selectedStatus === 'rejected' &&
                   !additionalData.notes.trim()) ||
                 ((selectedStatus === 'partially_received' ||
-                  selectedStatus === 'material_received') &&
+                  selectedStatus === 'fully_received') &&
                   !additionalData.receivedQuantity.trim())
               }
             >
               {selectedStatus === 'reverted' && 'Revert Request'}
               {selectedStatus === 'rejected' && 'Reject Request'}
               {(selectedStatus === 'partially_received' ||
-                selectedStatus === 'material_received') &&
+                selectedStatus === 'fully_received') &&
                 'Update Status'}
             </Button>
           </div>

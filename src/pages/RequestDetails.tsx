@@ -45,6 +45,7 @@ import {
   ReceiveMaterialPurchaseItemRequest,
   MaterialPurchaseItem,
 } from '../lib/api/types';
+import { Badge } from '../components/ui/badge';
 
 interface VendorQuotation {
   id: string;
@@ -59,7 +60,7 @@ interface VendorQuotation {
 
 interface RequestItem {
   id: string;
-  srNo: number;
+  srNo: string; // Change from number to string
   productName: string;
   machineName: string;
   specifications: string;
@@ -182,11 +183,9 @@ const RequestDetails: React.FC = () => {
       setError(null);
 
       try {
-        // Extract numeric ID from the request ID
-        const numericId = parseInt(
-          decodedRequestId.split('/').pop()?.split('-').pop() || '0',
-          10
-        );
+        // The decodedRequestId should be the numeric ID from the URL
+        // For example: if URL is /request-details/16, then decodedRequestId is "16"
+        const numericId = parseInt(decodedRequestId, 10);
 
         if (isNaN(numericId) || numericId <= 0) {
           throw new Error('Invalid request ID format');
@@ -205,7 +204,7 @@ const RequestDetails: React.FC = () => {
           apiData: indentData, // Store the original API data
           items: indentData.items.map((item) => ({
             id: item.id.toString(),
-            srNo: item.id,
+            srNo: formatPurchaseId(indentData.uniqueId, indentData.branch?.code), // Use the same formatted ID as the Purchase ID
             productName: item.material.name,
             machineName: item.machine?.name || 'N/A',
             specifications:
@@ -413,33 +412,57 @@ const RequestDetails: React.FC = () => {
     if (!requestData || !requestData.apiData) return;
 
     try {
-      // Extract numeric ID from the request ID
-      const numericId = parseInt(
-        requestData.id.split('/').pop()?.split('-').pop() || '0',
-        10
-      );
+      // Use the API data ID directly instead of parsing from the formatted ID
+      const numericId = requestData.apiData.id;
 
-      if (isNaN(numericId) || numericId <= 0) {
-        throw new Error('Invalid request ID format');
+      if (!numericId || numericId <= 0) {
+        throw new Error('Invalid request ID');
       }
 
       let updatedIndent;
 
-      // Handle approve by opening dialog to choose item and quotation
+      // Handle different status changes
       if (newStatus === IndentStatus.APPROVED) {
+        // For approval, we need to select item and quotation
         setIsApprovalDialogOpen(true);
         return;
-      } else if (
-        newStatus === IndentStatus.REJECTED &&
-        additionalData?.rejectionReason
-      ) {
-        const rejectionReason = String(
-          additionalData.rejectionReason || 'Rejected'
-        );
-        updatedIndent = await materialIndentsApi.reject(
-          numericId,
-          rejectionReason
-        );
+      } else if (newStatus === IndentStatus.REJECTED) {
+        // For rejection, we need a reason
+        setIsRejectionDialogOpen(true);
+        return;
+      } else if (newStatus === IndentStatus.ORDERED) {
+        // Create purchase order
+        const purchaseData = {
+          purchaseOrderNumber: `PO-${requestData.apiData.uniqueId}`,
+          orderDate: new Date().toISOString().split('T')[0],
+          additionalNotes: requestData.apiData.additionalNotes || '',
+          indentId: requestData.apiData.id,
+        };
+        updatedIndent = await materialPurchasesApi.create(purchaseData);
+      } else if (newStatus === IndentStatus.PARTIALLY_RECEIVED || 
+                 newStatus === IndentStatus.FULLY_RECEIVED) {
+        // Handle material receipt
+        if (additionalData?.receivedQuantity && additionalData?.receivedDate) {
+          const receiveData = {
+            receivedQuantity: Number(additionalData.receivedQuantity),
+            receivedDate: String(additionalData.receivedDate),
+            notes: String(additionalData.notes || ''),
+          };
+          
+          // Find the first purchase order to receive
+          const firstPurchase = requestData.receiptHistory?.[0];
+          if (firstPurchase?.items?.[0]) {
+            await materialPurchasesApi.receiveItem(
+              Number(firstPurchase.id),
+              firstPurchase.items[0].id,
+              receiveData
+            );
+          }
+        }
+        updatedIndent = await materialIndentsApi.update(numericId, {
+          status: newStatus as IndentStatus,
+          ...additionalData,
+        });
       } else {
         // For other status changes
         updatedIndent = await materialIndentsApi.update(numericId, {
@@ -451,37 +474,9 @@ const RequestDetails: React.FC = () => {
       // Update the local state with the API response
       const updatedData = {
         ...requestData,
-        status: updatedIndent.status,
-        apiData: updatedIndent,
+        status: updatedIndent?.status || newStatus,
+        apiData: updatedIndent || requestData.apiData,
       };
-
-      // Update receipt history if needed
-      if (
-        additionalData &&
-        (newStatus === IndentStatus.PARTIALLY_RECEIVED ||
-          newStatus === IndentStatus.FULLY_RECEIVED)
-      ) {
-        const receivedDate =
-          (additionalData.receivedDate as string) ||
-          new Date().toISOString().split('T')[0];
-        const receivedQuantity =
-          (additionalData.receivedQuantity as string) || '0';
-        const notes = (additionalData.notes as string) || '';
-
-        updatedData.receiptHistory = [
-          ...(requestData.receiptHistory || []),
-          {
-            id: `receipt-${Date.now()}`,
-            date: receivedDate,
-            materialName: requestData.items[0]?.productName || 'Unknown',
-            quantity: requestData.items[0]?.reqQuantity || '0',
-            receivedQuantity: receivedQuantity,
-            receivedDate: receivedDate,
-            notes: notes,
-            status: newStatus,
-          },
-        ];
-      }
 
       setRequestData(updatedData);
 
@@ -977,70 +972,38 @@ const RequestDetails: React.FC = () => {
   const renderWorkflowActions = () => {
     if (!requestData || !requestData.apiData) return null;
 
-    const canApprove =
-      hasPermission('inventory:material-indents:approve') &&
-      requestData.status === 'pending_approval';
-    const canReject =
-      hasPermission('inventory:material-indents:approve') &&
-      requestData.status === 'pending_approval';
-    const canOrder =
-      hasPermission('inventory:material-indents:update') &&
-      requestData.status === 'approved';
-    const canReceive =
-      hasPermission('inventory:material-purchases:receive') &&
-      (requestData.status === 'ordered' ||
-        requestData.status === 'partially_received');
+    // Only show status dropdown for users who can update status
+    const canUpdateStatus = 
+      hasPermission('inventory:material-indents:approve') ||
+      hasPermission('inventory:material-indents:update');
+
+    if (!canUpdateStatus) return null;
+
+    // Show dropdown for more statuses including 'ordered'
+    const allowedStatuses = [
+      'pending_approval',
+      'approved', 
+      'ordered',
+      'partially_received',
+      'fully_received',
+      'issued',
+      'closed'
+    ];
+
+    if (!allowedStatuses.includes(requestData.status)) return null;
 
     return (
-      <div className='flex flex-wrap gap-2'>
-        {canApprove && (
-          <Button
-            variant='outline'
-            className='gap-2 text-green-600 border-green-600 hover:bg-green-50'
-            onClick={() => setIsApprovalDialogOpen(true)}
-          >
-            <CheckCircle className='w-4 h-4' />
-            Approve
-          </Button>
-        )}
-
-        {canReject && (
-          <Button
-            variant='outline'
-            className='gap-2 text-red-600 border-red-600 hover:bg-red-50'
-            onClick={() => setIsRejectionDialogOpen(true)}
-          >
-            <XCircle className='w-4 h-4' />
-            Reject
-          </Button>
-        )}
-
-        {canOrder && (
-          <Button
-            variant='outline'
-            className='gap-2 text-blue-600 border-blue-600 hover:bg-blue-50'
-            onClick={() => setIsOrderDialogOpen(true)}
-          >
-            <ShoppingCart className='w-4 h-4' />
-            Create Order
-          </Button>
-        )}
-
-        {canReceive && (
-          <Button
-            variant='outline'
-            className='gap-2 text-orange-600 border-orange-600 hover:bg-orange-50'
-            onClick={() => {
-              // Create a mock purchase object for demonstration
-              // In a real implementation, you'd fetch the actual purchase order
-              setIsReceiveDialogOpen(true);
-            }}
-          >
-            <Package className='w-4 h-4' />
-            Receive Material
-          </Button>
-        )}
-      </div>
+      <StatusDropdown
+        currentStatus={requestData.status}
+        userRole={
+          hasPermission('inventory:material-indents:approve')
+            ? 'company_owner'
+            : 'supervisor'
+        }
+        onStatusChange={handleStatusChange}
+        requestId={requestData.id}
+        hasVendorSelected={true}
+      />
     );
   };
 
@@ -1130,46 +1093,66 @@ const RequestDetails: React.FC = () => {
           </div>
         </div>
 
-        <div className='flex items-center gap-3'>
-          {canEdit() && !isEditing && (
-            <Button onClick={() => setIsEditing(true)} className='gap-2'>
-              <FileEdit className='w-4 h-4' />
-              Edit Request
-            </Button>
-          )}
+        <div className='flex items-center gap-6'>
+          {/* Date and Status on the right side */}
+          <div className='flex items-center gap-4'>
+            <div>
+              <Label className='text-sm font-medium text-muted-foreground'>
+                Date
+              </Label>
+              <div className='text-lg font-semibold'>
+                {new Date(requestData.date).toLocaleDateString('en-GB')}
+              </div>
+            </div>
+            <div>
+              <Label className='text-sm font-medium text-muted-foreground'>
+                Status
+              </Label>
+              <div className='mt-1'>
+                {(hasPermission('inventory:material-indents:update') || 
+                  hasPermission('inventory:material-indents:approve')) ? (
+                  <StatusDropdown
+                    currentStatus={requestData.status}
+                    userRole={
+                      hasPermission('inventory:material-indents:approve')
+                        ? 'company_owner'
+                        : 'supervisor'
+                    }
+                    onStatusChange={handleStatusChange}
+                    requestId={requestData.id}
+                    hasVendorSelected={true}
+                  />
+                ) : (
+                  <Badge>{requestData.status}</Badge>
+                )}
+              </div>
+            </div>
+          </div>
 
-          {isEditing && (
-            <Button onClick={handleSave} className='gap-2'>
-              <Save className='w-4 h-4' />
-              Save Changes
-            </Button>
-          )}
-
-          {/* Enhanced workflow actions */}
-          {renderWorkflowActions()}
-
-          {shouldShowStatusDropdown() &&
-            !hasPermission('inventory:material-indents:approve') && (
-              <StatusDropdown
-                currentStatus={requestData.status}
-                userRole={
-                  hasPermission('inventory:material-indents:approve')
-                    ? 'company_owner'
-                    : 'supervisor'
-                }
-                onStatusChange={handleStatusChange}
-                requestId={requestData.id}
-                hasVendorSelected={true}
-              />
-            )}
-
-          {hasPermission('inventory:material-indents:update') &&
-            requestData.status === 'reverted' && (
-              <Button onClick={handleResubmit} className='gap-2'>
-                <Package className='w-4 h-4' />
-                Resubmit for Approval
+          {/* Action buttons */}
+          <div className='flex items-center gap-3'>
+            {canEdit() && !isEditing && (
+              <Button onClick={() => setIsEditing(true)} className='gap-2'>
+                <FileEdit className='w-4 h-4' />
+                Edit Request
               </Button>
             )}
+
+            {isEditing && (
+              <Button onClick={handleSave} className='gap-2'>
+                <Save className='w-4 h-4' />
+                Save Changes
+              </Button>
+            )}
+
+            {hasPermission('inventory:material-indents:update') &&
+              requestData.status === 'reverted' && (
+                <Button onClick={handleResubmit} className='gap-2'>
+                  <Package className='w-4 h-4' />
+                  Resubmit for Approval
+                </Button>
+              )}
+          </div>
         </div>
       </div>
 
@@ -1193,6 +1176,13 @@ const RequestDetails: React.FC = () => {
               }
               itemImageUrlsMap={itemImageUrls}
               quotationImageUrlsMap={quotationImageUrls}
+              onStatusChange={handleStatusChange}
+              userRole={
+                hasPermission('inventory:material-indents:approve')
+                  ? 'company_owner'
+                  : 'supervisor'
+              }
+              hasPermission={hasPermission}
             />
           ) : currentUser?.role === 'supervisor' &&
             ['approved', 'ordered', 'partially_received', 'issued'].includes(
@@ -1219,6 +1209,13 @@ const RequestDetails: React.FC = () => {
                 }
                 itemImageUrlsMap={itemImageUrls}
                 quotationImageUrlsMap={quotationImageUrls}
+                onStatusChange={handleStatusChange}
+                userRole={
+                  hasPermission('inventory:material-indents:approve')
+                    ? 'company_owner'
+                    : 'supervisor'
+                }
+                hasPermission={hasPermission}
               />
 
               {null}

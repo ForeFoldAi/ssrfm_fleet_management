@@ -151,6 +151,7 @@ export interface Material {
   measureUnitId?: number;
   makerBrand: string; // Make/Brand instead of category
   currentStock: number;
+  totalValue?: number; // Add totalValue field
   minStockLevel?: number;
   maxStockLevel?: number;
   additionalNotes?: string;

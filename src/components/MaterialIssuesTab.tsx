@@ -117,7 +117,7 @@ export const MaterialIssuesTab = () => {
   const [error, setError] = useState<string | null>(null);
   const [materialIssues, setMaterialIssues] = useState<MaterialIssue[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5); // Changed default to 5 to match MachinesTab
+  const [itemsPerPage, setItemsPerPage] = useState(5); // Changed back to 5 to match MaterialsTab
   const [materialIssuesData, setMaterialIssuesData] = useState<{
     data?: unknown;
     meta?: {
@@ -157,7 +157,7 @@ export const MaterialIssuesTab = () => {
   }, [currentUser?.role]);
 
   // Fetch material issues from API
-  const fetchMaterialIssues = async (page = 1, limit = 10) => {
+  const fetchMaterialIssues = async (page = 1, limit = 10) => { // Changed back to default 10
     setIsLoading(true);
     setError(null);
 
@@ -326,7 +326,7 @@ export const MaterialIssuesTab = () => {
 
   // Load material issues on component mount
   useEffect(() => {
-    fetchMaterialIssues();
+    fetchMaterialIssues(); // Use default parameters
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -356,8 +356,8 @@ export const MaterialIssuesTab = () => {
   };
 
   const handleViewIssue = (issue: TransformedIssue) => {
-    setSelectedIssue(issue);
-    setIsViewDialogOpen(true);
+    // Instead of opening view dialog, open edit form directly
+    handleEditIssue(issue);
   };
 
   const handleEditIssue = (issue: TransformedIssue) => {
@@ -617,13 +617,13 @@ export const MaterialIssuesTab = () => {
       ) : filteredIssues.length > 0 ? (
         viewMode === 'table' ? (
           // Table View for Material Issues - Individual Items
-          <Card className='rounded-lg shadow-sm'>
+          <Card className='rounded-lg shadow-sm border border-primary/10'>
             <CardContent className='p-0'>
-              <div className='overflow-hidden'>
+              <div className='overflow-x-auto'>
                 <TableComponent>
                   <TableHeader>
-                    <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
-                      <TableHead className='w-[80px] text-foreground font-semibold'>
+                    <TableRow className='bg-gradient-to-r from-primary/5 to-primary/10 border-b-2 border-primary/20'>
+                      <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
                         <Button
                           variant='ghost'
                           onClick={() => handleSort('uniqueId')}
@@ -633,29 +633,32 @@ export const MaterialIssuesTab = () => {
                           {getSortIcon('uniqueId')}
                         </Button>
                       </TableHead>
-                      <TableHead className='w-[120px] text-foreground font-semibold'>
-                        Material
+                      <TableHead className='w-[140px] text-foreground font-semibold text-sm'>
+                        Issued Material
                       </TableHead>
-                      <TableHead className='w-[80px] text-foreground font-semibold'>
-                        Specs
+                      <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
+                        Specifications
                       </TableHead>
-                      <TableHead className='w-[90px] text-foreground font-semibold'>
-                        Stock
+                      <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
+                        Stock Info
                       </TableHead>
-                      <TableHead className='w-[80px] text-foreground font-semibold'>
+                      <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
                         <Button
                           variant='ghost'
                           onClick={() => handleSort('issueDate')}
                           className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                         >
-                          Date
+                         Issued Date
                           {getSortIcon('issueDate')}
                         </Button>
                       </TableHead>
-                      <TableHead className='w-[100px] text-foreground font-semibold'>
+                      <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
+                        Issued For
+                      </TableHead>
+                      <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
                         Issued To
                       </TableHead>
-                      <TableHead className='w-[100px] text-foreground font-semibold'>
+                      <TableHead className='w-[130px] text-foreground font-semibold text-sm'>
                         <Button
                           variant='ghost'
                           onClick={() => handleSort('issuedBy')}
@@ -665,7 +668,7 @@ export const MaterialIssuesTab = () => {
                           {getSortIcon('issuedBy')}
                         </Button>
                       </TableHead>
-                      <TableHead className='w-[70px] text-foreground font-semibold'>
+                      <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
                         <Button
                           variant='ghost'
                           onClick={() => handleSort('branch')}
@@ -675,7 +678,7 @@ export const MaterialIssuesTab = () => {
                           {getSortIcon('branch')}
                         </Button>
                       </TableHead>
-                      <TableHead className='w-[80px] text-foreground font-semibold'>
+                      <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
                         Purpose
                       </TableHead>
                     </TableRow>
@@ -685,53 +688,76 @@ export const MaterialIssuesTab = () => {
                       issue.items.map((item, itemIndex) => (
                         <TableRow
                           key={`${issue.id}-item-${itemIndex}`}
-                          className='bg-secondary/10 hover:bg-secondary/20 border-b border-secondary/20 cursor-pointer'
+                          className='hover:bg-primary/5 border-b border-border/50 cursor-pointer transition-colors duration-200'
                           onClick={() => handleViewIssue(issue)}
                         >
-                          <TableCell className='font-medium text-xs'>
+                          <TableCell className='font-medium text-sm py-3'>
                             <Button
                               variant='link'
-                              className='p-0 h-auto text-left font-medium text-primary hover:text-primary/80 uppercase text-xs'
+                              className='p-0 h-auto text-left font-semibold text-primary hover:text-primary/80 text-sm uppercase'
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleViewIssue(issue);
+                                handleEditIssue(issue);
                               }}
                             >
                               {issue.id}
                             </Button>
                           </TableCell>
-                          <TableCell className='text-sm'>
-                            <div className='font-medium capitalize truncate'>
-                              {item.materialName}
-                            </div>
-                          </TableCell>
-                          <TableCell className='text-xs text-muted-foreground truncate'>
-                            {item.specifications}
-                          </TableCell>
-                          <TableCell className='text-xs'>
-                            <div className='space-y-0.5'>
-                              <div>
-                                <span className='text-muted-foreground'>Existing:</span> {item.existingStock}
-                              </div>
-                              <div className='font-medium text-primary'>
-                                <span className='text-muted-foreground'>Issued:</span> {item.issuedQuantity}
-                              </div>
-                              <div>
-                                <span className='text-muted-foreground'>After:</span> {item.stockAfterIssue}
+                          <TableCell className='text-sm py-3'>
+                            <div className='flex items-center gap-2'>
+                              <div className='w-2 h-2 bg-primary rounded-full'></div>
+                              <div className='font-semibold text-foreground capitalize'>
+                                {item.materialName}
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className='text-xs'>
-                            {new Date(issue.issuedDate).toLocaleDateString()}
+                          <TableCell className='text-sm py-3'>
+                            <div className='text-muted-foreground max-w-[120px] truncate' title={item.specifications}>
+                              {item.specifications}
+                            </div>
                           </TableCell>
-                          <TableCell className='text-sm'>
-                            <div className='font-medium truncate'>
+                          <TableCell className='text-sm py-3'>
+                            <div className='space-y-1'>
+                              <div className='flex items-center justify-between text-xs'>
+                                <span className='text-muted-foreground'>Existing:</span>
+                                <span className='font-semibold text-foreground'>{item.existingStock}</span>
+                              </div>
+                              <div className='flex items-center justify-between text-xs'>
+                                <span className='text-muted-foreground'>Issued:</span>
+                                <span className='font-semibold text-primary'>{item.issuedQuantity}</span>
+                              </div>
+                              <div className='flex items-center justify-between text-xs'>
+                                <span className='text-muted-foreground'>After:</span>
+                                <span className='font-semibold text-foreground'>{item.stockAfterIssue}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className='text-sm py-3'>
+                            <span className='text-foreground'>
+                              {new Date(issue.issuedDate).toLocaleDateString()}
+                            </span>
+                          </TableCell>
+                          <TableCell className='text-sm py-3'>
+                            <div className='flex items-center gap-2'>
+                              {item.machineName ? (
+                                <div className='font-medium text-foreground truncate' title={item.machineName}>
+                                  {item.machineName}
+                                </div>
+                              ) : (
+                                <div className='font-medium text-amber-600 text-xs'>
+                                  No machine selected
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className='text-sm py-3'>
+                            <div className='font-medium text-foreground truncate'>
                               {item.recipientName}
                             </div>
                           </TableCell>
-                          <TableCell className='text-sm'>
-                            <div>
-                              <div className='font-medium truncate'>
+                          <TableCell className='text-sm py-3'>
+                            <div className='space-y-1'>
+                              <div className='font-semibold text-foreground truncate'>
                                 {issue.issuingPersonName}
                               </div>
                               <div className='text-xs text-muted-foreground truncate'>
@@ -739,11 +765,15 @@ export const MaterialIssuesTab = () => {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className='text-xs'>
-                            <Badge variant='outline' className='text-xs'>{issue.unitName}</Badge>
+                          <TableCell className='text-sm py-3'>
+                            <Badge variant='outline' className='text-xs bg-primary/10 text-primary border-primary/30'>
+                              {issue.unitName}
+                            </Badge>
                           </TableCell>
-                          <TableCell className='text-xs truncate'>
-                            {item.purpose}
+                          <TableCell className='text-sm py-3'>
+                            <div className='text-muted-foreground truncate max-w-[100px]' title={item.purpose}>
+                              {item.purpose}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -766,13 +796,13 @@ export const MaterialIssuesTab = () => {
                         Issue ID
                       </TableHead>
                       <TableHead className='w-[120px] text-foreground font-semibold'>
-                        Material
+                        Issued Material
                       </TableHead>
                       <TableHead className='w-[80px] text-foreground font-semibold'>
-                        Specs
+                        Specifications
                       </TableHead>
                       <TableHead className='w-[90px] text-foreground font-semibold'>
-                        Stock
+                        Stock Info
                       </TableHead>
                       <TableHead className='w-[100px] text-foreground font-semibold'>
                         Issued To
@@ -785,6 +815,9 @@ export const MaterialIssuesTab = () => {
                       </TableHead>
                       <TableHead className='w-[80px] text-foreground font-semibold'>
                         Date
+                      </TableHead>
+                      <TableHead className='w-[100px] text-foreground font-semibold'>
+                        Issued For
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -825,7 +858,7 @@ export const MaterialIssuesTab = () => {
                                 className='p-0 h-auto text-left font-medium text-primary hover:text-primary/80 uppercase text-xs'
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleViewIssue(issue);
+                                  handleEditIssue(issue);
                                 }}
                               >
                                 {issue.id}
@@ -878,6 +911,11 @@ export const MaterialIssuesTab = () => {
                             <TableCell className='text-xs'>
                               {new Date(issue.issuedDate).toLocaleDateString()}
                             </TableCell>
+                            <TableCell className='text-xs'>
+                              <div className='font-medium truncate' title={item.machineName}>
+                                {item.machineName || 'No machine selected'}
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))
                       )}
@@ -901,7 +939,7 @@ export const MaterialIssuesTab = () => {
         </Card>
       )}
 
-      {/* Pagination */}
+      {/* Pagination - Restore the pagination section */}
       {materialIssuesData && materialIssuesData.meta && (
         <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
           {/* Page Info */}
@@ -1054,192 +1092,6 @@ export const MaterialIssuesTab = () => {
           </div>
         </div>
       )}
-
-      {/* Issue Details View Dialog - Matching MaterialIssueForm UI */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className='max-w-6xl max-h-[95vh] overflow-y-auto p-4'>
-          <DialogHeader className='pb-3'>
-            <DialogTitle className='flex items-center gap-2'>
-              <div className='w-8 h-8 bg-secondary/20 rounded-lg flex items-center justify-center'>
-                <FileText className='w-4 h-4 text-foreground' />
-              </div>
-              <div>
-                <div className='text-base font-bold'>
-                  MATERIAL ISSUE DETAILS - {selectedIssue?.id}
-                </div>
-              </div>
-            </DialogTitle>
-          </DialogHeader>
-
-          {selectedIssue && (
-            <div className='space-y-3'>
-              {/* Material Items Table - Matching MaterialIssueForm */}
-              <Card>
-                <CardContent className='p-0'>
-                  <div className='overflow-x-auto'>
-                    <TableComponent>
-                      <TableHeader>
-                        <TableRow className='bg-gray-50'>
-                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                            SR.NO.
-                          </TableHead>
-                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                            ISSUING MATERIAL
-                          </TableHead>
-                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                            CURRENT STOCK
-                          </TableHead>
-                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                            ISSUED QTY
-                          </TableHead>
-                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                            STOCK AFTER ISSUE
-                          </TableHead>
-                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                            ISSUING TO
-                          </TableHead>
-                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                            UPLOAD IMAGE
-                          </TableHead>
-                          <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                            PURPOSE OF ISSUE
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedIssue.items.map((item, index) => (
-                          <TableRow key={index}>
-                            <TableCell className='border border-gray-300 text-center font-semibold text-xs px-2 py-1'>
-                              {index + 1}
-                            </TableCell>
-                            <TableCell className='border border-gray-300 px-2 py-1'>
-                              <div className='flex flex-col'>
-                                <span className='font-medium'>
-                                  {item.materialName}
-                                </span>
-                                {item.specifications && (
-                                  <span className='text-xs text-muted-foreground'>
-                                    {item.specifications}
-                                  </span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className='border border-gray-300 text-center px-2 py-1'>
-                              <div className='font-semibold text-xs'>
-                                {item.existingStock}
-                              </div>
-                            </TableCell>
-                            <TableCell className='border border-gray-300 text-center px-2 py-1'>
-                              <div className='font-semibold text-xs text-primary'>
-                                {item.issuedQuantity}
-                              </div>
-                            </TableCell>
-                            <TableCell className='border border-gray-300 text-center px-2 py-1'>
-                              <div className='font-semibold text-xs'>
-                                {item.stockAfterIssue}
-                              </div>
-                            </TableCell>
-                            <TableCell className='border border-gray-300 px-2 py-1'>
-                              <div className='font-medium text-xs'>
-                                {item.recipientName}
-                              </div>
-                            </TableCell>
-                            <TableCell className='border border-gray-300 px-2 py-1'>
-                              {item.imagePath ? (
-                                <div className='relative w-full h-16 mb-1'>
-                                  <img
-                                    src={`http://localhost:3000/${item.imagePath}`}
-                                    alt='Material Image'
-                                    className='h-full object-contain rounded-sm'
-                                  />
-                                </div>
-                              ) : (
-                                <span className='text-xs text-muted-foreground'>
-                                  No image
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell className='border border-gray-300 px-2 py-1'>
-                              <div className='text-xs'>{item.purpose}</div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </TableComponent>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Additional Information - Matching MaterialIssueForm */}
-              <Card>
-                <CardContent className='space-y-3'>
-                  <div className='space-y-1'>
-                    <Label className='text-xs'>Additional Notes</Label>
-                    <div className='min-h-[60px] px-4 py-3 border border-input bg-background rounded-[5px] text-sm'>
-                      {selectedIssue.additionalNotes || 'No additional notes'}
-                    </div>
-                  </div>
-
-                  <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
-                    <div className='space-y-1'>
-                      <Label className='text-xs'>Issued By</Label>
-                      <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs'>
-                        {selectedIssue.issuingPersonName}
-                      </div>
-                    </div>
-
-                    <div className='space-y-1'>
-                      <Label className='text-xs'>Date</Label>
-                      <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs'>
-                        {new Date(
-                          selectedIssue.issuedDate
-                        ).toLocaleDateString()}
-                      </div>
-                    </div>
-
-                    <div className='space-y-1'>
-                      <Label className='text-xs'>Unit</Label>
-                      <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs'>
-                        {selectedIssue.unitName}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Form Actions - Matching MaterialIssueForm */}
-              <div className='flex justify-center gap-3 pt-3'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  className='gap-2'
-                  onClick={() => handleEditIssue(selectedIssue)}
-                  disabled={!canEditIssue(selectedIssue.issuedDate)}
-                  title={
-                    canEditIssue(selectedIssue.issuedDate)
-                      ? 'Edit issue'
-                      : 'Cannot edit after 7 days'
-                  }
-                >
-                  <Edit className='w-4 h-4' />
-                  {canEditIssue(selectedIssue.issuedDate)
-                    ? 'Edit Form'
-                    : 'Cannot Edit (7+ days)'}
-                </Button>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  className='gap-2'
-                  onClick={() => setIsViewDialogOpen(false)}
-                >
-                  <X className='w-4 h-4' />
-                  Close
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Material Issue Form */}
       <MaterialIssueForm

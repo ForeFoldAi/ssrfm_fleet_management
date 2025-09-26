@@ -71,6 +71,7 @@ export const MachinesTab = () => {
   const [isAddMachineOpen, setIsAddMachineOpen] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState<TransformedMachine | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false); // Add edit mode state
 
   const [isLoading, setIsLoading] = useState(false);
   const [machinesData, setMachinesData] =
@@ -207,6 +208,14 @@ export const MachinesTab = () => {
   const handleAddMachine = (machineData: Machine) => {
     // After successfully adding a machine, refresh the data
     fetchMachines();
+    setIsEditMode(false); // Reset edit mode
+  };
+
+  // Add function to handle edit
+  const handleEditMachine = (machine: TransformedMachine) => {
+    setSelectedMachine(machine);
+    setIsEditMode(true);
+    setIsAddMachineOpen(true);
   };
 
   const filteredMachines = machines.filter((machine) => {
@@ -701,9 +710,8 @@ export const MachinesTab = () => {
               <Button
                 variant='outline'
                 onClick={() => {
-                  // Handle edit action - you can navigate to edit page or open edit modal
-                  console.log('Edit machine:', selectedMachine.id);
-                  // Example: navigate(`/machines/${selectedMachine.id}/edit`);
+                  handleEditMachine(selectedMachine);
+                  setIsViewModalOpen(false);
                 }}
                 className='gap-2'
               >
@@ -724,8 +732,13 @@ export const MachinesTab = () => {
       {/* Add Machine Form */}
       <AddMachineForm
         isOpen={isAddMachineOpen}
-        onClose={() => setIsAddMachineOpen(false)}
+        onClose={() => {
+          setIsAddMachineOpen(false);
+          setIsEditMode(false);
+          setSelectedMachine(null);
+        }}
         onSubmit={handleAddMachine}
+        editingData={isEditMode ? selectedMachine : null}
       />
     </div>
   );

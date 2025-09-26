@@ -109,7 +109,15 @@ const MaterialsInventory = () => {
       {/* Fixed Footer */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border/50 py-2 z-10">
         <p className="text-center text-sm text-muted-foreground">
-          Developed & Maintained by ForeFold AI
+          Developed & Maintained by{' '}
+          <a 
+            href="https://forefoldai.com/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-primary hover:text-primary/80 underline transition-colors duration-200"
+          >
+            ForeFold AI
+          </a>
         </p>
       </div>
     </div>

@@ -468,38 +468,40 @@ export const MaterialIssueForm = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className='space-y-3'>
-          {/* Add Item Button - Compact */}
-          <div className='flex justify-end'>
-            <Button
-              type='button'
-              onClick={() => {
-                const newItem = {
-                  srNo: formData.items.length + 1,
-                  nameOfMaterial: '',
-                  existingStock: 0,
-                  issuedQty: '',
-                  stockAfterIssue: 0,
-                  measureUnit: '',
-                  receiverName: '',
-                  image: null,
-                  imagePreview: '',
-                  materialId: 0,
-                  purpose: '',
-                  machineId: 0,
-                  machineName: '',
-                };
-                setFormData((prev) => ({
-                  ...prev,
-                  items: [...prev.items, newItem],
-                }));
-              }}
-              className='gap-1 h-8 text-xs'
-              size='sm'
-            >
-              <Plus className='w-3 h-3' />
-              Add Item
-            </Button>
-          </div>
+          {/* Add Item Button - Only show when not editing */}
+          {!editingIssue && (
+            <div className='flex justify-end'>
+              <Button
+                type='button'
+                onClick={() => {
+                  const newItem = {
+                    srNo: formData.items.length + 1,
+                    nameOfMaterial: '',
+                    existingStock: 0,
+                    issuedQty: '',
+                    stockAfterIssue: 0,
+                    measureUnit: '',
+                    receiverName: '',
+                    image: null,
+                    imagePreview: '',
+                    materialId: 0,
+                    purpose: '',
+                    machineId: 0,
+                    machineName: '',
+                  };
+                  setFormData((prev) => ({
+                    ...prev,
+                    items: [...prev.items, newItem],
+                  }));
+                }}
+                className='gap-1 h-8 text-xs'
+                size='sm'
+              >
+                <Plus className='w-3 h-3' />
+                Add Item
+              </Button>
+            </div>
+          )}
 
           {/* Material Items Table - Compact */}
           <Card>
@@ -833,7 +835,7 @@ export const MaterialIssueForm = ({
                                 }));
                               }
                             }}
-                            disabled={formData.items.length === 1}
+                            disabled={formData.items.length === 1 || !!editingIssue}
                             className='gap-1 text-xs h-6 w-6 p-0'
                           >
                             <Trash2 className='w-3 h-3' />
@@ -901,7 +903,7 @@ export const MaterialIssueForm = ({
               ) : (
                 <>
                   <FileText className='w-4 h-4' />
-                  {editingIssue ? 'Update Form' : 'Submit Form'}
+                  {editingIssue ? 'Update' : 'Submit Form'}
                 </>
               )}
             </Button>

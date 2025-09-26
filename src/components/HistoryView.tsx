@@ -114,17 +114,18 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
               <TableHeader>
                 <TableRow className='bg-gray-50'>
                   <TableHead className='font-semibold whitespace-nowrap'>
-                    Purchase ID
+                    Purchased ID
                   </TableHead>
                   <TableHead className='font-semibold whitespace-nowrap'>
-                    Date
+                    Purchased Date
                   </TableHead>
                   <TableHead className='font-semibold whitespace-nowrap'>
-                    Purchase Value
+                    Purchase Price
                   </TableHead>
                   <TableHead className='font-semibold whitespace-nowrap'>
-                    Requested Value
+                          Requested Value
                   </TableHead>
+                  
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -178,13 +179,13 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
               <TableHeader>
                 <TableRow className='bg-gray-50'>
                   <TableHead className='font-semibold whitespace-nowrap'>
-                    Purchase ID
+                    Purchased ID
                   </TableHead>
                   <TableHead className='font-semibold whitespace-nowrap'>
-                    Date
+                    Purchased Date
                   </TableHead>
                   <TableHead className='font-semibold whitespace-nowrap'>
-                          Purchase Value
+                          Purchase Price
                   </TableHead>
                   <TableHead className='font-semibold whitespace-nowrap'>
                           Requested Value

@@ -32,12 +32,26 @@ interface AddMachineFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (machineData: Machine) => void;
+  editingData?: {
+    id: number;
+    name: string;
+    type: string;
+    status: string;
+    createdDate: string;
+    lastMaintenance: string;
+    nextMaintenanceDue: string;
+    specifications: string;
+    unit: string;
+    unitName: string;
+    branch: string;
+  } | null;
 }
 
 export const AddMachineForm = ({
   isOpen,
   onClose,
   onSubmit,
+  editingData,
 }: AddMachineFormProps) => {
   const { currentUser } = useRole();
   const [formData, setFormData] = useState({
@@ -64,34 +78,71 @@ export const AddMachineForm = ({
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Prefill form data when editing
+  useEffect(() => {
+    if (editingData && isOpen) {
+      // Find the typeId and unitId from the fetched data
+      const typeId = machineTypes.find(type => type.name === editingData.type)?.id || 0;
+      const unitId = units.find(unit => unit.name === editingData.unitName)?.id || 0;
+      
+      setFormData({
+        name: editingData.name,
+        typeId: typeId,
+        unitId: unitId,
+        status: editingData.status,
+        specifications: editingData.specifications,
+        manufacturer: '',
+        model: '',
+        serialNumber: '',
+        purchaseDate: '',
+        warrantyExpiry: '',
+        capacity: '',
+        installationDate: '',
+        lastService: editingData.lastMaintenance !== 'Not serviced' ? editingData.lastMaintenance : '',
+        nextMaintenanceDue: editingData.nextMaintenanceDue !== 'Not scheduled' ? editingData.nextMaintenanceDue : '',
+        additionalNotes: '',
+      });
+    } else if (!editingData && isOpen) {
+      // Reset form when adding new machine
+      setFormData({
+        name: '',
+        typeId: 0,
+        unitId: 0,
+        status: 'Active',
+        specifications: '',
+        manufacturer: '',
+        model: '',
+        serialNumber: '',
+        purchaseDate: '',
+        warrantyExpiry: '',
+        capacity: '',
+        installationDate: '',
+        lastService: '',
+        nextMaintenanceDue: '',
+        additionalNotes: '',
+      });
+    }
+  }, [editingData, isOpen, machineTypes, units]);
+
   // Fetch machine types and units on component mount
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Here you would fetch machine types and units from your API
-        // For now, we'll use dummy data
         const typesResponse = await getMachineTypes({
           limit: 100,
-          sortBy: 'id',
-          sortOrder: 'ASC',
         });
-        const typesData = await typesResponse.data;
-        setMachineTypes(typesData || []);
+        setMachineTypes(typesResponse.data || []);
 
-        // Fetch units
         const unitsResponse = await getUnits({
           limit: 100,
-          sortBy: 'id',
-          sortOrder: 'ASC',
         });
-        const unitsData = await unitsResponse.data;
-        setUnits(unitsData || []);
+        setUnits(unitsResponse.data || []);
       } catch (error) {
-        console.error('Error fetching form data:', error);
+        console.error('Error fetching data:', error);
         toast({
           title: 'Error',
-          description: 'Failed to load form data. Please try again.',
+          description: 'Failed to load machine types and units.',
           variant: 'destructive',
         });
       } finally {
@@ -224,7 +275,7 @@ export const AddMachineForm = ({
             <div className='w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center'>
               <Plus className='w-4 h-4 text-primary' />
             </div>
-            Add New Machine
+            
           </DialogTitle>
         </DialogHeader>
 

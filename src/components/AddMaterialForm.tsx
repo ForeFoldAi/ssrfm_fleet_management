@@ -63,8 +63,8 @@ export const AddMaterialForm = ({
     maker: '',
     supplier: '',
     supplierContact: '',
-    unitPrice: '',
     currentStock: '',
+    totalValue: '',
     minStock: '',
     maxStock: '',
     reorderLevel: '',
@@ -185,10 +185,15 @@ export const AddMaterialForm = ({
     }
     if (!formData.currentStock.trim())
       newErrors.currentStock = 'Current stock is required';
+    if (!formData.totalValue.trim())
+      newErrors.totalValue = 'Total value is required';
 
     // Numeric validations
     if (formData.currentStock && isNaN(Number(formData.currentStock))) {
       newErrors.currentStock = 'Current stock must be a number';
+    }
+    if (formData.totalValue && isNaN(Number(formData.totalValue))) {
+      newErrors.totalValue = 'Total value must be a number';
     }
 
     return newErrors;
@@ -222,6 +227,7 @@ export const AddMaterialForm = ({
       console.log('Selected unit:', formData.measureUnit, 'ID:', measureUnitId);
 
       const currentStockNum = Number(formData.currentStock);
+      const totalValueNum = Number(formData.totalValue);
 
       const apiMaterial: ApiMaterial = {
         name: formData.name,
@@ -256,8 +262,8 @@ export const AddMaterialForm = ({
         maker: '',
         supplier: '',
         supplierContact: '',
-        unitPrice: '',
         currentStock: '',
+        totalValue: '',
         minStock: '',
         maxStock: '',
         reorderLevel: '',
@@ -322,8 +328,8 @@ export const AddMaterialForm = ({
       maker: '',
       supplier: '',
       supplierContact: '',
-      unitPrice: '',
       currentStock: '',
+      totalValue: '',
       minStock: '',
       maxStock: '',
       reorderLevel: '',
@@ -496,25 +502,51 @@ export const AddMaterialForm = ({
                 )}
               </div>
             </div>
-            <div className='space-y-1'>
-              <Label htmlFor='currentStock' className='text-sm font-medium'>
-                Current Stock *
-              </Label>
-              <Input
-                id='currentStock'
-                type='number'
-                placeholder='0'
-                value={formData.currentStock}
-                onChange={(e) =>
-                  handleInputChange('currentStock', e.target.value)
-                }
-                className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-              />
-              {errors.currentStock && (
-                <p className='text-destructive text-xs mt-1'>
-                  {errors.currentStock}
-                </p>
-              )}
+
+            {/* Third Row - Current Stock and Total Value */}
+            <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+              <div className='space-y-1'>
+                <Label htmlFor='currentStock' className='text-sm font-medium'>
+                  Current Stock *
+                </Label>
+                <Input
+                  id='currentStock'
+                  type='number'
+                  placeholder='0'
+                  value={formData.currentStock}
+                  onChange={(e) =>
+                    handleInputChange('currentStock', e.target.value)
+                  }
+                  className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                />
+                {errors.currentStock && (
+                  <p className='text-destructive text-xs mt-1'>
+                    {errors.currentStock}
+                  </p>
+                )}
+              </div>
+
+              <div className='space-y-1'>
+                <Label htmlFor='totalValue' className='text-sm font-medium'>
+                  Total Value (₹)
+                </Label>
+                <Input
+                  id='totalValue'
+                  type='number'
+                  step='0.01'
+                  placeholder='0.00'
+                  value={formData.totalValue}
+                  onChange={(e) =>
+                    handleInputChange('totalValue', e.target.value)
+                  }
+                  className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                />
+                {errors.totalValue && (
+                  <p className='text-destructive text-xs mt-1'>
+                    {errors.totalValue}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Specifications */}

@@ -21,7 +21,7 @@ interface VendorQuotation {
 
 interface RequestItem {
   id: string;
-  srNo: number;
+  srNo: string; // Change from number to string
   productName: string;
   machineName: string;
   specifications: string;

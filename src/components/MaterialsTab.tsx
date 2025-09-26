@@ -53,7 +53,7 @@ import { AddMaterialForm } from './AddMaterialForm';
 import { useRole } from '../contexts/RoleContext';
 import { materialsApi } from '../lib/api/materials';
 import { Material, MaterialCategory, Unit } from '../lib/api/types';
-import { getMaterialCategories } from '../lib/api/common';
+import { getMaterialCategories, getUnits } from '../lib/api/common';
 import { branchesApi } from '../lib/api/branches';
 import { Branch } from '../lib/api/types';
 import { toast } from '../hooks/use-toast';
@@ -86,6 +86,7 @@ export const MaterialsTab = () => {
   // API state management - updated to match MachinesTab structure
   const [materials, setMaterials] = useState<Material[]>([]);
   const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -152,6 +153,37 @@ export const MaterialsTab = () => {
     }
   };
 
+  // Fetch units for measure unit display
+  const fetchUnits = async () => {
+    try {
+      const response = await getUnits({ limit: 100 });
+      console.log('Fetched units:', response.data);
+      setUnits(response.data || []);
+    } catch (err) {
+      console.error('Error fetching units:', err);
+    }
+  };
+
+  // Get unit name by ID
+  const getUnitName = (unitId?: number) => {
+    if (!unitId) return '';
+    const unit = units.find(u => u.id === unitId);
+    console.log('Looking for unitId:', unitId, 'Found unit:', unit, 'All units:', units);
+    return unit?.name || '';
+  };
+
+  // Add a function to calculate average price
+  const calculateAveragePrice = (material: Material) => {
+    // Check if material has totalValue field
+    const totalValue = (material as any).totalValue || 0;
+    const currentStock = material.currentStock || 0;
+    
+    console.log('Material:', material.name, 'totalValue:', totalValue, 'currentStock:', currentStock);
+    
+    if (currentStock === 0) return '0.00';
+    return (totalValue / currentStock).toFixed(2);
+  };
+
   // Handle column sorting
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -190,6 +222,7 @@ export const MaterialsTab = () => {
   useEffect(() => {
     fetchMaterials();
     fetchBranches();
+    fetchUnits();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -389,6 +422,9 @@ export const MaterialsTab = () => {
                       Current Stock
                     </TableHead>
                     <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                      Average Price (₹)
+                    </TableHead>
+                    <TableHead className='min-w-[100px] text-foreground font-semibold'>
                       Stock Status
                     </TableHead>
                     <TableHead className='min-w-[120px] text-foreground font-semibold'>
@@ -402,6 +438,7 @@ export const MaterialsTab = () => {
                       material.currentStock,
                       material.minStockLevel
                     );
+                    const averagePrice = calculateAveragePrice(material);
                     return (
                       <TableRow
                         key={material.id}
@@ -437,7 +474,12 @@ export const MaterialsTab = () => {
                         </TableCell>
                         <TableCell className='text-sm'>
                           <div className='font-semibold text-foreground'>
-                            {material.currentStock} {material.unit}
+                            {material.currentStock} {material.unit || getUnitName(material.unitId) || 'units'}
+                          </div>
+                        </TableCell>
+                        <TableCell className='text-sm'>
+                          <div className='font-semibold text-foreground'>
+                            ₹{averagePrice}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -496,6 +538,9 @@ export const MaterialsTab = () => {
                       </Button>
                     </TableHead>
                     <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                      Average Price (₹)
+                    </TableHead>
+                    <TableHead className='min-w-[100px] text-foreground font-semibold'>
                       Stock Status
                     </TableHead>
                     <TableHead className='min-w-[120px] text-foreground font-semibold'>
@@ -516,6 +561,7 @@ export const MaterialsTab = () => {
                       material.currentStock,
                       material.minStockLevel
                     );
+                    const averagePrice = calculateAveragePrice(material);
                     return (
                       <TableRow
                         key={material.id}
@@ -531,7 +577,10 @@ export const MaterialsTab = () => {
                           {material.specifications}
                         </TableCell>
                         <TableCell className='font-semibold text-foreground'>
-                          {material.currentStock} {material.unit}
+                          {material.currentStock} {material.unit || getUnitName(material.unitId) || 'units'}
+                        </TableCell>
+                        <TableCell className='font-semibold text-foreground'>
+                          ₹{averagePrice}
                         </TableCell>
                         <TableCell>
                           <Badge className={getStatusBadge(stockStatus)}>
@@ -782,7 +831,7 @@ export const MaterialsTab = () => {
                       Current Stock *
                     </Label>
                     <p className='text-sm text-foreground py-2 font-semibold'>
-                      {selectedMaterial.currentStock} {selectedMaterial.unit}
+                      {selectedMaterial.currentStock} {selectedMaterial.unit || getUnitName(selectedMaterial.unitId) || 'units'}
                     </p>
                     <p className='text-xs text-muted-foreground'>
                       Current stock cannot be edited from here
@@ -790,9 +839,14 @@ export const MaterialsTab = () => {
                   </div>
 
                   <div className='space-y-1'>
-                    <Label className='text-sm font-medium'>Measure Unit</Label>
-                    <p className='text-sm text-foreground py-2'>
-                      {selectedMaterial.unit}
+                    <Label className='text-sm font-medium'>
+                      Average Price (₹)
+                    </Label>
+                    <p className='text-sm text-foreground py-2 font-semibold'>
+                      ₹{calculateAveragePrice(selectedMaterial)}
+                    </p>
+                    <p className='text-xs text-muted-foreground'>
+                      Calculated from total value and current stock
                     </p>
                   </div>
                 </div>
