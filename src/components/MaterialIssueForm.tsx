@@ -716,19 +716,29 @@ export const MaterialIssueForm = ({
                                   {machinesError}
                                 </div>
                               ) : (
-                                availableMachines.map((machine) => (
-                                  <SelectItem
-                                    key={machine.id}
-                                    value={machine.name}
-                                  >
+                                [
+                                  ...availableMachines.map((machine) => (
+                                    <SelectItem
+                                      key={machine.id}
+                                      value={machine.name}
+                                    >
+                                      <div className='flex flex-col'>
+                                        <span>{machine.name}</span>
+                                        <span className='text-xs text-muted-foreground'>
+                                          {machine.model} - {machine.serialNumber}
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  )),
+                                  <SelectItem key="other" value="Other">
                                     <div className='flex flex-col'>
-                                      <span>{machine.name}</span>
+                                      <span>Other</span>
                                       <span className='text-xs text-muted-foreground'>
-                                        {machine.model} - {machine.serialNumber}
+                                        Custom machine or equipment
                                       </span>
                                     </div>
                                   </SelectItem>
-                                ))
+                                ]
                               )}
                             </SelectContent>
                           </Select>

@@ -60,7 +60,7 @@ import { Label } from './ui/label';
 import { branchesApi } from '../lib/api/branches';
 import { Branch } from '../lib/api/types';
 
-type SortField = 'id' | 'issueDate' | 'issuedBy' | 'branch' | 'uniqueId';
+type SortField = 'id' | 'issueDate' | 'issuedBy' | 'branch' | 'uniqueId' | 'materialName' | 'specifications' | 'stockInfo' | 'issuedFor' | 'issuedTo' | 'purpose';
 type SortOrder = 'ASC' | 'DESC';
 
 export const MaterialIssuesTab = () => {
@@ -80,7 +80,7 @@ export const MaterialIssuesTab = () => {
 
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('issueDate');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('DESC');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('DESC'); // Already set to DESC
 
   // Helper function to format date as dd-mm-yyyy
   const formatDate = (dateString: string): string => {
@@ -165,74 +165,21 @@ export const MaterialIssuesTab = () => {
     fetchBranches();
   }, [currentUser?.role]);
 
-  // Fetch material issues from API
-  const fetchMaterialIssues = async (page = 1, limit = 10) => { // Changed back to default 10
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const params = {
-        page,
-        limit,
-        sortBy: sortField,
-        sortOrder: sortOrder,
-        ...(searchQuery && { search: searchQuery }),
-        ...(filterUnit !== 'all' &&
-          currentUser?.role === 'company_owner' && {
-            branchId: filterUnit,
-          }),
-      };
-
-      const response = await materialIssuesApi.getAll(params);
-
-      // Validate response structure
-      if (!response || !response.data || !response.meta) {
-        throw new Error('Invalid response format from API');
-      }
-
-      setMaterialIssuesData(response);
-      setMaterialIssues(response.data);
-
-      // Transform API data to match component data structure
-      const transformedIssues = response.data.map(transformApiIssueToUiFormat);
-      setIssuedMaterials(transformedIssues);
-    } catch (error: unknown) {
-      const err = error as {
-        response?: {
-          data?: { message?: string };
-          status?: number;
-        };
-        request?: unknown;
-        message?: string;
-      };
-
-      // More detailed error handling
-      let errorMessage = 'Failed to load material issues. Please try again.';
-
-      if (err.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        errorMessage = `Server error: ${err.response.status}. ${
-          err.response.data?.message || ''
-        }`;
-      } else if (err.request) {
-        // The request was made but no response was received
-        errorMessage =
-          'No response received from server. Please check your connection.';
-      } else {
-        // Something happened in setting up the request
-        errorMessage = `Request error: ${err.message || 'Unknown error'}`;
-      }
-
-      setError(errorMessage);
-      setIssuedMaterials([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle column sorting
+  // Handle column sorting - only for API-supported fields
   const handleSort = (field: SortField) => {
+    // Only allow sorting on fields that the API supports
+    const supportedSortFields: SortField[] = ['id', 'issueDate', 'issuedBy', 'branch', 'uniqueId'];
+    
+    if (!supportedSortFields.includes(field)) {
+      // Show a message for unsupported sort fields
+      toast({
+        title: 'Sorting Not Available',
+        description: 'Sorting is not available for this column.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (sortField === field) {
       // Toggle sort order if same field
       setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
@@ -331,6 +278,46 @@ export const MaterialIssuesTab = () => {
       }
     }
     return result;
+  };
+
+  // Add the missing fetchMaterialIssues function
+  const fetchMaterialIssues = async (page = 1, limit = itemsPerPage) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const params: any = {
+        page,
+        limit,
+        sortBy: sortField,
+        sortOrder: 'DESC', // Force DESC to show newest first
+      };
+
+      // Add search if provided
+      if (searchQuery.trim()) {
+        params.search = searchQuery.trim();
+      }
+
+      // Add unit filter for company owner
+      if (currentUser?.role === 'company_owner' && filterUnit !== 'all') {
+        params.branchId = filterUnit;
+      }
+
+      const response = await materialIssuesApi.getAll(params);
+      
+      setMaterialIssues(response.data);
+      setMaterialIssuesData(response);
+      
+      // Transform the data for UI display
+      const transformedIssues = response.data.map(transformApiIssueToUiFormat);
+      setIssuedMaterials(transformedIssues);
+      
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      setError(error.message || 'Failed to fetch material issues');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Load material issues on component mount
@@ -643,13 +630,34 @@ export const MaterialIssuesTab = () => {
                         </Button>
                       </TableHead>
                       <TableHead className='w-[140px] text-foreground font-semibold text-sm'>
-                        Issued Material
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('materialName')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Issued Material
+                          {getSortIcon('materialName')}
+                        </Button>
                       </TableHead>
                       <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
-                        Specifications
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('specifications')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Specifications
+                          {getSortIcon('specifications')}
+                        </Button>
                       </TableHead>
                       <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
-                        Stock Info
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('stockInfo')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Stock Info
+                          {getSortIcon('stockInfo')}
+                        </Button>
                       </TableHead>
                       <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
                         <Button
@@ -662,10 +670,24 @@ export const MaterialIssuesTab = () => {
                         </Button>
                       </TableHead>
                       <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
-                        Issued For
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('issuedFor')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Issued For
+                          {getSortIcon('issuedFor')}
+                        </Button>
                       </TableHead>
                       <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
-                        Issued To
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('issuedTo')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Issued To
+                          {getSortIcon('issuedTo')}
+                        </Button>
                       </TableHead>
                       <TableHead className='w-[130px] text-foreground font-semibold text-sm'>
                         <Button
@@ -688,7 +710,14 @@ export const MaterialIssuesTab = () => {
                         </Button>
                       </TableHead>
                       <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
-                        Purpose
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('purpose')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Purpose
+                          {getSortIcon('purpose')}
+                        </Button>
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -802,31 +831,94 @@ export const MaterialIssuesTab = () => {
                     <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
                       <TableHead className='w-8'></TableHead>
                       <TableHead className='w-[80px] text-foreground font-semibold'>
-                        Issue ID
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('uniqueId')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Issue ID
+                          {getSortIcon('uniqueId')}
+                        </Button>
                       </TableHead>
                       <TableHead className='w-[120px] text-foreground font-semibold'>
-                        Issued Material
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('materialName')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Issued Material
+                          {getSortIcon('materialName')}
+                        </Button>
                       </TableHead>
                       <TableHead className='w-[80px] text-foreground font-semibold'>
-                        Specifications
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('specifications')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Specifications
+                          {getSortIcon('specifications')}
+                        </Button>
                       </TableHead>
                       <TableHead className='w-[90px] text-foreground font-semibold'>
-                        Stock Info
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('stockInfo')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Stock Info
+                          {getSortIcon('stockInfo')}
+                        </Button>
                       </TableHead>
                       <TableHead className='w-[100px] text-foreground font-semibold'>
-                        Issued To
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('issuedTo')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Issued To
+                          {getSortIcon('issuedTo')}
+                        </Button>
                       </TableHead>
                       <TableHead className='w-[100px] text-foreground font-semibold'>
-                        Issuing Person
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('issuedBy')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Issuing Person
+                          {getSortIcon('issuedBy')}
+                        </Button>
                       </TableHead>
                       <TableHead className='w-[70px] text-foreground font-semibold'>
-                        Unit
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('branch')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Unit
+                          {getSortIcon('branch')}
+                        </Button>
                       </TableHead>
                       <TableHead className='w-[80px] text-foreground font-semibold'>
-                        Date
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('issueDate')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Date
+                          {getSortIcon('issueDate')}
+                        </Button>
                       </TableHead>
                       <TableHead className='w-[100px] text-foreground font-semibold'>
-                        Issued For
+                        <Button
+                          variant='ghost'
+                          onClick={() => handleSort('issuedFor')}
+                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                        >
+                          Issued For
+                          {getSortIcon('issuedFor')}
+                        </Button>
                       </TableHead>
                     </TableRow>
                   </TableHeader>

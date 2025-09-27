@@ -105,6 +105,9 @@ export const MaterialsTab = () => {
     };
   } | null>(null);
 
+  // Add state for material categories
+  const [materialCategories, setMaterialCategories] = useState<MaterialCategory[]>([]);
+
   // Fetch materials from API
   const fetchMaterials = async (page = 1, limit = 10) => {
     try {
@@ -165,12 +168,29 @@ export const MaterialsTab = () => {
     }
   };
 
+  // Fetch material categories
+  const fetchMaterialCategories = async () => {
+    try {
+      const response = await getMaterialCategories({ limit: 100 });
+      setMaterialCategories(response.data || []);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+    }
+  };
+
   // Get unit name by ID
   const getUnitName = (unitId?: number) => {
     if (!unitId) return '';
     const unit = units.find(u => u.id === unitId);
     console.log('Looking for unitId:', unitId, 'Found unit:', unit, 'All units:', units);
     return unit?.name || '';
+  };
+
+  // Get category name by ID
+  const getCategoryName = (categoryId?: number) => {
+    if (!categoryId) return '';
+    const category = materialCategories.find(cat => cat.id === categoryId);
+    return category?.name || '';
   };
 
   // Add a function to calculate average price
@@ -219,11 +239,21 @@ export const MaterialsTab = () => {
     setExpandedRows(newExpandedRows);
   };
 
+  // Helper function to check if material can be edited (within 7 days)
+  const canEditMaterial = (createdAt: string) => {
+    const createDate = new Date(createdAt);
+    const currentDate = new Date();
+    const diffTime = Math.abs(currentDate.getTime() - createDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7;
+  };
+
   // Initial data fetch
   useEffect(() => {
     fetchMaterials();
     fetchBranches();
     fetchUnits();
+    fetchMaterialCategories(); // Add this
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -270,16 +300,32 @@ export const MaterialsTab = () => {
   };
 
   const handleMaterialClick = (material: Material) => {
-    setSelectedMaterial(material);
-    setIsEditMode(false);
-    setIsViewEditOpen(true);
+    if (canEditMaterial(material.createdAt)) {
+      setSelectedMaterial(material);
+      setIsEditMode(true);
+      setIsViewEditOpen(true);
+    } else {
+      toast({
+        title: 'Cannot Edit Material',
+        description: "This material cannot be edited as it's more than 7 days old. Only recent materials (within 7 days) can be modified.",
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleEditClick = (e: React.MouseEvent, material: Material) => {
     e.stopPropagation();
-    setSelectedMaterial(material);
-    setIsEditMode(true);
-    setIsViewEditOpen(true);
+    if (canEditMaterial(material.createdAt)) {
+      setSelectedMaterial(material);
+      setIsEditMode(true);
+      setIsViewEditOpen(true);
+    } else {
+      toast({
+        title: 'Cannot Edit Material',
+        description: "This material cannot be edited as it's more than 7 days old. Only recent materials (within 7 days) can be modified.",
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleViewEditClose = () => {
@@ -779,12 +825,12 @@ export const MaterialsTab = () => {
         onSubmit={handleAddMaterial}
       />
 
-      {/* View/Edit Material Dialog */}
+      {/* Edit Material Dialog */}
       <Dialog open={isViewEditOpen} onOpenChange={handleViewEditClose}>
         <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
           <DialogHeader className='flex flex-row items-center justify-between'>
             <DialogTitle className='text-xl font-semibold'>
-              {isEditMode ? 'Edit Material' : 'View Material'}
+              Edit Material
             </DialogTitle>
           </DialogHeader>
 
@@ -798,30 +844,26 @@ export const MaterialsTab = () => {
                     <Label className='text-sm font-medium'>
                       Material Name *
                     </Label>
-                    {isEditMode ? (
-                      <Input
-                        defaultValue={selectedMaterial.name}
-                        className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-                      />
-                    ) : (
-                      <p className='text-sm text-foreground py-2'>
-                        {selectedMaterial.name}
-                      </p>
-                    )}
+                    <Input
+                      defaultValue={selectedMaterial.name}
+                      className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                    />
                   </div>
 
                   <div className='space-y-1'>
-                    <Label className='text-sm font-medium'>Make/Brand</Label>
-                    {isEditMode ? (
-                      <Input
-                        defaultValue={selectedMaterial.makerBrand}
-                        className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-                      />
-                    ) : (
-                      <p className='text-sm text-foreground py-2'>
-                        {selectedMaterial.makerBrand || 'N/A'}
-                      </p>
-                    )}
+                    <Label className='text-sm font-medium'>Category *</Label>
+                    <Select defaultValue={getCategoryName(selectedMaterial.categoryId)}>
+                      <SelectTrigger className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
+                        <SelectValue placeholder='Select category' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {materialCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.name}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -829,20 +871,54 @@ export const MaterialsTab = () => {
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
                   <div className='space-y-1'>
                     <Label className='text-sm font-medium'>
-                      Current Stock *
+                      Measure Unit *
                     </Label>
-                    <p className='text-sm text-foreground py-2 font-semibold'>
-                      {selectedMaterial.currentStock} {selectedMaterial.unit || getUnitName(selectedMaterial.unitId) || 'units'}
-                    </p>
+                    <Select defaultValue={getUnitName(selectedMaterial.unitId)}>
+                      <SelectTrigger className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
+                        <SelectValue placeholder='Select Measure unit' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.name}>
+                            {unit.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className='space-y-1'>
+                    <Label className='text-sm font-medium'>Make/Brand</Label>
+                    <Input
+                      defaultValue={selectedMaterial.makerBrand}
+                      className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                    />
+                  </div>
+                </div>
+
+                {/* Third Row - Current Stock (Read-only) and Total Value */}
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+                  <div className='space-y-1'>
+                    <Label className='text-sm font-medium'>
+                      Current Stock (Read-only)
+                    </Label>
+                    <Input
+                      value={`${selectedMaterial.currentStock} ${getUnitName(selectedMaterial.unitId) || 'units'}`}
+                      disabled
+                      className='h-9 px-3 py-2 border border-input bg-muted text-muted-foreground cursor-not-allowed rounded-[5px] text-sm'
+                    />
                   </div>
 
                   <div className='space-y-1'>
                     <Label className='text-sm font-medium'>
-                      Average Price (₹)
+                      Total Value (₹) *
                     </Label>
-                    <p className='text-sm text-foreground py-2 font-semibold'>
-                      ₹{calculateAveragePrice(selectedMaterial)}
-                    </p>
+                    <Input
+                      type='number'
+                      step='0.01'
+                      defaultValue={(selectedMaterial as any).totalValue || '0.00'}
+                      className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                    />
                   </div>
                 </div>
 
@@ -851,55 +927,33 @@ export const MaterialsTab = () => {
                   <Label className='text-sm font-medium'>
                     Specifications *
                   </Label>
-                  {isEditMode ? (
-                    <Textarea
-                      defaultValue={selectedMaterial.specifications}
-                      className='min-h-[80px] px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-                    />
-                  ) : (
-                    <p className='text-sm text-foreground py-2 whitespace-pre-wrap'>
-                      {selectedMaterial.specifications}
-                    </p>
-                  )}
+                  <Textarea
+                    defaultValue={selectedMaterial.specifications}
+                    className='min-h-[80px] px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                  />
                 </div>
 
                 {/* Additional Notes */}
-                {selectedMaterial.additionalNotes && (
-                  <div className='space-y-1'>
-                    <Label className='text-sm font-medium'>
-                      Additional Notes
-                    </Label>
-                    {isEditMode ? (
-                      <Textarea
-                        defaultValue={selectedMaterial.additionalNotes}
-                        className='min-h-[60px] px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-                      />
-                    ) : (
-                      <p className='text-sm text-foreground py-2 whitespace-pre-wrap'>
-                        {selectedMaterial.additionalNotes}
-                      </p>
-                    )}
-                  </div>
-                )}
+                <div className='space-y-1'>
+                  <Label className='text-sm font-medium'>
+                    Additional Notes
+                  </Label>
+                  <Textarea
+                    defaultValue={selectedMaterial.additionalNotes || ''}
+                    className='min-h-[60px] px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                  />
+                </div>
               </div>
 
               {/* Action Buttons */}
               <div className='flex justify-end space-x-2 pt-4 border-t'>
-                <Button variant='outline' onClick={handleViewEditClose}>
-                  {isEditMode ? 'Cancel' : 'Close'}
+                <Button type='button' variant='outline' onClick={handleViewEditClose}>
+                  Cancel
                 </Button>
-                {!isEditMode && (
-                  <Button onClick={() => setIsEditMode(true)}>
-                    <Edit className='w-4 h-4 mr-2' />
-                    Edit Material
-                  </Button>
-                )}
-                {isEditMode && (
-                  <Button>
-                    <Edit className='w-4 h-4 mr-2' />
-                    Save Changes
-                  </Button>
-                )}
+                <Button type='submit'>
+                  <Edit className='w-4 h-4 mr-2' />
+                  Save Changes
+                </Button>
               </div>
             </form>
           )}

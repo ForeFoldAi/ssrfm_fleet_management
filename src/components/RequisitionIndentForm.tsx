@@ -34,13 +34,13 @@ import {
 import { Label } from './ui/label';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { toast } from '../hooks/use-toast';
-import { generateSrNo } from '../lib/utils';
+import { generateSrNo, formatDateToDDMMYYYY } from '../lib/utils';
 import { StatusDropdown } from './StatusDropdown';
 import { MaterialPurchaseItem } from '../lib/api/types';
 
 interface RequestItem {
   id: string;
-  srNo: string; // Change from number to string
+  srNo: string;
   productName: string;
   machineName: string;
   specifications: string;
@@ -61,7 +61,7 @@ interface VendorQuotation {
   quotedPrice: string;
   notes: string;
   quotationFile?: File | null;
-  isSelected?: boolean; // Add this field
+  isSelected?: boolean;
 }
 
 interface RequisitionIndentFormProps {
@@ -115,11 +115,11 @@ interface RequisitionIndentFormProps {
   onLoadQuotationImages?: (itemId: number) => void;
   itemImageUrlsMap?: Record<string, string[]>;
   quotationImageUrlsMap?: Record<string, string[]>;
-  onStatusChange?: (newStatus: string, additionalData?: any) => void; // Add this prop
-  userRole?: 'company_owner' | 'supervisor'; // Add this prop
-  hasPermission?: (permission: string) => boolean; // Add this prop
-  selectedVendors?: Record<string, string>; // Add this
-  onVendorSelection?: (vendors: Record<string, string>) => void; // Add this
+  onStatusChange?: (newStatus: string, additionalData?: any) => void;
+  userRole?: 'company_owner' | 'supervisor';
+  hasPermission?: (permission: string) => boolean;
+  selectedVendors?: Record<string, string>;
+  onVendorSelection?: (vendors: Record<string, string>) => void;
 }
 
 export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
@@ -160,11 +160,31 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
   // Add state for vendor selection
   const [selectedVendorsState, setSelectedVendorsState] = useState<Record<string, string>>({});
 
+  // Add state for partial receipt management
+  const [isPartialReceiptOpen, setIsPartialReceiptOpen] = useState(false);
+  const [partialReceiptData, setPartialReceiptData] = useState({
+    receivedQuantity: '',
+    receivedDate: new Date().toISOString().split('T')[0],
+    notes: '',
+  });
+
+  // Add state for quotation details popup
+  const [isQuotationPopupOpen, setIsQuotationPopupOpen] = useState(false);
+  const [selectedQuotation, setSelectedQuotation] = useState<VendorQuotation | null>(null);
+  const [selectedItemForQuotation, setSelectedItemForQuotation] = useState<RequestItem | null>(null);
+
   // Function to show images in popup
   const showImagesInPopup = (images: string[], title: string) => {
     setSelectedImages(images);
     setPopupTitle(title);
     setIsImagePopupOpen(true);
+  };
+
+  // Function to show quotation details in popup
+  const showQuotationDetails = (quotation: VendorQuotation, item: RequestItem) => {
+    setSelectedQuotation(quotation);
+    setSelectedItemForQuotation(item);
+    setIsQuotationPopupOpen(true);
   };
 
   const handleItemChange = (itemId: string, field: string, value: string) => {
@@ -266,6 +286,74 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
     if (onVendorSelection) {
       onVendorSelection(newSelection);
     }
+  };
+
+  // Add function to open partial receipt dialog
+  const openPartialReceiptDialog = (itemId: string) => {
+    setCurrentItemId(itemId);
+    setPartialReceiptData({
+      receivedQuantity: '',
+      receivedDate: new Date().toISOString().split('T')[0],
+      notes: '',
+    });
+    setIsPartialReceiptOpen(true);
+  };
+
+  // Add function to handle partial receipt submission
+  const handlePartialReceiptSubmit = () => {
+    if (!partialReceiptData.receivedQuantity || !partialReceiptData.receivedDate) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const receivedQty = parseInt(partialReceiptData.receivedQuantity);
+    const currentItem = requestData.items.find(item => item.id === currentItemId);
+    const requiredQty = parseInt(currentItem?.reqQuantity || '0');
+    const totalReceived = (requestData.apiData?.totalReceivedQuantity || 0) + receivedQty;
+
+    // Check if this receipt will complete the order
+    const willBeFullyReceived = totalReceived >= requiredQty;
+    const status = willBeFullyReceived ? 'fully_received' : 'partially_received';
+
+    if (onStatusChange) {
+      onStatusChange(status, {
+        receivedQuantity: receivedQty,
+        receivedDate: partialReceiptData.receivedDate,
+        notes: partialReceiptData.notes,
+      });
+    }
+
+    setIsPartialReceiptOpen(false);
+    setPartialReceiptData({
+      receivedQuantity: '',
+      receivedDate: new Date().toISOString().split('T')[0],
+      notes: '',
+    });
+
+    toast({
+      title: 'Receipt Added',
+      description: willBeFullyReceived 
+        ? 'Material fully received and status updated'
+        : 'Partial receipt added successfully',
+    });
+  };
+
+  // Calculate total received quantity
+  const getTotalReceivedQuantity = () => {
+    return requestData.apiData?.partialReceiptHistory?.reduce((sum, receipt) => 
+      sum + (receipt.receivedQuantity || 0), 0
+    ) || 0;
+  };
+
+  // Check if item can receive more materials
+  const canReceiveMore = (item: RequestItem) => {
+    const totalReceived = getTotalReceivedQuantity();
+    const required = parseInt(item.reqQuantity);
+    return totalReceived < required && ['ordered', 'partially_received'].includes(requestData.status);
   };
 
   return (
@@ -398,28 +486,89 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                       )}
                     </TableCell>
                     <TableCell className='border border-gray-300'>
-                      <div className='flex items-center gap-2'>
-                        {isReadOnly ? (
-                          <div>{item.reqQuantity}</div>
-                        ) : (
-                          <Input
-                            type='number'
-                            value={item.reqQuantity}
-                            onChange={(e) =>
-                              handleItemChange(
-                                item.id,
-                                'reqQuantity',
-                                e.target.value
-                              )
-                            }
-                            placeholder='Qty'
-                            min='0'
-                            className='border border-gray-300 p-2 h-auto w-20 focus:ring-0 focus:outline-none rounded-md'
-                          />
+                      <div className='space-y-2'>
+                        <div className='flex items-center gap-2'>
+                          {isReadOnly ? (
+                            <div className='flex items-center gap-2'>
+                              <span>{item.reqQuantity}</span>
+                              <span className='text-sm text-gray-600'>
+                                {item.measureUnit}
+                              </span>
+                              {canReceiveMore(item) && userRole === 'supervisor' && (
+                                <Button
+                                  variant='outline'
+                                  size='sm'
+                                  onClick={() => openPartialReceiptDialog(item.id)}
+                                  className='h-6 w-6 p-0 ml-2'
+                                >
+                                  <Plus className='w-3 h-3' />
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <>
+                              <Input
+                                type='number'
+                                value={item.reqQuantity}
+                                onChange={(e) =>
+                                  handleItemChange(
+                                    item.id,
+                                    'reqQuantity',
+                                    e.target.value
+                                  )
+                                }
+                                placeholder='Qty'
+                                min='0'
+                                className='border border-gray-300 p-2 h-auto w-20 focus:ring-0 focus:outline-none rounded-md'
+                              />
+                              <span className='text-sm text-gray-600'>
+                                {item.measureUnit}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        
+                        {/* Show partial receipt history with dates */}
+                        {requestData.apiData?.partialReceiptHistory && 
+                         requestData.apiData.partialReceiptHistory.length > 0 && (
+                          <div className='space-y-1'>
+                            <div className='text-xs font-medium text-blue-600'>
+                              Received History:
+                            </div>
+                            {requestData.apiData.partialReceiptHistory.map((receipt, index) => (
+                              <div key={receipt.id} className='text-xs bg-blue-50 border border-blue-200 p-2 rounded'>
+                                <div className='flex justify-between items-start mb-1'>
+                                  <span className='font-medium text-blue-800'>
+                                    Receipt #{index + 1}
+                                  </span>
+                                  <span className='text-blue-600 font-medium'>
+                                    {receipt.receivedQuantity} {item.measureUnit}
+                                  </span>
+                                </div>
+                                <div className='flex justify-between items-center text-blue-600'>
+                                  <span>{formatDateToDDMMYYYY(receipt.receivedDate)}</span>
+                                  <span className='text-xs'>by {receipt.receivedBy}</span>
+                                </div>
+                                {receipt.notes && (
+                                  <div className='text-blue-600 mt-1 text-xs italic'>
+                                    "{receipt.notes}"
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            <div className='text-xs font-medium text-green-600 bg-green-50 border border-green-200 p-2 rounded'>
+                              <div className='flex justify-between items-center'>
+                                <span>Total Received:</span>
+                                <span className='font-bold'>
+                                  {getTotalReceivedQuantity()} {item.measureUnit}
+                                </span>
+                              </div>
+                              <div className='text-xs text-green-500 mt-1'>
+                                {requestData.apiData.partialReceiptHistory.length} receipt(s)
+                              </div>
+                            </div>
+                          </div>
                         )}
-                        <span className='text-sm text-gray-600'>
-                          {item.measureUnit}
-                        </span>
                       </div>
                     </TableCell>
                     <TableCell className='border border-gray-300'>
@@ -456,36 +605,83 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                     </TableCell>
                     <TableCell className='border border-gray-300'>
                       <div className='space-y-1'>
-                        {/* Load remote quotation images when available */}
-                        {onLoadQuotationImages && (
-                          <div className='flex gap-2 mb-1'>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => {
-                                onLoadQuotationImages(parseInt(item.id, 10));
-                                // Show images in popup if they exist
-                                if (
-                                  quotationImageUrlsMap[item.id] &&
-                                  quotationImageUrlsMap[item.id].length > 0
-                                ) {
-                                  showImagesInPopup(
-                                    quotationImageUrlsMap[item.id],
-                                    `Quotation Images - ${item.productName}`
-                                  );
-                                }
-                              }}
-                              disabled={!isReadOnly}
-                              className='gap-2'
-                            >
-                              <Eye className='w-4 h-4' />
-                              View Images
-                            </Button>
+                        {/* Show all quotations with name and price only */}
+                        {item.vendorQuotations.length > 0 && (
+                          <div className='space-y-2'>
+                            {userRole === 'company_owner' && 
+                             requestData.status === 'pending_approval' ? (
+                              // Show radio buttons for company owner approval
+                              <RadioGroup
+                                value={selectedVendorsState[item.id] || ''}
+                                onValueChange={(value) => handleVendorSelection(item.id, value)}
+                              >
+                                {item.vendorQuotations.map((quotation) => (
+                                  <div key={quotation.id} className="flex items-center space-x-2 p-2 border border-gray-200 rounded cursor-pointer hover:bg-gray-50">
+                                    <RadioGroupItem
+                                      value={quotation.id}
+                                      id={`${item.id}-${quotation.id}`}
+                                    />
+                                    <Label
+                                      htmlFor={`${item.id}-${quotation.id}`}
+                                      className="text-sm cursor-pointer flex-1"
+                                    >
+                                      <div className="font-medium text-gray-900">{quotation.vendorName}</div>
+                                      <div className="text-xs font-medium text-green-600">
+                                        {quotation.quotedPrice}
+                                      </div>
+                                    </Label>
+                                    <Button
+                                      variant='outline'
+                                      size='sm'
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        showQuotationDetails(quotation, item);
+                                      }}
+                                      className='h-6 w-6 p-0 ml-2'
+                                    >
+                                      <Eye className='w-3 h-3' />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </RadioGroup>
+                            ) : (
+                              // Show all quotations with selection status
+                              <div className='space-y-2'>
+                                {item.vendorQuotations.map((quotation) => (
+                                  <div
+                                    key={quotation.id}
+                                    className={`p-2 rounded border cursor-pointer hover:bg-gray-50 ${
+                                      quotation.isSelected 
+                                        ? 'bg-green-50 border-green-200' 
+                                        : 'bg-gray-50 border-gray-200'
+                                    }`}
+                                    onClick={() => showQuotationDetails(quotation, item)}
+                                  >
+                                    <div className="flex justify-between items-center">
+                                      <div>
+                                        <div className="font-medium text-gray-900">
+                                          {quotation.vendorName}
+                                        </div>
+                                        <div className="text-xs font-medium text-green-600">
+                                          {quotation.quotedPrice}
+                                        </div>
+                                      </div>
+                                      {quotation.isSelected && (
+                                        <div className="text-xs bg-green-600 text-white px-2 py-1 rounded">
+                                          SELECTED
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
-                        {/* Quotation thumbnails hidden per requirements */}
+                        
+                        {/* Add quotation button for editing */}
                         {!isReadOnly && (
-                          <div className='flex gap-1'>
+                          <div className='flex gap-1 mt-2'>
                             <Button
                               variant='outline'
                               size='sm'
@@ -508,105 +704,11 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                             )}
                           </div>
                         )}
-                        {item.vendorQuotations.length > 0 && (
-                          <div className='space-y-2'>
-                            {userRole === 'company_owner' && 
-                             requestData.status === 'pending_approval' ? (
-                              // Show radio buttons for company owner approval
-                              <RadioGroup
-                                value={selectedVendorsState[item.id] || ''}
-                                onValueChange={(value) => handleVendorSelection(item.id, value)}
-                              >
-                                {item.vendorQuotations.map((quotation) => (
-                                  <div key={quotation.id} className="flex items-center space-x-2">
-                                    <RadioGroupItem
-                                      value={quotation.id}
-                                      id={`${item.id}-${quotation.id}`}
-                                    />
-                                    <Label
-                                      htmlFor={`${item.id}-${quotation.id}`}
-                                      className="text-sm cursor-pointer flex-1"
-                                    >
-                                      <div className="font-medium">{quotation.vendorName}</div>
-                                      <div className="text-xs text-muted-foreground">
-                                        {quotation.quotedPrice}
-                                        {quotation.contactPerson && ` • ${quotation.contactPerson}`}
-                                      </div>
-                                    </Label>
-                                  </div>
-                                ))}
-                              </RadioGroup>
-                            ) : (userRole === 'company_owner' || userRole === 'supervisor') && 
-                              ['approved', 'ordered', 'partially_received', 'fully_received', 'issued', 'closed'].includes(requestData.status) ? (
-                              // Show only selected vendor for both company owner and supervisor after approval
-                              <div className='space-y-1'>
-                                {(() => {
-                                  // Debug: Log the quotations to see isSelected values
-                                  console.log('Item quotations:', item.vendorQuotations);
-                                  console.log('Selected quotations:', item.vendorQuotations.filter(q => q.isSelected));
-                                  
-                                  const selectedQuotations = item.vendorQuotations.filter((quotation) => quotation.isSelected);
-                                  
-                                  if (selectedQuotations.length === 0) {
-                                    return (
-                                      <div className='text-xs text-gray-500 italic'>
-                                        No vendor selected
-                                      </div>
-                                    );
-                                  }
-                                  
-                                  return selectedQuotations.map((quotation) => (
-                                    <div
-                                      key={quotation.id}
-                                      className='flex items-center justify-between gap-2 text-xs bg-green-50 border border-green-200 p-2 rounded'
-                                    >
-                                      <div className='flex-1'>
-                                        <div className='font-medium text-green-800'>
-                                          {quotation.vendorName}
-                                        </div>
-                                        <div className='text-green-600'>
-                                          {quotation.quotedPrice}
-                                          {quotation.contactPerson && ` • ${quotation.contactPerson}`}
-                                        </div>
-                                      </div>
-                                      <div className='text-xs text-green-600 font-medium'>
-                                        SELECTED
-                                      </div>
-                                    </div>
-                                  ));
-                                })()}
-                              </div>
-                            ) : (
-                              // Show read-only quotations for other cases
-                              <div className='space-y-1'>
-                                {item.vendorQuotations.map((quotation) => (
-                                  <div
-                                    key={quotation.id}
-                                    className='flex items-center justify-between gap-2 text-xs bg-gray-50 p-1 rounded border'
-                                  >
-                                    <span className='truncate flex-1 font-medium'>
-                                      {quotation.vendorName} -{' '}
-                                      {quotation.quotedPrice}
-                                    </span>
-                                    {!isReadOnly && (
-                                      <Button
-                                        variant='ghost'
-                                        size='sm'
-                                        onClick={() =>
-                                          removeVendorQuotation(
-                                            item.id,
-                                            quotation.id
-                                          )
-                                        }
-                                        className='h-4 w-4 p-0 text-red-600 hover:text-red-700 hover:bg-red-50'
-                                      >
-                                        <X className='w-2 h-2' />
-                                      </Button>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                        
+                        {/* Show message when no quotations */}
+                        {item.vendorQuotations.length === 0 && (
+                          <div className='text-xs text-gray-500 italic p-2 bg-gray-50 border border-gray-200 rounded'>
+                            No vendor quotations added
                           </div>
                         )}
                       </div>
@@ -657,69 +759,74 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
         </CardContent>
       </Card>
 
-      {/* Partial Receipt History */}
-      {requestData.status === 'partially_received' && 
-       requestData.apiData?.partialReceiptHistory && 
-       requestData.apiData.partialReceiptHistory.length > 0 && (
-        <Card className='border-0 shadow-sm'>
-          <CardContent className='p-6'>
-            <h3 className='text-lg font-semibold mb-4 flex items-center gap-2'>
-              <Truck className='w-5 h-5' />
-              Partial Receipt History
-            </h3>
-            <div className='space-y-3'>
-              {requestData.apiData.partialReceiptHistory.map((receipt, index) => (
-                <div key={receipt.id} className='flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg'>
-                  <div className='flex-1'>
-                    <div className='flex items-center gap-2 mb-1'>
-                      <span className='text-sm font-medium text-orange-800'>
-                        Receipt #{index + 1}
-                      </span>
-                      <span className='text-xs text-orange-600'>
-                        {new Date(receipt.receivedDate).toLocaleDateString('en-GB')}
-                      </span>
-                    </div>
-                    <div className='text-sm text-orange-700'>
-                      <strong>Quantity:</strong> {receipt.receivedQuantity} units
-                    </div>
-                    {receipt.notes && (
-                      <div className='text-sm text-orange-600'>
-                        <strong>Notes:</strong> {receipt.notes}
-                      </div>
-                    )}
-                    <div className='text-xs text-orange-500'>
-                      Received by: {receipt.receivedBy} • {new Date(receipt.timestamp).toLocaleString()}
-                    </div>
-                  </div>
-                  <div className='text-right'>
-                    <div className='text-sm font-medium text-orange-800'>
-                      {receipt.receivedQuantity} units
-                    </div>
-                    <div className='text-xs text-orange-600'>
-                      #{index + 1}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              {/* Total Summary */}
-              <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
-                <div className='flex items-center justify-between'>
-                  <span className='font-medium text-blue-800'>Total Received:</span>
-                  <span className='font-bold text-blue-900'>
-                    {requestData.apiData.partialReceiptHistory.reduce((sum, receipt) => 
-                      sum + (receipt.receivedQuantity || 0), 0
-                    )} units
-                  </span>
-                </div>
-                <div className='text-sm text-blue-600 mt-1'>
-                  {requestData.apiData.partialReceiptHistory.length} partial receipt(s)
-                </div>
+      {/* Partial Receipt Dialog */}
+      <Dialog open={isPartialReceiptOpen} onOpenChange={setIsPartialReceiptOpen}>
+        <DialogContent className='max-w-md'>
+          <DialogHeader>
+            <DialogTitle>Add Partial Receipt</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            <div className='grid grid-cols-2 gap-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='receivedQuantity'>Received Quantity *</Label>
+                <Input
+                  id='receivedQuantity'
+                  type='number'
+                  value={partialReceiptData.receivedQuantity}
+                  onChange={(e) =>
+                    setPartialReceiptData((prev) => ({
+                      ...prev,
+                      receivedQuantity: e.target.value,
+                    }))
+                  }
+                  placeholder='Enter quantity'
+                  min='1'
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='receivedDate'>Received Date *</Label>
+                <Input
+                  id='receivedDate'
+                  type='date'
+                  value={partialReceiptData.receivedDate}
+                  onChange={(e) =>
+                    setPartialReceiptData((prev) => ({
+                      ...prev,
+                      receivedDate: e.target.value,
+                    }))
+                  }
+                />
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className='space-y-2'>
+              <Label htmlFor='notes'>Notes</Label>
+              <Textarea
+                id='notes'
+                value={partialReceiptData.notes}
+                onChange={(e) =>
+                  setPartialReceiptData((prev) => ({
+                    ...prev,
+                    notes: e.target.value,
+                  }))
+                }
+                placeholder='Additional notes about the receipt...'
+              />
+            </div>
+          </div>
+          <div className='flex justify-end gap-2 pt-4'>
+            <Button variant='outline' onClick={() => setIsPartialReceiptOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePartialReceiptSubmit}
+              disabled={!partialReceiptData.receivedQuantity || !partialReceiptData.receivedDate}
+            >
+              <Truck className='w-4 h-4 mr-2' />
+              Add Receipt
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Vendor Quotation Management Dialog */}
       <Dialog open={isVendorFormOpen} onOpenChange={setIsVendorFormOpen}>
@@ -1034,6 +1141,123 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                   <p>No images available</p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quotation Details Popup */}
+      {isQuotationPopupOpen && selectedQuotation && selectedItemForQuotation && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+          <div className='bg-white rounded-lg max-w-4xl max-h-[80vh] w-full overflow-hidden'>
+            {/* Header */}
+            <div className='flex items-center justify-between p-4 border-b border-gray-200'>
+              <h3 className='text-lg font-semibold'>
+                Quotation Details - {selectedQuotation.vendorName}
+              </h3>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={() => setIsQuotationPopupOpen(false)}
+                className='h-8 w-8 p-0'
+              >
+                <X className='w-4 h-4' />
+              </Button>
+            </div>
+
+            {/* Content */}
+            <div className='p-4 overflow-y-auto max-h-[60vh]'>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                {/* Quotation Details */}
+                <div className='space-y-4'>
+                  <div className='bg-gray-50 p-4 rounded-lg'>
+                    <h4 className='font-semibold text-gray-800 mb-3'>Vendor Information</h4>
+                    <div className='space-y-2 text-sm'>
+                      <div>
+                        <span className='font-medium'>Vendor Name:</span>
+                        <span className='ml-2'>{selectedQuotation.vendorName}</span>
+                      </div>
+                      <div>
+                        <span className='font-medium'>Contact Person:</span>
+                        <span className='ml-2'>{selectedQuotation.contactPerson || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className='font-medium'>Phone:</span>
+                        <span className='ml-2'>{selectedQuotation.phone || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className='font-medium'>Quoted Price:</span>
+                        <span className='ml-2 font-bold text-green-600'>{selectedQuotation.quotedPrice}</span>
+                      </div>
+                      {selectedQuotation.notes && (
+                        <div>
+                          <span className='font-medium'>Notes:</span>
+                          <div className='mt-1 p-2 bg-white rounded border text-gray-600'>
+                            {selectedQuotation.notes}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Material Information */}
+                  <div className='bg-blue-50 p-4 rounded-lg'>
+                    <h4 className='font-semibold text-blue-800 mb-3'>Material Information</h4>
+                    <div className='space-y-2 text-sm'>
+                      <div>
+                        <span className='font-medium'>Material:</span>
+                        <span className='ml-2'>{selectedItemForQuotation.productName}</span>
+                      </div>
+                      <div>
+                        <span className='font-medium'>Specifications:</span>
+                        <span className='ml-2'>{selectedItemForQuotation.specifications}</span>
+                      </div>
+                      <div>
+                        <span className='font-medium'>Requested Quantity:</span>
+                        <span className='ml-2'>{selectedItemForQuotation.reqQuantity} {selectedItemForQuotation.measureUnit}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quotation Images */}
+                <div className='space-y-4'>
+                  <h4 className='font-semibold text-gray-800'>Quotation Images</h4>
+                  {quotationImageUrlsMap[selectedItemForQuotation.id] && 
+                   quotationImageUrlsMap[selectedItemForQuotation.id].length > 0 ? (
+                    <div className='grid grid-cols-1 gap-4'>
+                      {quotationImageUrlsMap[selectedItemForQuotation.id].map((imageUrl, index) => (
+                        <div key={index} className='relative group'>
+                          <img
+                            src={imageUrl}
+                            alt={`Quotation Image ${index + 1}`}
+                            className='w-full h-48 object-cover rounded-lg border border-gray-200 hover:border-primary transition-colors cursor-pointer'
+                            onClick={() => window.open(imageUrl, '_blank')}
+                          />
+                          <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center'>
+                            <div className='opacity-0 group-hover:opacity-100 transition-opacity'>
+                              <Button
+                                variant='secondary'
+                                size='sm'
+                                onClick={() => window.open(imageUrl, '_blank')}
+                                className='gap-2'
+                              >
+                                <Eye className='w-4 h-4' />
+                                View Full Size
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className='text-center py-8 text-muted-foreground'>
+                      <FileText className='w-12 h-12 mx-auto mb-4 opacity-50' />
+                      <p>No quotation images available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

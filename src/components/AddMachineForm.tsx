@@ -6,8 +6,9 @@ import {
   Calendar,
   MapPin,
   Wrench,
-  Plus,
+  
   Loader2,
+  Plus,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -275,7 +276,7 @@ export const AddMachineForm = ({
             <div className='w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center'>
               <Plus className='w-4 h-4 text-primary' />
             </div>
-            
+            Add New Machine
           </DialogTitle>
         </DialogHeader>
 
@@ -325,11 +326,16 @@ export const AddMachineForm = ({
                         <SelectValue placeholder='Select machine type' />
                       </SelectTrigger>
                       <SelectContent>
-                        {machineTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id.toString()}>
-                            {type.name}
+                        {[
+                          ...machineTypes.map((type) => (
+                            <SelectItem key={type.id} value={type.id.toString()}>
+                              {type.name}
+                            </SelectItem>
+                          )),
+                          <SelectItem key="other" value="0">
+                            Other
                           </SelectItem>
-                        ))}
+                        ]}
                       </SelectContent>
                     </Select>
                     {errors.typeId && (
@@ -356,11 +362,16 @@ export const AddMachineForm = ({
                         <SelectValue placeholder='Select Unit' />
                       </SelectTrigger>
                       <SelectContent>
-                        {units.map((unit) => (
-                          <SelectItem key={unit.id} value={unit.id.toString()}>
-                            {unit.name}
+                        {[
+                          ...units.map((unit) => (
+                            <SelectItem key={unit.id} value={unit.id.toString()}>
+                              {unit.name}
+                            </SelectItem>
+                          )),
+                          <SelectItem key="other" value="0">
+                            Other
                           </SelectItem>
-                        ))}
+                        ]}
                       </SelectContent>
                     </Select>
                     {errors.unitId && (

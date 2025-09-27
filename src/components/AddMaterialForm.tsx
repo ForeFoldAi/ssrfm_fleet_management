@@ -195,6 +195,9 @@ export const AddMaterialForm = ({
     if (formData.totalValue && isNaN(Number(formData.totalValue))) {
       newErrors.totalValue = 'Total value must be a number';
     }
+    if (formData.totalValue && Number(formData.totalValue) <= 0) {
+      newErrors.totalValue = 'Total value must be greater than 0';
+    }
 
     return newErrors;
   };
@@ -396,17 +399,27 @@ export const AddMaterialForm = ({
                   </SelectTrigger>
                   <SelectContent>
                     {materialCategories.length > 0
-                      ? materialCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.name}>
-                            {category.name}
+                      ? [
+                          ...materialCategories.map((category) => (
+                            <SelectItem key={category.id} value={category.name}>
+                              {category.name}
+                            </SelectItem>
+                          )),
+                          <SelectItem key="other" value="Other">
+                            Other
                           </SelectItem>
-                        ))
+                        ]
                       : // Fallback to dummy data if API fails
-                        categories.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
+                        [
+                          ...categories.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          )),
+                          <SelectItem key="other" value="Other">
+                            Other
                           </SelectItem>
-                        ))}
+                        ]}
                   </SelectContent>
                 </Select>
                 {formData.category === 'Other' && (
@@ -449,17 +462,27 @@ export const AddMaterialForm = ({
                   </SelectTrigger>
                   <SelectContent>
                     {units.length > 0
-                      ? units.map((unit) => (
-                          <SelectItem key={unit.id} value={unit.name}>
-                            {unit.name}
+                      ? [
+                          ...units.map((unit) => (
+                            <SelectItem key={unit.id} value={unit.name}>
+                              {unit.name}
+                            </SelectItem>
+                          )),
+                          <SelectItem key="other" value="other">
+                            Other
                           </SelectItem>
-                        ))
+                        ]
                       : // Fallback to dummy data if API fails
-                        measureUnits.map((measureUnit) => (
-                          <SelectItem key={measureUnit} value={measureUnit}>
-                            {measureUnit}
+                        [
+                          ...measureUnits.map((measureUnit) => (
+                            <SelectItem key={measureUnit} value={measureUnit}>
+                              {measureUnit}
+                            </SelectItem>
+                          )),
+                          <SelectItem key="other" value="other">
+                            Other
                           </SelectItem>
-                        ))}
+                        ]}
                   </SelectContent>
                 </Select>
                 {formData.measureUnit === 'other' && (
@@ -528,7 +551,7 @@ export const AddMaterialForm = ({
 
               <div className='space-y-1'>
                 <Label htmlFor='totalValue' className='text-sm font-medium'>
-                  Total Value (₹)
+                  Total Value (₹) *
                 </Label>
                 <Input
                   id='totalValue'

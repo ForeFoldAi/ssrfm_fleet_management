@@ -35,6 +35,7 @@ interface HistoryItem {
   notes?: string;
   requestedBy?: string;
   location?: string;
+  purchasedFrom?: string; // Add this field
 }
 
 interface HistoryViewProps {
@@ -141,6 +142,9 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                     <TableCell className='font-medium text-sm py-2 !px-0'>
                       ₹{item.purchaseValue}
                     </TableCell>
+                    <TableCell className='text-sm py-2 !px-0'>
+                      {item.purchasedFrom || 'N/A'}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -201,6 +205,9 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                     </TableCell>
                     <TableCell className='font-medium text-sm py-2 !px-0'>
                       ₹{item.purchaseValue}
+                    </TableCell>
+                    <TableCell className='text-sm py-2 !px-0'>
+                      {item.purchasedFrom || 'N/A'}
                     </TableCell>
                   </TableRow>
                 ))}

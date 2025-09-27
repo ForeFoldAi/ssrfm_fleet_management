@@ -58,6 +58,7 @@ const CompanyOwnerDashboard = () => {
         { machine: "Lathe", "Unit-1": Math.round(18000 * multiplier), "Unit-2": Math.round(11000 * multiplier), "Unit-3": Math.round(6000 * multiplier) },
         { machine: "Milling", "Unit-1": Math.round(15000 * multiplier), "Unit-2": Math.round(9000 * multiplier), "Unit-3": Math.round(4000 * multiplier) },
         { machine: "Drill", "Unit-1": Math.round(8000 * multiplier), "Unit-2": Math.round(6000 * multiplier), "Unit-3": Math.round(4000 * multiplier) },
+        { machine: "Other", "Unit-1": Math.round(5000 * multiplier), "Unit-2": Math.round(4000 * multiplier), "Unit-3": Math.round(3000 * multiplier) },
       ],
       
     };
