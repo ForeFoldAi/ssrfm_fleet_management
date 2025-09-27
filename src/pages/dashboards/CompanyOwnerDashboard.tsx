@@ -262,17 +262,20 @@ const CompanyOwnerDashboard = () => {
             </CardHeader>
             <CardContent>
               <ChartContainer config={{}} className="w-full h-80">
-                <ReBarChart data={materialExpensesByUnit} margin={{ left: 20, right: 20, bottom: 20, top: 20 }}>
+                <ReBarChart data={materialExpensesByUnit} layout="vertical" margin={{ left: 20, right: 20, bottom: 20, top: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis 
-                    dataKey="material" 
-                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
-                    axisLine={{ stroke: "hsl(var(--border))" }}
-                  />
-                  <YAxis 
+                    type="number"
                     tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                     axisLine={{ stroke: "hsl(var(--border))" }}
                     tickFormatter={(value) => `₹${(value / 1000)}k`}
+                  />
+                  <YAxis 
+                    type="category"
+                    dataKey="material" 
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={{ stroke: "hsl(var(--border))" }}
+                    width={120}
                   />
                   <ChartTooltip 
                     content={<ChartTooltipContent 
@@ -284,14 +287,14 @@ const CompanyOwnerDashboard = () => {
                     dataKey="Unit-I" 
                     fill="#3B82F6" 
                     barSize={24} 
-                    radius={[6, 6, 0, 0]}
+                    radius={[0, 6, 6, 0]}
                     name="Unit-I"
                   />
                   <Bar 
                     dataKey="Unit-II" 
                     fill="#F59E0B" 
                     barSize={24} 
-                    radius={[6, 6, 0, 0]}
+                    radius={[0, 6, 6, 0]}
                     name="Unit-II"
                   />
                 </ReBarChart>

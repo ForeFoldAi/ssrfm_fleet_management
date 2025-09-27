@@ -17,6 +17,7 @@ import {
   User,
   Building2,
 } from 'lucide-react';
+import { generatePurchaseId, parseLocationFromId, formatDateToDDMMYYYY } from '../lib/utils';
 
 interface HistoryItem {
   id: string;
@@ -101,48 +102,44 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
 
   const renderOwnerHistory = () => (
     <Card className='border border-gray-200 w-full'>
-      <CardHeader>
+      <CardHeader className='pb-3'>
         <CardTitle className='flex items-center gap-2 text-lg'>
           <Building2 className='w-5 h-5 text-primary' />
           {title || `Last 5 Material Received`}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className='pt-0'>
         {filteredHistoryData.length > 0 ? (
           <div className='overflow-x-auto w-full'>
             <Table className='min-w-full'>
               <TableHeader>
                 <TableRow className='bg-gray-50'>
-                  <TableHead className='font-semibold whitespace-nowrap'>
+                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
                     Purchased ID
                   </TableHead>
-                  <TableHead className='font-semibold whitespace-nowrap'>
+                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
                     Purchased Date
                   </TableHead>
-                  <TableHead className='font-semibold whitespace-nowrap'>
-                    Purchase Price
+                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
+                    Purchased Price
                   </TableHead>
-                  <TableHead className='font-semibold whitespace-nowrap'>
-                          Requested Value
+                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
+                    Purchased From
                   </TableHead>
-                  
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredHistoryData.map((item) => (
                   <TableRow key={item.id} className='hover:bg-gray-50'>
-                    <TableCell className='font-medium'>{item.id}</TableCell>
-                    <TableCell>
-                      <div className='flex items-center gap-2'>
+                    <TableCell className='font-medium text-sm py-2 !px-0'>{item.id}</TableCell>
+                    <TableCell className='text-sm py-2 !px-0'>
+                      <div className='flex items-center gap-1'>
                         <Calendar className='w-3 h-3 text-muted-foreground' />
-                        <span>{new Date(item.date).toLocaleDateString()}</span>
+                        <span>{formatDateToDDMMYYYY(item.date)}</span>
                       </div>
                     </TableCell>
-                    <TableCell className='font-medium'>
+                    <TableCell className='font-medium text-sm py-2 !px-0'>
                       ₹{item.purchaseValue}
-                    </TableCell>
-                    <TableCell className='font-medium'>
-                      ₹{item.requestedValue}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -150,10 +147,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
             </Table>
           </div>
         ) : (
-          <div className='text-center py-8 text-muted-foreground'>
-            <Package className='w-12 h-12 mx-auto mb-4 opacity-50' />
-            <p>No material receipts found</p>
-            <p className='text-sm'>
+          <div className='text-center py-6 text-muted-foreground'>
+            <Package className='w-10 h-10 mx-auto mb-3 opacity-50' />
+            <p className='text-sm'>No material receipts found</p>
+            <p className='text-xs'>
               Recent material receipts for {materialName || 'this material'}{' '}
               will appear here
             </p>
@@ -165,48 +162,45 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
 
   const renderSupervisorHistory = () => (
     <Card className='border border-gray-200 w-full'>
-      <CardHeader>
+      <CardHeader className='pb-3'>
         <CardTitle className='flex items-center gap-2 text-lg'>
           <Package className='w-5 h-5 text-primary' />
           {title || `Last 5 Material Received`}
           {requestId && <Badge variant='secondary'>{requestId}</Badge>}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className='pt-0'>
         {filteredHistoryData.length > 0 ? (
           <div className='overflow-x-auto w-full'>
             <Table className='min-w-full'>
               <TableHeader>
                 <TableRow className='bg-gray-50'>
-                  <TableHead className='font-semibold whitespace-nowrap'>
+                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
                     Purchased ID
                   </TableHead>
-                  <TableHead className='font-semibold whitespace-nowrap'>
+                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
                     Purchased Date
                   </TableHead>
-                  <TableHead className='font-semibold whitespace-nowrap'>
-                          Purchase Price
+                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
+                    Purchased Price
                   </TableHead>
-                  <TableHead className='font-semibold whitespace-nowrap'>
-                          Requested Value
+                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
+                    Purchased From
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredHistoryData.map((item) => (
                   <TableRow key={item.id} className='hover:bg-gray-50'>
-                    <TableCell className='font-medium'>{item.id}</TableCell>
-                    <TableCell>
-                      <div className='flex items-center gap-2'>
+                    <TableCell className='font-medium text-sm py-2 !px-0'>{item.id}</TableCell>
+                    <TableCell className='text-sm py-2 !px-0'>
+                      <div className='flex items-center gap-1'>
                         <Calendar className='w-3 h-3 text-muted-foreground' />
-                        <span>{new Date(item.date).toLocaleDateString()}</span>
+                        <span>{formatDateToDDMMYYYY(item.date)}</span>
                       </div>
                     </TableCell>
-                    <TableCell className='font-medium'>
+                    <TableCell className='font-medium text-sm py-2 !px-0'>
                       ₹{item.purchaseValue}
-                    </TableCell>
-                    <TableCell className='font-medium'>
-                      ₹{item.requestedValue}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -214,10 +208,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
             </Table>
           </div>
         ) : (
-          <div className='text-center py-8 text-muted-foreground'>
-            <Package className='w-12 h-12 mx-auto mb-4 opacity-50' />
-            <p>No material receipts found</p>
-            <p className='text-sm'>
+          <div className='text-center py-6 text-muted-foreground'>
+            <Package className='w-10 h-10 mx-auto mb-3 opacity-50' />
+            <p className='text-sm'>No material receipts found</p>
+            <p className='text-xs'>
               Material receipts for {materialName || 'this material'} will
               appear here
             </p>

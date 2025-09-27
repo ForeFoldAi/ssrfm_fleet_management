@@ -77,6 +77,15 @@ export const MaterialIssueForm = ({
   const { currentUser } = useRole();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Helper function to format date as dd-mm-yyyy
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
   const [formData, setFormData] = useState({
     // Document Information
     date: new Date().toISOString().split('T')[0],
@@ -470,37 +479,37 @@ export const MaterialIssueForm = ({
         <form onSubmit={handleSubmit} className='space-y-3'>
           {/* Add Item Button - Only show when not editing */}
           {!editingIssue && (
-            <div className='flex justify-end'>
-              <Button
-                type='button'
-                onClick={() => {
-                  const newItem = {
-                    srNo: formData.items.length + 1,
-                    nameOfMaterial: '',
-                    existingStock: 0,
-                    issuedQty: '',
-                    stockAfterIssue: 0,
-                    measureUnit: '',
-                    receiverName: '',
-                    image: null,
-                    imagePreview: '',
-                    materialId: 0,
-                    purpose: '',
-                    machineId: 0,
-                    machineName: '',
-                  };
-                  setFormData((prev) => ({
-                    ...prev,
-                    items: [...prev.items, newItem],
-                  }));
-                }}
-                className='gap-1 h-8 text-xs'
-                size='sm'
-              >
-                <Plus className='w-3 h-3' />
-                Add Item
-              </Button>
-            </div>
+          <div className='flex justify-end'>
+            <Button
+              type='button'
+              onClick={() => {
+                const newItem = {
+                  srNo: formData.items.length + 1,
+                  nameOfMaterial: '',
+                  existingStock: 0,
+                  issuedQty: '',
+                  stockAfterIssue: 0,
+                  measureUnit: '',
+                  receiverName: '',
+                  image: null,
+                  imagePreview: '',
+                  materialId: 0,
+                  purpose: '',
+                  machineId: 0,
+                  machineName: '',
+                };
+                setFormData((prev) => ({
+                  ...prev,
+                  items: [...prev.items, newItem],
+                }));
+              }}
+              className='gap-1 h-8 text-xs'
+              size='sm'
+            >
+              <Plus className='w-3 h-3' />
+              Add Item
+            </Button>
+          </div>
           )}
 
           {/* Material Items Table - Compact */}
@@ -520,7 +529,7 @@ export const MaterialIssueForm = ({
                         CURRENT STOCK
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                        ISSUED QTY
+                        ISSUING QTY
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
                         STOCK AFTER ISSUE
@@ -529,7 +538,7 @@ export const MaterialIssueForm = ({
                         ISSUING TO
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
-                        ISSUED FOR
+                        ISSUING FOR
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1'>
                         UPLOAD IMAGE
@@ -880,7 +889,7 @@ export const MaterialIssueForm = ({
                 <div className='space-y-1'>
                   <Label className='text-xs'>Date</Label>
                   <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs'>
-                    {new Date(formData.date).toLocaleDateString()}
+                    {formatDate(formData.date)}
                   </div>
                 </div>
               </div>
@@ -903,7 +912,7 @@ export const MaterialIssueForm = ({
               ) : (
                 <>
                   <FileText className='w-4 h-4' />
-                  {editingIssue ? 'Update' : 'Submit Form'}
+                  {editingIssue ? 'Update' : 'Issue'}
                 </>
               )}
             </Button>

@@ -82,6 +82,15 @@ export const MaterialIssuesTab = () => {
   const [sortField, setSortField] = useState<SortField>('issueDate');
   const [sortOrder, setSortOrder] = useState<SortOrder>('DESC');
 
+  // Helper function to format date as dd-mm-yyyy
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
+
   // Define interface for transformed issue data
   interface TransformedIssueItem {
     materialId: number;
@@ -707,13 +716,13 @@ export const MaterialIssuesTab = () => {
                             <div className='flex items-center gap-2'>
                               <div className='w-2 h-2 bg-primary rounded-full'></div>
                               <div className='font-semibold text-foreground capitalize'>
-                                {item.materialName}
+                              {item.materialName}
                               </div>
                             </div>
                           </TableCell>
                           <TableCell className='text-sm py-3'>
                             <div className='text-muted-foreground max-w-[120px] truncate' title={item.specifications}>
-                              {item.specifications}
+                            {item.specifications}
                             </div>
                           </TableCell>
                           <TableCell className='text-sm py-3'>
@@ -734,7 +743,7 @@ export const MaterialIssuesTab = () => {
                           </TableCell>
                           <TableCell className='text-sm py-3'>
                             <span className='text-foreground'>
-                              {new Date(issue.issuedDate).toLocaleDateString()}
+                            {formatDate(issue.issuedDate)}
                             </span>
                           </TableCell>
                           <TableCell className='text-sm py-3'>
@@ -772,7 +781,7 @@ export const MaterialIssuesTab = () => {
                           </TableCell>
                           <TableCell className='text-sm py-3'>
                             <div className='text-muted-foreground truncate max-w-[100px]' title={item.purpose}>
-                              {item.purpose}
+                            {item.purpose}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -909,7 +918,7 @@ export const MaterialIssuesTab = () => {
                               <Badge variant='outline' className='text-xs'>{issue.unitName}</Badge>
                             </TableCell>
                             <TableCell className='text-xs'>
-                              {new Date(issue.issuedDate).toLocaleDateString()}
+                              {formatDate(issue.issuedDate)}
                             </TableCell>
                             <TableCell className='text-xs'>
                               <div className='font-medium truncate' title={item.machineName}>

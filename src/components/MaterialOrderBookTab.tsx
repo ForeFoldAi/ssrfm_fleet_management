@@ -31,6 +31,7 @@ import {
   ShoppingCart,
   CheckCircle2,
   X,
+  
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -1415,6 +1416,82 @@ export const MaterialOrderBookTab = () => {
                                       </div>
                                     </div>
                                   )}
+
+                                  {/* Vendor Quotations Section - Only for Company Owners and Pending Approval */}
+                                  {currentUser?.role === 'company_owner' && 
+                                   request.status === 'pending_approval' && 
+                                   request.originalIndent?.items && (
+                                    <div>
+                                      <span className='font-medium text-muted-foreground'>
+                                        Vendor Quotations:
+                                      </span>
+                                      <div className='mt-2 space-y-3'>
+                                        {request.originalIndent.items.map((item) => (
+                                          <div key={item.id} className='p-3 bg-background rounded border'>
+                                            <div className='font-medium text-sm mb-2'>
+                                              {item.material.name} - Qty: {item.requestedQuantity}
+                                            </div>
+                                            {item.quotations && item.quotations.length > 0 ? (
+                                              <div className='space-y-2'>
+                                                {item.quotations.map((quotation) => (
+                                                  <div 
+                                                    key={quotation.id} 
+                                                    className={`p-2 rounded border cursor-pointer transition-colors ${
+                                                      item.selectedQuotation?.id === quotation.id
+                                                        ? 'bg-green-50 border-green-200'
+                                                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                                                    }`}
+                                                    onClick={() => {
+                                                      // Update the selected quotation for this item
+                                                      const updatedIndent = {
+                                                        ...request.originalIndent,
+                                                        items: request.originalIndent.items.map(i => 
+                                                          i.id === item.id 
+                                                            ? { ...i, selectedQuotation: quotation }
+                                                            : i
+                                                        )
+                                                      };
+                                                      setSelectedIndentForApproval(updatedIndent);
+                                                    }}
+                                                  >
+                                                    <div className='flex items-center justify-between'>
+                                                      <div>
+                                                        <div className='font-medium text-sm'>
+                                                          {quotation.vendorName}
+                                                        </div>
+                                                        <div className='text-xs text-muted-foreground'>
+                                                          {quotation.contactPerson && `Contact: ${quotation.contactPerson}`}
+                                                        </div>
+                                                      </div>
+                                                      <div className='text-right'>
+                                                        <div className='font-bold text-primary'>
+                                                          ₹{quotation.quotationAmount}
+                                                        </div>
+                                                        <div className='text-xs text-muted-foreground'>
+                                                          per unit
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                    {item.selectedQuotation?.id === quotation.id && (
+                                                      <div className='mt-1 flex items-center gap-1 text-green-600'>
+                                                        <CheckCircle className='w-3 h-3' />
+                                                        <span className='text-xs'>Selected</span>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            ) : (
+                                              <div className='text-center py-4 text-muted-foreground'>
+                                                <FileText className='w-6 h-6 mx-auto mb-2 opacity-50' />
+                                                <div className='text-xs'>No quotations available</div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1906,14 +1983,23 @@ export const MaterialOrderBookTab = () => {
         {canApprove && (
           <Button
             variant='outline'
-            className='gap-2 rounded-lg text-green-600 border-green-600 hover:bg-green-50'
+            className={`gap-2 rounded-lg ${
+              // Check if all items have selected quotations
+              request.originalIndent?.items?.every(item => item.selectedQuotation)
+                ? 'text-green-600 border-green-600 hover:bg-green-50'
+                : 'text-gray-400 border-gray-300 cursor-not-allowed'
+            }`}
+            disabled={!request.originalIndent?.items?.every(item => item.selectedQuotation)}
             onClick={() => {
               setSelectedIndentForApproval(request.originalIndent);
               setIsApprovalDialogOpen(true);
             }}
           >
             <CheckCircle className='w-4 h-4' />
-            Approve
+            {request.originalIndent?.items?.every(item => item.selectedQuotation) 
+              ? 'Approve' 
+              : 'Select Vendor to Approve'
+            }
           </Button>
         )}
 

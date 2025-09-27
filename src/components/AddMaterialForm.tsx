@@ -505,25 +505,25 @@ export const AddMaterialForm = ({
 
             {/* Third Row - Current Stock and Total Value */}
             <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
-              <div className='space-y-1'>
-                <Label htmlFor='currentStock' className='text-sm font-medium'>
-                  Current Stock *
-                </Label>
-                <Input
-                  id='currentStock'
-                  type='number'
-                  placeholder='0'
-                  value={formData.currentStock}
-                  onChange={(e) =>
-                    handleInputChange('currentStock', e.target.value)
-                  }
-                  className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-                />
-                {errors.currentStock && (
-                  <p className='text-destructive text-xs mt-1'>
-                    {errors.currentStock}
-                  </p>
-                )}
+            <div className='space-y-1'>
+              <Label htmlFor='currentStock' className='text-sm font-medium'>
+                Current Stock *
+              </Label>
+              <Input
+                id='currentStock'
+                type='number'
+                placeholder='0'
+                value={formData.currentStock}
+                onChange={(e) =>
+                  handleInputChange('currentStock', e.target.value)
+                }
+                className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+              />
+              {errors.currentStock && (
+                <p className='text-destructive text-xs mt-1'>
+                  {errors.currentStock}
+                </p>
+              )}
               </div>
 
               <div className='space-y-1'>

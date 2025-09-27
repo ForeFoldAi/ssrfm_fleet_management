@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ChevronsLeft,
   ChevronsRight,
+  CheckCircle,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -781,15 +782,15 @@ export const MaterialsTab = () => {
       {/* View/Edit Material Dialog */}
       <Dialog open={isViewEditOpen} onOpenChange={handleViewEditClose}>
         <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
-          <DialogHeader>
+          <DialogHeader className='flex flex-row items-center justify-between'>
             <DialogTitle className='text-xl font-semibold'>
               {isEditMode ? 'Edit Material' : 'View Material'}
             </DialogTitle>
           </DialogHeader>
 
           {selectedMaterial && (
-            <div className='space-y-6 py-4'>
-              {/* Material Information */}
+            <form className='space-y-6 py-4'>
+              {/* Material Information Section */}
               <div className='space-y-4'>
                 {/* First Row */}
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
@@ -818,7 +819,7 @@ export const MaterialsTab = () => {
                       />
                     ) : (
                       <p className='text-sm text-foreground py-2'>
-                        {selectedMaterial.makerBrand}
+                        {selectedMaterial.makerBrand || 'N/A'}
                       </p>
                     )}
                   </div>
@@ -833,9 +834,6 @@ export const MaterialsTab = () => {
                     <p className='text-sm text-foreground py-2 font-semibold'>
                       {selectedMaterial.currentStock} {selectedMaterial.unit || getUnitName(selectedMaterial.unitId) || 'units'}
                     </p>
-                    <p className='text-xs text-muted-foreground'>
-                      Current stock cannot be edited from here
-                    </p>
                   </div>
 
                   <div className='space-y-1'>
@@ -845,46 +843,6 @@ export const MaterialsTab = () => {
                     <p className='text-sm text-foreground py-2 font-semibold'>
                       ₹{calculateAveragePrice(selectedMaterial)}
                     </p>
-                    <p className='text-xs text-muted-foreground'>
-                      Calculated from total value and current stock
-                    </p>
-                  </div>
-                </div>
-
-                {/* Third Row */}
-                <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
-                  <div className='space-y-1'>
-                    <Label className='text-sm font-medium'>
-                      Min Stock Level
-                    </Label>
-                    {isEditMode ? (
-                      <Input
-                        type='number'
-                        defaultValue={selectedMaterial.minStockLevel || ''}
-                        className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-                      />
-                    ) : (
-                      <p className='text-sm text-foreground py-2'>
-                        {selectedMaterial.minStockLevel || 'Not set'}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className='space-y-1'>
-                    <Label className='text-sm font-medium'>
-                      Max Stock Level
-                    </Label>
-                    {isEditMode ? (
-                      <Input
-                        type='number'
-                        defaultValue={selectedMaterial.maxStockLevel || ''}
-                        className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-                      />
-                    ) : (
-                      <p className='text-sm text-foreground py-2'>
-                        {selectedMaterial.maxStockLevel || 'Not set'}
-                      </p>
-                    )}
                   </div>
                 </div>
 
@@ -943,7 +901,7 @@ export const MaterialsTab = () => {
                   </Button>
                 )}
               </div>
-            </div>
+            </form>
           )}
         </DialogContent>
       </Dialog>

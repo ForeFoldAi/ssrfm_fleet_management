@@ -227,6 +227,8 @@ export interface MaterialIndentItem {
 }
 
 export interface MaterialIndent {
+  partialReceiptHistory: any[];
+  totalReceivedQuantity?: number; // Add this line
   id: number;
   uniqueId: string;
   requestDate: string;

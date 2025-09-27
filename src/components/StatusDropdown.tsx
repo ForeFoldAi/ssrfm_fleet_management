@@ -27,6 +27,15 @@ interface StatusDropdownProps {
   onStatusChange: (newStatus: string, additionalData?: any) => void;
   requestId: string;
   hasVendorSelected?: boolean;
+  partialReceiptHistory?: Array<{
+    id: string;
+    receivedQuantity: number;
+    receivedDate: string;
+    notes: string;
+    receivedBy: string;
+    timestamp: string;
+    status: string;
+  }>;
 }
 
 interface StatusOption {
@@ -43,6 +52,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
   onStatusChange,
   requestId,
   hasVendorSelected = false,
+  partialReceiptHistory = [],
 }) => {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedStatus, setSelectedStatus] = React.useState('');
@@ -53,19 +63,28 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
     revertReason: '',
   });
 
-  const getOwnerStatusOptions = (): StatusOption[] => [
-    {
-      value: 'approved',
-      label: 'Approved',
-      icon: <CheckCircle className='w-4 h-4' />,
-    },
-    {
+  const getOwnerStatusOptions = (): StatusOption[] => {
+    const options: StatusOption[] = [];
+    
+    // Always show revert option
+    options.push({
       value: 'reverted',
       label: 'Revert',
       icon: <RotateCcw className='w-4 h-4' />,
       requiresAdditionalData: true,
-    },
-  ];
+    });
+    
+    // Only show approve option if vendor is selected
+    if (hasVendorSelected) {
+      options.unshift({
+        value: 'approved',
+        label: 'Approved',
+        icon: <CheckCircle className='w-4 h-4' />,
+      });
+    }
+    
+    return options;
+  };
 
   const getSupervisorStatusOptions = (): StatusOption[] => {
     switch (currentStatus) {
@@ -94,6 +113,12 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
         ];
       case 'partially_received':
         return [
+          {
+            value: 'partially_received',
+            label: 'Add Partial Received',
+            icon: <Truck className='w-4 h-4' />,
+            requiresAdditionalData: true,
+          },
           {
             value: 'fully_received',
             label: 'Fully Received',
@@ -134,7 +159,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
 
   const canChangeStatus = () => {
     if (userRole === 'company_owner') {
-      return currentStatus === 'pending_approval' && hasVendorSelected;
+      return currentStatus === 'pending_approval';
     }
     return ['approved', 'ordered', 'partially_received'].includes(
       currentStatus
@@ -220,54 +245,156 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
             {(selectedStatus === 'partially_received' ||
               selectedStatus === 'fully_received') && (
               <>
-                <div className='grid grid-cols-2 gap-4'>
-                  <div className='space-y-2'>
-                    <Label htmlFor='receivedQuantity'>
-                      Received Quantity *
-                    </Label>
-                    <Input
-                      id='receivedQuantity'
-                      type='number'
-                      value={additionalData.receivedQuantity}
-                      onChange={(e) =>
-                        setAdditionalData((prev) => ({
-                          ...prev,
-                          receivedQuantity: e.target.value,
-                        }))
-                      }
-                      placeholder='Enter quantity'
-                      min='0'
-                    />
+                {selectedStatus === 'fully_received' ? (
+                  // Simple confirmation for fully received
+                  <div className='space-y-4'>
+                    {/* Show past received data if available */}
+                    {partialReceiptHistory.length > 0 && (
+                      <div className='space-y-3 p-3 bg-green-50 border border-green-200 rounded-lg'>
+                        <h4 className='font-medium text-green-800'>Receipt Summary</h4>
+                        <div className='space-y-2 max-h-32 overflow-y-auto'>
+                          {partialReceiptHistory.map((receipt, index) => (
+                            <div key={receipt.id} className='text-sm bg-white p-2 rounded border'>
+                              <div className='flex justify-between items-start'>
+                                <div>
+                                  <span className='font-medium'>Receipt #{index + 1}</span>
+                                  <span className='text-gray-500 ml-2'>
+                                    {new Date(receipt.receivedDate).toLocaleDateString('en-GB')}
+                                  </span>
+                                </div>
+                                <span className='font-medium text-green-600'>
+                                  {receipt.receivedQuantity} units
+                                </span>
+                              </div>
+                              {receipt.notes && (
+                                <div className='text-gray-600 mt-1'>
+                                  {receipt.notes}
+                                </div>
+                              )}
+                              <div className='text-xs text-gray-500 mt-1'>
+                                by {receipt.receivedBy}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className='text-sm font-medium text-green-700 pt-2 border-t'>
+                          Total Received: {partialReceiptHistory.reduce((sum, receipt) => 
+                            sum + receipt.receivedQuantity, 0
+                          )} units
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className='p-4 bg-blue-50 border border-blue-200 rounded-lg'>
+                      <p className='text-blue-800 font-medium'>
+                        Confirm that all materials have been fully received and the request can be marked as complete.
+                      </p>
+                    </div>
                   </div>
-                  <div className='space-y-2'>
-                    <Label htmlFor='receivedDate'>Received Date *</Label>
-                    <Input
-                      id='receivedDate'
-                      type='date'
-                      value={additionalData.receivedDate}
-                      onChange={(e) =>
-                        setAdditionalData((prev) => ({
-                          ...prev,
-                          receivedDate: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='notes'>Notes</Label>
-                  <Textarea
-                    id='notes'
-                    value={additionalData.notes}
-                    onChange={(e) =>
-                      setAdditionalData((prev) => ({
-                        ...prev,
-                        notes: e.target.value,
-                      }))
-                    }
-                    placeholder='Additional notes about the receipt...'
-                  />
-                </div>
+                ) : (
+                  // Full form for partial receipt
+                  <>
+                    {/* Debug: Log the partial receipt history */}
+                    {(() => {
+                      console.log('StatusDropdown - partialReceiptHistory:', partialReceiptHistory);
+                      console.log('StatusDropdown - partialReceiptHistory.length:', partialReceiptHistory.length);
+                      return null;
+                    })()}
+                    
+                    {/* Show past received data if available */}
+                    {partialReceiptHistory.length > 0 && (
+                      <div className='space-y-3 p-3 bg-gray-50 border border-gray-200 rounded-lg'>
+                        <h4 className='font-medium text-gray-800'>Previous Receipts</h4>
+                        <div className='space-y-2 max-h-32 overflow-y-auto'>
+                          {partialReceiptHistory.map((receipt, index) => (
+                            <div key={receipt.id} className='text-sm bg-white p-2 rounded border'>
+                              <div className='flex justify-between items-start'>
+                                <div>
+                                  <span className='font-medium'>Receipt #{index + 1}</span>
+                                  <span className='text-gray-500 ml-2'>
+                                    {new Date(receipt.receivedDate).toLocaleDateString('en-GB')}
+                                  </span>
+                                </div>
+                                <span className='font-medium text-blue-600'>
+                                  {receipt.receivedQuantity} units
+                                </span>
+                              </div>
+                              {receipt.notes && (
+                                <div className='text-gray-600 mt-1'>
+                                  {receipt.notes}
+                                </div>
+                              )}
+                              <div className='text-xs text-gray-500 mt-1'>
+                                by {receipt.receivedBy}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className='text-sm font-medium text-gray-700 pt-2 border-t'>
+                          Total Received: {partialReceiptHistory.reduce((sum, receipt) => 
+                            sum + receipt.receivedQuantity, 0
+                          )} units
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Show message if no previous receipts */}
+                    {partialReceiptHistory.length === 0 && (
+                      <div className='text-sm text-gray-500 italic p-3 bg-gray-50 border border-gray-200 rounded-lg'>
+                        No previous receipts found
+                      </div>
+                    )}
+
+                    <div className='grid grid-cols-2 gap-4'>
+                      <div className='space-y-2'>
+                        <Label htmlFor='receivedQuantity'>
+                          Received Quantity *
+                        </Label>
+                        <Input
+                          id='receivedQuantity'
+                          type='number'
+                          value={additionalData.receivedQuantity}
+                          onChange={(e) =>
+                            setAdditionalData((prev) => ({
+                              ...prev,
+                              receivedQuantity: e.target.value,
+                            }))
+                          }
+                          placeholder='Enter quantity'
+                          min='0'
+                        />
+                      </div>
+                      <div className='space-y-2'>
+                        <Label htmlFor='receivedDate'>Received Date *</Label>
+                        <Input
+                          id='receivedDate'
+                          type='date'
+                          value={additionalData.receivedDate}
+                          onChange={(e) =>
+                            setAdditionalData((prev) => ({
+                              ...prev,
+                              receivedDate: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className='space-y-2'>
+                      <Label htmlFor='notes'>Notes</Label>
+                      <Textarea
+                        id='notes'
+                        value={additionalData.notes}
+                        onChange={(e) =>
+                          setAdditionalData((prev) => ({
+                            ...prev,
+                            notes: e.target.value,
+                          }))
+                        }
+                        placeholder='Additional notes about the receipt...'
+                      />
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -283,16 +410,14 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
                   !additionalData.revertReason.trim()) ||
                 (selectedStatus === 'rejected' &&
                   !additionalData.notes.trim()) ||
-                ((selectedStatus === 'partially_received' ||
-                  selectedStatus === 'fully_received') &&
+                (selectedStatus === 'partially_received' &&
                   !additionalData.receivedQuantity.trim())
               }
             >
               {selectedStatus === 'reverted' && 'Revert Request'}
               {selectedStatus === 'rejected' && 'Reject Request'}
-              {(selectedStatus === 'partially_received' ||
-                selectedStatus === 'fully_received') &&
-                'Update Status'}
+              {selectedStatus === 'partially_received' && 'Add Receipt'}
+              {selectedStatus === 'fully_received' && 'Confirm Fully Received'}
             </Button>
           </div>
         </DialogContent>

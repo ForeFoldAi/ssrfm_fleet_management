@@ -11,6 +11,7 @@ export enum IndentStatus {
   PENDING_APPROVAL = 'pending_approval',
   APPROVED = 'approved',
   REJECTED = 'rejected',
+  REVERTED = 'reverted',
   ORDERED = 'ordered',
   PARTIALLY_RECEIVED = 'partially_received',
   FULLY_RECEIVED = 'fully_received',
@@ -125,6 +126,22 @@ export const materialIndentsApi = {
       `/inventory/material-indents/${id}/reject`,
       {
         rejectionReason,
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Revert a material indent
+   */
+  revert: async (
+    id: number,
+    revertReason: string
+  ): Promise<MaterialIndent> => {
+    const response = await api.post<MaterialIndent>(
+      `/inventory/material-indents/${id}/revert`,
+      {
+        revertReason,
       }
     );
     return response.data;
