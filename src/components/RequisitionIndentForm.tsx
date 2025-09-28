@@ -664,7 +664,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                                       </div>
                                       {quotation.isSelected && (
                                         <div className="text-xs bg-green-600 text-white px-2 py-1 rounded">
-                                          SELECTED
+                                          APPROVED
                                         </div>
                                       )}
                                     </div>

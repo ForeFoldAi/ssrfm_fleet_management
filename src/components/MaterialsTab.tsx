@@ -903,10 +903,21 @@ export const MaterialsTab = () => {
                       Current Stock *
                     </Label>
                     <Input
-                      value={`${selectedMaterial.currentStock} ${getUnitName(selectedMaterial.unitId) || 'units'}`}
-                      disabled
-                      className='h-9 px-3 py-2 border border-input bg-muted text-muted-foreground cursor-not-allowed rounded-[5px] text-sm'
+                      type='number'
+                      step='0.01'
+                      defaultValue={selectedMaterial.currentStock}
+                      disabled={!canEditMaterial(selectedMaterial.createdAt)}
+                      className={`h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 ${
+                        !canEditMaterial(selectedMaterial.createdAt) 
+                          ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                          : ''
+                      }`}
                     />
+                    {!canEditMaterial(selectedMaterial.createdAt) && (
+                      <p className='text-xs text-muted-foreground'>
+                        Current stock cannot be edited for materials older than 7 days
+                      </p>
+                    )}
                   </div>
 
                   <div className='space-y-1'>
