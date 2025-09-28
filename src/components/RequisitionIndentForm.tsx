@@ -357,13 +357,9 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
   };
 
   return (
-    <div className='space-y-6'>
-      {/* Form Header */}
-      <Card className='border-0 shadow-sm'>
-        <CardContent className='p-6'>
-          {/* Removed Date and Status fields - they're now in the header */}
-        </CardContent>
-      </Card>
+    <div className='space-y-5'>
+      {/* Form Header - Remove empty card to reduce spacing */}
+      {/* Removed the empty Card component that was creating unnecessary spacing */}
 
       {/* Items Table */}
       <Card className='border-0 shadow-none'>

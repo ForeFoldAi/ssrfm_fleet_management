@@ -1279,7 +1279,7 @@ const RequestDetails: React.FC = () => {
       {/* Main Content */}
       <div className='w-full'>
         {/* Request Form - Full Width */}
-        <div className='space-y-6'>
+        <div className='space-y-5'>
           {currentUser?.role === 'supervisor' &&
           requestData.status === 'reverted' ? (
             // For reverted requests, show full editable form like MaterialRequest.tsx

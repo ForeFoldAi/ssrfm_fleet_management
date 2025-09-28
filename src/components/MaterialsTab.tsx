@@ -900,7 +900,7 @@ export const MaterialsTab = () => {
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
                   <div className='space-y-1'>
                     <Label className='text-sm font-medium'>
-                      Current Stock (Read-only)
+                      Current Stock *
                     </Label>
                     <Input
                       value={`${selectedMaterial.currentStock} ${getUnitName(selectedMaterial.unitId) || 'units'}`}

@@ -2438,12 +2438,7 @@ export const MaterialOrderBookTab = () => {
               <p className='text-muted-foreground mb-4'>
                 No material indents match your current filters.
               </p>
-              <Button asChild variant='outline'>
-                <Link to='/materials-inventory/material-request'>
-                  <FileEdit className='w-4 h-4 mr-2' />
-                  Create Material Indent
-                </Link>
-              </Button>
+              
             </Card>
           )}
         </TabsContent>

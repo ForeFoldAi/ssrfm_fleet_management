@@ -244,10 +244,11 @@ export const MachinesTab = () => {
     );
   };
 
-  // Handle machine name click
+  // Handle machine name click - directly open edit form
   const handleMachineClick = (machine: TransformedMachine) => {
     setSelectedMachine(machine);
-    setIsViewModalOpen(true);
+    setIsEditMode(true);
+    setIsAddMachineOpen(true);
   };
 
   return (

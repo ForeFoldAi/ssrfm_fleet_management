@@ -274,9 +274,9 @@ export const AddMachineForm = ({
         <DialogHeader className='pb-2'>
           <DialogTitle className='flex items-center gap-2 text-lg'>
             <div className='w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center'>
-              <Plus className='w-4 h-4 text-primary' />
+              {editingData ? <Settings className='w-4 h-4 text-primary' /> : <Plus className='w-4 h-4 text-primary' />}
             </div>
-            Add New Machine
+            {editingData ? 'Edit Machine Details' : 'Add New Machine'}
           </DialogTitle>
         </DialogHeader>
 
