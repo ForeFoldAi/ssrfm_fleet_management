@@ -111,6 +111,12 @@ export const MaterialIssueForm = ({
     additionalNotes: '',
   });
 
+  // New state for custom machine input
+  const [showCustomMachineInput, setShowCustomMachineInput] = useState<number | null>(null);
+  const [customMachineName, setCustomMachineName] = useState('');
+  const [customMachineSpecs, setCustomMachineSpecs] = useState('');
+  const [isCreatingMachine, setIsCreatingMachine] = useState(false);
+
   // Effect to populate form when editing
   useEffect(() => {
     if (editingIssue && isOpen) {
@@ -271,6 +277,65 @@ export const MaterialIssueForm = ({
     }
   };
 
+  // Function to create new machine
+  const handleCreateMachine = async (itemIndex: number) => {
+    if (!customMachineName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a machine name.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsCreatingMachine(true);
+    try {
+      const newMachine = await machinesApi.create({
+        name: customMachineName.trim(),
+        status: 'Active',
+        specifications: customMachineSpecs.trim() || 'Custom machine',
+        manufacturer: 'Custom',
+        model: 'Custom',
+        serialNumber: 'Custom',
+        capacity: 'Custom',
+      });
+
+      // Add the new machine to the available machines list
+      setAvailableMachines(prev => [...prev, newMachine]);
+
+      // Update the form data with the new machine
+      const newItems = [...formData.items];
+      newItems[itemIndex] = {
+        ...newItems[itemIndex],
+        machineName: newMachine.name,
+        machineId: newMachine.id,
+      };
+      setFormData(prev => ({
+        ...prev,
+        items: newItems,
+      }));
+
+      // Hide the custom input
+      setShowCustomMachineInput(null);
+      setCustomMachineName('');
+      setCustomMachineSpecs('');
+
+      toast({
+        title: 'Success',
+        description: `Machine "${newMachine.name}" has been created.`,
+      });
+    } catch (error) {
+      console.error('Error creating machine:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create machine. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreatingMachine(false);
+    }
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -321,7 +386,8 @@ export const MaterialIssueForm = ({
         }`;
       }
 
-      if (!item.machineId) {
+      // Updated validation to handle machine selection properly
+      if (!item.machineName || (!item.machineId && item.machineName !== "Other")) {
         newErrors[
           `machineId_${index}`
         ] = `Machine selection is required for item ${index + 1}`;
@@ -364,6 +430,7 @@ export const MaterialIssueForm = ({
               receiverName: item.receiverName,
               purpose: item.purpose,
               machineId: item.machineId,
+              machineName: item.machineName, // Add machineName to payload
             },
           ])
         );
@@ -428,6 +495,9 @@ export const MaterialIssueForm = ({
 
       setSelectedMaterial(null);
       setErrors({});
+      setShowCustomMachineInput(null);
+      setCustomMachineName('');
+      setCustomMachineSpecs('');
       onClose();
     } catch (error: unknown) {
       const err = error as {
@@ -680,22 +750,41 @@ export const MaterialIssueForm = ({
                         </TableCell>
                         <TableCell className='border border-gray-300 px-2 py-1'>
                           <Select
-                            value={item.machineName}
+                            value={item.machineName || ''}
                             onValueChange={(value) => {
-                              const machine = availableMachines.find(
-                                (m) => m.name === value
-                              );
-                              if (machine) {
+                              if (value === "Other") {
+                                // Show custom machine input for this item
+                                setShowCustomMachineInput(index);
                                 const newItems = [...formData.items];
                                 newItems[index] = {
                                   ...item,
-                                  machineName: machine.name,
-                                  machineId: machine.id,
+                                  machineName: "Other",
+                                  machineId: 0, // Use 0 for custom machines
                                 };
                                 setFormData((prev) => ({
                                   ...prev,
                                   items: newItems,
                                 }));
+                              } else {
+                                const machine = availableMachines.find(
+                                  (m) => m.name === value
+                                );
+                                if (machine) {
+                                  const newItems = [...formData.items];
+                                  newItems[index] = {
+                                    ...item,
+                                    machineName: machine.name,
+                                    machineId: machine.id,
+                                  };
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    items: newItems,
+                                  }));
+                                }
+                                // Hide custom input if it was showing for this item
+                                if (showCustomMachineInput === index) {
+                                  setShowCustomMachineInput(null);
+                                }
                               }
                             }}
                             disabled={isLoadingMachines}
@@ -865,6 +954,74 @@ export const MaterialIssueForm = ({
                   </TableBody>
                 </Table>
               </div>
+
+              {/* Custom Machine Input - Show below the table */}
+              {showCustomMachineInput !== null && (
+                <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2'>
+                  <Label className='text-xs font-medium text-blue-800'>
+                    Add New Issue for Item {showCustomMachineInput + 1}
+                  </Label>
+                  <div className='space-y-2'>
+                    <Input
+                      placeholder='Enter Issue'
+                      value={customMachineName}
+                      onChange={(e) => setCustomMachineName(e.target.value)}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                    />
+                    <Input
+                      placeholder='Enter Issue specifications'
+                      value={customMachineSpecs}
+                      onChange={(e) => setCustomMachineSpecs(e.target.value)}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                    />
+                    <div className='flex gap-2'>
+                      <Button
+                        type='button'
+                        onClick={() => handleCreateMachine(showCustomMachineInput)}
+                        size='sm'
+                        className='h-8 px-3 bg-blue-600 hover:bg-blue-700'
+                        disabled={isCreatingMachine}
+                      >
+                        {isCreatingMachine ? (
+                          <>
+                            <Loader2 className='w-3 h-3 mr-1 animate-spin' />
+                            Creating...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className='w-3 h-3 mr-1' />
+                            Add Machine
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        type='button'
+                        onClick={() => {
+                          setShowCustomMachineInput(null);
+                          setCustomMachineName('');
+                          setCustomMachineSpecs('');
+                          // Reset the machine selection for this item
+                          const newItems = [...formData.items];
+                          newItems[showCustomMachineInput] = {
+                            ...newItems[showCustomMachineInput],
+                            machineName: '',
+                            machineId: 0,
+                          };
+                          setFormData(prev => ({
+                            ...prev,
+                            items: newItems,
+                          }));
+                        }}
+                        variant='outline'
+                        size='sm'
+                        className='h-8 px-3'
+                      >
+                        <X className='w-3 h-3' />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Signature Section - Compact */}
             </CardContent>

@@ -193,13 +193,16 @@ export const MaterialsTab = () => {
     return category?.name || '';
   };
 
-  // Add a function to calculate average price
-  const calculateAveragePrice = (material: Material) => {
-    // Check if material has totalValue field
-    const totalValue = (material as any).totalValue || 0;
-    const currentStock = material.currentStock || 0;
+  // Remove the calculateAveragePrice function and replace with this:
+  const getAveragePrice = (material: Material) => {
+    // Use averageValue from API if available, otherwise fallback to calculation
+    if (material.averageValue !== undefined && material.averageValue !== null) {
+      return material.averageValue.toFixed(2);
+    }
     
-    console.log('Material:', material.name, 'totalValue:', totalValue, 'currentStock:', currentStock);
+    // Fallback calculation if averageValue is not provided
+    const totalValue = material.totalValue || 0;
+    const currentStock = material.currentStock || 0;
     
     if (currentStock === 0) return '0.00';
     return (totalValue / currentStock).toFixed(2);
@@ -485,7 +488,6 @@ export const MaterialsTab = () => {
                       material.currentStock,
                       material.minStockLevel
                     );
-                    const averagePrice = calculateAveragePrice(material);
                     return (
                       <TableRow
                         key={material.id}
@@ -526,7 +528,7 @@ export const MaterialsTab = () => {
                         </TableCell>
                         <TableCell className='text-sm'>
                           <div className='font-semibold text-foreground'>
-                            ₹{averagePrice}
+                            ₹{getAveragePrice(material)}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -608,7 +610,6 @@ export const MaterialsTab = () => {
                       material.currentStock,
                       material.minStockLevel
                     );
-                    const averagePrice = calculateAveragePrice(material);
                     return (
                       <TableRow
                         key={material.id}
@@ -627,7 +628,7 @@ export const MaterialsTab = () => {
                           {material.currentStock} {material.unit || getUnitName(material.unitId) || 'units'}
                         </TableCell>
                         <TableCell className='font-semibold text-foreground'>
-                          ₹{averagePrice}
+                          ₹{getAveragePrice(material)}
                         </TableCell>
                         <TableCell>
                           <Badge className={getStatusBadge(stockStatus)}>

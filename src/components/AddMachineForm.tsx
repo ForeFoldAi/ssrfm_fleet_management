@@ -27,7 +27,7 @@ import { toast } from '../hooks/use-toast';
 import { machinesApi } from '../lib/api/machines';
 import { Machine, MachineType, Unit } from '../lib/api/types';
 import { useRole } from '../contexts/RoleContext';
-import { getMachineTypes, getUnits } from '@/lib/api/common';
+import { getMachineTypes, getUnits, createMachineType, createUnit } from '@/lib/api/common';
 
 interface AddMachineFormProps {
   isOpen: boolean;
@@ -78,6 +78,13 @@ export const AddMachineForm = ({
   const [machineTypes, setMachineTypes] = useState<MachineType[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // New state for custom inputs
+  const [showCustomTypeInput, setShowCustomTypeInput] = useState(false);
+  const [showCustomUnitInput, setShowCustomUnitInput] = useState(false);
+  const [customTypeName, setCustomTypeName] = useState('');
+  const [customUnitName, setCustomUnitName] = useState('');
+  const [customUnitDescription, setCustomUnitDescription] = useState('');
 
   // Prefill form data when editing
   useEffect(() => {
@@ -178,6 +185,99 @@ export const AddMachineForm = ({
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
+
+    // Handle "Other" selection
+    if (field === 'typeId' && value === 0) {
+      setShowCustomTypeInput(true);
+      setShowCustomUnitInput(false);
+    } else if (field === 'unitId' && value === 0) {
+      setShowCustomUnitInput(true);
+      setShowCustomTypeInput(false);
+    } else {
+      setShowCustomTypeInput(false);
+      setShowCustomUnitInput(false);
+    }
+  };
+
+  // Function to create new machine type
+  const handleCreateMachineType = async () => {
+    if (!customTypeName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a machine type name.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      console.log('Creating machine type:', customTypeName.trim());
+      
+      const newType = await createMachineType({ name: customTypeName.trim() });
+      
+      console.log('Machine type created:', newType);
+      
+      setMachineTypes(prev => [...prev, newType]);
+      setFormData(prev => ({ ...prev, typeId: newType.id }));
+      setShowCustomTypeInput(false);
+      setCustomTypeName('');
+      
+      toast({
+        title: 'Success',
+        description: `Machine type "${newType.name}" has been created.`,
+      });
+    } catch (error) {
+      console.error('Error creating machine type:', error);
+      
+      // Log more detailed error information
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        console.error('Error status:', error.response.status);
+        console.error('Error headers:', error.response.headers);
+      }
+      
+      toast({
+        title: 'Error',
+        description: `Failed to create machine type: ${error.response?.data?.message || error.message || 'Unknown error'}`,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Function to create new unit
+  const handleCreateUnit = async () => {
+    if (!customUnitName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a unit name.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const newUnit = await createUnit({ 
+        name: customUnitName.trim(),
+        description: customUnitDescription.trim() || 'Custom unit'
+      });
+      setUnits(prev => [...prev, newUnit]);
+      setFormData(prev => ({ ...prev, unitId: newUnit.id }));
+      setShowCustomUnitInput(false);
+      setCustomUnitName('');
+      setCustomUnitDescription('');
+      
+      toast({
+        title: 'Success',
+        description: `Unit "${newUnit.name}" has been created.`,
+      });
+    } catch (error) {
+      console.error('Error creating unit:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create unit. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -254,6 +354,11 @@ export const AddMachineForm = ({
           additionalNotes: '',
         });
         setErrors({});
+        setShowCustomTypeInput(false);
+        setShowCustomUnitInput(false);
+        setCustomTypeName('');
+        setCustomUnitName('');
+        setCustomUnitDescription('');
         onClose();
       } catch (error) {
         console.error('Error creating machine:', error);
@@ -317,7 +422,7 @@ export const AddMachineForm = ({
                       Machine Type *
                     </Label>
                     <Select
-                      value={formData.typeId.toString()}
+                      value={formData.typeId > 0 ? formData.typeId.toString() : ''}
                       onValueChange={(value) =>
                         handleSelectChange('typeId', parseInt(value))
                       }
@@ -326,16 +431,14 @@ export const AddMachineForm = ({
                         <SelectValue placeholder='Select machine type' />
                       </SelectTrigger>
                       <SelectContent>
-                        {[
-                          ...machineTypes.map((type) => (
-                            <SelectItem key={type.id} value={type.id.toString()}>
-                              {type.name}
-                            </SelectItem>
-                          )),
-                          <SelectItem key="other" value="0">
-                            Other
+                        {machineTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id.toString()}>
+                            {type.name}
                           </SelectItem>
-                        ]}
+                        ))}
+                        <SelectItem key="other" value="0">
+                          Other
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     {errors.typeId && (
@@ -346,6 +449,45 @@ export const AddMachineForm = ({
                   </div>
                 </div>
 
+                {/* Custom Machine Type Input */}
+                {showCustomTypeInput && (
+                  <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2'>
+                    <Label className='text-xs font-medium text-blue-800'>
+                      Add New Machine Type
+                    </Label>
+                    <div className='flex gap-2'>
+                      <Input
+                        placeholder='Enter Issue For'
+                        value={customTypeName}
+                        onChange={(e) => setCustomTypeName(e.target.value)}
+                        className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                      />
+                      <Button
+                        type='button'
+                        onClick={handleCreateMachineType}
+                        size='sm'
+                        className='h-8 px-3 bg-blue-600 hover:bg-blue-700'
+                      >
+                        <Plus className='w-3 h-3 mr-1' />
+                        Add
+                      </Button>
+                      <Button
+                        type='button'
+                        onClick={() => {
+                          setShowCustomTypeInput(false);
+                          setCustomTypeName('');
+                          setFormData(prev => ({ ...prev, typeId: 0 }));
+                        }}
+                        variant='outline'
+                        size='sm'
+                        className='h-8 px-3'
+                      >
+                        <X className='w-3 h-3' />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Second Row */}
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
                   <div className='space-y-1'>
@@ -353,7 +495,7 @@ export const AddMachineForm = ({
                       Unit *
                     </Label>
                     <Select
-                      value={formData.unitId.toString()}
+                      value={formData.unitId > 0 ? formData.unitId.toString() : ''}
                       onValueChange={(value) =>
                         handleSelectChange('unitId', parseInt(value))
                       }
@@ -362,16 +504,14 @@ export const AddMachineForm = ({
                         <SelectValue placeholder='Select Unit' />
                       </SelectTrigger>
                       <SelectContent>
-                        {[
-                          ...units.map((unit) => (
-                            <SelectItem key={unit.id} value={unit.id.toString()}>
-                              {unit.name}
-                            </SelectItem>
-                          )),
-                          <SelectItem key="other" value="0">
-                            Other
+                        {units.map((unit) => (
+                          <SelectItem key={unit.id} value={unit.id.toString()}>
+                            {unit.name}
                           </SelectItem>
-                        ]}
+                        ))}
+                        <SelectItem key="other" value="0">
+                          Other
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     {errors.unitId && (
@@ -403,6 +543,54 @@ export const AddMachineForm = ({
                     </div>
                   </div>
                 </div>
+
+                {/* Custom Unit Input */}
+                {showCustomUnitInput && (
+                  <div className='p-3 bg-green-50 border border-green-200 rounded-lg space-y-2'>
+                    <Label className='text-xs font-medium text-green-800'>
+                      Add New Unit
+                    </Label>
+                    <div className='space-y-2'>
+                      <Input
+                        placeholder='Enter unit name'
+                        value={customUnitName}
+                        onChange={(e) => setCustomUnitName(e.target.value)}
+                        className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                      />
+                      <Input
+                        placeholder='Enter unit description (optional)'
+                        value={customUnitDescription}
+                        onChange={(e) => setCustomUnitDescription(e.target.value)}
+                        className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                      />
+                      <div className='flex gap-2'>
+                        <Button
+                          type='button'
+                          onClick={handleCreateUnit}
+                          size='sm'
+                          className='h-8 px-3 bg-green-600 hover:bg-green-700'
+                        >
+                          <Plus className='w-3 h-3 mr-1' />
+                          Add
+                        </Button>
+                        <Button
+                          type='button'
+                          onClick={() => {
+                            setShowCustomUnitInput(false);
+                            setCustomUnitName('');
+                            setCustomUnitDescription('');
+                            setFormData(prev => ({ ...prev, unitId: 0 }));
+                          }}
+                          variant='outline'
+                          size='sm'
+                          className='h-8 px-3'
+                        >
+                          <X className='w-3 h-3' />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Specifications */}
                 <div className='space-y-1'>

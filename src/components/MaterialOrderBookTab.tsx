@@ -159,6 +159,9 @@ export const MaterialOrderBookTab = () => {
   const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
 
+  // Add this after line 293 (after the useRequestWorkflow hook)
+  const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>([]);
+
   // Fetch branches
   useEffect(() => {
     const fetchBranches = async () => {
@@ -322,241 +325,7 @@ export const MaterialOrderBookTab = () => {
     [key: string]: unknown; // For other properties
   }
 
-  const [issuedMaterials, setIssuedMaterials] = useState<IssuedMaterial[]>([
-    // Recent Material Issues - Including items from physical form
-    {
-      id: 'ISS-2024-012',
-      materialId: 'MAT-001',
-      materialName: 'fevicol',
-      specifications: 'SH adhesive, MARINE brand',
-      MeasureUnit: 'KG',
-      existingStock: 1,
-      issuedQuantity: '1',
-      stockAfterIssue: 0,
-      recipientName: 'DBLU KUMAR (AJEET)',
-      recipientId: 'EMP-CH001',
-      recipientDesignation: 'CH-MISTRI',
-      department: 'Maintenance',
-      machineId: 'GENERAL',
-      machineName: 'General Maintenance',
-      purpose: 'Adhesive work for equipment repair',
-      issuingPersonName: 'SHARWAN',
-      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
-      issuedBy: 'SHARWAN',
-      issuedDate: '2024-01-22',
-      materialIssueFormSrNo: 'SSFM/IISFN/007',
-      reqFormSrNo: 'SSFM/MNT/RQ/0012',
-      indFormSrNo: 'SSFM/MNT/IND./0012',
-      status: 'issued',
-      type: 'material_issue',
-      timestamp: '2024-01-22T09:15:00Z',
-      unit: 'unit-1',
-      unitName: 'SSRFM Unit 1',
-    },
-    {
-      id: 'ISS-2024-011',
-      materialId: 'MAT-002',
-      materialName: 'wire brush',
-      specifications: '0.01 mm thickness of wire, INDUSTRIAL',
-      MeasureUnit: 'pieces',
-      existingStock: 2,
-      issuedQuantity: '2',
-      stockAfterIssue: 0,
-      recipientName: 'RAVI SHARMA',
-      recipientId: 'EMP-MT002',
-      recipientDesignation: 'MAINTENANCE TECHNICIAN',
-      department: 'Maintenance',
-      machineId: 'MACHINE-003',
-      machineName: 'Flour Sifter #01',
-      purpose: 'Cleaning and maintenance of sifter components',
-      issuingPersonName: 'SHARWAN',
-      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
-      issuedBy: 'SHARWAN',
-      issuedDate: '2024-01-21',
-      materialIssueFormSrNo: 'SSFM/IISFN/006',
-      reqFormSrNo: 'SSFM/MNT/RQ/0011',
-      indFormSrNo: 'SSFM/MNT/IND./0011',
-      status: 'issued',
-      type: 'material_issue',
-      timestamp: '2024-01-21T14:30:00Z',
-      unit: 'unit-2',
-      unitName: 'SSRFM Unit 2',
-    },
-    {
-      id: 'ISS-2024-010',
-      materialId: 'MAT-003',
-      materialName: 'dholak ball',
-      specifications: 'PVC transparent, INDUSTRIAL',
-      MeasureUnit: 'pieces',
-      existingStock: 200,
-      issuedQuantity: '200',
-      stockAfterIssue: 0,
-      recipientName: 'SURESH KUMAR',
-      recipientId: 'EMP-OP003',
-      recipientDesignation: 'MACHINE OPERATOR',
-      department: 'Production Floor A',
-      machineId: 'MACHINE-001',
-      machineName: 'Main Flour Mill #01',
-      purpose: 'Production line component replacement',
-      issuingPersonName: 'SHARWAN',
-      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
-      issuedBy: 'SHARWAN',
-      issuedDate: '2024-01-20',
-      materialIssueFormSrNo: 'SSFM/IISFN/005',
-      reqFormSrNo: 'SSFM/MNT/RQ/0010',
-      indFormSrNo: 'SSFM/MNT/IND./0010',
-      status: 'issued',
-      type: 'material_issue',
-      timestamp: '2024-01-20T11:45:00Z',
-      unit: 'unit-1',
-      unitName: 'SSRFM Unit 1',
-    },
-    {
-      id: 'ISS-2024-009',
-      materialId: 'MAT-004',
-      materialName: 'triangle brush',
-      specifications: 'Cleaning brush, INDUSTRIAL',
-      MeasureUnit: 'pieces',
-      existingStock: 130,
-      issuedQuantity: '60',
-      stockAfterIssue: 70,
-      recipientName: 'MOHAN LAL',
-      recipientId: 'EMP-CL001',
-      recipientDesignation: 'CLEANING SUPERVISOR',
-      department: 'Housekeeping',
-      machineId: 'ALL-MACHINES',
-      machineName: 'General Cleaning Operations',
-      purpose: 'Daily cleaning and maintenance of all equipment',
-      issuingPersonName: 'SHARWAN',
-      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
-      issuedBy: 'SHARWAN',
-      issuedDate: '2024-01-19',
-      materialIssueFormSrNo: 'SSFM/IISFN/004',
-      reqFormSrNo: 'SSFM/MNT/RQ/0009',
-      indFormSrNo: 'SSFM/MNT/IND./0009',
-      status: 'issued',
-      type: 'material_issue',
-      timestamp: '2024-01-19T16:20:00Z',
-      unit: 'unit-2',
-      unitName: 'SSRFM Unit 2',
-    },
-    {
-      id: 'ISS-2024-008',
-      materialId: 'MAT-005',
-      materialName: 'gum tape',
-      specifications: '1 inch width adhesive tape, INDUSTRIAL',
-      MeasureUnit: 'pieces',
-      existingStock: 14,
-      issuedQuantity: '2',
-      stockAfterIssue: 12,
-      recipientName: 'PRAKASH SINGH',
-      recipientId: 'EMP-PK001',
-      recipientDesignation: 'PACKAGING SUPERVISOR',
-      department: 'Packaging',
-      machineId: 'MACHINE-004',
-      machineName: 'Main Conveyor #01',
-      purpose: 'Packaging and sealing operations',
-      issuingPersonName: 'SHARWAN',
-      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
-      issuedBy: 'SHARWAN',
-      issuedDate: '2024-01-18',
-      materialIssueFormSrNo: 'SSFM/IISFN/003',
-      reqFormSrNo: 'SSFM/MNT/RQ/0008',
-      indFormSrNo: 'SSFM/MNT/IND./0008',
-      status: 'issued',
-      type: 'material_issue',
-      timestamp: '2024-01-18T13:10:00Z',
-      unit: 'unit-3',
-      unitName: 'SSRFM Unit 3',
-    },
-    {
-      id: 'ISS-2024-007',
-      materialId: 'MAT-006',
-      materialName: 'Bearings (SKF 6205-2RS)',
-      specifications: 'Deep Grove Ball Bearing, Inner: 25mm, Outer: 52mm',
-      MeasureUnit: 'pieces',
-      existingStock: 24,
-      issuedQuantity: '4',
-      stockAfterIssue: 20,
-      recipientName: 'RAJESH KUMAR',
-      recipientId: 'EMP-ME001',
-      recipientDesignation: 'MECHANICAL ENGINEER',
-      department: 'Production Floor A',
-      machineId: 'MACHINE-001',
-      machineName: 'Main Flour Mill #01',
-      purpose: 'Replace worn bearings in main grinding unit',
-      issuingPersonName: 'SHARWAN',
-      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
-      issuedBy: 'SHARWAN',
-      issuedDate: '2024-01-17',
-      materialIssueFormSrNo: 'SSFM/IISFN/002',
-      reqFormSrNo: 'SSFM/MNT/RQ/0007',
-      indFormSrNo: 'SSFM/MNT/IND./0007',
-      status: 'issued',
-      type: 'material_issue',
-      timestamp: '2024-01-17T10:30:00Z',
-      unit: 'unit-4',
-      unitName: 'SSRFM Unit 4',
-    },
-    {
-      id: 'ISS-2024-006',
-      materialId: 'MAT-007',
-      materialName: 'Motor Oil (SAE 10W-30)',
-      specifications: 'Industrial grade lubricant for machinery',
-      MeasureUnit: 'liters',
-      existingStock: 65,
-      issuedQuantity: '15',
-      stockAfterIssue: 50,
-      recipientName: 'VIKRAM SINGH',
-      recipientId: 'EMP-MT003',
-      recipientDesignation: 'MAINTENANCE TECHNICIAN',
-      department: 'Maintenance',
-      machineId: 'MACHINE-002',
-      machineName: 'Secondary Mill #02',
-      purpose: 'Scheduled maintenance and lubrication',
-      issuingPersonName: 'SHARWAN',
-      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
-      issuedBy: 'SHARWAN',
-      issuedDate: '2024-01-16',
-      materialIssueFormSrNo: 'SSFM/IISFN/001',
-      reqFormSrNo: 'SSFM/MNT/RQ/0006',
-      indFormSrNo: 'SSFM/MNT/IND./0006',
-      status: 'issued',
-      type: 'material_issue',
-      timestamp: '2024-01-16T14:45:00Z',
-      unit: 'unit-1',
-      unitName: 'SSRFM Unit 1',
-    },
-    {
-      id: 'ISS-2024-005',
-      materialId: 'MAT-008',
-      materialName: 'Conveyor Belts',
-      specifications: 'Rubber belt, 600mm width, food grade',
-      MeasureUnit: 'meters',
-      existingStock: 45,
-      issuedQuantity: '8',
-      stockAfterIssue: 37,
-      recipientName: 'ANIL KUMAR',
-      recipientId: 'EMP-CV001',
-      recipientDesignation: 'CONVEYOR TECHNICIAN',
-      department: 'Production Line',
-      machineId: 'MACHINE-004',
-      machineName: 'Main Conveyor #01',
-      purpose: 'Conveyor belt maintenance and repair',
-      issuingPersonName: 'SHARWAN',
-      issuingPersonDesignation: 'MAINTANCE -SUPERVISOR',
-      issuedBy: 'SHARWAN',
-      issuedDate: '2024-01-15',
-      materialIssueFormSrNo: 'SSFM/IISFN/000',
-      reqFormSrNo: 'SSFM/MNT/RQ/0005',
-      indFormSrNo: 'SSFM/MNT/IND./0005',
-      status: 'issued',
-      type: 'material_issue',
-      timestamp: '2024-01-15T11:20:00Z',
-      unit: 'unit-2',
-      unitName: 'SSRFM Unit 2',
-    },
-  ]);
+
 
   // Fetch material indents when filters change
   useEffect(() => {
@@ -757,27 +526,48 @@ export const MaterialOrderBookTab = () => {
     setIsResubmitFormOpen(true);
   };
 
-  const handleStatusUpdate = (requestId: string, newStatus: string) => {
-    setAllRequests((prev) =>
-      prev.map((req) =>
-        req.id === requestId ? { ...req, status: newStatus } : req
-      )
-    );
-
-    // In a real implementation, we would call the API to update the status
-    // materialIndentsApi.updateStatus(requestId, newStatus)
-    //   .then(() => fetchMaterialIndents())
-    //   .catch(error => console.error('Failed to update status:', error));
+  const handleStatusUpdate = async (requestId: string, newStatus: string) => {
+    try {
+      // Call the API to update the status
+      await materialIndentsApi.update(parseInt(requestId), { status: newStatus });
+      
+      // Refresh the data from API
+      await fetchMaterialIndents(pagination.page, pagination.limit);
+      
+      toast({
+        title: 'Success',
+        description: 'Request status updated successfully.',
+      });
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update request status. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleResubmitRequest = (requestData: Record<string, unknown>) => {
-    // Handle resubmit logic here
-    console.log('Resubmitting request:', requestData);
-
-    // In a real implementation, we would call the API to resubmit the request
-    // materialIndentsApi.create(requestData)
-    //   .then(() => fetchMaterialIndents())
-    //   .catch(error => console.error('Failed to resubmit request:', error));
+  const handleResubmitRequest = async (requestData: Record<string, unknown>) => {
+    try {
+      // Call the API to resubmit the request
+      await materialIndentsApi.create(requestData);
+      
+      // Refresh the data from API
+      await fetchMaterialIndents(pagination.page, pagination.limit);
+      
+      toast({
+        title: 'Success',
+        description: 'Request resubmitted successfully.',
+      });
+    } catch (error) {
+      console.error('Failed to resubmit request:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to resubmit request. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   // New function to handle approval
@@ -2215,31 +2005,44 @@ export const MaterialOrderBookTab = () => {
             </Select>
           )}
 
-          {/* Status Filter - Hide for company owners since they only see pending/reverted */}
-          {currentUser?.role !== 'company_owner' && (
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-                <SelectValue placeholder='All Status' />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All Status</SelectItem>
-                <SelectItem value={IndentStatus.DRAFT}>Draft</SelectItem>
-                <SelectItem value={IndentStatus.PENDING_APPROVAL}>
-                  Pending Approval
-                </SelectItem>
-                <SelectItem value={IndentStatus.APPROVED}>Approved</SelectItem>
-                <SelectItem value={IndentStatus.ORDERED}>Ordered</SelectItem>
-                <SelectItem value={IndentStatus.PARTIALLY_RECEIVED}>
-                  Partially Received
-                </SelectItem>
-                <SelectItem value={IndentStatus.FULLY_RECEIVED}>
-                  Fully Received
-                </SelectItem>
-                <SelectItem value={IndentStatus.CLOSED}>Closed</SelectItem>
-                <SelectItem value={IndentStatus.REJECTED}>Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
+          {/* Status Filter - Show for company owners with limited options */}
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
+              <SelectValue placeholder='All Status' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='all'>All Status</SelectItem>
+              {currentUser?.role === 'company_owner' ? (
+                // Company owners only see pending approval and reverted
+                <>
+                  <SelectItem value={IndentStatus.PENDING_APPROVAL}>
+                    Pending Approval
+                  </SelectItem>
+                  <SelectItem value={IndentStatus.REVERTED}>
+                    Reverted
+                  </SelectItem>
+                </>
+              ) : (
+                // Other roles see all statuses
+                <>
+                  <SelectItem value={IndentStatus.DRAFT}>Draft</SelectItem>
+                  <SelectItem value={IndentStatus.PENDING_APPROVAL}>
+                    Pending Approval
+                  </SelectItem>
+                  <SelectItem value={IndentStatus.APPROVED}>Approved</SelectItem>
+                  <SelectItem value={IndentStatus.ORDERED}>Ordered</SelectItem>
+                  <SelectItem value={IndentStatus.PARTIALLY_RECEIVED}>
+                    Partially Received
+                  </SelectItem>
+                  <SelectItem value={IndentStatus.FULLY_RECEIVED}>
+                    Fully Received
+                  </SelectItem>
+                  <SelectItem value={IndentStatus.CLOSED}>Closed</SelectItem>
+                  <SelectItem value={IndentStatus.REJECTED}>Rejected</SelectItem>
+                </>
+              )}
+            </SelectContent>
+          </Select>
 
           {/* Action Buttons */}
           <div className='flex gap-2'>

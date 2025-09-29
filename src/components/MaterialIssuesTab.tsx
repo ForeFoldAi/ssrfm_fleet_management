@@ -217,8 +217,9 @@ export const MaterialIssuesTab = () => {
       recipientName: item.receiverName,
       purpose: item.purpose,
       imagePath: item.imagePath,
-      machineId: item.machineId,
-      machineName: item.machineName,
+      // Updated to handle the new issuedFor structure
+      machineId: item.issuedFor?.id || 0,
+      machineName: item.issuedFor?.name || 'No machine selected',
       originalItem: item,
     }));
 

@@ -152,6 +152,7 @@ export interface Material {
   makerBrand: string; // Make/Brand instead of category
   currentStock: number;
   totalValue?: number; // Add totalValue field
+  averageValue?: number; // Add averageValue field from API
   minStockLevel?: number;
   maxStockLevel?: number;
   additionalNotes?: string;
@@ -167,12 +168,32 @@ export interface MaterialIssueItem {
   receiverName: string;
   imagePath?: string;
   purpose: string;
-  machineId?: number;
-  machineName?: string;
   createdAt: string;
   updatedAt: string;
   material: Material;
   branch: Branch;
+  // Updated to match the new API response structure
+  issuedFor?: {
+    id: number;
+    name: string;
+    status: string;
+    specifications: string;
+    manufacturer: string;
+    model: string;
+    serialNumber: string;
+    capacity: string;
+    purchaseDate: string;
+    warrantyExpiry: string;
+    installationDate: string;
+    lastService: string;
+    nextMaintenanceDue: string;
+    additionalNotes: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  // Keep these for backward compatibility or if the API still returns them
+  machineId?: number;
+  machineName?: string;
 }
 
 export interface MaterialIssue {

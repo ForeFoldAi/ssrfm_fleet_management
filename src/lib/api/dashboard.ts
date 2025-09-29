@@ -49,23 +49,44 @@ export interface DashboardData {
 }
 
 export interface DashboardQueryParams {
-  period?: '1m' | '3m' | '6m' | '1y';
-  branchId?: number;
+  dateRangeType?: 'this_month' | 'last_month' | 'this_quarter' | 'this_year' | 'custom';
   startDate?: string;
   endDate?: string;
+  unitId?: number;
+  machineId?: number;
 }
 
 export const dashboardApi = {
+  /**
+   * Get expenses data with various filters
+   */
+  getExpenses: async (params: DashboardQueryParams = {}): Promise<any> => {
+    const queryParams = new URLSearchParams();
+
+    if (params.dateRangeType) queryParams.append('dateRangeType', params.dateRangeType);
+    if (params.startDate) queryParams.append('startDate', params.startDate);
+    if (params.endDate) queryParams.append('endDate', params.endDate);
+    if (params.unitId) queryParams.append('unitId', params.unitId.toString());
+    if (params.machineId) queryParams.append('machineId', params.machineId.toString());
+
+    const queryString = queryParams.toString();
+    const url = `/dashboard/expenses${queryString ? `?${queryString}` : ''}`;
+
+    const response = await api.get(url);
+    return response.data;
+  },
+
   /**
    * Get dashboard data for company owner
    */
   getDashboardData: async (params: DashboardQueryParams = {}): Promise<DashboardData> => {
     const queryParams = new URLSearchParams();
 
-    if (params.period) queryParams.append('period', params.period);
-    if (params.branchId) queryParams.append('branchId', params.branchId.toString());
+    if (params.dateRangeType) queryParams.append('dateRangeType', params.dateRangeType);
     if (params.startDate) queryParams.append('startDate', params.startDate);
     if (params.endDate) queryParams.append('endDate', params.endDate);
+    if (params.unitId) queryParams.append('unitId', params.unitId.toString());
+    if (params.machineId) queryParams.append('machineId', params.machineId.toString());
 
     const queryString = queryParams.toString();
     const url = `/dashboard/company-owner${queryString ? `?${queryString}` : ''}`;
@@ -88,10 +109,11 @@ export const dashboardApi = {
   getBranchExpenses: async (params: DashboardQueryParams = {}): Promise<BranchExpenseData[]> => {
     const queryParams = new URLSearchParams();
 
-    if (params.period) queryParams.append('period', params.period);
-    if (params.branchId) queryParams.append('branchId', params.branchId.toString());
+    if (params.dateRangeType) queryParams.append('dateRangeType', params.dateRangeType);
     if (params.startDate) queryParams.append('startDate', params.startDate);
     if (params.endDate) queryParams.append('endDate', params.endDate);
+    if (params.unitId) queryParams.append('unitId', params.unitId.toString());
+    if (params.machineId) queryParams.append('machineId', params.machineId.toString());
 
     const queryString = queryParams.toString();
     const url = `/dashboard/branch-expenses${queryString ? `?${queryString}` : ''}`;
@@ -106,10 +128,11 @@ export const dashboardApi = {
   getMaterialExpenses: async (params: DashboardQueryParams = {}): Promise<MaterialExpenseData[]> => {
     const queryParams = new URLSearchParams();
 
-    if (params.period) queryParams.append('period', params.period);
-    if (params.branchId) queryParams.append('branchId', params.branchId.toString());
+    if (params.dateRangeType) queryParams.append('dateRangeType', params.dateRangeType);
     if (params.startDate) queryParams.append('startDate', params.startDate);
     if (params.endDate) queryParams.append('endDate', params.endDate);
+    if (params.unitId) queryParams.append('unitId', params.unitId.toString());
+    if (params.machineId) queryParams.append('machineId', params.machineId.toString());
 
     const queryString = queryParams.toString();
     const url = `/dashboard/material-expenses${queryString ? `?${queryString}` : ''}`;
@@ -124,10 +147,11 @@ export const dashboardApi = {
   getMachineExpenses: async (params: DashboardQueryParams = {}): Promise<MachineExpenseData[]> => {
     const queryParams = new URLSearchParams();
 
-    if (params.period) queryParams.append('period', params.period);
-    if (params.branchId) queryParams.append('branchId', params.branchId.toString());
+    if (params.dateRangeType) queryParams.append('dateRangeType', params.dateRangeType);
     if (params.startDate) queryParams.append('startDate', params.startDate);
     if (params.endDate) queryParams.append('endDate', params.endDate);
+    if (params.unitId) queryParams.append('unitId', params.unitId.toString());
+    if (params.machineId) queryParams.append('machineId', params.machineId.toString());
 
     const queryString = queryParams.toString();
     const url = `/dashboard/machine-expenses${queryString ? `?${queryString}` : ''}`;
@@ -149,10 +173,11 @@ export const dashboardApi = {
   }[]> => {
     const queryParams = new URLSearchParams();
 
-    if (params.period) queryParams.append('period', params.period);
-    if (params.branchId) queryParams.append('branchId', params.branchId.toString());
+    if (params.dateRangeType) queryParams.append('dateRangeType', params.dateRangeType);
     if (params.startDate) queryParams.append('startDate', params.startDate);
     if (params.endDate) queryParams.append('endDate', params.endDate);
+    if (params.unitId) queryParams.append('unitId', params.unitId.toString());
+    if (params.machineId) queryParams.append('machineId', params.machineId.toString());
 
     const queryString = queryParams.toString();
     const url = `/dashboard/weighted-average-prices${queryString ? `?${queryString}` : ''}`;

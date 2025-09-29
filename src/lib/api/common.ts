@@ -37,6 +37,14 @@ export const getUnits = async (
 };
 
 /**
+ * Create a new unit
+ */
+export const createUnit = async (data: { name: string; description: string }): Promise<Unit> => {
+  const response = await api.post<Unit>('/inventory/units', data);
+  return response.data;
+};
+
+/**
  * Get all machine types with pagination
  */
 export const getMachineTypes = async (
@@ -62,6 +70,14 @@ export const getMachineTypes = async (
   const url = `/inventory/machine-types${queryString ? `?${queryString}` : ''}`;
 
   const response = await api.get<PaginatedResponse<Unit>>(url);
+  return response.data;
+};
+
+/**
+ * Create a new machine type
+ */
+export const createMachineType = async (data: { name: string }): Promise<MachineType> => {
+  const response = await api.post<MachineType>('/inventory/machine-types', data);
   return response.data;
 };
 
@@ -93,5 +109,13 @@ export const getMaterialCategories = async (
   }`;
 
   const response = await api.get<PaginatedResponse<MaterialCategory>>(url);
+  return response.data;
+};
+
+/**
+ * Create a new material category
+ */
+export const createMaterialCategory = async (data: { name: string }): Promise<MaterialCategory> => {
+  const response = await api.post<MaterialCategory>('/inventory/material-categories', data);
   return response.data;
 };

@@ -16,11 +16,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, X } from 'lucide-react';
 import { useStock } from '@/contexts/StockContext';
 import { materialsApi } from '@/lib/api/materials';
 import { Material, MaterialCategory, Unit } from '@/lib/api/types';
-import { getMaterialCategories, getUnits } from '@/lib/api/common';
+import { getMaterialCategories, getUnits, createMaterialCategory, createUnit } from '@/lib/api/common';
 import { toast } from '@/hooks/use-toast';
 
 interface AddMaterialFormProps {
@@ -35,6 +35,7 @@ interface ApiMaterial {
   measureUnitId: number;
   makerBrand: string;
   currentStock: number;
+  totalValue: number;
   minStockLevel?: number;
   maxStockLevel?: number;
   specifications: string;
@@ -52,6 +53,15 @@ export const AddMaterialForm = ({
     MaterialCategory[]
   >([]);
   const [units, setUnits] = useState<Unit[]>([]);
+
+  // New state for custom inputs
+  const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
+  const [showCustomUnitInput, setShowCustomUnitInput] = useState(false);
+  const [customCategoryName, setCustomCategoryName] = useState('');
+  const [customUnitName, setCustomUnitName] = useState('');
+  const [customUnitDescription, setCustomUnitDescription] = useState('');
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [isCreatingUnit, setIsCreatingUnit] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -162,6 +172,92 @@ export const AddMaterialForm = ({
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
+
+    // Handle "Other" selection
+    if (field === 'category' && value === 'Other') {
+      setShowCustomCategoryInput(true);
+      setShowCustomUnitInput(false);
+    } else if (field === 'measureUnit' && value === 'other') {
+      setShowCustomUnitInput(true);
+      setShowCustomCategoryInput(false);
+    } else {
+      setShowCustomCategoryInput(false);
+      setShowCustomUnitInput(false);
+    }
+  };
+
+  // Function to create new material category
+  const handleCreateCategory = async () => {
+    if (!customCategoryName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a category name.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsCreatingCategory(true);
+    try {
+      const newCategory = await createMaterialCategory({ name: customCategoryName.trim() });
+      setMaterialCategories(prev => [...prev, newCategory]);
+      setFormData(prev => ({ ...prev, category: newCategory.name }));
+      setShowCustomCategoryInput(false);
+      setCustomCategoryName('');
+      
+      toast({
+        title: 'Success',
+        description: `Category "${newCategory.name}" has been created.`,
+      });
+    } catch (error) {
+      console.error('Error creating category:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create category. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreatingCategory(false);
+    }
+  };
+
+  // Function to create new unit
+  const handleCreateUnit = async () => {
+    if (!customUnitName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a unit name.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsCreatingUnit(true);
+    try {
+      const newUnit = await createUnit({ 
+        name: customUnitName.trim(),
+        description: customUnitDescription.trim() || 'Custom unit'
+      });
+      setUnits(prev => [...prev, newUnit]);
+      setFormData(prev => ({ ...prev, measureUnit: newUnit.name }));
+      setShowCustomUnitInput(false);
+      setCustomUnitName('');
+      setCustomUnitDescription('');
+      
+      toast({
+        title: 'Success',
+        description: `Unit "${newUnit.name}" has been created.`,
+      });
+    } catch (error) {
+      console.error('Error creating unit:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create unit. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreatingUnit(false);
+    }
   };
 
   const validateForm = () => {
@@ -238,6 +334,7 @@ export const AddMaterialForm = ({
         measureUnitId: measureUnitId,
         makerBrand: formData.maker,
         currentStock: currentStockNum,
+        totalValue: totalValueNum,
         minStockLevel: formData.minStock
           ? Number(formData.minStock)
           : undefined,
@@ -278,6 +375,11 @@ export const AddMaterialForm = ({
         notes: '',
       });
       setErrors({});
+      setShowCustomCategoryInput(false);
+      setShowCustomUnitInput(false);
+      setCustomCategoryName('');
+      setCustomUnitName('');
+      setCustomUnitDescription('');
       onClose();
     } catch (error) {
       console.error('Error creating material:', error);
@@ -344,6 +446,11 @@ export const AddMaterialForm = ({
       notes: '',
     });
     setErrors({});
+    setShowCustomCategoryInput(false);
+    setShowCustomUnitInput(false);
+    setCustomCategoryName('');
+    setCustomUnitName('');
+    setCustomUnitDescription('');
     onClose();
   };
 
@@ -422,28 +529,62 @@ export const AddMaterialForm = ({
                         ]}
                   </SelectContent>
                 </Select>
-                {formData.category === 'Other' && (
-                  <Input
-                    placeholder='Enter custom category'
-                    value={formData.customCategory}
-                    onChange={(e) =>
-                      handleInputChange('customCategory', e.target.value)
-                    }
-                    className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-1'
-                  />
-                )}
                 {errors.category && (
                   <p className='text-destructive text-xs mt-1'>
                     {errors.category}
                   </p>
                 )}
-                {errors.customCategory && (
-                  <p className='text-destructive text-xs mt-1'>
-                    {errors.customCategory}
-                  </p>
-                )}
               </div>
             </div>
+
+            {/* Custom Category Input */}
+            {showCustomCategoryInput && (
+              <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2'>
+                <Label className='text-xs font-medium text-blue-800'>
+                  Add New Category
+                </Label>
+                <div className='flex gap-2'>
+                  <Input
+                    placeholder='Enter category name'
+                    value={customCategoryName}
+                    onChange={(e) => setCustomCategoryName(e.target.value)}
+                    className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                  />
+                  <Button
+                    type='button'
+                    onClick={handleCreateCategory}
+                    size='sm'
+                    className='h-8 px-3 bg-blue-600 hover:bg-blue-700'
+                    disabled={isCreatingCategory}
+                  >
+                    {isCreatingCategory ? (
+                      <>
+                        <Loader2 className='w-3 h-3 mr-1 animate-spin' />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className='w-3 h-3 mr-1' />
+                        Add
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type='button'
+                    onClick={() => {
+                      setShowCustomCategoryInput(false);
+                      setCustomCategoryName('');
+                      setFormData(prev => ({ ...prev, category: '' }));
+                    }}
+                    variant='outline'
+                    size='sm'
+                    className='h-8 px-3'
+                  >
+                    <X className='w-3 h-3' />
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Second Row */}
             <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
@@ -485,24 +626,9 @@ export const AddMaterialForm = ({
                         ]}
                   </SelectContent>
                 </Select>
-                {formData.measureUnit === 'other' && (
-                  <Input
-                    placeholder='Enter custom measure unit'
-                    value={formData.customMeasureUnit}
-                    onChange={(e) =>
-                      handleInputChange('customMeasureUnit', e.target.value)
-                    }
-                    className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 mt-1'
-                  />
-                )}
                 {errors.measureUnit && (
                   <p className='text-destructive text-xs mt-1'>
                     {errors.measureUnit}
-                  </p>
-                )}
-                {errors.customMeasureUnit && (
-                  <p className='text-destructive text-xs mt-1'>
-                    {errors.customMeasureUnit}
                   </p>
                 )}
               </div>
@@ -525,6 +651,64 @@ export const AddMaterialForm = ({
                 )}
               </div>
             </div>
+
+            {/* Custom Unit Input */}
+            {showCustomUnitInput && (
+              <div className='p-3 bg-green-50 border border-green-200 rounded-lg space-y-2'>
+                <Label className='text-xs font-medium text-green-800'>
+                  Add New Unit
+                </Label>
+                <div className='space-y-2'>
+                  <Input
+                    placeholder='Enter unit name'
+                    value={customUnitName}
+                    onChange={(e) => setCustomUnitName(e.target.value)}
+                    className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                  />
+                  <Input
+                    placeholder='Enter unit description (optional)'
+                    value={customUnitDescription}
+                    onChange={(e) => setCustomUnitDescription(e.target.value)}
+                    className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                  />
+                  <div className='flex gap-2'>
+                    <Button
+                      type='button'
+                      onClick={handleCreateUnit}
+                      size='sm'
+                      className='h-8 px-3 bg-green-600 hover:bg-green-700'
+                      disabled={isCreatingUnit}
+                    >
+                      {isCreatingUnit ? (
+                        <>
+                          <Loader2 className='w-3 h-3 mr-1 animate-spin' />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className='w-3 h-3 mr-1' />
+                          Add
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type='button'
+                      onClick={() => {
+                        setShowCustomUnitInput(false);
+                        setCustomUnitName('');
+                        setCustomUnitDescription('');
+                        setFormData(prev => ({ ...prev, measureUnit: '' }));
+                      }}
+                      variant='outline'
+                      size='sm'
+                      className='h-8 px-3'
+                    >
+                      <X className='w-3 h-3' />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Third Row - Current Stock and Total Value */}
             <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>

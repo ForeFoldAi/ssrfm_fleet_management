@@ -506,12 +506,12 @@ const RequestDetails: React.FC = () => {
           }
 
           // Update with partial receipt history
-        updatedIndent = await materialIndentsApi.update(numericId, {
-          status: newStatus as IndentStatus,
+          updatedIndent = await materialIndentsApi.update(numericId, {
+            status: newStatus as IndentStatus,
             partialReceiptHistory: updatedHistory,
             totalReceivedQuantity: totalReceived,
-          ...additionalData,
-        });
+            ...additionalData,
+          });
         }
       } else {
         // For other status changes
@@ -521,14 +521,11 @@ const RequestDetails: React.FC = () => {
         });
       }
 
-      // Update the local state with the API response
-      const updatedData = {
-        ...requestData,
-        status: updatedIndent?.status || newStatus,
-        apiData: updatedIndent || requestData.apiData,
-      };
-
-      setRequestData(updatedData);
+      // Refresh the data from API to get the latest state
+      if (requestData?.apiData?.id) {
+        const updatedIndent = await materialIndentsApi.getById(requestData.apiData.id);
+        setRequestData(prev => prev ? { ...prev, apiData: updatedIndent, status: updatedIndent.status } : null);
+      }
 
       // Status-specific success messages
       let successMessage = '';
