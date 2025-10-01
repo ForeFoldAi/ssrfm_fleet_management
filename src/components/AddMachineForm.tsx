@@ -6,7 +6,6 @@ import {
   Calendar,
   MapPin,
   Wrench,
-  
   Loader2,
   Plus,
 } from 'lucide-react';
@@ -25,7 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { toast } from '../hooks/use-toast';
 import { machinesApi } from '../lib/api/machines';
-import { Machine, MachineType, Unit } from '../lib/api/types';
+import { Machine, MachineType, Unit, User } from '../lib/api/types';
 import { useRole } from '../contexts/RoleContext';
 import { getMachineTypes, getUnits, createMachineType, createUnit } from '@/lib/api/common';
 
@@ -85,6 +84,12 @@ export const AddMachineForm = ({
   const [customTypeName, setCustomTypeName] = useState('');
   const [customUnitName, setCustomUnitName] = useState('');
   const [customUnitDescription, setCustomUnitDescription] = useState('');
+
+  // Get the full user data from localStorage to access branch information
+  const getFullUserData = (): User | null => {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  };
 
   // Prefill form data when editing
   useEffect(() => {
@@ -298,17 +303,17 @@ export const AddMachineForm = ({
     if (Object.keys(newErrors).length === 0) {
       setIsSubmitting(true);
       try {
-        // Call the API to create the machine
-        const response = await machinesApi.create({
-          name: formData.name,
+        // Prepare the payload - don't include branch as it's handled by the backend
+        const machinePayload = {
+          name: formData.name.trim(),
           typeId: Number(formData.typeId),
           unitId: Number(formData.unitId),
           status: formData.status,
-          specifications: formData.specifications,
-          manufacturer: formData.manufacturer,
-          model: formData.model,
-          serialNumber: formData.serialNumber,
-          capacity: formData.capacity,
+          specifications: formData.specifications.trim(),
+          manufacturer: formData.manufacturer.trim(),
+          model: formData.model.trim() || undefined,
+          serialNumber: formData.serialNumber.trim() || undefined,
+          capacity: formData.capacity.trim() || undefined,
           purchaseDate: formData.purchaseDate
             ? new Date(formData.purchaseDate).toISOString()
             : undefined,
@@ -324,8 +329,13 @@ export const AddMachineForm = ({
           nextMaintenanceDue: formData.nextMaintenanceDue
             ? new Date(formData.nextMaintenanceDue).toISOString()
             : undefined,
-          additionalNotes: formData.additionalNotes,
-        });
+          additionalNotes: formData.additionalNotes.trim() || undefined,
+        };
+
+        console.log('Machine payload:', machinePayload);
+
+        // Call the API to create the machine
+        const response = await machinesApi.create(machinePayload);
 
         // Call the onSubmit callback with the created machine
         onSubmit(response);
@@ -362,9 +372,16 @@ export const AddMachineForm = ({
         onClose();
       } catch (error) {
         console.error('Error creating machine:', error);
+        
+        // Log the detailed error for debugging
+        if (error.response) {
+          console.error('Error response data:', error.response.data);
+          console.error('Error response status:', error.response.status);
+        }
+        
         toast({
           title: 'Error',
-          description: 'Failed to create machine. Please try again.',
+          description: error.response?.data?.message || error.message || 'Failed to create machine. Please try again.',
           variant: 'destructive',
         });
       } finally {
@@ -457,7 +474,7 @@ export const AddMachineForm = ({
                     </Label>
                     <div className='flex gap-2'>
                       <Input
-                        placeholder='Enter Issue For'
+                        placeholder='Enter machine type name'
                         value={customTypeName}
                         onChange={(e) => setCustomTypeName(e.target.value)}
                         className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
@@ -492,7 +509,7 @@ export const AddMachineForm = ({
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
                   <div className='space-y-1'>
                     <Label htmlFor='unit' className='text-xs font-medium'>
-                      Unit *
+                      Measure Unit *
                     </Label>
                     <Select
                       value={formData.unitId > 0 ? formData.unitId.toString() : ''}
@@ -501,7 +518,7 @@ export const AddMachineForm = ({
                       }
                     >
                       <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
-                        <SelectValue placeholder='Select Unit' />
+                        <SelectValue placeholder='Select Measure Unit' />
                       </SelectTrigger>
                       <SelectContent>
                         {units.map((unit) => (

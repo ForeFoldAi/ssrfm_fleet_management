@@ -83,11 +83,11 @@ const Login = () => {
       <div className='w-full max-w-md'>
         <Card className='w-full mx-auto'>
           <CardHeader className='text-center'>
-            <div className='w-20 h-20 flex items-center justify-center mx-auto mb-4'>
+            <div className='flex items-center justify-center mx-auto mb-4'>
               <img
                 src='/logo.png'
                 alt='Company Logo'
-                className='w-18 h-18 object-contain'
+                className='h-20 w-auto object-contain'
               />
             </div>
             <CardTitle className='text-2xl font-bold'>

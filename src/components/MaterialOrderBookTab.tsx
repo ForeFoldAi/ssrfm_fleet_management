@@ -79,7 +79,7 @@ import { RequestStatusManager } from '../components/RequestStatusManager';
 import { ResubmitForm } from '../components/ResubmitForm';
 import { useRequestWorkflow } from '../hooks/useRequestWorkflow';
 import { HistoryView } from '../components/HistoryView';
-import { generatePurchaseId, parseLocationFromId } from '../lib/utils';
+import { generatePurchaseId, parseLocationFromId, formatDateToDDMMYYYY } from '../lib/utils';
 import materialIndentsApi, { IndentStatus } from '../lib/api/material-indents';
 import {
   materialPurchasesApi,
@@ -206,15 +206,9 @@ export const MaterialOrderBookTab = () => {
           sortOrder,
         };
 
-        // For company owners, only show pending approval and reverted statuses
-        if (currentUser?.role === 'company_owner') {
-          // Override the status filter for company owners
-          params.status = 'pending_approval,reverted';
-        } else {
-          // Add status filter if not 'all' for other roles
-          if (filterStatus !== 'all') {
-            params.status = filterStatus;
-          }
+        // Add status filter if not 'all' (for all roles including company owner)
+        if (filterStatus !== 'all') {
+          params.status = filterStatus;
         }
 
         // Add branch filter if not 'all'
@@ -773,27 +767,11 @@ export const MaterialOrderBookTab = () => {
 
   // Helper function to format Purchase ID
   const formatPurchaseId = (uniqueId: string, branchCode?: string) => {
-    // Convert to uppercase
+    // Convert to uppercase and keep numeric unit format (UNIT1, UNIT2, etc.)
     let formattedId = uniqueId.toUpperCase();
 
-    // Convert unit numbers to Roman numerals (UNIT1 -> UNIT-I, UNIT2 -> UNIT-II, etc.)
-    formattedId = formattedId.replace(/UNIT(\d+)/g, (match, unitNumber) => {
-      const num = parseInt(unitNumber, 10);
-      const romanNumerals = [
-        '',
-        'I',
-        'II',
-        'III',
-        'IV',
-        'V',
-        'VI',
-        'VII',
-        'VIII',
-        'IX',
-        'X',
-      ];
-      return `UNIT-${romanNumerals[num] || unitNumber}`;
-    });
+    // Remove any hyphens between UNIT and number
+    formattedId = formattedId.replace(/UNIT-(\d+)/g, 'UNIT$1');
 
     return formattedId;
   };
@@ -809,6 +787,11 @@ export const MaterialOrderBookTab = () => {
         ? firstItem.quotations[0]
         : null);
 
+    // Only show price and value for fully_received or partially_received status
+    const shouldShowPrice = 
+      indent.status === IndentStatus.FULLY_RECEIVED || 
+      indent.status === IndentStatus.PARTIALLY_RECEIVED;
+
     return {
       id: formatPurchaseId(indent.uniqueId, indent.branch?.code),
       originalId: indent.id,
@@ -817,18 +800,18 @@ export const MaterialOrderBookTab = () => {
         firstItem?.specifications || firstItem?.material.specifications || '',
       maker: firstItem?.material.makerBrand || 'N/A',
       quantity: firstItem ? `${firstItem.requestedQuantity} units` : '0',
-      unitPrice: firstQuotation ? `₹${firstQuotation.quotationAmount}` : 'N/A',
-      value: firstQuotation
+      unitPrice: shouldShowPrice && firstQuotation ? `₹${firstQuotation.quotationAmount}` : '',
+      value: shouldShowPrice && firstQuotation
         ? `₹${
             Number(firstQuotation.quotationAmount) *
             (firstItem?.requestedQuantity || 0)
           }`
-        : 'N/A',
+        : '',
       priority: 'medium', // Not available in API, using default
       materialPurpose: firstItem?.notes || indent.additionalNotes || '',
       machineId: firstItem?.machine?.id.toString() || 'N/A',
       machineName: firstItem?.machine?.name || 'N/A',
-      date: new Date(indent.requestDate).toLocaleDateString(),
+      date: formatDateToDDMMYYYY(indent.requestDate),
       status: indent.status,
       statusDescription: `${getStatusLabel(indent.status)} - ${
         indent.additionalNotes || ''
@@ -841,7 +824,7 @@ export const MaterialOrderBookTab = () => {
       unitName: indent.branch?.name || '',
       approvedBy: indent.approvedBy?.name,
       approvedDate: indent.approvalDate
-        ? new Date(indent.approvalDate).toLocaleDateString()
+        ? formatDateToDDMMYYYY(indent.approvalDate)
         : undefined,
       additionalNotes: indent.additionalNotes,
       rejectionReason: indent.rejectionReason,
@@ -1094,23 +1077,18 @@ export const MaterialOrderBookTab = () => {
                       </Button>
                     </TableCell>
                     <TableCell>
-                      <div>
-                        <div className='font-medium'>
-                          {request.materialName}
-                        </div>
-                        <div className='text-xs text-muted-foreground'>
-                          {request.maker}
-                        </div>
+                      <div className='font-medium'>
+                        {request.materialName}
                       </div>
                     </TableCell>
                     <TableCell className='text-sm'>
                       {request.quantity}
                     </TableCell>
                     <TableCell className='text-sm font-medium'>
-                      {request.unitPrice || 'N/A'}
+                      {request.unitPrice || '-'}
                     </TableCell>
                     <TableCell className='text-sm font-medium'>
-                      {request.value}
+                      {request.value || '-'}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -1696,19 +1674,14 @@ export const MaterialOrderBookTab = () => {
                     </Button>
                   </TableCell>
                   <TableCell>
-                    <div>
-                      <div className='font-medium'>{request.materialName}</div>
-                      <div className='text-xs text-muted-foreground'>
-                        {request.maker}
-                      </div>
-                    </div>
+                    <div className='font-medium'>{request.materialName}</div>
                   </TableCell>
                   <TableCell className='text-sm'>{request.quantity}</TableCell>
                   <TableCell className='text-sm font-medium'>
-                    {request.unitPrice || 'N/A'}
+                    {request.unitPrice || '-'}
                   </TableCell>
                   <TableCell className='text-sm font-medium'>
-                    {request.value}
+                    {request.value || '-'}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -2005,42 +1978,28 @@ export const MaterialOrderBookTab = () => {
             </Select>
           )}
 
-          {/* Status Filter - Show for company owners with limited options */}
+          {/* Status Filter - Show all statuses for all roles */}
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
               <SelectValue placeholder='All Status' />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value='all'>All Status</SelectItem>
-              {currentUser?.role === 'company_owner' ? (
-                // Company owners only see pending approval and reverted
-                <>
-                  <SelectItem value={IndentStatus.PENDING_APPROVAL}>
-                    Pending Approval
-                  </SelectItem>
-                  <SelectItem value={IndentStatus.REVERTED}>
-                    Reverted
-                  </SelectItem>
-                </>
-              ) : (
-                // Other roles see all statuses
-                <>
-                  <SelectItem value={IndentStatus.DRAFT}>Draft</SelectItem>
-                  <SelectItem value={IndentStatus.PENDING_APPROVAL}>
-                    Pending Approval
-                  </SelectItem>
-                  <SelectItem value={IndentStatus.APPROVED}>Approved</SelectItem>
-                  <SelectItem value={IndentStatus.ORDERED}>Ordered</SelectItem>
-                  <SelectItem value={IndentStatus.PARTIALLY_RECEIVED}>
-                    Partially Received
-                  </SelectItem>
-                  <SelectItem value={IndentStatus.FULLY_RECEIVED}>
-                    Fully Received
-                  </SelectItem>
-                  <SelectItem value={IndentStatus.CLOSED}>Closed</SelectItem>
-                  <SelectItem value={IndentStatus.REJECTED}>Rejected</SelectItem>
-                </>
-              )}
+              <SelectItem value={IndentStatus.DRAFT}>Draft</SelectItem>
+              <SelectItem value={IndentStatus.PENDING_APPROVAL}>
+                Pending Approval
+              </SelectItem>
+              <SelectItem value={IndentStatus.APPROVED}>Approved</SelectItem>
+              <SelectItem value={IndentStatus.REVERTED}>Reverted</SelectItem>
+              <SelectItem value={IndentStatus.ORDERED}>Ordered</SelectItem>
+              <SelectItem value={IndentStatus.PARTIALLY_RECEIVED}>
+                Partially Received
+              </SelectItem>
+              <SelectItem value={IndentStatus.FULLY_RECEIVED}>
+                Fully Received
+              </SelectItem>
+              <SelectItem value={IndentStatus.CLOSED}>Closed</SelectItem>
+              <SelectItem value={IndentStatus.REJECTED}>Rejected</SelectItem>
             </SelectContent>
           </Select>
 
@@ -2307,9 +2266,7 @@ export const MaterialOrderBookTab = () => {
                   </p>
                   <p>
                     <strong>Date:</strong>{' '}
-                    {new Date(
-                      selectedIndentForApproval.requestDate
-                    ).toLocaleDateString()}
+                    {formatDateToDDMMYYYY(selectedIndentForApproval.requestDate)}
                   </p>
                 </div>
 
@@ -2408,9 +2365,7 @@ export const MaterialOrderBookTab = () => {
                   </p>
                   <p>
                     <strong>Date:</strong>{' '}
-                    {new Date(
-                      selectedIndentForApproval.requestDate
-                    ).toLocaleDateString()}
+                    {formatDateToDDMMYYYY(selectedIndentForApproval.requestDate)}
                   </p>
                 </div>
 
@@ -2469,9 +2424,7 @@ export const MaterialOrderBookTab = () => {
                   </p>
                   <p>
                     <strong>Date:</strong>{' '}
-                    {new Date(
-                      selectedIndentForOrder.requestDate
-                    ).toLocaleDateString()}
+                    {formatDateToDDMMYYYY(selectedIndentForOrder.requestDate)}
                   </p>
                 </div>
 
@@ -2541,7 +2494,7 @@ export const MaterialOrderBookTab = () => {
                   </p>
                   <p>
                     <strong>Order Date:</strong>{' '}
-                    {new Date(selectedPurchase.orderDate).toLocaleDateString()}
+                    {formatDateToDDMMYYYY(selectedPurchase.orderDate)}
                   </p>
                   <p>
                     <strong>Total Value:</strong> ₹{selectedPurchase.totalValue}

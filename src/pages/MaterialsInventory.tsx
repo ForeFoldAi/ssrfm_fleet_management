@@ -49,8 +49,8 @@ const MaterialsInventory = () => {
             className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
           >
             <Hourglass className="w-4 h-4" />
-            <span className="hidden xs:inline sm:inline">Outstanding Materials</span>
-            <span className="xs:hidden sm:hidden">Outstanding</span>
+            <span className="hidden xs:inline sm:inline">Stock In Hand</span>
+            <span className="xs:hidden sm:hidden"> Stock In Hand</span>
         </TabsTrigger>
           
           

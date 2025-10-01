@@ -55,12 +55,9 @@ export const AddMaterialForm = ({
   const [units, setUnits] = useState<Unit[]>([]);
 
   // New state for custom inputs
-  const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
   const [showCustomUnitInput, setShowCustomUnitInput] = useState(false);
-  const [customCategoryName, setCustomCategoryName] = useState('');
   const [customUnitName, setCustomUnitName] = useState('');
   const [customUnitDescription, setCustomUnitDescription] = useState('');
-  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [isCreatingUnit, setIsCreatingUnit] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -73,8 +70,8 @@ export const AddMaterialForm = ({
     maker: '',
     supplier: '',
     supplierContact: '',
-    currentStock: '',
-    totalValue: '',
+    currentStock: '0',
+    totalValue: '0',
     minStock: '',
     maxStock: '',
     reorderLevel: '',
@@ -173,51 +170,11 @@ export const AddMaterialForm = ({
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
 
-    // Handle "Other" selection
-    if (field === 'category' && value === 'Other') {
-      setShowCustomCategoryInput(true);
-      setShowCustomUnitInput(false);
-    } else if (field === 'measureUnit' && value === 'other') {
+    // Handle "Other" selection for measure unit
+    if (field === 'measureUnit' && value === 'other') {
       setShowCustomUnitInput(true);
-      setShowCustomCategoryInput(false);
     } else {
-      setShowCustomCategoryInput(false);
       setShowCustomUnitInput(false);
-    }
-  };
-
-  // Function to create new material category
-  const handleCreateCategory = async () => {
-    if (!customCategoryName.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a category name.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsCreatingCategory(true);
-    try {
-      const newCategory = await createMaterialCategory({ name: customCategoryName.trim() });
-      setMaterialCategories(prev => [...prev, newCategory]);
-      setFormData(prev => ({ ...prev, category: newCategory.name }));
-      setShowCustomCategoryInput(false);
-      setCustomCategoryName('');
-      
-      toast({
-        title: 'Success',
-        description: `Category "${newCategory.name}" has been created.`,
-      });
-    } catch (error) {
-      console.error('Error creating category:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create category. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsCreatingCategory(false);
     }
   };
 
@@ -265,10 +222,6 @@ export const AddMaterialForm = ({
 
     // Required field validations
     if (!formData.name.trim()) newErrors.name = 'Material name is required';
-    if (!formData.category) newErrors.category = 'Category is required';
-    if (formData.category === 'Other' && !formData.customCategory.trim()) {
-      newErrors.customCategory = 'Custom category is required';
-    }
     if (!formData.specifications.trim())
       newErrors.specifications = 'Specifications are required';
     if (!formData.measureUnit)
@@ -291,9 +244,6 @@ export const AddMaterialForm = ({
     if (formData.totalValue && isNaN(Number(formData.totalValue))) {
       newErrors.totalValue = 'Total value must be a number';
     }
-    if (formData.totalValue && Number(formData.totalValue) <= 0) {
-      newErrors.totalValue = 'Total value must be greater than 0';
-    }
 
     return newErrors;
   };
@@ -313,16 +263,15 @@ export const AddMaterialForm = ({
 
     try {
       // Prepare API data
-      const categoryId =
-        materialCategories.find((cat) => cat.name === formData.category)?.id ||
-        (formData.category === 'Other' ? 0 : 0);
+      // Use first available category as default, or ID 1 if none available
+      const categoryId = materialCategories.length > 0 ? materialCategories[0].id : 1;
 
       const measureUnitId =
         units.find((unit) => unit.name === formData.measureUnit)?.id ||
         (formData.measureUnit === 'other' ? 0 : 0);
 
       // Log for debugging
-      console.log('Selected category:', formData.category, 'ID:', categoryId);
+      console.log('Using default categoryId:', categoryId);
       console.log('Selected unit:', formData.measureUnit, 'ID:', measureUnitId);
 
       const currentStockNum = Number(formData.currentStock);
@@ -362,8 +311,8 @@ export const AddMaterialForm = ({
         maker: '',
         supplier: '',
         supplierContact: '',
-        currentStock: '',
-        totalValue: '',
+        currentStock: '0',
+        totalValue: '0',
         minStock: '',
         maxStock: '',
         reorderLevel: '',
@@ -375,9 +324,7 @@ export const AddMaterialForm = ({
         notes: '',
       });
       setErrors({});
-      setShowCustomCategoryInput(false);
       setShowCustomUnitInput(false);
-      setCustomCategoryName('');
       setCustomUnitName('');
       setCustomUnitDescription('');
       onClose();
@@ -433,8 +380,8 @@ export const AddMaterialForm = ({
       maker: '',
       supplier: '',
       supplierContact: '',
-      currentStock: '',
-      totalValue: '',
+      currentStock: '0',
+      totalValue: '0',
       minStock: '',
       maxStock: '',
       reorderLevel: '',
@@ -446,9 +393,7 @@ export const AddMaterialForm = ({
       notes: '',
     });
     setErrors({});
-    setShowCustomCategoryInput(false);
     setShowCustomUnitInput(false);
-    setCustomCategoryName('');
     setCustomUnitName('');
     setCustomUnitDescription('');
     onClose();
@@ -492,102 +437,26 @@ export const AddMaterialForm = ({
               </div>
 
               <div className='space-y-1'>
-                <Label htmlFor='category' className='text-sm font-medium'>
-                  Category *
+                <Label htmlFor='maker' className='text-sm font-medium'>
+                  Model/Version
                 </Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) =>
-                    handleSelectChange('category', value)
-                  }
-                >
-                  <SelectTrigger className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
-                    <SelectValue placeholder='Select category' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {materialCategories.length > 0
-                      ? [
-                          ...materialCategories.map((category) => (
-                            <SelectItem key={category.id} value={category.name}>
-                              {category.name}
-                            </SelectItem>
-                          )),
-                          <SelectItem key="other" value="Other">
-                            Other
-                          </SelectItem>
-                        ]
-                      : // Fallback to dummy data if API fails
-                        [
-                          ...categories.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
-                            </SelectItem>
-                          )),
-                          <SelectItem key="other" value="Other">
-                            Other
-                          </SelectItem>
-                        ]}
-                  </SelectContent>
-                </Select>
-                {errors.category && (
+                <Input
+                  id='maker'
+                  placeholder='Enter model or version'
+                  value={formData.maker}
+                  onChange={(e) => handleInputChange('maker', e.target.value)}
+                  className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                />
+                {errors.maker && (
                   <p className='text-destructive text-xs mt-1'>
-                    {errors.category}
+                    {errors.maker}
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Custom Category Input */}
-            {showCustomCategoryInput && (
-              <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2'>
-                <Label className='text-xs font-medium text-blue-800'>
-                  Add New Category
-                </Label>
-                <div className='flex gap-2'>
-                  <Input
-                    placeholder='Enter category name'
-                    value={customCategoryName}
-                    onChange={(e) => setCustomCategoryName(e.target.value)}
-                    className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
-                  />
-                  <Button
-                    type='button'
-                    onClick={handleCreateCategory}
-                    size='sm'
-                    className='h-8 px-3 bg-blue-600 hover:bg-blue-700'
-                    disabled={isCreatingCategory}
-                  >
-                    {isCreatingCategory ? (
-                      <>
-                        <Loader2 className='w-3 h-3 mr-1 animate-spin' />
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className='w-3 h-3 mr-1' />
-                        Add
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    type='button'
-                    onClick={() => {
-                      setShowCustomCategoryInput(false);
-                      setCustomCategoryName('');
-                      setFormData(prev => ({ ...prev, category: '' }));
-                    }}
-                    variant='outline'
-                    size='sm'
-                    className='h-8 px-3'
-                  >
-                    <X className='w-3 h-3' />
-                  </Button>
-                </div>
-              </div>
-            )}
-
             {/* Second Row */}
-            <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
+            <div className='grid grid-cols-1 gap-4'>
               <div className='space-y-1'>
                 <Label htmlFor='measureUnit' className='text-sm font-medium'>
                   Measure Unit *
@@ -629,24 +498,6 @@ export const AddMaterialForm = ({
                 {errors.measureUnit && (
                   <p className='text-destructive text-xs mt-1'>
                     {errors.measureUnit}
-                  </p>
-                )}
-              </div>
-
-              <div className='space-y-1'>
-                <Label htmlFor='maker' className='text-sm font-medium'>
-                  Maker/Brand
-                </Label>
-                <Input
-                  id='maker'
-                  placeholder='Enter maker or brand name'
-                  value={formData.maker}
-                  onChange={(e) => handleInputChange('maker', e.target.value)}
-                  className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-                />
-                {errors.maker && (
-                  <p className='text-destructive text-xs mt-1'>
-                    {errors.maker}
                   </p>
                 )}
               </div>
@@ -759,17 +610,22 @@ export const AddMaterialForm = ({
             {/* Specifications */}
             <div className='space-y-1'>
               <Label htmlFor='specifications' className='text-sm font-medium'>
-                Specifications *
+                Specifications * (Max 30 characters)
               </Label>
               <Textarea
                 id='specifications'
                 placeholder='Enter detailed specifications and technical details'
                 value={formData.specifications}
-                onChange={(e) =>
-                  handleInputChange('specifications', e.target.value)
-                }
+                onChange={(e) => {
+                  const value = e.target.value.slice(0, 30);
+                  handleInputChange('specifications', value);
+                }}
+                maxLength={30}
                 className='min-h-[80px] px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
               />
+              <div className='text-xs text-muted-foreground'>
+                {formData.specifications.length}/30 characters
+              </div>
               {errors.specifications && (
                 <p className='text-destructive text-xs mt-1'>
                   {errors.specifications}

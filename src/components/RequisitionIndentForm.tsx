@@ -58,6 +58,7 @@ interface VendorQuotation {
   vendorName: string;
   contactPerson: string;
   phone: string;
+  price: string;
   quotedPrice: string;
   notes: string;
   quotationFile?: File | null;
@@ -147,7 +148,8 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
     vendorName: '',
     contactPerson: '',
     phone: '',
-    quotedPrice: '',
+    price: '0',
+    quotedPrice: '0',
     notes: '',
     quotationFile: null,
   });
@@ -211,7 +213,8 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
       vendorName: '',
       contactPerson: '',
       phone: '',
-      quotedPrice: '',
+      price: '0',
+      quotedPrice: '0',
       notes: '',
       quotationFile: null,
     });
@@ -248,7 +251,8 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
         vendorName: '',
         contactPerson: '',
         phone: '',
-        quotedPrice: '',
+        price: '0',
+        quotedPrice: '0',
         notes: '',
         quotationFile: null,
       });
@@ -368,31 +372,31 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
             <Table className='border-none'>
               <TableHeader className='border-none'>
                 <TableRow className='bg-gray-50'>
-                  <TableHead className='border border-gray-300 font-semibold'>
+                  <TableHead className='border border-gray-300 font-semibold w-24'>
                     PURCHASE ID
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold'>
+                  <TableHead className='border border-gray-300 font-semibold w-40'>
                     MATERIALS
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold'>
+                  <TableHead className='border border-gray-300 font-semibold w-56'>
                     SPECIFICATIONS
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold'>
+                  <TableHead className='border border-gray-300 font-semibold w-20'>
                     CURRENT STOCK
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold'>
+                  <TableHead className='border border-gray-300 font-semibold w-24'>
                     REQ. QUANTITY
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold'>
+                  <TableHead className='border border-gray-300 font-semibold w-20'>
                     IMAGES
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold'>
-                    VENDOR QUOTATIONS
+                  <TableHead className='border border-gray-300 font-semibold w-40'>
+                    VENDOR QUOTATIONS (Optional)
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold'>
-                    MACHINE NAME
+                  <TableHead className='border border-gray-300 font-semibold w-52'>
+                    MACHINE NAME*
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold'>
+                  <TableHead className='border border-gray-300 font-semibold w-40'>
                     NOTES
                   </TableHead>
                 </TableRow>
@@ -704,7 +708,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                         {/* Show message when no quotations */}
                         {item.vendorQuotations.length === 0 && (
                           <div className='text-xs text-gray-500 italic p-2 bg-gray-50 border border-gray-200 rounded'>
-                            No vendor quotations added
+                            No vendor quotations (Optional)
                           </div>
                         )}
                       </div>
@@ -720,9 +724,11 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                           }
                         >
                           <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none'>
-                            <SelectValue placeholder='Select Machine' />
+                            <SelectValue placeholder='Select Machine *' />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value='Spare'>Spare</SelectItem>
+                            <SelectItem value='Other'>Other</SelectItem>
                             {machines.map((machine) => (
                               <SelectItem key={machine} value={machine}>
                                 {machine}
@@ -832,7 +838,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
               <div className='w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center'>
                 <UserRoundPlus className='w-6 h-6 text-primary' />
               </div>
-              Manage Vendor Quotations
+              Manage Vendor Quotations (Optional)
             </DialogTitle>
           </DialogHeader>
 
@@ -840,7 +846,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
             {/* Current Quotations Table */}
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
-                <h3 className='text-lg font-semibold'>Current Quotations</h3>
+                <h3 className='text-lg font-semibold'>Current Quotations (Optional)</h3>
                 <Badge variant='secondary'>
                   {requestData.items.find((item) => item.id === currentItemId)
                     ?.vendorQuotations.length || 0}
@@ -852,28 +858,31 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                 <Table>
                   <TableHeader>
                     <TableRow className='bg-gray-50'>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-12'>
                         SR.
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-36'>
                         Vendor Name
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-32'>
                         Contact Person
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-28'>
                         Phone
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-24'>
+                        Price
+                      </TableHead>
+                      <TableHead className='border-r font-semibold w-32'>
                         Total Quotation Amount{' '}
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-44'>
                         Notes
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-28'>
                         File
                       </TableHead>
-                      <TableHead className='font-semibold'>Actions</TableHead>
+                      <TableHead className='font-semibold w-16'>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -892,6 +901,9 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                           </TableCell>
                           <TableCell className='border-r'>
                             {quotation.phone}
+                          </TableCell>
+                          <TableCell className='border-r font-medium'>
+                            {quotation.price}
                           </TableCell>
                           <TableCell className='border-r font-medium text-primary'>
                             {quotation.quotedPrice}
@@ -947,7 +959,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
 
             {/* Add New Quotation Form */}
             <div className='space-y-4 border-t pt-6'>
-              <h3 className='text-lg font-semibold'>Add New Quotation</h3>
+              <h3 className='text-lg font-semibold'>Add New Quotation (Optional)</h3>
 
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
                 <div className='space-y-2'>
@@ -992,6 +1004,20 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                       handleVendorFormChange('phone', e.target.value)
                     }
                     placeholder='Enter phone number'
+                    className='h-10 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-md text-sm transition-all duration-200'
+                  />
+                </div>
+                <div className='space-y-2'>
+                  <Label htmlFor='price' className='text-sm font-medium'>
+                    Price*
+                  </Label>
+                  <Input
+                    id='price'
+                    value={vendorFormData.price}
+                    onChange={(e) =>
+                      handleVendorFormChange('price', e.target.value)
+                    }
+                    placeholder='Enter Price'
                     className='h-10 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-md text-sm transition-all duration-200'
                   />
                 </div>

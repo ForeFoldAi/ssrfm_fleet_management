@@ -16,6 +16,7 @@ interface VendorQuotation {
   vendorName: string;
   contactPerson: string;
   phone: string;
+  price: string;
   quotedPrice: string;
   notes: string;
   quotationFile?: File | null;
@@ -54,7 +55,8 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
     vendorName: "",
     contactPerson: "",
     phone: "",
-    quotedPrice: "",
+    price: "0",
+    quotedPrice: "0",
     notes: "",
     quotationFile: null
   });
@@ -200,7 +202,8 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
       vendorName: "",
       contactPerson: "",
       phone: "",
-      quotedPrice: "",
+      price: "0",
+      quotedPrice: "0",
       notes: "",
       quotationFile: null
     });
@@ -617,6 +620,16 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="price" className="text-sm font-medium">Price *</Label>
+                  <Input
+                    id="price"
+                    value={vendorFormData.price}
+                    onChange={(e) => handleVendorFormChange("price", e.target.value)}
+                    placeholder="Enter Price"
+                    className="h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="quotedPrice" className="text-sm font-medium">Total Quotation Amount *</Label>
                   <Input
                     id="quotedPrice"
@@ -633,7 +646,7 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
                 <Input
                   id="quotationFile"
                   type="file"
-                  accept=".pdf,.doc,.docx"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
@@ -700,6 +713,10 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
                           </div>
                           <div>
                             <span className="font-medium text-muted-foreground">Price:</span>
+                            <div className="font-medium">{quotation.price}</div>
+                          </div>
+                          <div>
+                            <span className="font-medium text-muted-foreground">Total Quotation Amount:</span>
                             <div className="font-medium text-primary/80">{quotation.quotedPrice}</div>
                           </div>
                         </div>

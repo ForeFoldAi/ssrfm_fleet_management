@@ -72,6 +72,7 @@ interface VendorQuotation {
   vendorName: string;
   contactPerson: string;
   phone: string;
+  price: string;
   quotedPrice: string;
   notes: string;
   quotationFile?: File | null;
@@ -112,7 +113,8 @@ const MaterialRequest = () => {
     vendorName: '',
     contactPerson: '',
     phone: '',
-    quotedPrice: '',
+    price: '0',
+    quotedPrice: '0',
     notes: '',
     quotationFile: null,
   });
@@ -250,13 +252,13 @@ const MaterialRequest = () => {
             prev.map((item) =>
               item.id === itemId
                 ? {
-                    ...item,
-                    images: [...(item.images || []), ...newFiles],
-                    imagePreviews: [
-                      ...(item.imagePreviews || []),
-                      ...newPreviews,
-                    ],
-                  }
+                  ...item,
+                  images: [...(item.images || []), ...newFiles],
+                  imagePreviews: [
+                    ...(item.imagePreviews || []),
+                    ...newPreviews,
+                  ],
+                }
                 : item
             )
           );
@@ -271,14 +273,14 @@ const MaterialRequest = () => {
       prev.map((item) =>
         item.id === itemId
           ? {
-              ...item,
-              images:
-                item.images?.filter((_, index) => index !== imageIndex) || [],
-              imagePreviews:
-                item.imagePreviews?.filter(
-                  (_, index) => index !== imageIndex
-                ) || [],
-            }
+            ...item,
+            images:
+              item.images?.filter((_, index) => index !== imageIndex) || [],
+            imagePreviews:
+              item.imagePreviews?.filter(
+                (_, index) => index !== imageIndex
+              ) || [],
+          }
           : item
       )
     );
@@ -291,12 +293,12 @@ const MaterialRequest = () => {
         prev.map((item) =>
           item.id === itemId
             ? {
-                ...item,
-                productName: material.name,
-                specifications: material.specifications || '',
-                measureUnit: String(material.measureUnitId ?? ''),
-                oldStock: material.currentStock,
-              }
+              ...item,
+              productName: material.name,
+              specifications: material.specifications || '',
+              measureUnit: String(material.measureUnitId ?? ''),
+              oldStock: material.currentStock,
+            }
             : item
         )
       );
@@ -334,7 +336,8 @@ const MaterialRequest = () => {
       vendorName: '',
       contactPerson: '',
       phone: '',
-      quotedPrice: '',
+      price: '0',
+      quotedPrice: '0',
       notes: '',
       quotationFile: null,
     });
@@ -370,9 +373,9 @@ const MaterialRequest = () => {
         prev.map((item) =>
           item.id === currentItemId
             ? {
-                ...item,
-                vendorQuotations: [...item.vendorQuotations, newQuotation],
-              }
+              ...item,
+              vendorQuotations: [...item.vendorQuotations, newQuotation],
+            }
             : item
         )
       );
@@ -383,7 +386,8 @@ const MaterialRequest = () => {
         vendorName: '',
         contactPerson: '',
         phone: '',
-        quotedPrice: '',
+        price: '0',
+        quotedPrice: '0',
         notes: '',
         quotationFile: null,
       });
@@ -406,11 +410,11 @@ const MaterialRequest = () => {
       prev.map((item) =>
         item.id === itemId
           ? {
-              ...item,
-              vendorQuotations: item.vendorQuotations.filter(
-                (q) => q.id !== quotationId
-              ),
-            }
+            ...item,
+            vendorQuotations: item.vendorQuotations.filter(
+              (q) => q.id !== quotationId
+            ),
+          }
           : item
       )
     );
@@ -424,7 +428,10 @@ const MaterialRequest = () => {
         newErrors[
           `productName_${item.id}`
         ] = `Product name is required for item ${index + 1}`;
-      // Removed machine name validation - now optional
+      if (!item.machineName || !item.machineName.trim())
+        newErrors[
+          `machineName_${item.id}`
+        ] = `Machine name is required for item ${index + 1}`;
       if (!item.reqQuantity.trim())
         newErrors[
           `reqQuantity_${item.id}`
@@ -469,11 +476,13 @@ const MaterialRequest = () => {
             specifications: item.specifications || '',
             requestedQuantity: Number(item.reqQuantity),
             machineId: machine?.id,
+            machineName: machine?.id ? undefined : item.machineName, // Send machineName if no machineId (for Spare/Other)
             itemImageCount: item.images?.length || 0,
             vendorQuotations: (item.vendorQuotations || []).map((v) => ({
               vendorName: v.vendorName,
               contactPerson: v.contactPerson,
               phone: v.phone,
+              price: Number(v.price || 0),
               imageCount: v.quotationFile ? 1 : 0,
               quotationAmount: Number(v.quotedPrice || 0),
               notes: v.notes,
@@ -550,7 +559,7 @@ const MaterialRequest = () => {
       if (successFullResponse.length > 0 && failedItems.length === 0) {
         toast({
           title: 'All Items Submitted Successfully',
-          description: `${successFullResponse.length} item(s) submitted successfully`,
+          description: `${successFullResponse.length} item(s) submitted successfully. Company Owner will be notified for approval.`,
         });
       } else if (successFullResponse.length > 0 && failedItems.length > 0) {
         toast({
@@ -605,34 +614,34 @@ const MaterialRequest = () => {
           <Table className='border-none'>
             <TableHeader className='border-none'>
               <TableRow className='bg-gray-50'>
-                <TableHead className='border border-gray-300 font-semibold'>
+                <TableHead className='border border-gray-300 font-semibold w-12'>
                   SR.NO.
                 </TableHead>
-                <TableHead className='border border-gray-300 font-semibold'>
+                <TableHead className='border border-gray-300 font-semibold w-40'>
                   MATERIALS
                 </TableHead>
-                <TableHead className='border border-gray-300 font-semibold'>
+                <TableHead className='border border-gray-300 font-semibold w-56'>
                   SPECIFICATIONS
                 </TableHead>
-                <TableHead className='border border-gray-300 font-semibold'>
+                <TableHead className='border border-gray-300 font-semibold w-20'>
                   CURRENT STOCK
                 </TableHead>
-                <TableHead className='border border-gray-300 font-semibold'>
+                <TableHead className='border border-gray-300 font-semibold w-24'>
                   REQ. QUANTITY
                 </TableHead>
-                <TableHead className='border border-gray-300 font-semibold'>
+                <TableHead className='border border-gray-300 font-semibold w-20'>
                   IMAGES
                 </TableHead>
-                <TableHead className='border border-gray-300 font-semibold'>
+                <TableHead className='border border-gray-300 font-semibold w-40'>
                   VENDOR QUOTATIONS
                 </TableHead>
-                <TableHead className='border border-gray-300 font-semibold'>
-                  MACHINE NAME
+                <TableHead className='border border-gray-300 font-semibold w-52'>
+                  MACHINE NAME*
                 </TableHead>
-                <TableHead className='border border-gray-300 font-semibold'>
+                <TableHead className='border border-gray-300 font-semibold w-40'>
                   NOTES
                 </TableHead>
-                <TableHead className='border border-gray-300 font-semibold'>
+                <TableHead className='border border-gray-300 font-semibold w-16'>
                   ACTIONS
                 </TableHead>
               </TableRow>
@@ -656,14 +665,7 @@ const MaterialRequest = () => {
                       <SelectContent>
                         {availableMaterials.map((material) => (
                           <SelectItem key={material.name} value={material.name}>
-                            <div className='flex flex-col'>
-                              <div className='font-semibold'>
-                                {material.name}
-                              </div>
-                              <div className='text-sm text-muted-foreground'>
-                                {material.makerBrand || `ID: ${material.id}`}
-                              </div>
-                            </div>
+                            {material.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -675,7 +677,7 @@ const MaterialRequest = () => {
                     )}
                   </TableCell>
                   <TableCell className='border border-gray-300'>
-                    <Input
+                    <Textarea
                       value={item.specifications}
                       onChange={(e) => {
                         const value = e.target.value.slice(0, 30);
@@ -684,7 +686,8 @@ const MaterialRequest = () => {
                       placeholder='Specifications (max 30 chars)'
                       maxLength={30}
                       readOnly
-                      className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none'
+                      className='border-0 p-0 h-auto min-h-[60px] resize-none focus:ring-0 focus:outline-none rounded-none'
+                      rows={2}
                     />
                     <div className='text-xs text-muted-foreground mt-1'>
                       {item.specifications.length}/30 characters
@@ -847,9 +850,11 @@ const MaterialRequest = () => {
                       }
                     >
                       <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none'>
-                        <SelectValue placeholder='Select Machine (Optional)' />
+                        <SelectValue placeholder='Select Machine *' />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value='Spare'>Spare</SelectItem>
+                        <SelectItem value='Other'>Other</SelectItem>
                         {availableMachines.map((machine) => (
                           <SelectItem key={machine.id} value={machine.name}>
                             {machine.name}
@@ -857,7 +862,11 @@ const MaterialRequest = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    {/* Removed error display for machine name since it's now optional */}
+                    {errors[`machineName_${item.id}`] && (
+                      <p className='text-red-500 text-xs mt-1'>
+                        {errors[`machineName_${item.id}`]}
+                      </p>
+                    )}
                   </TableCell>
                   <TableCell className='border border-gray-300'>
                     <Textarea
@@ -912,12 +921,7 @@ const MaterialRequest = () => {
                     <SelectContent>
                       {availableMaterials.map((material) => (
                         <SelectItem key={material.name} value={material.name}>
-                          <div className='flex flex-col'>
-                            <div className='font-semibold'>{material.name}</div>
-                            <div className='text-sm text-muted-foreground'>
-                              {material.makerBrand || `ID: ${material.id}`}
-                            </div>
-                          </div>
+                          {material.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -931,7 +935,7 @@ const MaterialRequest = () => {
 
                 <div className='space-y-2'>
                   <Label className='text-sm font-medium'>
-                    Machine Name (Optional)
+                    Machine Name *
                   </Label>
                   <Select
                     value={item.machineName}
@@ -940,9 +944,11 @@ const MaterialRequest = () => {
                     }
                   >
                     <SelectTrigger className='h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
-                      <SelectValue placeholder='Select Machine (Optional)' />
+                      <SelectValue placeholder='Select Machine *' />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value='Spare'>Spare</SelectItem>
+                      <SelectItem value='Other'>Other</SelectItem>
                       {availableMachines.map((machine) => (
                         <SelectItem key={machine.id} value={machine.name}>
                           {machine.name}
@@ -950,7 +956,11 @@ const MaterialRequest = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {/* Removed error display for machine name since it's now optional */}
+                  {errors[`machineName_${item.id}`] && (
+                    <p className='text-destructive text-sm mt-1'>
+                      {errors[`machineName_${item.id}`]}
+                    </p>
+                  )}
                 </div>
 
                 <div className='space-y-2'>
@@ -1168,11 +1178,10 @@ const MaterialRequest = () => {
               variant={viewMode === 'list' ? 'default' : 'ghost'}
               size='sm'
               onClick={() => setViewMode('list')}
-              className={`rounded-none px-3 sm:px-4 ${
-                viewMode === 'list'
+              className={`rounded-none px-3 sm:px-4 ${viewMode === 'list'
                   ? 'bg-primary text-white hover:bg-primary-hover'
                   : 'text-foreground hover:text-foreground hover:bg-secondary/20'
-              }`}
+                }`}
             >
               <List className='w-4 h-4' />
               <span className='ml-1 sm:ml-2 text-xs sm:text-sm'>List</span>
@@ -1181,11 +1190,10 @@ const MaterialRequest = () => {
               variant={viewMode === 'table' ? 'default' : 'ghost'}
               size='sm'
               onClick={() => setViewMode('table')}
-              className={`rounded-none px-3 sm:px-4 ${
-                viewMode === 'table'
+              className={`rounded-none px-3 sm:px-4 ${viewMode === 'table'
                   ? 'bg-primary text-white hover:bg-primary-hover'
                   : 'text-foreground hover:text-foreground hover:bg-secondary/20'
-              }`}
+                }`}
             >
               <TableIcon className='w-4 h-4' />
               <span className='ml-1 sm:ml-2 text-xs sm:text-sm'>Table</span>
@@ -1249,28 +1257,31 @@ const MaterialRequest = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className='bg-gray-50'>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-12'>
                         SR.
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-36'>
                         Vendor Name
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-32'>
                         Contact Person
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-28'>
                         Phone
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-24'>
+                        Price
+                      </TableHead>
+                      <TableHead className='border-r font-semibold w-32'>
                         Total Quotation Amount
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-44'>
                         Notes
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-28'>
                         File
                       </TableHead>
-                      <TableHead className='font-semibold'>Actions</TableHead>
+                      <TableHead className='font-semibold w-16'>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1289,6 +1300,9 @@ const MaterialRequest = () => {
                           </TableCell>
                           <TableCell className='border-r'>
                             {quotation.phone}
+                          </TableCell>
+                          <TableCell className='border-r font-medium'>
+                            {quotation.price}
                           </TableCell>
                           <TableCell className='border-r font-medium text-primary'>
                             {quotation.quotedPrice}
@@ -1327,15 +1341,15 @@ const MaterialRequest = () => {
                       ))}
                     {!requestItems.find((item) => item.id === currentItemId)
                       ?.vendorQuotations.length && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={8}
-                          className='text-center py-8 text-muted-foreground'
-                        >
-                          No vendor quotations added yet
-                        </TableCell>
-                      </TableRow>
-                    )}
+                        <TableRow>
+                          <TableCell
+                            colSpan={8}
+                            className='text-center py-8 text-muted-foreground'
+                          >
+                            No vendor quotations added yet
+                          </TableCell>
+                        </TableRow>
+                      )}
                   </TableBody>
                 </Table>
               </div>
@@ -1392,6 +1406,20 @@ const MaterialRequest = () => {
                   />
                 </div>
                 <div className='space-y-2'>
+                  <Label htmlFor='price' className='text-sm font-medium'>
+                    Price*
+                  </Label>
+                  <Input
+                    id='price'
+                    value={vendorFormData.price}
+                    onChange={(e) =>
+                      handleVendorFormChange('price', e.target.value)
+                    }
+                    placeholder='Enter Price'
+                    className='h-10 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-md text-sm transition-all duration-200'
+                  />
+                </div>
+                <div className='space-y-2'>
                   <Label htmlFor='quotedPrice' className='text-sm font-medium'>
                     Total Quotation Amount*
                   </Label>
@@ -1405,9 +1433,6 @@ const MaterialRequest = () => {
                     className='h-10 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-md text-sm transition-all duration-200'
                   />
                 </div>
-              </div>
-
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 <div className='space-y-2'>
                   <Label
                     htmlFor='quotationFile'
@@ -1467,18 +1492,20 @@ const MaterialRequest = () => {
                   Add Quotation
                 </Button>
               </div>
+
+              <div className='flex justify-end gap-4 pt-6 border-t'>
+                <Button
+                  variant='outline'
+                  onClick={() => setIsVendorFormOpen(false)}
+                  className='h-10 px-6'
+                >
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
 
-          <div className='flex justify-end gap-4 pt-6 border-t'>
-            <Button
-              variant='outline'
-              onClick={() => setIsVendorFormOpen(false)}
-              className='h-10 px-6'
-            >
-              Close
-            </Button>
-          </div>
+
         </DialogContent>
       </Dialog>
 
@@ -1501,28 +1528,28 @@ const MaterialRequest = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className='bg-gray-50'>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-12'>
                         SR.
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-36'>
                         Vendor Name
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-32'>
                         Contact Person
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-28'>
                         Phone
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-32'>
                         Total Quotation Amount
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-44'>
                         Notes
                       </TableHead>
-                      <TableHead className='border-r font-semibold'>
+                      <TableHead className='border-r font-semibold w-28'>
                         File
                       </TableHead>
-                      <TableHead className='font-semibold'>Actions</TableHead>
+                      <TableHead className='font-semibold w-16'>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

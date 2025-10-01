@@ -10,6 +10,7 @@ interface VendorQuotation {
   vendorName: string;
   contactPerson: string;
   phone: string;
+  price: string;
   quotedPrice: string;
   notes: string;
   quotationFile?: File | null;
@@ -92,10 +93,16 @@ export const VendorQuotationSelector: React.FC<VendorQuotationSelectorProps> = (
                               )}
                             </div>
                             
-                            {/* Price */}
-                            <div className="flex items-center justify-center">
+                            {/* Price Info */}
+                            <div className="flex flex-col items-center justify-center gap-2">
                               <div className="text-center">
-                                <div className="text-sm text-muted-foreground">Total Quotation Amount </div>
+                                <div className="text-xs text-muted-foreground">Price</div>
+                                <div className="text-lg font-semibold">
+                                  {quotation.price}
+                                </div>
+                              </div>
+                              <div className="text-center">
+                                <div className="text-xs text-muted-foreground">Total Quotation Amount</div>
                                 <div className="text-xl font-bold text-primary">
                                   {quotation.quotedPrice}
                                 </div>

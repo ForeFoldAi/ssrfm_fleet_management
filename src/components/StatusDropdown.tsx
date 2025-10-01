@@ -199,19 +199,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
           <DialogHeader>
             <DialogTitle>Confirm Purchase Order</DialogTitle>
           </DialogHeader>
-          <div className='space-y-4'>
-            
-            
-            <div className='space-y-2'>
-              <h4 className='font-medium text-gray-800'>Order Details:</h4>
-              <div className='text-sm text-gray-600 space-y-1'>
-                <div>• Purchase order will be generated automatically</div>
-                <div>• Materials will be marked as ordered</div>
-                <div>• Status will change to "Ordered"</div>
-                <div>• Ready for material receipt tracking</div>
-              </div>
-            </div>
-          </div>
+          
 
           <div className='flex justify-end gap-2 pt-4'>
             <Button variant='outline' onClick={() => setIsOrderConfirmOpen(false)}>

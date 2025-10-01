@@ -53,6 +53,7 @@ interface VendorQuotation {
   vendorName: string;
   contactPerson: string;
   phone: string;
+  price: string;
   quotedPrice: string;
   notes: string;
   quotationFile?: File | null;
@@ -160,27 +161,11 @@ const RequestDetails: React.FC = () => {
 
   // Helper function to format Purchase ID (same as MaterialOrderBookTab)
   const formatPurchaseId = (uniqueId: string, branchCode?: string) => {
-    // Convert to uppercase
+    // Convert to uppercase and keep numeric unit format (UNIT1, UNIT2, etc.)
     let formattedId = uniqueId.toUpperCase();
 
-    // Convert unit numbers to Roman numerals (UNIT1 -> UNIT-I, UNIT2 -> UNIT-II, etc.)
-    formattedId = formattedId.replace(/UNIT(\d+)/g, (match, unitNumber) => {
-      const num = parseInt(unitNumber, 10);
-      const romanNumerals = [
-        '',
-        'I',
-        'II',
-        'III',
-        'IV',
-        'V',
-        'VI',
-        'VII',
-        'VIII',
-        'IX',
-        'X',
-      ];
-      return `UNIT-${romanNumerals[num] || unitNumber}`;
-    });
+    // Remove any hyphens between UNIT and number
+    formattedId = formattedId.replace(/UNIT-(\d+)/g, 'UNIT$1');
 
     return formattedId;
   };
@@ -233,6 +218,7 @@ const RequestDetails: React.FC = () => {
               vendorName: quotation.vendorName,
               contactPerson: quotation.contactPerson,
               phone: quotation.phone,
+              price: quotation.price || '0',
               quotedPrice: `₹${quotation.quotationAmount}`,
               notes: quotation.notes,
               quotationFile: null,

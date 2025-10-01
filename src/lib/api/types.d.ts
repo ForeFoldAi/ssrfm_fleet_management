@@ -213,6 +213,7 @@ export interface VendorQuotation {
   vendorName: string;
   contactPerson: string;
   phone: string;
+  price: string;
   quotationAmount: string;
   filePaths: string[];
   notes: string;
@@ -271,6 +272,7 @@ export interface CreateVendorQuotationInput {
   vendorName: string;
   contactPerson?: string;
   phone?: string;
+  price: number | string;
   imageCount?: number; // number of files appended under quotationFiles for this quotation
   quotationAmount: number | string;
   notes?: string;
@@ -281,6 +283,7 @@ export interface CreateMaterialIndentItemInput {
   specifications?: string;
   requestedQuantity: number;
   machineId?: number;
+  machineName?: string; // For cases like "Spare" or "Other" where machineId doesn't exist
   itemImageCount?: number; // number of files appended under itemFiles for this item
   vendorQuotations?: CreateVendorQuotationInput[];
   notes?: string;

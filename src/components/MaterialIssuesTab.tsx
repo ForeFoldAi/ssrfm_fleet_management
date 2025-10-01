@@ -240,7 +240,7 @@ export const MaterialIssuesTab = () => {
     };
   };
 
-  // Generate formatted Issue ID: SSRMF/UNIT-I/YYMMDDSQ
+  // Generate formatted Issue ID: SSRFM/UNIT1/I-YYMMDD/SQ
   const generateFormattedIssueId = (issue: MaterialIssue): string => {
     const date = new Date(issue.issueDate);
 
@@ -250,18 +250,17 @@ export const MaterialIssuesTab = () => {
     const day = date.getDate().toString().padStart(2, '0');
     const dateStr = `${year}${month}${day}`;
 
-    // Get unit number and convert to Roman numeral
+    // Get unit number (keep as numeric)
     const unitNumber = issue.branch?.id || 1;
-    const unitRoman = convertToRoman(unitNumber);
 
     // Generate sequence number (using issue ID as sequence)
     const sequence = issue.id.toString().padStart(2, '0');
 
-    // Format: SSRMF/UNIT-I/YYMMDDSQ
-    return `SSRMF/UNIT-${unitRoman}/${dateStr}${sequence}`;
+    // Format: SSRFM/UNIT1/I-YYMMDD/SQ
+    return `SSRFM/UNIT${unitNumber}/I-${dateStr}/${sequence}`;
   };
 
-  // Convert number to Roman numeral
+  // Convert number to Roman numeral (kept for backward compatibility if needed)
   const convertToRoman = (num: number): string => {
     const romanNumerals = [
       { value: 10, numeral: 'X' },
@@ -772,7 +771,7 @@ export const MaterialIssuesTab = () => {
                             </div>
                           </TableCell>
                           <TableCell className='text-sm py-3'>
-                            <span className='text-foreground'>
+                            <span className='text-foreground font-bold'>
                             {formatDate(issue.issuedDate)}
                             </span>
                           </TableCell>
@@ -1011,7 +1010,9 @@ export const MaterialIssuesTab = () => {
                               <Badge variant='outline' className='text-xs'>{issue.unitName}</Badge>
                             </TableCell>
                             <TableCell className='text-xs'>
-                              {formatDate(issue.issuedDate)}
+                              <span className='font-bold'>
+                                {formatDate(issue.issuedDate)}
+                              </span>
                             </TableCell>
                             <TableCell className='text-xs'>
                               <div className='font-medium truncate' title={item.machineName}>

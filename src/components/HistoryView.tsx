@@ -111,38 +111,38 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
       </CardHeader>
       <CardContent className='pt-0'>
         {filteredHistoryData.length > 0 ? (
-          <div className='overflow-x-auto w-full'>
+          <div className='overflow-x-auto w-full border border-gray-300 rounded-md'>
             <Table className='min-w-full'>
               <TableHeader>
-                <TableRow className='bg-gray-50'>
-                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
+                <TableRow className='bg-gray-100 border-b border-gray-300'>
+                  <TableHead className='font-semibold text-sm border-r border-gray-300'>
                     Purchased ID
                   </TableHead>
-                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
+                  <TableHead className='font-semibold text-sm border-r border-gray-300'>
                     Purchased Date
                   </TableHead>
-                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
+                  <TableHead className='font-semibold text-sm border-r border-gray-300'>
                     Purchased Price
                   </TableHead>
-                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
+                  <TableHead className='font-semibold text-sm'>
                     Purchased From
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredHistoryData.map((item) => (
-                  <TableRow key={item.id} className='hover:bg-gray-50'>
-                    <TableCell className='font-medium text-sm py-2 !px-0'>{item.id}</TableCell>
-                    <TableCell className='text-sm py-2 !px-0'>
+                  <TableRow key={item.id} className='border-b border-gray-200 hover:bg-gray-50'>
+                    <TableCell className='font-medium text-sm border-r border-gray-300'>{item.id}</TableCell>
+                    <TableCell className='text-sm border-r border-gray-300'>
                       <div className='flex items-center gap-1'>
                         <Calendar className='w-3 h-3 text-muted-foreground' />
                         <span>{formatDateToDDMMYYYY(item.date)}</span>
                       </div>
                     </TableCell>
-                    <TableCell className='font-medium text-sm py-2 !px-0'>
+                    <TableCell className='font-medium text-sm border-r border-gray-300'>
                       ₹{item.purchaseValue}
                     </TableCell>
-                    <TableCell className='text-sm py-2 !px-0'>
+                    <TableCell className='text-sm'>
                       {item.purchasedFrom || 'N/A'}
                     </TableCell>
                   </TableRow>
@@ -175,38 +175,38 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
       </CardHeader>
       <CardContent className='pt-0'>
         {filteredHistoryData.length > 0 ? (
-          <div className='overflow-x-auto w-full'>
+          <div className='overflow-x-auto w-full border border-gray-300 rounded-md'>
             <Table className='min-w-full'>
               <TableHeader>
-                <TableRow className='bg-gray-50'>
-                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
+                <TableRow className='bg-gray-100 border-b border-gray-300'>
+                  <TableHead className='font-semibold text-sm border-r border-gray-300'>
                     Purchased ID
                   </TableHead>
-                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
+                  <TableHead className='font-semibold text-sm border-r border-gray-300'>
                     Purchased Date
                   </TableHead>
-                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
+                  <TableHead className='font-semibold text-sm border-r border-gray-300'>
                     Purchased Price
                   </TableHead>
-                  <TableHead className='font-semibold whitespace-nowrap text-sm py-2 !px-0'>
+                  <TableHead className='font-semibold text-sm'>
                     Purchased From
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredHistoryData.map((item) => (
-                  <TableRow key={item.id} className='hover:bg-gray-50'>
-                    <TableCell className='font-medium text-sm py-2 !px-0'>{item.id}</TableCell>
-                    <TableCell className='text-sm py-2 !px-0'>
+                  <TableRow key={item.id} className='border-b border-gray-200 hover:bg-gray-50'>
+                    <TableCell className='font-medium text-sm border-r border-gray-300'>{item.id}</TableCell>
+                    <TableCell className='text-sm border-r border-gray-300'>
                       <div className='flex items-center gap-1'>
                         <Calendar className='w-3 h-3 text-muted-foreground' />
                         <span>{formatDateToDDMMYYYY(item.date)}</span>
                       </div>
                     </TableCell>
-                    <TableCell className='font-medium text-sm py-2 !px-0'>
+                    <TableCell className='font-medium text-sm border-r border-gray-300'>
                       ₹{item.purchaseValue}
                     </TableCell>
-                    <TableCell className='text-sm py-2 !px-0'>
+                    <TableCell className='text-sm'>
                       {item.purchasedFrom || 'N/A'}
                     </TableCell>
                   </TableRow>

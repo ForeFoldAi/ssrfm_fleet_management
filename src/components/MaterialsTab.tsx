@@ -399,7 +399,7 @@ export const MaterialsTab = () => {
           <div className='relative'>
             <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4' />
             <Input
-              placeholder='Search materials, specifications, make/brand...'
+              placeholder='Search materials, specifications, model/version...'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className='pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64'
@@ -462,23 +462,23 @@ export const MaterialsTab = () => {
                 <TableHeader>
                   <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
                     <TableHead className='w-12'></TableHead>
-                    <TableHead className='min-w-[150px] text-foreground font-semibold'>
+                    <TableHead className='w-48 text-foreground font-semibold'>
                       Material Name
                     </TableHead>
-                    <TableHead className='min-w-[200px] text-foreground font-semibold'>
+                    <TableHead className='w-64 text-foreground font-semibold'>
                       Specifications
                     </TableHead>
-                    <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                    <TableHead className='w-32 text-foreground font-semibold'>
                       Current Stock
                     </TableHead>
-                    <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                      Average Price (₹)
+                    <TableHead className='w-40 text-foreground font-semibold'>
+                      Avg.Purchased Price (₹)
                     </TableHead>
-                    <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                      Stock Status
+                    <TableHead className='w-32 text-foreground font-semibold'>
+                    Stock Indicator
                     </TableHead>
-                    <TableHead className='min-w-[120px] text-foreground font-semibold'>
-                      Make/Brand
+                    <TableHead className='w-36 text-foreground font-semibold'>
+                      Model/Version
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -556,7 +556,7 @@ export const MaterialsTab = () => {
               <TableComponent>
                 <TableHeader>
                   <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
-                    <TableHead className='min-w-[150px] text-foreground font-semibold'>
+                    <TableHead className='w-48 text-foreground font-semibold'>
                       <Button
                         variant='ghost'
                         onClick={() => handleSort('name')}
@@ -566,7 +566,7 @@ export const MaterialsTab = () => {
                         {getSortIcon('name')}
                       </Button>
                     </TableHead>
-                    <TableHead className='min-w-[200px] text-foreground font-semibold'>
+                    <TableHead className='w-64 text-foreground font-semibold'>
                       <Button
                         variant='ghost'
                         onClick={() => handleSort('specifications')}
@@ -576,7 +576,7 @@ export const MaterialsTab = () => {
                         {getSortIcon('specifications')}
                       </Button>
                     </TableHead>
-                    <TableHead className='min-w-[100px] text-foreground font-semibold'>
+                    <TableHead className='w-32 text-foreground font-semibold'>
                       <Button
                         variant='ghost'
                         onClick={() => handleSort('currentStock')}
@@ -586,19 +586,19 @@ export const MaterialsTab = () => {
                         {getSortIcon('currentStock')}
                       </Button>
                     </TableHead>
-                    <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                      Average Price (₹)
+                    <TableHead className='w-40 text-foreground font-semibold'>
+                    Avg.Purchased Price (₹)
                     </TableHead>
-                    <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                      Stock Status
+                    <TableHead className='w-32 text-foreground font-semibold'>
+                    Stock Indicator
                     </TableHead>
-                    <TableHead className='min-w-[120px] text-foreground font-semibold'>
+                    <TableHead className='w-36 text-foreground font-semibold'>
                       <Button
                         variant='ghost'
                         onClick={() => handleSort('makerBrand')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        Make/Brand
+                        Model/Version
                         {getSortIcon('makerBrand')}
                       </Button>
                     </TableHead>
@@ -809,13 +809,7 @@ export const MaterialsTab = () => {
               ? 'Try adjusting your search terms'
               : 'Start by adding your first material'}
           </p>
-          <Button
-            className='btn-primary text-sm sm:text-base'
-            onClick={() => setIsAddMaterialOpen(true)}
-          >
-            <FileText className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
-            Add First Material
-          </Button>
+         
         </Card>
       )}
 

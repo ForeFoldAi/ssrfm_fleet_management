@@ -205,10 +205,37 @@ export const MachinesTab = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, itemsPerPage, searchQuery, filterUnit]);
 
-  const handleAddMachine = (machineData: Machine) => {
-    // After successfully adding a machine, refresh the data
-    fetchMachines();
+  // Update the handleAddMachine function to be async and add refresh to other operations
+  const handleAddMachine = async (machineData: Machine) => {
+    // After successfully adding/updating a machine, refresh the data
+    await fetchMachines();
     setIsEditMode(false); // Reset edit mode
+  };
+
+  // Add function to handle machine updates
+  const handleUpdateMachine = async (machineData: Machine) => {
+    // After successfully updating a machine, refresh the data
+    await fetchMachines();
+    setIsEditMode(false);
+  };
+
+  // Add function to handle machine deletion (if needed)
+  const handleDeleteMachine = async (machineId: number) => {
+    try {
+      await machinesApi.delete(machineId);
+      await fetchMachines(); // Refresh the data
+      toast({
+        title: 'Success',
+        description: 'Machine deleted successfully.',
+      });
+    } catch (error) {
+      console.error('Error deleting machine:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete machine. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Add function to handle edit
@@ -504,13 +531,7 @@ export const MachinesTab = () => {
               ? 'Try adjusting your search terms'
               : 'Start by adding your first machine'}
           </p>
-          <Button
-            className='btn-primary text-sm sm:text-base'
-            onClick={() => setIsAddMachineOpen(true)}
-          >
-            <FileText className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
-            {searchQuery ? 'Clear Search and Try Again' : 'Add First Machine'}
-          </Button>
+          
         </Card>
       )}
 
@@ -738,7 +759,7 @@ export const MachinesTab = () => {
           setIsEditMode(false);
           setSelectedMachine(null);
         }}
-        onSubmit={handleAddMachine}
+        onSubmit={isEditMode ? handleUpdateMachine : handleAddMachine}
         editingData={isEditMode ? selectedMachine : null}
       />
     </div>
