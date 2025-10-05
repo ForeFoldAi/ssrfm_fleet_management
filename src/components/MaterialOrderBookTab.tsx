@@ -82,7 +82,11 @@ import { RequestStatusManager } from '../components/RequestStatusManager';
 import { RequisitionIndentForm } from '../components/RequisitionIndentForm';
 import { useRequestWorkflow } from '../hooks/useRequestWorkflow';
 import { HistoryView } from '../components/HistoryView';
-import { generatePurchaseId, parseLocationFromId, formatDateToDDMMYYYY } from '../lib/utils';
+import {
+  generatePurchaseId,
+  parseLocationFromId,
+  formatDateToDDMMYYYY,
+} from '../lib/utils';
 import materialIndentsApi, { IndentStatus } from '../lib/api/material-indents';
 import materialsApi from '../lib/api/materials';
 import machinesApi from '../lib/api/machines';
@@ -124,12 +128,14 @@ export const MaterialOrderBookTab = () => {
   const [selectedRequestForResubmit, setSelectedRequestForResubmit] =
     useState<MaterialIndent | null>(null);
   const [isResubmitFormOpen, setIsResubmitFormOpen] = useState(false);
-  
+
   // State for RequisitionIndentForm
   const [resubmitFormData, setResubmitFormData] = useState<any>(null);
   const [availableMaterials, setAvailableMaterials] = useState<any[]>([]);
   const [availableMachines, setAvailableMachines] = useState<string[]>([]);
-  const [availableMachinesData, setAvailableMachinesData] = useState<Machine[]>([]);
+  const [availableMachinesData, setAvailableMachinesData] = useState<Machine[]>(
+    []
+  );
   const [isLoadingResubmitForm, setIsLoadingResubmitForm] = useState(false);
 
   // Debug effect to monitor state changes
@@ -139,9 +145,15 @@ export const MaterialOrderBookTab = () => {
       selectedRequestForResubmit: selectedRequestForResubmit?.id,
       resubmitFormData: resubmitFormData?.id,
       availableMaterials: availableMaterials.length,
-      availableMachines: availableMachines.length
+      availableMachines: availableMachines.length,
     });
-  }, [isResubmitFormOpen, selectedRequestForResubmit, resubmitFormData, availableMaterials, availableMachines]);
+  }, [
+    isResubmitFormOpen,
+    selectedRequestForResubmit,
+    resubmitFormData,
+    availableMaterials,
+    availableMachines,
+  ]);
 
   // New state for approval/rejection workflow
   const [selectedIndentForApproval, setSelectedIndentForApproval] =
@@ -261,7 +273,12 @@ export const MaterialOrderBookTab = () => {
 
         // Debug logging
         console.log('API call params:', params);
-        console.log('Current filters - Status:', filterStatus, 'Unit:', filterUnit);
+        console.log(
+          'Current filters - Status:',
+          filterStatus,
+          'Unit:',
+          filterUnit
+        );
 
         const response = await materialIndentsApi.getAll(params);
 
@@ -305,14 +322,14 @@ export const MaterialOrderBookTab = () => {
   const handleSort = (column: string) => {
     // Map UI column names to API field names
     const columnToFieldMap: { [key: string]: string } = {
-      'uniqueId': 'uniqueId',
-      'materialName': 'items.material.name',
-      'quantity': 'items.requestedQuantity',
-      'unitPrice': 'items.selectedQuotation.quotationAmount',
-      'value': 'items.selectedQuotation.quotationAmount',
-      'status': 'status',
-      'requestDate': 'requestDate',
-      'machineName': 'items.machine.name'
+      uniqueId: 'uniqueId',
+      materialName: 'items.material.name',
+      quantity: 'items.requestedQuantity',
+      unitPrice: 'items.selectedQuotation.quotationAmount',
+      value: 'items.selectedQuotation.quotationAmount',
+      status: 'status',
+      requestDate: 'requestDate',
+      machineName: 'items.machine.name',
     };
 
     const apiField = columnToFieldMap[column] || column;
@@ -330,14 +347,14 @@ export const MaterialOrderBookTab = () => {
   // Get sort icon for column
   const getSortIcon = (column: string) => {
     const columnToFieldMap: { [key: string]: string } = {
-      'uniqueId': 'uniqueId',
-      'materialName': 'items.material.name',
-      'quantity': 'items.requestedQuantity',
-      'unitPrice': 'items.selectedQuotation.quotationAmount',
-      'value': 'items.selectedQuotation.quotationAmount',
-      'status': 'status',
-      'requestDate': 'requestDate',
-      'machineName': 'items.machine.name'
+      uniqueId: 'uniqueId',
+      materialName: 'items.material.name',
+      quantity: 'items.requestedQuantity',
+      unitPrice: 'items.selectedQuotation.quotationAmount',
+      value: 'items.selectedQuotation.quotationAmount',
+      status: 'status',
+      requestDate: 'requestDate',
+      machineName: 'items.machine.name',
     };
 
     const apiField = columnToFieldMap[column] || column;
@@ -392,8 +409,6 @@ export const MaterialOrderBookTab = () => {
     [key: string]: unknown; // For other properties
   }
 
-
-
   // Fetch material indents when filters change
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -410,11 +425,10 @@ export const MaterialOrderBookTab = () => {
     fetchMaterialIndents,
   ]);
 
-
   // Reset to first page when filters change
   useEffect(() => {
     if (pagination.page !== 1) {
-      setPagination(prev => ({ ...prev, page: 1 }));
+      setPagination((prev) => ({ ...prev, page: 1 }));
     }
   }, [filterStatus, filterUnit, searchTerm]);
 
@@ -607,25 +621,27 @@ export const MaterialOrderBookTab = () => {
   const openResubmitForm = async (request: MaterialIndent | LegacyRequest) => {
     console.log('Opening resubmit form with request:', request);
     setIsLoadingResubmitForm(true);
-    
+
     try {
       setSelectedRequestForResubmit(request as MaterialIndent);
-      
+
       // Transform MaterialIndent data to RequisitionIndentForm format
-      const transformedData = transformIndentToFormData(request as MaterialIndent);
+      const transformedData = transformIndentToFormData(
+        request as MaterialIndent
+      );
       console.log('Transformed data:', transformedData);
       setResubmitFormData(transformedData);
-      
+
       // Fetch materials and machines data
       await fetchFormData();
-      
+
       setIsResubmitFormOpen(true);
     } catch (error) {
       console.error('Error opening resubmit form:', error);
       toast({
         title: 'Error',
         description: 'Failed to open resubmit form. Please try again.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsLoadingResubmitForm(false);
@@ -648,7 +664,7 @@ export const MaterialOrderBookTab = () => {
         images: [],
         imagePreviews: item.imagePaths || [],
         notes: item.notes || '',
-        vendorQuotations: (item.quotations || []).map(quotation => ({
+        vendorQuotations: (item.quotations || []).map((quotation) => ({
           id: quotation.id.toString(),
           vendorName: quotation.vendorName || '',
           contactPerson: quotation.contactPerson || '',
@@ -658,9 +674,9 @@ export const MaterialOrderBookTab = () => {
           notes: quotation.notes || '',
           quotationFile: null,
           isSelected: quotation.isSelected || false,
-          filePaths: quotation.filePaths || []
+          filePaths: quotation.filePaths || [],
         })),
-        purposeType: 'machine' // Default to machine, can be enhanced later
+        purposeType: 'machine', // Default to machine, can be enhanced later
       })),
       requestedBy: indent.requestedBy?.name || '',
       location: indent.branch?.location || '',
@@ -668,8 +684,8 @@ export const MaterialOrderBookTab = () => {
       status: indent.status || '',
       apiData: {
         partialReceiptHistory: indent.partialReceiptHistory || [],
-        totalReceivedQuantity: indent.totalReceivedQuantity || 0
-      }
+        totalReceivedQuantity: indent.totalReceivedQuantity || 0,
+      },
     };
   };
 
@@ -680,7 +696,7 @@ export const MaterialOrderBookTab = () => {
       const materialsResponse = await materialsApi.getMaterials({
         limit: 100,
         sortBy: 'name',
-        sortOrder: 'ASC'
+        sortOrder: 'ASC',
       });
       setAvailableMaterials(materialsResponse.data);
 
@@ -688,34 +704,40 @@ export const MaterialOrderBookTab = () => {
       const machinesResponse = await machinesApi.getAll({
         limit: 100,
         sortBy: 'name',
-        sortOrder: 'ASC'
+        sortOrder: 'ASC',
       });
       setAvailableMachinesData(machinesResponse.data);
-      setAvailableMachines(machinesResponse.data.map(machine => machine.name));
+      setAvailableMachines(
+        machinesResponse.data.map((machine) => machine.name)
+      );
     } catch (error) {
       console.error('Error fetching form data:', error);
       toast({
         title: 'Error',
         description: 'Failed to load form data',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     }
   };
 
-  const handleStatusUpdate = async (requestId: string, newStatus: string, updateData?: any) => {
+  const handleStatusUpdate = async (
+    requestId: string,
+    newStatus: string,
+    updateData?: any
+  ) => {
     try {
       // Find the request to get the numeric ID
-      const request = allRequests.find(req => req.id === requestId);
+      const request = allRequests.find((req) => req.id === requestId);
       if (!request) {
         throw new Error('Request not found');
       }
-      
+
       // Use the numeric ID for API calls
       const numericId = request.originalId || parseInt(requestId);
       if (isNaN(numericId)) {
         throw new Error('Invalid request ID');
       }
-      
+
       // Use specific API endpoints for different status updates
       if (newStatus === 'reverted' && updateData?.revertReason) {
         // Use the dedicated revert API endpoint
@@ -732,7 +754,7 @@ export const MaterialOrderBookTab = () => {
       } else {
         // For other status updates, use the generic update endpoint
         const updatePayload: any = { status: newStatus };
-        
+
         // Add additional data if provided
         if (updateData) {
           // Handle order-specific data
@@ -740,9 +762,13 @@ export const MaterialOrderBookTab = () => {
             updatePayload.orderedBy = updateData.orderedBy;
             updatePayload.orderedDate = updateData.orderedDate;
           }
-          
+
           // Handle receipt-specific data
-          if ((newStatus === 'partially_received' || newStatus === 'material_received') && updateData.receivedBy) {
+          if (
+            (newStatus === 'partially_received' ||
+              newStatus === 'material_received') &&
+            updateData.receivedBy
+          ) {
             updatePayload.receivedBy = updateData.receivedBy;
             updatePayload.receivedDate = updateData.receivedDate;
             updatePayload.purchasedPrice = updateData.purchasedPrice;
@@ -752,16 +778,17 @@ export const MaterialOrderBookTab = () => {
             updatePayload.qualityCheck = updateData.qualityCheck;
             updatePayload.notes = updateData.notes;
             updatePayload.partialReceipts = updateData.partialReceipts;
-            updatePayload.totalReceivedQuantity = updateData.totalReceivedQuantity;
+            updatePayload.totalReceivedQuantity =
+              updateData.totalReceivedQuantity;
           }
         }
-        
+
         await materialIndentsApi.update(numericId, updatePayload);
       }
-      
+
       // Refresh the data from API
       await fetchMaterialIndents(pagination.page, pagination.limit);
-      
+
       toast({
         title: 'Success',
         description: 'Request status updated successfully.',
@@ -776,12 +803,18 @@ export const MaterialOrderBookTab = () => {
     }
   };
 
-  const handleResubmitRequest = async (requestData: Record<string, unknown>) => {
+  const handleResubmitRequest = async (
+    requestData: Record<string, unknown>
+  ) => {
     try {
       console.log('Starting resubmit request with data:', requestData);
-      
+
       // Validate required fields
-      if (!requestData.items || !Array.isArray(requestData.items) || requestData.items.length === 0) {
+      if (
+        !requestData.items ||
+        !Array.isArray(requestData.items) ||
+        requestData.items.length === 0
+      ) {
         throw new Error('No items found in the request data');
       }
 
@@ -794,69 +827,76 @@ export const MaterialOrderBookTab = () => {
           throw new Error('Valid requested quantity is required for all items');
         }
       }
-      
+
       // Check if we have a selected request to resubmit
       if (!selectedRequestForResubmit) {
         throw new Error('No request selected for resubmission');
       }
-      
+
       // Transform the form data back to API format
       const apiData = transformFormDataToApiFormat(requestData);
-      
+
       console.log('Calling API with transformed data:', apiData);
-      console.log('Creating new indent from original ID:', selectedRequestForResubmit.id);
-      
+      console.log(
+        'Creating new indent from original ID:',
+        selectedRequestForResubmit.id
+      );
+
       // Create a new indent for resubmission (since reverted indents cannot be updated)
-      const response = await materialIndentsApi.create({
-        ...apiData,
-        uniqueId: selectedRequestForResubmit.uniqueId, // Preserve the original uniqueId
-        status: 'pending_approval', // Set status to pending approval
-        // Add reference to original indent in additional notes
-        additionalNotes: `${apiData.additionalNotes}\n\nResubmitted from original indent ID: ${selectedRequestForResubmit.id}`,
-      });
+      const response = await materialIndentsApi.reSubmit(
+        selectedRequestForResubmit?.id,
+        {
+          ...apiData,
+          uniqueId: selectedRequestForResubmit.uniqueId, // Preserve the original uniqueId
+          status: 'pending_approval', // Set status to pending approval
+          // Add reference to original indent in additional notes
+          additionalNotes: `${apiData.additionalNotes}\n\nResubmitted from original indent ID: ${selectedRequestForResubmit.id}`,
+        }
+      );
       console.log('API response:', response);
-      
+
       // Close the dialog
       setIsResubmitFormOpen(false);
       setSelectedRequestForResubmit(null);
       setResubmitFormData(null);
-      
+
       // Refresh the data from API
       await fetchMaterialIndents(pagination.page, pagination.limit);
-      
+
       toast({
         title: 'Success',
         description: 'Request resubmitted successfully.',
       });
     } catch (error) {
       console.error('Failed to resubmit request:', error);
-      
+
       // Extract more detailed error information
       let errorMessage = 'Failed to resubmit request. Please try again.';
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
+
       // Check for Axios error response
       const axiosError = error as {
-        response?: { 
-          data?: { 
+        response?: {
+          data?: {
             message?: string;
             error?: string;
           };
           status?: number;
         };
       };
-      
+
       if (axiosError.response?.status === 500) {
-        errorMessage = 'Server error occurred. Please check the console for details.';
+        errorMessage =
+          'Server error occurred. Please check the console for details.';
       } else if (axiosError.response?.data?.message) {
         errorMessage = axiosError.response.data.message;
       } else if (axiosError.response?.data?.error) {
         errorMessage = axiosError.response.data.error;
       }
-      
+
       toast({
         title: 'Error',
         description: errorMessage,
@@ -868,14 +908,20 @@ export const MaterialOrderBookTab = () => {
   // Transform form data back to API format
   const transformFormDataToApiFormat = (formData: any) => {
     console.log('Transforming form data to API format:', formData);
-    
+
     const apiData = {
-      additionalNotes: `Resubmitted after addressing revert reason: ${selectedRequestForResubmit?.rejectionReason || 'N/A'}`,
+      additionalNotes: `Resubmitted after addressing revert reason: ${
+        selectedRequestForResubmit?.rejectionReason || 'N/A'
+      }`,
       items: formData.items.map((item: any) => {
-        const material = availableMaterials.find(m => m.name === item.productName);
+        const material = availableMaterials.find(
+          (m) => m.name === item.productName
+        );
         if (!material) {
           console.error('Material not found for:', item.productName);
-          throw new Error(`Material "${item.productName}" not found in available materials`);
+          throw new Error(
+            `Material "${item.productName}" not found in available materials`
+          );
         }
 
         // Map purpose type to enum values
@@ -897,13 +943,20 @@ export const MaterialOrderBookTab = () => {
         // Handle machine ID properly
         if (item.purposeType === 'machine' && item.machineName) {
           // Find the machine ID from the available machines data
-          const machine = availableMachinesData.find(m => m.name === item.machineName);
-          
+          const machine = availableMachinesData.find(
+            (m) => m.name === item.machineName
+          );
+
           if (machine) {
             itemData.machineId = machine.id;
-            console.log(`Found machine ID ${machine.id} for machine: ${item.machineName}`);
+            console.log(
+              `Found machine ID ${machine.id} for machine: ${item.machineName}`
+            );
           } else {
-            console.warn('Machine not found in available machines:', item.machineName);
+            console.warn(
+              'Machine not found in available machines:',
+              item.machineName
+            );
             // Don't include machineId if not found
           }
         } else if (item.purposeType !== 'machine') {
@@ -912,18 +965,20 @@ export const MaterialOrderBookTab = () => {
 
         // Handle vendor quotations
         if (item.vendorQuotations && item.vendorQuotations.length > 0) {
-          itemData.vendorQuotations = item.vendorQuotations.map((quotation: any) => ({
-            vendorName: quotation.vendorName,
-            contactPerson: quotation.contactPerson || '',
-            phone: quotation.phone || '',
-            price: Number(quotation.price) || 0,
-            quotationAmount: Number(quotation.quotedPrice) || 0,
-            notes: quotation.notes || ''
-          }));
+          itemData.vendorQuotations = item.vendorQuotations.map(
+            (quotation: any) => ({
+              vendorName: quotation.vendorName,
+              contactPerson: quotation.contactPerson || '',
+              phone: quotation.phone || '',
+              price: Number(quotation.price) || 0,
+              quotationAmount: Number(quotation.quotedPrice) || 0,
+              notes: quotation.notes || '',
+            })
+          );
         }
 
         return itemData;
-      })
+      }),
     };
 
     console.log('Transformed API data:', apiData);
@@ -933,11 +988,11 @@ export const MaterialOrderBookTab = () => {
   // Handle item changes in the form
   const handleItemChange = (itemId: string, field: string, value: string) => {
     if (resubmitFormData) {
-      setResubmitFormData(prev => ({
+      setResubmitFormData((prev) => ({
         ...prev,
-        items: prev.items.map((item: any) => 
+        items: prev.items.map((item: any) =>
           item.id === itemId ? { ...item, [field]: value } : item
-        )
+        ),
       }));
     }
   };
@@ -945,11 +1000,11 @@ export const MaterialOrderBookTab = () => {
   // Handle vendor quotation changes
   const handleVendorQuotationChange = (itemId: string, quotations: any[]) => {
     if (resubmitFormData) {
-      setResubmitFormData(prev => ({
+      setResubmitFormData((prev) => ({
         ...prev,
-        items: prev.items.map((item: any) => 
+        items: prev.items.map((item: any) =>
           item.id === itemId ? { ...item, vendorQuotations: quotations } : item
-        )
+        ),
       }));
     }
   };
@@ -976,10 +1031,12 @@ export const MaterialOrderBookTab = () => {
         indentId: selectedIndentForApproval.id,
         approvalData,
         selectedIndent: selectedIndentForApproval,
-        selectedItem: selectedIndentForApproval.items.find(item => item.id === selectedItemId),
+        selectedItem: selectedIndentForApproval.items.find(
+          (item) => item.id === selectedItemId
+        ),
         selectedQuotation: selectedIndentForApproval.items
-          .find(item => item.id === selectedItemId)
-          ?.quotations.find(q => q.id === selectedQuotationId)
+          .find((item) => item.id === selectedItemId)
+          ?.quotations.find((q) => q.id === selectedQuotationId),
       });
 
       await materialIndentsApi.approve(
@@ -999,33 +1056,34 @@ export const MaterialOrderBookTab = () => {
       fetchMaterialIndents(pagination.page, pagination.limit);
     } catch (error) {
       console.error('Error approving indent:', error);
-      
+
       // Extract more detailed error information
       let errorMessage = 'Failed to approve material indent. Please try again.';
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
+
       // Check for Axios error response
       const axiosError = error as {
-        response?: { 
-          data?: { 
+        response?: {
+          data?: {
             message?: string;
             error?: string;
           };
           status?: number;
         };
       };
-      
+
       if (axiosError.response?.status === 502) {
-        errorMessage = 'Server error occurred (502). Please check the console for details.';
+        errorMessage =
+          'Server error occurred (502). Please check the console for details.';
       } else if (axiosError.response?.data?.message) {
         errorMessage = axiosError.response.data.message;
       } else if (axiosError.response?.data?.error) {
         errorMessage = axiosError.response.data.error;
       }
-      
+
       toast({
         title: 'Error',
         description: errorMessage,
@@ -1046,15 +1104,12 @@ export const MaterialOrderBookTab = () => {
     }
 
     try {
-      await materialIndentsApi.reject(
-        selectedIndentForApproval.id,
-        {
-          status: 'reverted',
-          rejectionReason: rejectionReason,
-          itemId: 0,
-          quotationId: 0,
-        }
-      );
+      await materialIndentsApi.reject(selectedIndentForApproval.id, {
+        status: 'reverted',
+        rejectionReason: rejectionReason,
+        itemId: 0,
+        quotationId: 0,
+      });
 
       toast({
         title: 'Success',
@@ -1220,8 +1275,8 @@ export const MaterialOrderBookTab = () => {
         : null);
 
     // Only show price and value for fully_received or partially_received status
-    const shouldShowPrice = 
-      indent.status === IndentStatus.FULLY_RECEIVED || 
+    const shouldShowPrice =
+      indent.status === IndentStatus.FULLY_RECEIVED ||
       indent.status === IndentStatus.PARTIALLY_RECEIVED;
 
     return {
@@ -1231,14 +1286,24 @@ export const MaterialOrderBookTab = () => {
       specifications:
         firstItem?.specifications || firstItem?.material.specifications || '',
       maker: firstItem?.material.makerBrand || 'N/A',
-      quantity: firstItem ? `${firstItem.requestedQuantity} ${firstItem.material.measureUnit?.name || firstItem.material.unit || 'units'}` : '0',
-      unitPrice: shouldShowPrice && firstQuotation ? `₹${firstQuotation.quotationAmount}` : '',
-      value: shouldShowPrice && firstQuotation
-        ? `₹${
-            Number(firstQuotation.quotationAmount) *
-            (firstItem?.requestedQuantity || 0)
+      quantity: firstItem
+        ? `${firstItem.requestedQuantity} ${
+            firstItem.material.measureUnit?.name ||
+            firstItem.material.unit ||
+            'units'
           }`
-        : '',
+        : '0',
+      unitPrice:
+        shouldShowPrice && firstQuotation
+          ? `₹${firstQuotation.quotationAmount}`
+          : '',
+      value:
+        shouldShowPrice && firstQuotation
+          ? `₹${
+              Number(firstQuotation.quotationAmount) *
+              (firstItem?.requestedQuantity || 0)
+            }`
+          : '',
       priority: 'medium', // Not available in API, using default
       materialPurpose: firstItem?.notes || indent.additionalNotes || '',
       machineId: firstItem?.machine?.id.toString() || 'N/A',
@@ -1321,28 +1386,34 @@ export const MaterialOrderBookTab = () => {
 
   // Navigation handler for request details
   const handleRequestClick = (requestId: string, requestStatus?: string) => {
-    console.log('handleRequestClick called with:', { requestId, requestStatus });
-    
+    console.log('handleRequestClick called with:', {
+      requestId,
+      requestStatus,
+    });
+
     // If status is reverted and user is supervisor, open resubmit form
-    if (requestStatus === 'reverted' && hasPermission('inventory:material-indents:update')) {
+    if (
+      requestStatus === 'reverted' &&
+      hasPermission('inventory:material-indents:update')
+    ) {
       console.log('Status is reverted, looking for original indent...');
-      
+
       // Find the original MaterialIndent from the API data, not the transformed UI data
-      const originalIndent = materialIndents.find(indent => {
+      const originalIndent = materialIndents.find((indent) => {
         const indentIdStr = indent.id.toString();
         const requestIdStr = requestId.toString();
-        
+
         return indentIdStr === requestIdStr;
       });
-      
+
       console.log('Found original indent:', originalIndent);
-      
+
       if (originalIndent) {
         openResubmitForm(originalIndent);
         return;
       }
     }
-    
+
     // Default behavior - navigate to request details
     const encodedRequestId = encodeURIComponent(requestId);
     navigate(`/request-details/${encodedRequestId}`);
@@ -1523,27 +1594,32 @@ export const MaterialOrderBookTab = () => {
                       </Button>
                     </TableCell>
                     <TableCell className='font-medium'>
-                    <Button
-                      variant='link'
-                      className={`p-0 h-auto font-medium hover:underline ${
-                        request.status === 'reverted' && hasPermission('inventory:material-indents:update')
-                          ? 'text-orange-600 hover:text-orange-700'
-                          : 'text-primary'
-                      }`}
-                      onClick={() => handleRequestClick(request.originalId || request.id, request.status)}
-                      title={
-                        request.status === 'reverted' && hasPermission('inventory:material-indents:update')
-                          ? 'Click to edit and resubmit form'
-                          : 'Click to view details'
-                      }
-                    >
-                      {request.id}
-                    </Button>
+                      <Button
+                        variant='link'
+                        className={`p-0 h-auto font-medium hover:underline ${
+                          request.status === 'reverted' &&
+                          hasPermission('inventory:material-indents:update')
+                            ? 'text-orange-600 hover:text-orange-700'
+                            : 'text-primary'
+                        }`}
+                        onClick={() =>
+                          handleRequestClick(
+                            request.originalId || request.id,
+                            request.status
+                          )
+                        }
+                        title={
+                          request.status === 'reverted' &&
+                          hasPermission('inventory:material-indents:update')
+                            ? 'Click to edit and resubmit form'
+                            : 'Click to view details'
+                        }
+                      >
+                        {request.id}
+                      </Button>
                     </TableCell>
                     <TableCell>
-                      <div className='font-medium'>
-                        {request.materialName}
-                      </div>
+                      <div className='font-medium'>{request.materialName}</div>
                     </TableCell>
                     <TableCell className='text-sm'>
                       {request.quantity}
@@ -1571,8 +1647,6 @@ export const MaterialOrderBookTab = () => {
                       {request.machineName}
                     </TableCell>
                   </TableRow>
-
-                
                 </>
               ))}
             </TableBody>
@@ -1674,13 +1748,20 @@ export const MaterialOrderBookTab = () => {
                     <Button
                       variant='link'
                       className={`p-0 h-auto font-medium hover:underline ${
-                        request.status === 'reverted' && hasPermission('inventory:material-indents:update')
+                        request.status === 'reverted' &&
+                        hasPermission('inventory:material-indents:update')
                           ? 'text-orange-600 hover:text-orange-700'
                           : 'text-primary'
                       }`}
-                      onClick={() => handleRequestClick(request.originalId || request.id, request.status)}
+                      onClick={() =>
+                        handleRequestClick(
+                          request.originalId || request.id,
+                          request.status
+                        )
+                      }
                       title={
-                        request.status === 'reverted' && hasPermission('inventory:material-indents:update')
+                        request.status === 'reverted' &&
+                        hasPermission('inventory:material-indents:update')
                           ? 'Click to edit and resubmit form'
                           : 'Click to view details'
                       }
@@ -1752,17 +1833,20 @@ export const MaterialOrderBookTab = () => {
         <Button
           variant='outline'
           className={`gap-2 rounded-lg ${
-            request.status === 'reverted' && hasPermission('inventory:material-indents:update')
+            request.status === 'reverted' &&
+            hasPermission('inventory:material-indents:update')
               ? 'border-orange-600 text-orange-600 hover:bg-orange-50'
               : ''
           }`}
-          onClick={() => handleRequestClick(request.originalId || request.id, request.status)}
+          onClick={() =>
+            handleRequestClick(request.originalId || request.id, request.status)
+          }
         >
           <Eye className='w-4 h-4' />
-          {request.status === 'reverted' && hasPermission('inventory:material-indents:update')
+          {request.status === 'reverted' &&
+          hasPermission('inventory:material-indents:update')
             ? 'Edit & Resubmit Form'
-            : 'View Full Details'
-          }
+            : 'View Full Details'}
         </Button>
 
         {canApprove && (
@@ -1770,11 +1854,17 @@ export const MaterialOrderBookTab = () => {
             variant='outline'
             className={`gap-2 rounded-lg ${
               // Check if all items have selected quotations
-              request.originalIndent?.items?.every(item => item.selectedQuotation)
+              request.originalIndent?.items?.every(
+                (item) => item.selectedQuotation
+              )
                 ? 'text-green-600 border-green-600 hover:bg-green-50'
                 : 'text-gray-400 border-gray-300 cursor-not-allowed'
             }`}
-            disabled={!request.originalIndent?.items?.every(item => item.selectedQuotation)}
+            disabled={
+              !request.originalIndent?.items?.every(
+                (item) => item.selectedQuotation
+              )
+            }
             onClick={() => {
               setSelectedIndentForApproval(request.originalIndent);
               setSelectedItemId(null); // Reset item selection
@@ -1783,10 +1873,11 @@ export const MaterialOrderBookTab = () => {
             }}
           >
             <CheckCircle className='w-4 h-4' />
-            {request.originalIndent?.items?.every(item => item.selectedQuotation) 
-              ? 'Approve' 
-              : 'Select Vendor to Approve'
-            }
+            {request.originalIndent?.items?.every(
+              (item) => item.selectedQuotation
+            )
+              ? 'Approve'
+              : 'Select Vendor to Approve'}
           </Button>
         )}
 
@@ -1908,13 +1999,13 @@ export const MaterialOrderBookTab = () => {
             onClick={() => {
               if (request.status === 'reverted') {
                 // Find the original MaterialIndent from the API data
-                const originalIndent = materialIndents.find(indent => {
+                const originalIndent = materialIndents.find((indent) => {
                   const indentIdStr = indent.id.toString();
                   const requestOriginalIdStr = request.originalId?.toString();
-                  
+
                   return indentIdStr === requestOriginalIdStr;
                 });
-                
+
                 if (originalIndent) {
                   openResubmitForm(originalIndent);
                 }
@@ -1935,14 +2026,15 @@ export const MaterialOrderBookTab = () => {
     <div className='space-y-6 p-4 sm:p-0'>
       {/* Network Status Alert */}
       {!isOnline && (
-        <Alert className="border-red-200 bg-red-50 text-red-800">
-          <WifiOff className="h-4 w-4" />
+        <Alert className='border-red-200 bg-red-50 text-red-800'>
+          <WifiOff className='h-4 w-4' />
           <AlertDescription>
-            You are currently offline. Some features may not work properly. Please check your internet connection.
+            You are currently offline. Some features may not work properly.
+            Please check your internet connection.
           </AlertDescription>
         </Alert>
       )}
-      
+
       {/* Main Heading */}
 
       {/* Search, Views, Status and Actions Row */}
@@ -2001,7 +2093,9 @@ export const MaterialOrderBookTab = () => {
               disabled={isLoadingBranches}
             >
               <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-                <SelectValue placeholder={isLoadingBranches ? 'Loading...' : 'Select Unit'} />
+                <SelectValue
+                  placeholder={isLoadingBranches ? 'Loading...' : 'Select Unit'}
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='all'>All Units</SelectItem>
@@ -2023,17 +2117,20 @@ export const MaterialOrderBookTab = () => {
           )}
 
           {/* Status Filter - Show all statuses for all roles */}
-          <Select value={filterStatus} onValueChange={(value) => {
-            setFilterStatus(value);
-            // Update URL params
-            const newSearchParams = new URLSearchParams(searchParams);
-            if (value === 'all') {
-              newSearchParams.delete('filter');
-            } else {
-              newSearchParams.set('filter', value);
-            }
-            setSearchParams(newSearchParams, { replace: true });
-          }}>
+          <Select
+            value={filterStatus}
+            onValueChange={(value) => {
+              setFilterStatus(value);
+              // Update URL params
+              const newSearchParams = new URLSearchParams(searchParams);
+              if (value === 'all') {
+                newSearchParams.delete('filter');
+              } else {
+                newSearchParams.set('filter', value);
+              }
+              setSearchParams(newSearchParams, { replace: true });
+            }}
+          >
             <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
               <SelectValue placeholder='All Status' />
             </SelectTrigger>
@@ -2253,7 +2350,6 @@ export const MaterialOrderBookTab = () => {
               <p className='text-muted-foreground mb-4'>
                 No material indents match your current filters.
               </p>
-              
             </Card>
           )}
         </TabsContent>
@@ -2283,80 +2379,89 @@ export const MaterialOrderBookTab = () => {
 
       {/* Resubmit Form using RequisitionIndentForm */}
       {selectedRequestForResubmit && (
-        <Dialog open={isResubmitFormOpen} onOpenChange={() => {
-          setIsResubmitFormOpen(false);
-          setSelectedRequestForResubmit(null);
-          setResubmitFormData(null);
-        }}>
-          <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto">
+        <Dialog
+          open={isResubmitFormOpen}
+          onOpenChange={() => {
+            setIsResubmitFormOpen(false);
+            setSelectedRequestForResubmit(null);
+            setResubmitFormData(null);
+          }}
+        >
+          <DialogContent className='max-w-7xl max-h-[95vh] overflow-y-auto'>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Edit className="w-5 h-5 text-foreground" />
+              <DialogTitle className='flex items-center gap-2'>
+                <Edit className='w-5 h-5 text-foreground' />
                 Resubmit Request - {selectedRequestForResubmit.id}
               </DialogTitle>
             </DialogHeader>
-            
+
             {isLoadingResubmitForm ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-8 h-8 animate-spin text-primary mr-2" />
+              <div className='flex items-center justify-center py-8'>
+                <Loader2 className='w-8 h-8 animate-spin text-primary mr-2' />
                 <span>Loading form data...</span>
               </div>
             ) : resubmitFormData && availableMaterials.length > 0 ? (
               <>
                 {/* Show revert reason if available */}
                 {selectedRequestForResubmit.rejectionReason && (
-                  <Alert className="border-orange-200 bg-orange-50">
-                    <AlertTriangle className="h-4 w-4 text-orange-600" />
-                    <div className="text-orange-800 font-semibold">Original Revert Reason</div>
-                    <AlertDescription className="text-orange-700">
+                  <Alert className='border-orange-200 bg-orange-50'>
+                    <AlertTriangle className='h-4 w-4 text-orange-600' />
+                    <div className='text-orange-800 font-semibold'>
+                      Original Revert Reason
+                    </div>
+                    <AlertDescription className='text-orange-700'>
                       {selectedRequestForResubmit.rejectionReason}
                     </AlertDescription>
                   </Alert>
                 )}
 
                 <RequisitionIndentForm
-              requestData={resubmitFormData}
-              isReadOnly={false}
-              onItemChange={handleItemChange}
-              onVendorQuotationChange={handleVendorQuotationChange}
-              availableMaterials={availableMaterials.map(material => ({
-                name: material.name,
-                specifications: material.specifications || '',
-                measureUnit: material.measureUnit?.name || 'units',
-                category: material.category?.name || 'General'
-              }))}
-              machines={availableMachines}
-              onStatusChange={(newStatus: string, additionalData?: any) => {
-                // Handle status change if needed
-                console.log('Status changed to:', newStatus, additionalData);
-              }}
-              userRole="supervisor"
-              hasPermission={hasPermission}
-            />
-            
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button 
-                onClick={() => handleResubmitRequest(resubmitFormData)}
-                className="bg-primary hover:bg-primary/90 text-white"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                Resubmit Request
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setIsResubmitFormOpen(false);
-                  setSelectedRequestForResubmit(null);
-                  setResubmitFormData(null);
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
+                  requestData={resubmitFormData}
+                  isReadOnly={false}
+                  onItemChange={handleItemChange}
+                  onVendorQuotationChange={handleVendorQuotationChange}
+                  availableMaterials={availableMaterials.map((material) => ({
+                    name: material.name,
+                    specifications: material.specifications || '',
+                    measureUnit: material.measureUnit?.name || 'units',
+                    category: material.category?.name || 'General',
+                  }))}
+                  machines={availableMachines}
+                  onStatusChange={(newStatus: string, additionalData?: any) => {
+                    // Handle status change if needed
+                    console.log(
+                      'Status changed to:',
+                      newStatus,
+                      additionalData
+                    );
+                  }}
+                  userRole='supervisor'
+                  hasPermission={hasPermission}
+                />
+
+                <div className='flex justify-end gap-3 pt-4 border-t'>
+                  <Button
+                    onClick={() => handleResubmitRequest(resubmitFormData)}
+                    className='bg-primary hover:bg-primary/90 text-white'
+                  >
+                    <Send className='w-4 h-4 mr-2' />
+                    Resubmit Request
+                  </Button>
+                  <Button
+                    variant='outline'
+                    onClick={() => {
+                      setIsResubmitFormOpen(false);
+                      setSelectedRequestForResubmit(null);
+                      setResubmitFormData(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </>
             ) : (
-              <div className="flex items-center justify-center py-8">
-                <AlertTriangle className="w-8 h-8 text-red-500 mr-2" />
+              <div className='flex items-center justify-center py-8'>
+                <AlertTriangle className='w-8 h-8 text-red-500 mr-2' />
                 <span>Failed to load form data. Please try again.</span>
               </div>
             )}
@@ -2389,7 +2494,9 @@ export const MaterialOrderBookTab = () => {
                   </p>
                   <p>
                     <strong>Date:</strong>{' '}
-                    {formatDateToDDMMYYYY(selectedIndentForApproval.requestDate)}
+                    {formatDateToDDMMYYYY(
+                      selectedIndentForApproval.requestDate
+                    )}
                   </p>
                 </div>
 
@@ -2488,7 +2595,9 @@ export const MaterialOrderBookTab = () => {
                   </p>
                   <p>
                     <strong>Date:</strong>{' '}
-                    {formatDateToDDMMYYYY(selectedIndentForApproval.requestDate)}
+                    {formatDateToDDMMYYYY(
+                      selectedIndentForApproval.requestDate
+                    )}
                   </p>
                 </div>
 

@@ -43,7 +43,10 @@ export const materialIndentsApi = {
     });
 
     // Always include complete item details
-    queryParams.append('include', 'items,items.material,items.machine,items.quotations');
+    queryParams.append(
+      'include',
+      'items,items.material,items.machine,items.quotations'
+    );
 
     const queryString = queryParams.toString();
     const url = `/inventory/material-indents${
@@ -121,26 +124,9 @@ export const materialIndentsApi = {
   },
 
   /**
-   * Reject a material indent
-   */
-  reject: async (
-    id: number,
-    payload: ApproveRejectMaterialIndentRequest
-  ): Promise<MaterialIndent> => {
-    const response = await api.post<MaterialIndent>(
-      `/inventory/material-indents/${id}/reject`,
-      payload
-    );
-    return response.data;
-  },
-
-  /**
    * Revert a material indent using the approve API endpoint
    */
-  revert: async (
-    id: number,
-    revertReason: string
-  ): Promise<MaterialIndent> => {
+  revert: async (id: number, revertReason: string): Promise<MaterialIndent> => {
     const response = await api.post<MaterialIndent>(
       `/inventory/material-indents/${id}/approve`,
       {
@@ -149,6 +135,19 @@ export const materialIndentsApi = {
         itemId: 0, // Default item ID for revert
         quotationId: 0, // Default quotation ID for revert
       }
+    );
+    return response.data;
+  },
+
+  reSubmit: async (id: number, newData: Partial<MaterialIndent>) => {
+    const headers =
+      newData instanceof FormData
+        ? { 'Content-Type': 'multipart/form-data' }
+        : { 'Content-Type': 'application/json' };
+    const response = await api.post<MaterialIndent>(
+      `/inventory/material-indents/${id}/submit`,
+      newData,
+      { headers }
     );
     return response.data;
   },
@@ -204,7 +203,9 @@ export const materialIndentsApi = {
   /**
    * Get all items for a material indent with complete details
    */
-  getIndentItems: async (indentId: number): Promise<MaterialIndent['items']> => {
+  getIndentItems: async (
+    indentId: number
+  ): Promise<MaterialIndent['items']> => {
     const response = await api.get<MaterialIndent['items']>(
       `/inventory/material-indents/${indentId}/items?include=material,machine,quotations`
     );

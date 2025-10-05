@@ -62,7 +62,18 @@ import { branchesApi } from '../lib/api/branches';
 import { Branch } from '../lib/api/types';
 import { Alert, AlertDescription } from './ui/alert';
 
-type SortField = 'id' | 'issueDate' | 'issuedBy' | 'branch' | 'uniqueId' | 'materialName' | 'specifications' | 'stockInfo' | 'issuedFor' | 'issuedTo' | 'purpose';
+type SortField =
+  | 'id'
+  | 'issueDate'
+  | 'issuedBy'
+  | 'branch'
+  | 'uniqueId'
+  | 'materialName'
+  | 'specifications'
+  | 'stockInfo'
+  | 'issuedFor'
+  | 'issuedTo'
+  | 'purpose';
 type SortOrder = 'ASC' | 'DESC';
 
 export const MaterialIssuesTab = () => {
@@ -188,8 +199,14 @@ export const MaterialIssuesTab = () => {
   // Handle column sorting - only for API-supported fields
   const handleSort = (field: SortField) => {
     // Only allow sorting on fields that the API supports
-    const supportedSortFields: SortField[] = ['id', 'issueDate', 'issuedBy', 'branch', 'uniqueId'];
-    
+    const supportedSortFields: SortField[] = [
+      'id',
+      'issueDate',
+      'issuedBy',
+      'branch',
+      'uniqueId',
+    ];
+
     if (!supportedSortFields.includes(field)) {
       // Show a message for unsupported sort fields
       toast({
@@ -229,7 +246,7 @@ export const MaterialIssuesTab = () => {
     // Debug logging to see what's in the issue
     console.log('Transforming issue:', issue);
     console.log('Issue branch:', issue.branch);
-    
+
     // Transform each item in the issue
     const transformedItems = issue.items.map((item) => ({
       materialId: item.material.id,
@@ -253,7 +270,7 @@ export const MaterialIssuesTab = () => {
     console.log('Issue branch data:', {
       branch: issue.branch,
       issuedBy: issue.issuedBy,
-      issuedByBranch: issue.issuedBy?.branch
+      issuedByBranch: issue.issuedBy?.branch,
     });
 
     // Create a transformed issue with all items
@@ -273,7 +290,7 @@ export const MaterialIssuesTab = () => {
       items: transformedItems,
       originalIssue: issue,
     };
-    
+
     console.log('Transformed issue:', transformedIssue);
     return transformedIssue;
   };
@@ -322,7 +339,7 @@ export const MaterialIssuesTab = () => {
   const fetchMaterialIssues = async (page = 1, limit = itemsPerPage) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const params: any = {
         page,
@@ -343,17 +360,21 @@ export const MaterialIssuesTab = () => {
 
       // Debug logging
       console.log('MaterialIssues API call params:', params);
-      console.log('Current filters - Unit:', filterUnit, 'Search:', searchQuery);
+      console.log(
+        'Current filters - Unit:',
+        filterUnit,
+        'Search:',
+        searchQuery
+      );
 
       const response = await materialIssuesApi.getAll(params);
-      
+
       setMaterialIssues(response.data);
       setMaterialIssuesData(response);
-      
+
       // Transform the data for UI display
       const transformedIssues = response.data.map(transformApiIssueToUiFormat);
       setIssuedMaterials(transformedIssues);
-      
     } catch (err: unknown) {
       const error = err as { message?: string };
       setError(error.message || 'Failed to fetch material issues');
@@ -391,7 +412,6 @@ export const MaterialIssuesTab = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, itemsPerPage]);
 
-
   const handleViewIssue = (issue: TransformedIssue) => {
     // Transform the TransformedIssue to the format expected by MaterialIssueForm for view-only
     const viewData = {
@@ -404,7 +424,7 @@ export const MaterialIssuesTab = () => {
           id: item.materialId,
           name: item.materialName,
           measureUnit: {
-            name: item.unitName
+            name: item.unitName,
           },
           specifications: item.specifications,
         },
@@ -525,14 +545,15 @@ export const MaterialIssuesTab = () => {
     <div className='space-y-4 sm:space-y-6'>
       {/* Network Status Alert */}
       {!isOnline && (
-        <Alert className="border-red-200 bg-red-50 text-red-800">
-          <WifiOff className="h-4 w-4" />
+        <Alert className='border-red-200 bg-red-50 text-red-800'>
+          <WifiOff className='h-4 w-4' />
           <AlertDescription>
-            You are currently offline. Some features may not work properly. Please check your internet connection.
+            You are currently offline. Some features may not work properly.
+            Please check your internet connection.
           </AlertDescription>
         </Alert>
       )}
-      
+
       {/* Header with Actions */}
       <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4'>
         {/* Left side: Title and View Toggle Buttons */}
@@ -576,7 +597,9 @@ export const MaterialIssuesTab = () => {
           {currentUser?.role === 'company_owner' && (
             <Select value={filterUnit} onValueChange={setFilterUnit}>
               <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-                <SelectValue placeholder={isLoadingBranches ? 'Loading...' : 'Select Unit'} />
+                <SelectValue
+                  placeholder={isLoadingBranches ? 'Loading...' : 'Select Unit'}
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='all'>All Units</SelectItem>
@@ -681,7 +704,7 @@ export const MaterialIssuesTab = () => {
                           onClick={() => handleSort('issueDate')}
                           className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                         >
-                         Issued Date
+                          Issued Date
                           {getSortIcon('issueDate')}
                         </Button>
                       </TableHead>
@@ -761,40 +784,58 @@ export const MaterialIssuesTab = () => {
                             <div className='flex items-center gap-2'>
                               <div className='w-2 h-2 bg-primary rounded-full'></div>
                               <div className='font-semibold text-foreground capitalize'>
-                              {item.materialName}
+                                {item.materialName}
                               </div>
                             </div>
                           </TableCell>
                           <TableCell className='text-sm py-3'>
-                            <div className='text-muted-foreground max-w-[120px] truncate' title={item.specifications}>
-                            {item.specifications}
+                            <div
+                              className='text-muted-foreground max-w-[120px] truncate'
+                              title={item.specifications}
+                            >
+                              {item.specifications}
                             </div>
                           </TableCell>
                           <TableCell className='text-sm py-3'>
                             <div className='space-y-1'>
                               <div className='flex items-center justify-between text-xs'>
-                                <span className='text-muted-foreground'>Existing:</span>
-                                <span className='font-semibold text-foreground'>{item.existingStock} {item.unitName}</span>
+                                <span className='text-muted-foreground'>
+                                  Existing:
+                                </span>
+                                <span className='font-semibold text-foreground'>
+                                  {item.existingStock} {item.unitName}
+                                </span>
                               </div>
                               <div className='flex items-center justify-between text-xs'>
-                                <span className='text-muted-foreground'>Issued:</span>
-                                <span className='font-semibold text-primary'>{item.issuedQuantity} {item.unitName}</span>
+                                <span className='text-muted-foreground'>
+                                  Issued:
+                                </span>
+                                <span className='font-semibold text-primary'>
+                                  {item.issuedQuantity} {item.unitName}
+                                </span>
                               </div>
                               <div className='flex items-center justify-between text-xs'>
-                                <span className='text-muted-foreground'>After:</span>
-                                <span className='font-semibold text-foreground'>{item.stockAfterIssue} {item.unitName}</span>
+                                <span className='text-muted-foreground'>
+                                  After:
+                                </span>
+                                <span className='font-semibold text-foreground'>
+                                  {item.stockAfterIssue} {item.unitName}
+                                </span>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell className='text-sm py-3'>
                             <span className='text-foreground font-bold'>
-                            {formatDate(issue.issuedDate)}
+                              {formatDate(issue.issuedDate)}
                             </span>
                           </TableCell>
                           <TableCell className='text-sm py-3'>
                             <div className='flex items-center gap-2'>
                               {item.machineName ? (
-                                <div className='font-medium text-foreground truncate' title={item.machineName}>
+                                <div
+                                  className='font-medium text-foreground truncate'
+                                  title={item.machineName}
+                                >
                                   {item.machineName}
                                 </div>
                               ) : (
@@ -821,7 +862,10 @@ export const MaterialIssuesTab = () => {
                           </TableCell>
                           <TableCell className='text-sm py-3'>
                             <div className='space-y-1'>
-                              <Badge variant='outline' className='text-xs bg-primary/10 text-primary border-primary/30'>
+                              <Badge
+                                variant='outline'
+                                className='text-xs bg-primary/10 text-primary border-primary/30'
+                              >
                                 {issue.unitName}
                               </Badge>
                               {issue.branchLocation && (
@@ -832,8 +876,11 @@ export const MaterialIssuesTab = () => {
                             </div>
                           </TableCell>
                           <TableCell className='text-sm py-3'>
-                            <div className='text-muted-foreground truncate max-w-[100px]' title={item.purpose}>
-                            {item.purpose}
+                            <div
+                              className='text-muted-foreground truncate max-w-[100px]'
+                              title={item.purpose}
+                            >
+                              {item.purpose}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -947,7 +994,10 @@ export const MaterialIssuesTab = () => {
                   </TableHeader>
                   <TableBody>
                     {filteredIssues
-                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                      .slice(
+                        (currentPage - 1) * itemsPerPage,
+                        currentPage * itemsPerPage
+                      )
                       .flatMap((issue) =>
                         issue.items.map((item, itemIndex) => (
                           <TableRow
@@ -1004,13 +1054,22 @@ export const MaterialIssuesTab = () => {
                             <TableCell className='text-xs'>
                               <div className='space-y-0.5'>
                                 <div>
-                                  <span className='text-muted-foreground'>Existing:</span> {item.existingStock} {item.unitName}
+                                  <span className='text-muted-foreground'>
+                                    Existing:
+                                  </span>{' '}
+                                  {item.existingStock} {item.unitName}
                                 </div>
                                 <div className='font-medium text-primary'>
-                                  <span className='text-muted-foreground'>Issued:</span> {item.issuedQuantity} {item.unitName}
+                                  <span className='text-muted-foreground'>
+                                    Issued:
+                                  </span>{' '}
+                                  {item.issuedQuantity} {item.unitName}
                                 </div>
                                 <div>
-                                  <span className='text-muted-foreground'>After:</span> {item.stockAfterIssue} {item.unitName}
+                                  <span className='text-muted-foreground'>
+                                    After:
+                                  </span>{' '}
+                                  {item.stockAfterIssue} {item.unitName}
                                 </div>
                               </div>
                             </TableCell>
@@ -1031,7 +1090,9 @@ export const MaterialIssuesTab = () => {
                             </TableCell>
                             <TableCell className='text-xs'>
                               <div className='space-y-1'>
-                                <Badge variant='outline' className='text-xs'>{issue.unitName}</Badge>
+                                <Badge variant='outline' className='text-xs'>
+                                  {issue.unitName}
+                                </Badge>
                                 {issue.branchLocation && (
                                   <div className='text-xs text-muted-foreground'>
                                     {issue.branchLocation}
@@ -1045,7 +1106,10 @@ export const MaterialIssuesTab = () => {
                               </span>
                             </TableCell>
                             <TableCell className='text-xs'>
-                              <div className='font-medium truncate' title={item.machineName}>
+                              <div
+                                className='font-medium truncate'
+                                title={item.machineName}
+                              >
                                 {item.machineName || 'others'}
                               </div>
                             </TableCell>
