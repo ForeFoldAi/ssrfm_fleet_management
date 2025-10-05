@@ -36,6 +36,7 @@ interface StatusDropdownProps {
     timestamp: string;
     status: string;
   }>;
+  requiredQuantity?: number;
 }
 
 interface StatusOption {
@@ -53,6 +54,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
   requestId,
   hasVendorSelected = false,
   partialReceiptHistory = [],
+  requiredQuantity = 0,
 }) => {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedStatus, setSelectedStatus] = React.useState('');
@@ -102,6 +104,12 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
       case 'ordered':
         return [
           {
+            value: 'partially_received',
+            label: 'Partially Received',
+            icon: <Truck className='w-4 h-4' />,
+            requiresAdditionalData: true,
+          },
+          {
             value: 'fully_received',
             label: 'Fully Received',
             icon: <CheckCircle className='w-4 h-4' />,
@@ -110,6 +118,12 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
         ];
       case 'partially_received':
         return [
+          {
+            value: 'partially_received',
+            label: 'Add Partial Receipt',
+            icon: <Truck className='w-4 h-4' />,
+            requiresAdditionalData: true,
+          },
           {
             value: 'fully_received',
             label: 'Fully Received',
@@ -143,7 +157,26 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
   };
 
   const handleSubmitWithData = () => {
-    onStatusChange(selectedStatus, additionalData);
+    // Check if this partial receipt will complete the order
+    if (selectedStatus === 'partially_received') {
+      const currentTotal = partialReceiptHistory.reduce((sum, receipt) => 
+        sum + (receipt.receivedQuantity || 0), 0
+      );
+      const newReceiptQuantity = parseInt(additionalData.receivedQuantity) || 0;
+      const totalAfterReceipt = currentTotal + newReceiptQuantity;
+      
+      // Use the required quantity passed as prop
+      
+      if (totalAfterReceipt >= requiredQuantity) {
+        // Auto-update to fully received
+        onStatusChange('fully_received', additionalData);
+      } else {
+        onStatusChange(selectedStatus, additionalData);
+      }
+    } else {
+      onStatusChange(selectedStatus, additionalData);
+    }
+    
     setIsDialogOpen(false);
     setAdditionalData({
       receivedQuantity: '',
@@ -225,6 +258,8 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
               {selectedStatus === 'rejected' && 'Reject Request'}
               {(selectedStatus === 'fully_received') &&
                 'Material Receipt'}
+              {(selectedStatus === 'partially_received') &&
+                'Partial Material Receipt'}
             </DialogTitle>
           </DialogHeader>
 
@@ -265,12 +300,12 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
               </div>
             )}
 
-            {selectedStatus === 'fully_received' && (
+            {(selectedStatus === 'fully_received' || selectedStatus === 'partially_received') && (
               <>
                 {/* Show past received data if available */}
                 {partialReceiptHistory.length > 0 && (
                   <div className='space-y-3 p-3 bg-green-50 border border-green-200 rounded-lg'>
-                    <h4 className='font-medium text-green-800'>Receipt Summary</h4>
+                    <h4 className='font-medium text-green-800'>Previous Receipts</h4>
                     <div className='space-y-2 max-h-32 overflow-y-auto'>
                       {partialReceiptHistory.map((receipt, index) => (
                         <div key={receipt.id} className='text-sm bg-white p-2 rounded border'>
@@ -304,11 +339,66 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
                   </div>
                 )}
                 
-                <div className='p-4 bg-blue-50 border border-blue-200 rounded-lg'>
-                  <p className='text-blue-800 font-medium'>
-                    Confirm that all materials have been fully received and the request can be marked as complete.
-                  </p>
+                {/* Input fields for new receipt */}
+                <div className='space-y-3'>
+                  <div>
+                    <Label htmlFor='receivedQuantity'>
+                      {selectedStatus === 'partially_received' ? 'Received Quantity *' : 'Total Received Quantity *'}
+                    </Label>
+                    <Input
+                      id='receivedQuantity'
+                      type='number'
+                      value={additionalData.receivedQuantity}
+                      onChange={(e) =>
+                        setAdditionalData((prev) => ({
+                          ...prev,
+                          receivedQuantity: e.target.value,
+                        }))
+                      }
+                      placeholder='Enter quantity received'
+                      min='1'
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor='receivedDate'>Received Date *</Label>
+                    <Input
+                      id='receivedDate'
+                      type='date'
+                      value={additionalData.receivedDate}
+                      onChange={(e) =>
+                        setAdditionalData((prev) => ({
+                          ...prev,
+                          receivedDate: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor='receiveNotes'>Notes</Label>
+                    <Textarea
+                      id='receiveNotes'
+                      value={additionalData.notes}
+                      onChange={(e) =>
+                        setAdditionalData((prev) => ({
+                          ...prev,
+                          notes: e.target.value,
+                        }))
+                      }
+                      placeholder='Any additional notes about the received material...'
+                      className='min-h-[80px]'
+                    />
+                  </div>
                 </div>
+                
+                {selectedStatus === 'fully_received' && (
+                  <div className='p-4 bg-blue-50 border border-blue-200 rounded-lg'>
+                    <p className='text-blue-800 font-medium'>
+                      Confirm that all materials have been fully received and the request can be marked as complete.
+                    </p>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -324,13 +414,14 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
                   !additionalData.revertReason.trim()) ||
                 (selectedStatus === 'rejected' &&
                   !additionalData.notes.trim()) ||
-                (selectedStatus === 'fully_received' &&
-                  !additionalData.receivedQuantity.trim())
+                ((selectedStatus === 'fully_received' || selectedStatus === 'partially_received') &&
+                  (!additionalData.receivedQuantity.trim() || !additionalData.receivedDate.trim()))
               }
             >
               {selectedStatus === 'reverted' && 'Revert Request'}
               {selectedStatus === 'rejected' && 'Reject Request'}
               {selectedStatus === 'fully_received' && 'Confirm Fully Received'}
+              {selectedStatus === 'partially_received' && 'Add Partial Receipt'}
             </Button>
           </div>
         </DialogContent>

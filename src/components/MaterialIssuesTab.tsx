@@ -24,6 +24,7 @@ import {
   ChevronLeft,
   ChevronsLeft,
   ChevronsRight,
+  WifiOff,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -59,6 +60,7 @@ import { useRole } from '../contexts/RoleContext';
 import { Label } from './ui/label';
 import { branchesApi } from '../lib/api/branches';
 import { Branch } from '../lib/api/types';
+import { Alert, AlertDescription } from './ui/alert';
 
 type SortField = 'id' | 'issueDate' | 'issuedBy' | 'branch' | 'uniqueId' | 'materialName' | 'specifications' | 'stockInfo' | 'issuedFor' | 'issuedTo' | 'purpose';
 type SortOrder = 'ASC' | 'DESC';
@@ -104,6 +106,7 @@ export const MaterialIssuesTab = () => {
     imagePath?: string;
     machineId: number;
     machineName: string;
+    unitName: string;
     originalItem: MaterialIssueItem;
   }
 
@@ -116,6 +119,8 @@ export const MaterialIssuesTab = () => {
     status: string;
     unit: string;
     unitName: string;
+    branchId?: number;
+    branchLocation?: string;
     additionalNotes?: string;
     items: TransformedIssueItem[];
     originalIssue: MaterialIssue;
@@ -126,7 +131,7 @@ export const MaterialIssuesTab = () => {
   const [error, setError] = useState<string | null>(null);
   const [materialIssues, setMaterialIssues] = useState<MaterialIssue[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5); // Changed back to 5 to match MaterialsTab
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [materialIssuesData, setMaterialIssuesData] = useState<{
     data?: unknown;
     meta?: {
@@ -142,6 +147,7 @@ export const MaterialIssuesTab = () => {
   // Available branches (units) for company owner - fetched from API
   const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
     const fetchBranches = async () => {
@@ -164,6 +170,20 @@ export const MaterialIssuesTab = () => {
 
     fetchBranches();
   }, [currentUser?.role]);
+
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Handle column sorting - only for API-supported fields
   const handleSort = (field: SortField) => {
@@ -206,6 +226,10 @@ export const MaterialIssuesTab = () => {
   const transformApiIssueToUiFormat = (
     issue: MaterialIssue
   ): TransformedIssue => {
+    // Debug logging to see what's in the issue
+    console.log('Transforming issue:', issue);
+    console.log('Issue branch:', issue.branch);
+    
     // Transform each item in the issue
     const transformedItems = issue.items.map((item) => ({
       materialId: item.material.id,
@@ -219,12 +243,21 @@ export const MaterialIssuesTab = () => {
       imagePath: item.imagePath,
       // Updated to handle the new issuedFor structure
       machineId: item.issuedFor?.id || 0,
-      machineName: item.issuedFor?.name || 'No machine selected',
+      machineName: item.issuedFor?.name || 'others',
+      // Add unit information from material
+      unitName: item.material.measureUnit?.name || 'units',
       originalItem: item,
     }));
 
+    // Debug logging for branch data
+    console.log('Issue branch data:', {
+      branch: issue.branch,
+      issuedBy: issue.issuedBy,
+      issuedByBranch: issue.issuedBy?.branch
+    });
+
     // Create a transformed issue with all items
-    return {
+    const transformedIssue = {
       id: issue.uniqueId.toString(),
       materialIssueFormSrNo: issue.uniqueId.toString(),
       issuingPersonName:
@@ -234,10 +267,15 @@ export const MaterialIssuesTab = () => {
       status: 'Issued',
       unit: issue.branch?.code || '',
       unitName: issue.branch?.name || '',
+      branchId: issue.branch?.id,
+      branchLocation: issue.branch?.location || '',
       additionalNotes: issue.additionalNotes || '',
       items: transformedItems,
       originalIssue: issue,
     };
+    
+    console.log('Transformed issue:', transformedIssue);
+    return transformedIssue;
   };
 
   // Generate formatted Issue ID: SSRFM/UNIT1/I-YYMMDD/SQ
@@ -303,6 +341,10 @@ export const MaterialIssuesTab = () => {
         params.branchId = filterUnit;
       }
 
+      // Debug logging
+      console.log('MaterialIssues API call params:', params);
+      console.log('Current filters - Unit:', filterUnit, 'Search:', searchQuery);
+
       const response = await materialIssuesApi.getAll(params);
       
       setMaterialIssues(response.data);
@@ -336,60 +378,49 @@ export const MaterialIssuesTab = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, filterUnit, sortField, sortOrder, itemsPerPage]);
 
+  // Reset to first page when filters change
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [filterUnit, searchQuery]);
+
   // Load material issues when pagination changes
   useEffect(() => {
     fetchMaterialIssues(currentPage, itemsPerPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, itemsPerPage]);
 
-  // Helper function to check if issue can be edited (within 7 days)
-  const canEditIssue = (issuedDate: string) => {
-    const issueDate = new Date(issuedDate);
-    const currentDate = new Date();
-    const diffTime = Math.abs(currentDate.getTime() - issueDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 7;
-  };
 
   const handleViewIssue = (issue: TransformedIssue) => {
-    // Instead of opening view dialog, open edit form directly
-    handleEditIssue(issue);
-  };
-
-  const handleEditIssue = (issue: TransformedIssue) => {
-    if (canEditIssue(issue.issuedDate)) {
-      // Transform the TransformedIssue to the format expected by MaterialIssueForm
-      const editingData = {
-        issuedDate: issue.issuedDate,
-        additionalNotes: issue.additionalNotes || '',
-        allItems: issue.items.map((item) => ({
-          material: {
-            id: item.materialId,
-            name: item.materialName,
-            makerBrand: item.specifications, // Using specifications as measure unit
+    // Transform the TransformedIssue to the format expected by MaterialIssueForm for view-only
+    const viewData = {
+      id: issue.id, // Add the issue ID for image URL construction
+      issuedDate: issue.issuedDate,
+      additionalNotes: issue.additionalNotes || '',
+      allItems: issue.items.map((item) => ({
+        id: item.originalItem.id, // Add item ID for image URL construction
+        material: {
+          id: item.materialId,
+          name: item.materialName,
+          measureUnit: {
+            name: item.unitName
           },
-          stockBeforeIssue: item.existingStock,
-          issuedQuantity: item.issuedQuantity,
-          stockAfterIssue: item.stockAfterIssue,
-          receiverName: item.recipientName,
-          purpose: item.purpose,
-          imagePath: item.imagePath,
-          machineId: item.machineId,
-          machineName: item.machineName,
-        })),
-      };
+          specifications: item.specifications,
+        },
+        stockBeforeIssue: item.existingStock,
+        issuedQuantity: item.issuedQuantity,
+        stockAfterIssue: item.stockAfterIssue,
+        receiverName: item.recipientName,
+        purpose: item.purpose,
+        imagePath: item.imagePath,
+        machineId: item.machineId,
+        machineName: item.machineName,
+      })),
+    };
 
-      setEditingIssue(editingData as unknown as TransformedIssue);
-      setIsIssueFormOpen(true);
-    } else {
-      // Show message when trying to edit after 7 days
-      toast({
-        title: 'Cannot Edit Issue',
-        description:
-          "This issue cannot be edited as it's more than 7 days old. Only recent issues (within 7 days) can be modified.",
-        variant: 'destructive',
-      });
-    }
+    setEditingIssue(viewData as unknown as TransformedIssue);
+    setIsIssueFormOpen(true);
   };
 
   const toggleRowExpansion = (id: string) => {
@@ -431,36 +462,10 @@ export const MaterialIssuesTab = () => {
     issuedItems: IssuedItem[];
   }
 
-  const handleIssueMaterial = async (issueData: IssueFormData) => {
+  const handleIssueMaterial = async (issueData: MaterialIssue) => {
     try {
-      // Get current user ID from context
-      const userId = currentUser?.id || 1;
-
-      // Prepare data for API
-      const materialIssueData = {
-        issueDate: issueData.date,
-        additionalNotes: issueData.purpose || '',
-        // Use the current user's ID
-        issuedBy: userId,
-        branchId: 1, // Default to first branch, should be selected by user or from context
-        // Map the items with the structure expected by the API
-        items: issueData.issuedItems.map((item) => ({
-          materialId: item.materialId,
-          issuedQuantity: parseInt(item.issuedQty),
-          stockBeforeIssue: item.existingStock,
-          stockAfterIssue: item.stockAfterIssue,
-          receiverName: issueData.receiverName,
-          purpose: issueData.purpose || '',
-        })),
-      };
-
-      // Call API to create material issue
-      await materialIssuesApi.create(
-        materialIssueData as unknown as Partial<MaterialIssue>
-      );
-
-      // Refresh the list
-      fetchMaterialIssues(currentPage, itemsPerPage);
+      // Refresh the list to show the new issue
+      await fetchMaterialIssues(currentPage, itemsPerPage);
 
       toast({
         title: 'Success',
@@ -478,7 +483,7 @@ export const MaterialIssuesTab = () => {
         message?: string;
       };
 
-      let errorMessage = 'Failed to create material issue. Please try again.';
+      let errorMessage = 'Failed to refresh material issues. Please try again.';
 
       if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
@@ -494,9 +499,12 @@ export const MaterialIssuesTab = () => {
     }
   };
 
-  // Filter issues based on search and unit
+  // Filter issues based on search only (unit filtering is handled by API)
   const filteredIssues = issuedMaterials.filter((issue) => {
     if (!issue) return false;
+
+    // Only apply client-side search filtering, unit filtering is handled by API
+    if (!searchQuery.trim()) return true;
 
     // Search in all items' material names and recipient names
     const materialNameMatch = issue.items.some((item) =>
@@ -515,6 +523,16 @@ export const MaterialIssuesTab = () => {
 
   return (
     <div className='space-y-4 sm:space-y-6'>
+      {/* Network Status Alert */}
+      {!isOnline && (
+        <Alert className="border-red-200 bg-red-50 text-red-800">
+          <WifiOff className="h-4 w-4" />
+          <AlertDescription>
+            You are currently offline. Some features may not work properly. Please check your internet connection.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {/* Header with Actions */}
       <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4'>
         {/* Left side: Title and View Toggle Buttons */}
@@ -558,9 +576,7 @@ export const MaterialIssuesTab = () => {
           {currentUser?.role === 'company_owner' && (
             <Select value={filterUnit} onValueChange={setFilterUnit}>
               <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-                <SelectValue placeholder='Select Unit'>
-                  {isLoadingBranches ? 'Loading...' : 'Select Unit'}
-                </SelectValue>
+                <SelectValue placeholder={isLoadingBranches ? 'Loading...' : 'Select Unit'} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='all'>All Units</SelectItem>
@@ -735,7 +751,7 @@ export const MaterialIssuesTab = () => {
                               className='p-0 h-auto text-left font-semibold text-primary hover:text-primary/80 text-sm uppercase'
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleEditIssue(issue);
+                                handleViewIssue(issue);
                               }}
                             >
                               {issue.id}
@@ -758,15 +774,15 @@ export const MaterialIssuesTab = () => {
                             <div className='space-y-1'>
                               <div className='flex items-center justify-between text-xs'>
                                 <span className='text-muted-foreground'>Existing:</span>
-                                <span className='font-semibold text-foreground'>{item.existingStock}</span>
+                                <span className='font-semibold text-foreground'>{item.existingStock} {item.unitName}</span>
                               </div>
                               <div className='flex items-center justify-between text-xs'>
                                 <span className='text-muted-foreground'>Issued:</span>
-                                <span className='font-semibold text-primary'>{item.issuedQuantity}</span>
+                                <span className='font-semibold text-primary'>{item.issuedQuantity} {item.unitName}</span>
                               </div>
                               <div className='flex items-center justify-between text-xs'>
                                 <span className='text-muted-foreground'>After:</span>
-                                <span className='font-semibold text-foreground'>{item.stockAfterIssue}</span>
+                                <span className='font-semibold text-foreground'>{item.stockAfterIssue} {item.unitName}</span>
                               </div>
                             </div>
                           </TableCell>
@@ -783,7 +799,7 @@ export const MaterialIssuesTab = () => {
                                 </div>
                               ) : (
                                 <div className='font-medium text-amber-600 text-xs'>
-                                  No machine selected
+                                  Other
                                 </div>
                               )}
                             </div>
@@ -804,9 +820,16 @@ export const MaterialIssuesTab = () => {
                             </div>
                           </TableCell>
                           <TableCell className='text-sm py-3'>
-                            <Badge variant='outline' className='text-xs bg-primary/10 text-primary border-primary/30'>
-                              {issue.unitName}
-                            </Badge>
+                            <div className='space-y-1'>
+                              <Badge variant='outline' className='text-xs bg-primary/10 text-primary border-primary/30'>
+                                {issue.unitName}
+                              </Badge>
+                              {issue.branchLocation && (
+                                <div className='text-xs text-muted-foreground'>
+                                  {issue.branchLocation}
+                                </div>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className='text-sm py-3'>
                             <div className='text-muted-foreground truncate max-w-[100px]' title={item.purpose}>
@@ -959,7 +982,7 @@ export const MaterialIssuesTab = () => {
                                 className='p-0 h-auto text-left font-medium text-primary hover:text-primary/80 uppercase text-xs'
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleEditIssue(issue);
+                                  handleViewIssue(issue);
                                 }}
                               >
                                 {issue.id}
@@ -981,13 +1004,13 @@ export const MaterialIssuesTab = () => {
                             <TableCell className='text-xs'>
                               <div className='space-y-0.5'>
                                 <div>
-                                  <span className='text-muted-foreground'>Existing:</span> {item.existingStock}
+                                  <span className='text-muted-foreground'>Existing:</span> {item.existingStock} {item.unitName}
                                 </div>
                                 <div className='font-medium text-primary'>
-                                  <span className='text-muted-foreground'>Issued:</span> {item.issuedQuantity}
+                                  <span className='text-muted-foreground'>Issued:</span> {item.issuedQuantity} {item.unitName}
                                 </div>
                                 <div>
-                                  <span className='text-muted-foreground'>After:</span> {item.stockAfterIssue}
+                                  <span className='text-muted-foreground'>After:</span> {item.stockAfterIssue} {item.unitName}
                                 </div>
                               </div>
                             </TableCell>
@@ -1007,7 +1030,14 @@ export const MaterialIssuesTab = () => {
                               </div>
                             </TableCell>
                             <TableCell className='text-xs'>
-                              <Badge variant='outline' className='text-xs'>{issue.unitName}</Badge>
+                              <div className='space-y-1'>
+                                <Badge variant='outline' className='text-xs'>{issue.unitName}</Badge>
+                                {issue.branchLocation && (
+                                  <div className='text-xs text-muted-foreground'>
+                                    {issue.branchLocation}
+                                  </div>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className='text-xs'>
                               <span className='font-bold'>
@@ -1016,7 +1046,7 @@ export const MaterialIssuesTab = () => {
                             </TableCell>
                             <TableCell className='text-xs'>
                               <div className='font-medium truncate' title={item.machineName}>
-                                {item.machineName || 'No machine selected'}
+                                {item.machineName || 'others'}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1077,7 +1107,6 @@ export const MaterialIssuesTab = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='5'>5</SelectItem>
                   <SelectItem value='10'>10</SelectItem>
                   <SelectItem value='20'>20</SelectItem>
                   <SelectItem value='50'>50</SelectItem>
@@ -1202,10 +1231,10 @@ export const MaterialIssuesTab = () => {
         onClose={() => {
           setIsIssueFormOpen(false);
           setEditingIssue(null);
+          // Refresh the table when form is closed (in case of successful submission)
+          fetchMaterialIssues(currentPage, itemsPerPage);
         }}
-        onSubmit={(data) =>
-          handleIssueMaterial(data as unknown as IssueFormData)
-        }
+        onSubmit={handleIssueMaterial}
         editingIssue={
           editingIssue
             ? (editingIssue as unknown as Record<string, unknown>)

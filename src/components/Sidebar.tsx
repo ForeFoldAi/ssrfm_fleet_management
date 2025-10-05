@@ -32,10 +32,12 @@ export const Sidebar = () => {
   // Build nav items by permissions (not roles)
   const getNavigationItems = () => {
     const userRole = currentUser?.role;
+    const hasApprovalPermission = hasPermission('inventory:material-indents:approve');
 
-    // Dashboard item - exclude for supervisors and inventory managers
+
+    // Dashboard item - show for company owners and users with approval permissions
     const baseItems =
-      userRole !== 'supervisor' && userRole !== 'inventory_manager'
+      userRole === 'company_owner' || hasApprovalPermission
         ? [
             {
               to: '/',
@@ -115,6 +117,12 @@ export const Sidebar = () => {
                 key={item.to}
                 to={item.to}
                 end={item.to === '/'}
+                onClick={() => {
+                  // Set navigation flag when user explicitly clicks on dashboard
+                  if (item.to === '/') {
+                    sessionStorage.setItem('navigation-flag', 'true');
+                  }
+                }}
                 className={({ isActive }) =>
                   `group flex items-center ${
                     isExpanded ? 'space-x-3 px-4' : 'justify-center px-2'

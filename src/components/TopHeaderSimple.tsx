@@ -93,10 +93,7 @@ export const TopHeaderSimple = () => {
           {/* Company Logo & Name */}
           <div className="flex items-center space-x-4">
             <img src={logo} alt="Sree Sai Logo" className="h-12 w-auto object-contain" />
-            <div>
-              <h1 className="text-xl font-bold text-white">Sree Sai Roller Flour Mill Pvt Ltd</h1>
-              <p className="text-xs text-warning font-medium">Smart Supply & Resource Management</p>
-            </div>
+            
           </div>
 
           {/* Profile Section - Right Side */}

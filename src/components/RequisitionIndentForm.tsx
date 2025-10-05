@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from './ui/card';
 import {
   Table,
@@ -37,6 +37,15 @@ import { toast } from '../hooks/use-toast';
 import { generateSrNo, formatDateToDDMMYYYY } from '../lib/utils';
 import { StatusDropdown } from './StatusDropdown';
 import { MaterialPurchaseItem } from '../lib/api/types';
+import { getUnits } from '../lib/api/common';
+import { Unit } from '../lib/api/types';
+import { materialIndentsApi } from '../lib/api/material-indents';
+
+export enum PurposeType {
+  MACHINE = 'machine',
+  OTHER = 'other',
+  SPARE = 'spare',
+}
 
 interface RequestItem {
   id: string;
@@ -51,6 +60,7 @@ interface RequestItem {
   imagePreviews?: string[];
   notes?: string;
   vendorQuotations: VendorQuotation[];
+  purposeType: PurposeType;
 }
 
 interface VendorQuotation {
@@ -63,6 +73,7 @@ interface VendorQuotation {
   notes: string;
   quotationFile?: File | null;
   isSelected?: boolean;
+  filePaths?: string[]; // Add filePaths for API data
 }
 
 interface RequisitionIndentFormProps {
@@ -74,6 +85,7 @@ interface RequisitionIndentFormProps {
     date: string;
     status: string;
     apiData?: {
+      id?: number; // Add indent ID for API calls
       partialReceiptHistory?: Array<{
         id: string;
         receivedQuantity: number;
@@ -133,13 +145,41 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
   onLoadItemImages,
   onLoadQuotationImages,
   itemImageUrlsMap = {},
-  quotationImageUrlsMap = {},
+  quotationImageUrlsMap = {}, // Keep for backward compatibility but not used for quotations anymore
   onStatusChange,
   userRole = 'supervisor',
   hasPermission = () => false,
   selectedVendors,
   onVendorSelection,
 }) => {
+  // Add units state
+  const [availableUnits, setAvailableUnits] = useState<Unit[]>([]);
+  const [isLoadingUnits, setIsLoadingUnits] = useState(false);
+
+  // Add function to get unit name by ID
+  const getUnitName = (unitId?: number) => {
+    if (!unitId) return '';
+    const unit = availableUnits.find(u => u.id === unitId);
+    return unit?.name || '';
+  };
+
+  // Fetch units when component mounts
+  useEffect(() => {
+    const fetchUnits = async () => {
+      setIsLoadingUnits(true);
+      try {
+        const res = await getUnits({ limit: 100 });
+        setAvailableUnits(res.data || []);
+      } catch (err) {
+        console.error('Error fetching units:', err);
+      } finally {
+        setIsLoadingUnits(false);
+      }
+    };
+
+    fetchUnits();
+  }, []);
+
   // Vendor management state
   const [isVendorFormOpen, setIsVendorFormOpen] = useState(false);
   const [currentItemId, setCurrentItemId] = useState<string>('');
@@ -174,6 +214,14 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
   const [isQuotationPopupOpen, setIsQuotationPopupOpen] = useState(false);
   const [selectedQuotation, setSelectedQuotation] = useState<VendorQuotation | null>(null);
   const [selectedItemForQuotation, setSelectedItemForQuotation] = useState<RequestItem | null>(null);
+  
+  // Add state for images loaded from API
+  const [quotationImagesLoaded, setQuotationImagesLoaded] = useState<Record<string, string[]>>({});
+  const [itemImagesLoaded, setItemImagesLoaded] = useState<Record<string, string[]>>({});
+
+  // Add state for partial receipt details popup
+  const [isPartialReceiptDetailsOpen, setIsPartialReceiptDetailsOpen] = useState(false);
+  const [selectedItemForReceiptDetails, setSelectedItemForReceiptDetails] = useState<RequestItem | null>(null);
 
   // Function to show images in popup
   const showImagesInPopup = (images: string[], title: string) => {
@@ -182,11 +230,77 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
     setIsImagePopupOpen(true);
   };
 
+  // Function to show partial receipt details in popup
+  const showPartialReceiptDetails = (item: RequestItem) => {
+    setSelectedItemForReceiptDetails(item);
+    setIsPartialReceiptDetailsOpen(true);
+  };
+
+  // Function to load item images from API
+  const loadItemImages = async (itemId: number) => {
+    try {
+      const indentId = requestData.apiData?.id;
+      
+      if (!indentId) {
+        console.warn('No indent ID available for loading item images');
+        return;
+      }
+
+      console.log('Loading item images for:', { indentId, itemId });
+      const imageUrls = await materialIndentsApi.getItemImageUrls(indentId, itemId);
+      console.log('Item image URLs received:', imageUrls);
+      
+      setItemImagesLoaded(prev => ({
+        ...prev,
+        [itemId.toString()]: imageUrls
+      }));
+    } catch (error) {
+      console.error('Error loading item images:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load item images',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Function to load quotation images from API
+  const loadQuotationImages = async (itemId: number) => {
+    try {
+      // Extract indent ID from requestData
+      const indentId = requestData.apiData?.id;
+      
+      if (!indentId) {
+        console.warn('No indent ID available for loading quotation images');
+        return;
+      }
+
+      console.log('Loading quotation images for:', { indentId, itemId });
+      const imageUrls = await materialIndentsApi.getItemQuotationImageUrls(indentId, itemId);
+      console.log('Quotation image URLs received:', imageUrls);
+
+      setQuotationImagesLoaded(prev => ({
+        ...prev,
+        [itemId.toString()]: imageUrls
+      }));
+    } catch (error) {
+      console.error('Error loading quotation images:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load quotation images',
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Function to show quotation details in popup
   const showQuotationDetails = (quotation: VendorQuotation, item: RequestItem) => {
     setSelectedQuotation(quotation);
     setSelectedItemForQuotation(item);
     setIsQuotationPopupOpen(true);
+    
+    // Load quotation images using API
+    loadQuotationImages(parseInt(item.id, 10));
   };
 
   const handleItemChange = (itemId: string, field: string, value: string) => {
@@ -201,7 +315,11 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
       if (material) {
         onItemChange(itemId, 'productName', material.name);
         onItemChange(itemId, 'specifications', material.specifications);
-        onItemChange(itemId, 'measureUnit', material.measureUnit);
+        // Convert measureUnit ID to name if it's a number
+        const unitName = typeof material.measureUnit === 'number' 
+          ? getUnitName(material.measureUnit) 
+          : material.measureUnit;
+        onItemChange(itemId, 'measureUnit', unitName);
       }
     }
   };
@@ -317,10 +435,32 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
     const receivedQty = parseInt(partialReceiptData.receivedQuantity);
     const currentItem = requestData.items.find(item => item.id === currentItemId);
     const requiredQty = parseInt(currentItem?.reqQuantity || '0');
-    const totalReceived = (requestData.apiData?.totalReceivedQuantity || 0) + receivedQty;
+    const totalReceived = getTotalReceivedQuantity();
+    const remainingQty = requiredQty - totalReceived;
+
+    // Validate that the received quantity doesn't exceed what's remaining
+    if (receivedQty > remainingQty) {
+      toast({
+        title: 'Invalid Quantity',
+        description: `Cannot receive ${receivedQty} units. Only ${remainingQty} units remaining (${totalReceived} already received out of ${requiredQty} required).`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (receivedQty <= 0) {
+      toast({
+        title: 'Invalid Quantity',
+        description: 'Received quantity must be greater than 0',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const newTotalReceived = totalReceived + receivedQty;
 
     // Check if this receipt will complete the order
-    const willBeFullyReceived = totalReceived >= requiredQty;
+    const willBeFullyReceived = newTotalReceived >= requiredQty;
     const status = willBeFullyReceived ? 'fully_received' : 'partially_received';
 
     if (onStatusChange) {
@@ -342,7 +482,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
       title: 'Receipt Added',
       description: willBeFullyReceived 
         ? 'Material fully received and status updated'
-        : 'Partial receipt added successfully',
+        : `Partial receipt added successfully. ${newTotalReceived}/${requiredQty} units received.`,
     });
   };
 
@@ -357,7 +497,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
   const canReceiveMore = (item: RequestItem) => {
     const totalReceived = getTotalReceivedQuantity();
     const required = parseInt(item.reqQuantity);
-    return totalReceived < required && ['ordered', 'partially_received'].includes(requestData.status);
+    return totalReceived < required && requestData.status === 'partially_received';
   };
 
   return (
@@ -367,36 +507,39 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
 
       {/* Items Table */}
       <Card className='border-0 shadow-none'>
-        <CardContent className='p-0 border-none'>
-          <div className='overflow-x-auto border-none'>
-            <Table className='border-none'>
+        <CardContent className='pt-6 pb-0 px-0 border-none'>
+          <div className='border-none'>
+            <Table className='border-none w-full'>
               <TableHeader className='border-none'>
                 <TableRow className='bg-gray-50'>
-                  <TableHead className='border border-gray-300 font-semibold w-24'>
+                  <TableHead className='border border-gray-300 font-semibold min-w-[80px]'>
                     PURCHASE ID
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold w-40'>
+                  <TableHead className='border border-gray-300 font-semibold min-w-[120px]'>
                     MATERIALS
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold w-56'>
+                  <TableHead className='border border-gray-300 font-semibold min-w-[150px]'>
                     SPECIFICATIONS
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold w-20'>
+                  <TableHead className='border border-gray-300 font-semibold min-w-[80px]'>
                     CURRENT STOCK
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold w-24'>
+                  <TableHead className='border border-gray-300 font-semibold min-w-[100px]'>
                     REQ. QUANTITY
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold w-20'>
+                  <TableHead className='border border-gray-300 font-semibold min-w-[80px]'>
                     IMAGES
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold w-40'>
-                    VENDOR QUOTATIONS (Optional)
+                  <TableHead className='border border-gray-300 font-semibold min-w-[120px]'>
+                    VENDOR QUOTATIONS
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold w-52'>
-                    MACHINE NAME*
+                  <TableHead className='border border-gray-300 font-semibold min-w-[100px]'>
+                    PURPOSE TYPE
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold w-40'>
+                  <TableHead className='border border-gray-300 font-semibold min-w-[120px]'>
+                    MACHINE NAME
+                  </TableHead>
+                  <TableHead className='border border-gray-300 font-semibold min-w-[100px]'>
                     NOTES
                   </TableHead>
                 </TableRow>
@@ -412,13 +555,13 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                           type='text'
                           value={item.srNo}
                           readOnly
-                          className='border-0 focus:ring-0 focus:outline-none rounded-none bg-transparent'
+                          className='border-0 focus:ring-0 focus:outline-none rounded-none bg-transparent w-full'
                         />
                       )}
                     </TableCell>
                     <TableCell className='border border-gray-300'>
                       {isReadOnly ? (
-                        <div className='font-medium'>{item.productName}</div>
+                        <div className='font-medium truncate'>{item.productName}</div>
                       ) : (
                         <Select
                           value={item.productName}
@@ -426,7 +569,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                             handleMaterialSelect(item.id, value)
                           }
                         >
-                          <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none'>
+                          <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none w-full'>
                             <SelectValue placeholder='Select Material' />
                           </SelectTrigger>
                           <SelectContent>
@@ -451,7 +594,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                     </TableCell>
                     <TableCell className='border border-gray-300'>
                       {isReadOnly ? (
-                        <div>{item.specifications}</div>
+                        <div className='truncate'>{item.specifications}</div>
                       ) : (
                         <Input
                           value={item.specifications}
@@ -461,14 +604,20 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                           }}
                           placeholder='Specifications'
                           maxLength={30}
-                          className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none'
+                          className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none w-full'
                         />
                       )}
                     </TableCell>
                     <TableCell className='border border-gray-300 text-center'>
                       {isReadOnly ? (
-                        <div>{item.oldStock}</div>
+                        <div className='flex items-center gap-2'>
+                          <span>{item.oldStock}</span>
+                          <span className='text-sm text-gray-600'>
+                            {item.measureUnit}
+                          </span>
+                        </div>
                       ) : (
+                        <div className='flex items-center gap-2'>
                         <Input
                           type='number'
                           value={item.oldStock}
@@ -483,6 +632,10 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                           min='0'
                           className='border-0 p-0 h-auto w-20 text-center focus:ring-0 focus:outline-none rounded-none'
                         />
+                          <span className='text-sm text-gray-600'>
+                            {item.measureUnit}
+                          </span>
+                        </div>
                       )}
                     </TableCell>
                     <TableCell className='border border-gray-300'>
@@ -490,20 +643,23 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                         <div className='flex items-center gap-2'>
                           {isReadOnly ? (
                             <div className='flex items-center gap-2'>
-                              <span>{item.reqQuantity}</span>
-                              <span className='text-sm text-gray-600'>
-                                {item.measureUnit}
-                              </span>
-                              {canReceiveMore(item) && userRole === 'supervisor' && (
-                                <Button
-                                  variant='outline'
-                                  size='sm'
-                                  onClick={() => openPartialReceiptDialog(item.id)}
-                                  className='h-6 w-6 p-0 ml-2'
-                                >
-                                  <Plus className='w-3 h-3' />
-                                </Button>
-                              )}
+                              <div className='flex flex-col'>
+                                <span className='truncate font-medium'>{item.reqQuantity}</span>
+                                <span className='text-xs text-gray-500'>{item.measureUnit}</span>
+                              </div>
+                              <div className='flex items-center gap-1 ml-2'>
+                                {canReceiveMore(item) && userRole === 'supervisor' && (
+                                  <Button
+                                    variant='outline'
+                                    size='sm'
+                                    onClick={() => openPartialReceiptDialog(item.id)}
+                                    className='h-6 w-6 p-0 flex-shrink-0'
+                                    title='Add Partial Receipt'
+                                  >
+                                    <Plus className='w-3 h-3' />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           ) : (
                             <>
@@ -521,7 +677,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                                 min='0'
                                 className='border border-gray-300 p-2 h-auto w-20 focus:ring-0 focus:outline-none rounded-md'
                               />
-                              <span className='text-sm text-gray-600'>
+                              <span className='text-sm text-gray-600 whitespace-nowrap'>
                                 {item.measureUnit}
                               </span>
                             </>
@@ -532,8 +688,11 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                         {requestData.apiData?.partialReceiptHistory && 
                          requestData.apiData.partialReceiptHistory.length > 0 && (
                           <div className='space-y-1'>
-                            <div className='text-xs font-medium text-blue-600'>
-                              Received History:
+                            <div className='text-xs font-medium text-blue-600 flex items-center justify-between'>
+                              <span>Received History:</span>
+                              <span className='text-green-600 font-bold'>
+                                {getTotalReceivedQuantity()}/{item.reqQuantity} {item.measureUnit}
+                              </span>
                             </div>
                             {requestData.apiData.partialReceiptHistory.map((receipt, index) => (
                               <div key={receipt.id} className='text-xs bg-blue-50 border border-blue-200 p-2 rounded'>
@@ -573,33 +732,37 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                     </TableCell>
                     <TableCell className='border border-gray-300'>
                       <div className='space-y-2'>
-                        {/* Load remote item images when available */}
-                        {onLoadItemImages && (
-                          <div className='flex items-center gap-2'>
-                            <Button
-                              variant='outline'
-                              size='sm'
-                              onClick={() => {
-                                onLoadItemImages(parseInt(item.id, 10));
-                                // Show images in popup if they exist
-                                if (
-                                  itemImageUrlsMap[item.id] &&
-                                  itemImageUrlsMap[item.id].length > 0
-                                ) {
-                                  showImagesInPopup(
-                                    itemImageUrlsMap[item.id],
-                                    `Item Images - ${item.productName}`
-                                  );
-                                }
-                              }}
-                              disabled={!isReadOnly}
-                              className='gap-2'
-                            >
-                              <Eye className='w-4 h-4' />
-                              View Images
-                            </Button>
-                          </div>
-                        )}
+                        {/* Load and display item images */}
+                        <div className='flex items-center gap-2'>
+                          <Button
+                            variant='outline'
+                            size='sm'
+                            onClick={async () => {
+                              // Load images from API
+                              await loadItemImages(parseInt(item.id, 10));
+                              
+                              // Show images in popup if they exist
+                              const images = itemImagesLoaded[item.id] || itemImageUrlsMap[item.id] || [];
+                              if (images.length > 0) {
+                                showImagesInPopup(
+                                  images,
+                                  `Item Images - ${item.productName}`
+                                );
+                              } else {
+                                toast({
+                                  title: 'No Images',
+                                  description: 'No images available for this item',
+                                  variant: 'default',
+                                });
+                              }
+                            }}
+                            disabled={!isReadOnly}
+                            className='gap-2 w-full'
+                          >
+                            <Eye className='w-4 h-4' />
+                            <span className='hidden sm:inline'>View Images</span>
+                          </Button>
+                        </div>
                         {/* Thumbnails hidden per requirements */}
                       </div>
                     </TableCell>
@@ -623,9 +786,9 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                                     />
                                     <Label
                                       htmlFor={`${item.id}-${quotation.id}`}
-                                      className="text-sm cursor-pointer flex-1"
+                                      className="text-sm cursor-pointer flex-1 min-w-0"
                                     >
-                                      <div className="font-medium text-gray-900">{quotation.vendorName}</div>
+                                      <div className="font-medium text-gray-900 truncate">{quotation.vendorName}</div>
                                       <div className="text-xs font-medium text-green-600">
                                         {quotation.quotedPrice}
                                       </div>
@@ -637,7 +800,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                                         e.stopPropagation();
                                         showQuotationDetails(quotation, item);
                                       }}
-                                      className='h-6 w-6 p-0 ml-2'
+                                      className='h-6 w-6 p-0 ml-2 flex-shrink-0'
                                     >
                                       <Eye className='w-3 h-3' />
                                     </Button>
@@ -658,8 +821,8 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                                     onClick={() => showQuotationDetails(quotation, item)}
                                   >
                                     <div className="flex justify-between items-center">
-                                      <div>
-                                        <div className="font-medium text-gray-900">
+                                      <div className="min-w-0 flex-1">
+                                        <div className="font-medium text-gray-900 truncate">
                                           {quotation.vendorName}
                                         </div>
                                         <div className="text-xs font-medium text-green-600">
@@ -667,8 +830,8 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                                         </div>
                                       </div>
                                       {quotation.isSelected && (
-                                        <div className="text-xs bg-green-600 text-white px-2 py-1 rounded">
-                                          APPROVED
+                                        <div className="text-xs bg-green-600 text-white px-2 py-1 rounded flex-shrink-0">
+                                          ✓
                                         </div>
                                       )}
                                     </div>
@@ -690,13 +853,14 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                               disabled={item.vendorQuotations.length >= 4}
                             >
                               <Plus className='w-3 h-3 mr-1' />
-                              Add ({item.vendorQuotations.length}/4)
+                              <span className='hidden sm:inline'>Add ({item.vendorQuotations.length}/4)</span>
+                              <span className='sm:hidden'>({item.vendorQuotations.length}/4)</span>
                             </Button>
                             {item.vendorQuotations.length > 0 && (
                               <Button
                                 variant='outline'
                                 size='sm'
-                                className='h-8 w-8 p-0'
+                                className='h-8 w-8 p-0 flex-shrink-0'
                                 onClick={() => openVendorForm(item.id)}
                               >
                                 <Eye className='w-3 h-3' />
@@ -708,47 +872,80 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                         {/* Show message when no quotations */}
                         {item.vendorQuotations.length === 0 && (
                           <div className='text-xs text-gray-500 italic p-2 bg-gray-50 border border-gray-200 rounded'>
-                            No vendor quotations (Optional)
+                            No vendor quotations
                           </div>
                         )}
                       </div>
                     </TableCell>
                     <TableCell className='border border-gray-300'>
                       {isReadOnly ? (
-                        <div>{item.machineName}</div>
+                        <div className='truncate'>{item.purposeType || 'Machine'}</div>
                       ) : (
                         <Select
-                          value={item.machineName}
-                          onValueChange={(value) =>
-                            handleItemChange(item.id, 'machineName', value)
-                          }
+                          value={item.purposeType || PurposeType.MACHINE}
+                          onValueChange={(value) => {
+                            handleItemChange(item.id, 'purposeType', value);
+                            // Reset machine name when purpose type changes
+                            if (value === PurposeType.SPARE || value === PurposeType.OTHER) {
+                              handleItemChange(item.id, 'machineName', value === PurposeType.SPARE ? 'Spare' : 'Other');
+                            } else {
+                              handleItemChange(item.id, 'machineName', '');
+                            }
+                          }}
                         >
-                          <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none'>
-                            <SelectValue placeholder='Select Machine *' />
+                          <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none w-full'>
+                            <SelectValue placeholder='Select Purpose *' />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value='Spare'>Spare</SelectItem>
-                            <SelectItem value='Other'>Other</SelectItem>
-                            {machines.map((machine) => (
-                              <SelectItem key={machine} value={machine}>
-                                {machine}
-                              </SelectItem>
-                            ))}
+                            <SelectItem value={PurposeType.MACHINE}>Machine</SelectItem>
+                            <SelectItem value={PurposeType.SPARE}>Spare</SelectItem>
+                            <SelectItem value={PurposeType.OTHER}>Other</SelectItem>
                           </SelectContent>
                         </Select>
                       )}
                     </TableCell>
                     <TableCell className='border border-gray-300'>
                       {isReadOnly ? (
-                        <div>{item.notes || '-'}</div>
+                        <div className='truncate'>{item.machineName}</div>
+                      ) : (
+                        <>
+                          {item.purposeType === PurposeType.MACHINE ? (
+                            <Select
+                              value={item.machineName}
+                              onValueChange={(value) =>
+                                handleItemChange(item.id, 'machineName', value)
+                              }
+                            >
+                              <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none w-full'>
+                                <SelectValue placeholder='Select Machine *' />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {machines.map((machine) => (
+                                  <SelectItem key={machine} value={machine}>
+                                    {machine}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className='text-sm text-gray-600 p-2'>
+                              {item.purposeType === PurposeType.SPARE ? 'Spare' : 'Other'}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </TableCell>
+                    <TableCell className='border border-gray-300'>
+                      {isReadOnly ? (
+                        <div className='truncate'>{item.notes || '-'}</div>
                       ) : (
                         <Textarea
                           value={item.notes || ''}
                           onChange={(e) =>
                             handleItemChange(item.id, 'notes', e.target.value)
                           }
-                          placeholder='Add notes...'
-                          className='border-0 p-0 h-auto min-h-[60px] resize-none focus:ring-0 focus:outline-none rounded-none'
+                          placeholder={item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER ? 'Required for Spare/Other purpose...' : 'Add notes...'}
+                          className='border-0 p-0 h-auto min-h-[60px] resize-none focus:ring-0 focus:outline-none rounded-none w-full'
                           rows={2}
                         />
                       )}
@@ -768,6 +965,33 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
             <DialogTitle>Add Partial Receipt</DialogTitle>
           </DialogHeader>
           <div className='space-y-4'>
+            {/* Show summary of current status */}
+            {(() => {
+              const currentItem = requestData.items.find(item => item.id === currentItemId);
+              const requiredQty = parseInt(currentItem?.reqQuantity || '0');
+              const totalReceived = getTotalReceivedQuantity();
+              const remainingQty = requiredQty - totalReceived;
+              
+              return (
+                <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+                  <div className='text-sm space-y-1'>
+                    <div className='flex justify-between'>
+                      <span className='text-blue-700'>Required:</span>
+                      <span className='font-semibold text-blue-900'>{requiredQty} {currentItem?.measureUnit}</span>
+                    </div>
+                    <div className='flex justify-between'>
+                      <span className='text-blue-700'>Already Received:</span>
+                      <span className='font-semibold text-green-600'>{totalReceived} {currentItem?.measureUnit}</span>
+                    </div>
+                    <div className='flex justify-between border-t border-blue-300 pt-1'>
+                      <span className='text-blue-700 font-medium'>Remaining:</span>
+                      <span className='font-bold text-orange-600'>{remainingQty} {currentItem?.measureUnit}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            
             <div className='grid grid-cols-2 gap-4'>
               <div className='space-y-2'>
                 <Label htmlFor='receivedQuantity'>Received Quantity *</Label>
@@ -783,6 +1007,12 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                   }
                   placeholder='Enter quantity'
                   min='1'
+                  max={(() => {
+                    const currentItem = requestData.items.find(item => item.id === currentItemId);
+                    const requiredQty = parseInt(currentItem?.reqQuantity || '0');
+                    const totalReceived = getTotalReceivedQuantity();
+                    return requiredQty - totalReceived;
+                  })()}
                 />
               </div>
               <div className='space-y-2'>
@@ -1138,21 +1368,22 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                       <img
                         src={imageUrl}
                         alt={`Image ${index + 1}`}
-                        className='w-full h-48 object-cover rounded-lg border border-gray-200 hover:border-primary transition-colors cursor-pointer'
-                        onClick={() => window.open(imageUrl, '_blank')}
+                        className='w-full h-48 object-cover rounded-lg border border-gray-200 hover:border-primary transition-colors'
+                        onLoad={() => console.log('Image loaded successfully:', imageUrl)}
+                        onError={(e) => {
+                          console.error('Failed to load image:', imageUrl, e);
+                          toast({
+                            title: 'Image Load Error',
+                            description: `Failed to load image: ${imageUrl}`,
+                            variant: 'destructive',
+                          });
+                        }}
                       />
-                      <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center'>
-                        <div className='opacity-0 group-hover:opacity-100 transition-opacity'>
-                          <Button
-                            variant='secondary'
-                            size='sm'
-                            onClick={() => window.open(imageUrl, '_blank')}
-                            className='gap-2'
-                          >
-                            <Eye className='w-4 h-4' />
-                            View Full Size
-                          </Button>
-                        </div>
+                      <div className='absolute top-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs'>
+                        Image {index + 1}
+                      </div>
+                      <div className='absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs max-w-[200px] truncate'>
+                        {imageUrl}
                       </div>
                     </div>
                   ))}
@@ -1161,6 +1392,8 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                 <div className='text-center py-8 text-muted-foreground'>
                   <Eye className='w-12 h-12 mx-auto mb-4 opacity-50' />
                   <p>No images available</p>
+                  <p className='text-xs mt-2'>Debug: {selectedImages.length} images in array</p>
+                  <p className='text-xs'>Title: {popupTitle}</p>
                 </div>
               )}
             </div>
@@ -1245,27 +1478,35 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                 {/* Quotation Images */}
                 <div className='space-y-4'>
                   <h4 className='font-semibold text-gray-800'>Quotation Images</h4>
-                  {quotationImageUrlsMap[selectedItemForQuotation.id] && 
-                   quotationImageUrlsMap[selectedItemForQuotation.id].length > 0 ? (
+                  {/* Display images loaded from API */}
+                  {quotationImagesLoaded[selectedItemForQuotation.id] && 
+                   quotationImagesLoaded[selectedItemForQuotation.id].length > 0 ? (
                     <div className='grid grid-cols-1 gap-4'>
-                      {quotationImageUrlsMap[selectedItemForQuotation.id].map((imageUrl, index) => (
-                        <div key={index} className='relative group'>
+                      {quotationImagesLoaded[selectedItemForQuotation.id].map((imageUrl, index) => (
+                        <div key={`quotation-${index}`} className='relative group'>
                           <img
                             src={imageUrl}
                             alt={`Quotation Image ${index + 1}`}
                             className='w-full h-48 object-cover rounded-lg border border-gray-200 hover:border-primary transition-colors cursor-pointer'
-                            onClick={() => window.open(imageUrl, '_blank')}
+                            onClick={() => showImagesInPopup([imageUrl], `Quotation Image ${index + 1}`)}
+                            onError={(e) => {
+                              console.error('Failed to load image:', imageUrl);
+                              e.currentTarget.style.display = 'none';
+                            }}
                           />
+                          <div className='absolute top-2 right-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs'>
+                            Image {index + 1}
+                          </div>
                           <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center'>
                             <div className='opacity-0 group-hover:opacity-100 transition-opacity'>
                               <Button
                                 variant='secondary'
                                 size='sm'
-                                onClick={() => window.open(imageUrl, '_blank')}
+                                onClick={() => showImagesInPopup([imageUrl], `Quotation Image ${index + 1}`)}
                                 className='gap-2'
                               >
                                 <Eye className='w-4 h-4' />
-                                View Full Size
+                                View Preview
                               </Button>
                             </div>
                           </div>
@@ -1276,6 +1517,17 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                     <div className='text-center py-8 text-muted-foreground'>
                       <FileText className='w-12 h-12 mx-auto mb-4 opacity-50' />
                       <p>No quotation images available</p>
+                      <p className='text-xs mt-2'>
+                        Loading images for item ID: {selectedItemForQuotation.id}
+                      </p>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => loadQuotationImages(parseInt(selectedItemForQuotation.id, 10))}
+                        className='mt-2'
+                      >
+                        Retry Loading Images
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -1283,6 +1535,127 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Partial Receipt Details Dialog */}
+      {isPartialReceiptDetailsOpen && selectedItemForReceiptDetails && (
+        <Dialog open={isPartialReceiptDetailsOpen} onOpenChange={setIsPartialReceiptDetailsOpen}>
+          <DialogContent className='max-w-4xl max-h-[80vh] overflow-y-auto'>
+            <DialogHeader>
+              <DialogTitle className='flex items-center gap-2'>
+                <Truck className='w-5 h-5' />
+                Partial Receipt Details - {selectedItemForReceiptDetails.productName}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className='space-y-6'>
+              {/* Item Summary */}
+              <div className='p-4 bg-blue-50 border border-blue-200 rounded-lg'>
+                <h3 className='font-semibold text-blue-800 mb-2'>Item Summary</h3>
+                <div className='grid grid-cols-2 gap-4 text-sm'>
+                  <div>
+                    <span className='font-medium'>Product:</span>
+                    <span className='ml-2'>{selectedItemForReceiptDetails.productName}</span>
+                  </div>
+                  <div>
+                    <span className='font-medium'>Required Quantity:</span>
+                    <span className='ml-2'>{selectedItemForReceiptDetails.reqQuantity} {selectedItemForReceiptDetails.measureUnit}</span>
+                  </div>
+                  <div>
+                    <span className='font-medium'>Total Received:</span>
+                    <span className='ml-2 font-bold text-green-600'>
+                      {getTotalReceivedQuantity()} {selectedItemForReceiptDetails.measureUnit}
+                    </span>
+                  </div>
+                  <div>
+                    <span className='font-medium'>Remaining:</span>
+                    <span className='ml-2 font-bold text-orange-600'>
+                      {parseInt(selectedItemForReceiptDetails.reqQuantity) - getTotalReceivedQuantity()} {selectedItemForReceiptDetails.measureUnit}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Receipt History */}
+              <div className='space-y-4'>
+                <h3 className='font-semibold text-lg'>Receipt History</h3>
+                {requestData.apiData?.partialReceiptHistory && 
+                 requestData.apiData.partialReceiptHistory.length > 0 ? (
+                  <div className='space-y-3'>
+                    {requestData.apiData.partialReceiptHistory.map((receipt, index) => (
+                      <div key={receipt.id} className='p-4 bg-gray-50 border border-gray-200 rounded-lg'>
+                        <div className='flex justify-between items-start mb-3'>
+                          <div className='flex items-center gap-2'>
+                            <span className='font-bold text-lg text-blue-600'>#{index + 1}</span>
+                            <span className='text-sm text-gray-500'>
+                              {formatDateToDDMMYYYY(receipt.receivedDate)}
+                            </span>
+                          </div>
+                          <div className='text-right'>
+                            <div className='font-bold text-green-600 text-lg'>
+                              {receipt.receivedQuantity} {selectedItemForReceiptDetails.measureUnit}
+                            </div>
+                            <div className='text-xs text-gray-500'>
+                              by {receipt.receivedBy}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {receipt.notes && (
+                          <div className='mt-3 p-3 bg-white border border-gray-200 rounded'>
+                            <div className='text-sm font-medium text-gray-700 mb-1'>Notes:</div>
+                            <div className='text-sm text-gray-600 italic'>"{receipt.notes}"</div>
+                          </div>
+                        )}
+                        
+                        <div className='mt-3 text-xs text-gray-500'>
+                          Timestamp: {new Date(receipt.timestamp).toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className='text-center py-8 text-muted-foreground'>
+                    <Truck className='w-12 h-12 mx-auto mb-4 opacity-50' />
+                    <p>No partial receipts recorded yet</p>
+                    <p className='text-xs mt-2'>
+                      This item is marked as partially received but no receipt details have been added.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Progress Summary */}
+              <div className='p-4 bg-green-50 border border-green-200 rounded-lg'>
+                <h3 className='font-semibold text-green-800 mb-2'>Progress Summary</h3>
+                <div className='space-y-2'>
+                  <div className='flex justify-between items-center'>
+                    <span>Total Receipts:</span>
+                    <span className='font-bold'>{requestData.apiData?.partialReceiptHistory?.length || 0}</span>
+                  </div>
+                  <div className='flex justify-between items-center'>
+                    <span>Total Received:</span>
+                    <span className='font-bold text-green-600'>
+                      {getTotalReceivedQuantity()} {selectedItemForReceiptDetails.measureUnit}
+                    </span>
+                  </div>
+                  <div className='flex justify-between items-center'>
+                    <span>Required:</span>
+                    <span className='font-bold'>
+                      {selectedItemForReceiptDetails.reqQuantity} {selectedItemForReceiptDetails.measureUnit}
+                    </span>
+                  </div>
+                  <div className='flex justify-between items-center'>
+                    <span>Completion:</span>
+                    <span className='font-bold text-blue-600'>
+                      {Math.round((getTotalReceivedQuantity() / parseInt(selectedItemForReceiptDetails.reqQuantity)) * 100)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

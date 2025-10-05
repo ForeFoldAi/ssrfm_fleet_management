@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import { RoleProvider, useRole } from './contexts/RoleContext';
 import { StockProvider } from './contexts/StockContext';
 import { SidebarProvider } from './contexts/SidebarContext';
+import { CacheProvider } from './contexts/CacheContext';
 import { Layout } from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import MaterialsInventory from './pages/MaterialsInventory';
@@ -15,11 +16,45 @@ import StockManagement from './pages/StockManagement';
 import AddStock from './pages/AddStock';
 import OrganizationalManagement from './pages/OrganizationalManagement';
 import RequestDetails from './pages/RequestDetails';
+import { Alert, AlertDescription } from './components/ui/alert';
+import { Wifi, WifiOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 import Login from './pages/Login';
 import NotFound from './pages/NotFound';
 
 const queryClient = new QueryClient();
+
+// Network Status Component
+const NetworkStatus = () => {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  if (isOnline) return null;
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50 p-4">
+      <Alert className="border-red-200 bg-red-50 text-red-800">
+        <WifiOff className="h-4 w-4" />
+        <AlertDescription>
+          You are currently offline. Some features may not work properly. Please check your internet connection.
+        </AlertDescription>
+      </Alert>
+    </div>
+  );
+};
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -37,10 +72,28 @@ const RoleBasedHome = () => {
 
   const isOwnerLike = hasPermission('inventory:material-indents:approve');
 
+  // Only redirect to last visited path on initial load (not when user explicitly navigates to dashboard)
+  // Check if this is a page refresh by looking for a specific flag
+  const isPageRefresh = !sessionStorage.getItem('navigation-flag');
+  
+  if (isPageRefresh) {
+    // Check if user was on a specific page before refresh
+    const lastVisitedPath = localStorage.getItem('last-visited-path');
+    
+    // If user has a last visited path and it's not the root, redirect there
+    if (lastVisitedPath && lastVisitedPath !== '/' && lastVisitedPath !== '/login') {
+      // Clear the stored path to prevent infinite redirects
+      localStorage.removeItem('last-visited-path');
+      return <Navigate to={lastVisitedPath} replace />;
+    }
+  } else {
+    // User explicitly navigated to dashboard, clear the navigation flag
+    sessionStorage.removeItem('navigation-flag');
+  }
+
   if (!isOwnerLike && hasPermission('inventory:materials:read')) {
     return <Navigate to='/materials-inventory' replace />;
   }
-
   return <Dashboard />;
 };
 
@@ -117,19 +170,22 @@ const AppRoutes = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <RoleProvider>
-      <StockProvider>
-        <SidebarProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <AppRoutes />
-            </BrowserRouter>
-          </TooltipProvider>
-        </SidebarProvider>
-      </StockProvider>
-    </RoleProvider>
+    <CacheProvider>
+      <RoleProvider>
+        <StockProvider>
+          <SidebarProvider>
+            <TooltipProvider>
+              <NetworkStatus />
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <AppRoutes />
+              </BrowserRouter>
+            </TooltipProvider>
+          </SidebarProvider>
+        </StockProvider>
+      </RoleProvider>
+    </CacheProvider>
   </QueryClientProvider>
 );
 

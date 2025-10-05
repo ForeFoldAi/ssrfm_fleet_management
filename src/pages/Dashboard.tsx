@@ -9,16 +9,22 @@ const Dashboard = () => {
     return <div>Loading...</div>;
   }
 
-  // Permission-based selection
-  const isOwnerLike = hasPermission('inventory:material-indents:approve');
+  // Permission-based selection - show CompanyOwnerDashboard for company owners or users with approval permissions
+  const isOwnerLike = currentUser.role === 'company_owner' || hasPermission('inventory:material-indents:approve');
 
   if (isOwnerLike) {
     return <CompanyOwnerDashboard />;
   }
 
- 
-
-  return <div>Loading...</div>;
+  // Fallback for other users - show a basic dashboard or redirect
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-foreground mb-4">Dashboard</h1>
+        <p className="text-muted-foreground">Welcome to your dashboard!</p>
+      </div>
+    </div>
+  );
 };
 
 export default Dashboard;

@@ -33,19 +33,21 @@ import { RequisitionIndentForm } from '../components/RequisitionIndentForm';
 import { SupervisorRequestForm } from '../components/SupervisorRequestForm';
 import { StatusDropdown } from '../components/StatusDropdown';
 import { HistoryView } from '../components/HistoryView';
+import { ConfirmApproveDialog } from '../components/ConfirmApproveDialog';
 import { generatePurchaseId, parseLocationFromId, formatDateToDDMMYYYY } from '../lib/utils';
 import materialIndentsApi, { IndentStatus } from '../lib/api/material-indents';
 import {
   materialPurchasesApi,
   MaterialPurchaseStatus,
 } from '../lib/api/materials-purchases';
-import {
+import type {
   MaterialIndent,
   MaterialPurchase,
   ApproveRejectMaterialIndentRequest,
   ReceiveMaterialPurchaseItemRequest,
   MaterialPurchaseItem,
-} from '../lib/api/types';
+} from '../lib/api/types.d';
+import { PurposeType } from '../lib/api/types.d';
 import { Badge } from '../components/ui/badge';
 
 interface VendorQuotation {
@@ -72,6 +74,7 @@ interface RequestItem {
   images?: File[];
   imagePreviews?: string[];
   notes?: string;
+  purposeType: PurposeType;
   vendorQuotations: VendorQuotation[];
 }
 
@@ -145,6 +148,8 @@ const RequestDetails: React.FC = () => {
       notes: '',
     });
 
+  // Loading states for dialogs
+
   // Add state for vendor selection
   const [selectedVendors, setSelectedVendors] = useState<Record<string, string>>({});
 
@@ -193,6 +198,74 @@ const RequestDetails: React.FC = () => {
         // Fetch the material indent data from API
         const indentData = await materialIndentsApi.getById(numericId);
 
+        // Build partial receipt history from purchase items
+        const partialReceiptHistory: Array<{
+          id: string;
+          receivedQuantity: number;
+          receivedDate: string;
+          notes: string;
+          receivedBy: string;
+          timestamp: string;
+          status: IndentStatus;
+        }> = [];
+        
+        // Get selected vendor name from indent items
+        const selectedVendorName = indentData.items?.[0]?.selectedQuotation?.vendorName || 'Unknown Vendor';
+        
+        // Check if backend provides partialReceiptHistory directly
+        if (indentData.partialReceiptHistory && Array.isArray(indentData.partialReceiptHistory) && indentData.partialReceiptHistory.length > 0) {
+          // Use the backend's partialReceiptHistory if available (this has individual receipts)
+          console.log('Using backend partialReceiptHistory:', indentData.partialReceiptHistory);
+          indentData.partialReceiptHistory.forEach((receipt: any) => {
+            partialReceiptHistory.push({
+              id: receipt.id || `receipt-${Date.now()}-${Math.random()}`,
+              receivedQuantity: receipt.receivedQuantity || 0,
+              receivedDate: receipt.receivedDate || new Date().toISOString().split('T')[0],
+              notes: receipt.notes || '',
+              receivedBy: receipt.receivedBy || selectedVendorName,
+              timestamp: receipt.timestamp || receipt.createdAt || new Date().toISOString(),
+              status: receipt.status || IndentStatus.PARTIALLY_RECEIVED,
+            });
+          });
+        } else {
+          // Fallback: Extract from purchase items (this only shows cumulative, not individual receipts)
+          console.log('Backend does not provide partialReceiptHistory, using purchase items (cumulative only)');
+          if (indentData.purchases && indentData.purchases.length > 0) {
+            indentData.purchases.forEach((purchase) => {
+              if (purchase.items && Array.isArray(purchase.items)) {
+                purchase.items.forEach((item) => {
+                  // Check if this item has received quantity
+                  if (item.receivedQuantity && item.receivedQuantity > 0) {
+                    // WARNING: This only shows cumulative total, not individual receipts
+                    // Backend needs to implement individual receipt tracking
+                    partialReceiptHistory.push({
+                      id: `receipt-${purchase.id}-${item.id}`,
+                      receivedQuantity: item.receivedQuantity,
+                      receivedDate: item.receivedDate || purchase.orderDate,
+                      notes: item.notes || '',
+                      receivedBy: item.receivedBy || selectedVendorName,
+                      timestamp: item.updatedAt || new Date().toISOString(),
+                      status: item.status === 'fully_received' ? IndentStatus.FULLY_RECEIVED : IndentStatus.PARTIALLY_RECEIVED,
+                    });
+                  }
+                });
+              }
+            });
+          }
+        }
+        
+        // Calculate total received quantity from all receipts
+        const totalReceivedQuantity = partialReceiptHistory.reduce((sum, receipt) => 
+          sum + (receipt.receivedQuantity || 0), 0
+        );
+
+        console.log('Partial Receipt History (Initial Load):', {
+          purchaseCount: indentData.purchases?.length || 0,
+          receiptsFound: partialReceiptHistory.length,
+          totalReceivedQuantity,
+          partialReceiptHistory,
+        });
+
         // Transform API data to match the RequestData interface
         const transformedData: RequestData = {
           id: formatPurchaseId(indentData.uniqueId, indentData.branch?.code), // Apply formatting here
@@ -200,7 +273,11 @@ const RequestDetails: React.FC = () => {
           location: indentData.branch?.name || 'Unknown',
           date: indentData.requestDate,
           status: indentData.status,
-          apiData: indentData, // Store the original API data
+          apiData: {
+            ...indentData,
+            partialReceiptHistory,
+            totalReceivedQuantity,
+          }, // Store the original API data with enhanced receipt history
           items: indentData.items.map((item) => ({
             id: item.id.toString(),
             srNo: formatPurchaseId(indentData.uniqueId, indentData.branch?.code), // Use the same formatted ID as the Purchase ID
@@ -213,6 +290,7 @@ const RequestDetails: React.FC = () => {
             measureUnit: item.material.measureUnitId?.toString() || 'units',
             notes: item.notes || '',
             imagePreviews: item.imagePaths || [],
+            purposeType: PurposeType.MACHINE, // Add required purposeType field
             vendorQuotations: item.quotations.map((quotation) => ({
               id: quotation.id.toString(),
               vendorName: quotation.vendorName,
@@ -223,6 +301,7 @@ const RequestDetails: React.FC = () => {
               notes: quotation.notes,
               quotationFile: null,
               isSelected: quotation.isSelected,
+              filePaths: quotation.filePaths || [], // Pass filePaths from API
             })),
           })),
           selectedVendors: {},
@@ -237,8 +316,8 @@ const RequestDetails: React.FC = () => {
             status: 'purchased',
             items: purchase.items,
           })),
-          partialReceiptHistory: indentData.partialReceiptHistory || [],
-          totalReceivedQuantity: indentData.totalReceivedQuantity || 0,
+          partialReceiptHistory,
+          totalReceivedQuantity,
         };
 
         // Removed initial selected vendors; handled via approval dialog
@@ -422,6 +501,8 @@ const RequestDetails: React.FC = () => {
       }
 
       let updatedIndent;
+      let updatedHistory: any[] = [];
+      let totalReceived = 0;
 
       // Handle different status changes
       if (newStatus === IndentStatus.APPROVED) {
@@ -433,12 +514,9 @@ const RequestDetails: React.FC = () => {
         setIsRejectionDialogOpen(true);
         return;
       } else if (newStatus === IndentStatus.REVERTED) {
-        // For revert, use the update method with revert reason
+        // For revert, use the dedicated revert method
         if (additionalData?.revertReason) {
-          updatedIndent = await materialIndentsApi.update(numericId, {
-            status: newStatus as IndentStatus,
-            additionalNotes: String(additionalData.revertReason),
-          });
+          updatedIndent = await materialIndentsApi.revert(numericId, String(additionalData.revertReason));
         } else {
           throw new Error('Revert reason is required');
         }
@@ -453,64 +531,231 @@ const RequestDetails: React.FC = () => {
         updatedIndent = await materialPurchasesApi.create(purchaseData);
       } else if (newStatus === IndentStatus.PARTIALLY_RECEIVED || 
                  newStatus === IndentStatus.FULLY_RECEIVED) {
-        // Handle material receipt
-        if (additionalData?.receivedQuantity && additionalData?.receivedDate) {
-          const receiveData = {
-            receivedQuantity: Number(additionalData.receivedQuantity),
-            receivedDate: String(additionalData.receivedDate),
-            notes: String(additionalData.notes || ''),
-          };
-          
-          // Create receipt record for history
-          const receiptRecord = {
-            id: `receipt-${Date.now()}`,
-            receivedQuantity: receiveData.receivedQuantity,
-            receivedDate: receiveData.receivedDate,
-            notes: receiveData.notes,
-            receivedBy: currentUser?.name || 'Supervisor',
-            timestamp: new Date().toISOString(),
-            status: newStatus,
-          };
+        // Handle material receipt using material-purchases API
+        
+        // Find the first purchase order to receive
+        const firstPurchase = requestData.receiptHistory?.[0];
+        if (!firstPurchase || !firstPurchase.items || !Array.isArray(firstPurchase.items) || firstPurchase.items.length === 0) {
+          throw new Error('No purchase order found. Please create a purchase order (status: ordered) before receiving materials.');
+        }
 
-          // Get existing partial receipt history
-          const existingHistory = requestData.apiData?.partialReceiptHistory || [];
-          const updatedHistory = [...existingHistory, receiptRecord];
+        const purchaseId = Number(firstPurchase.id);
+        const itemId = firstPurchase.items[0].id;
 
-          // Calculate total received quantity
-          const totalReceived = updatedHistory.reduce((sum, receipt) => 
-            sum + (receipt.receivedQuantity || 0), 0
-          );
-          
-          // Find the first purchase order to receive
-          const firstPurchase = requestData.receiptHistory?.[0];
-          if (firstPurchase?.items?.[0]) {
+        if (newStatus === IndentStatus.PARTIALLY_RECEIVED) {
+          // For partial receipt, call receiveItem with the partial quantity
+          if (additionalData?.receivedQuantity && additionalData?.receivedDate) {
+            const receiveData = {
+              receivedQuantity: Number(additionalData.receivedQuantity),
+              receivedDate: String(additionalData.receivedDate),
+              notes: String(additionalData.notes || ''),
+            };
+
+            console.log('Attempting to receive partial quantity:', {
+              purchaseId,
+              itemId,
+              receiveData,
+              currentPurchaseItem: firstPurchase.items[0],
+              orderedQuantity: firstPurchase.items[0].orderedQuantity,
+              alreadyReceived: firstPurchase.items[0].receivedQuantity,
+              pendingQuantity: firstPurchase.items[0].pendingQuantity,
+            });
+
+            // Call the receive item API to save partial receipt
+            const receiveResponse = await materialPurchasesApi.receiveItem(
+              purchaseId,
+              itemId,
+              receiveData
+            );
+
+            console.log('Partial receipt saved:', receiveResponse);
+
+            // Get existing partial receipt history and add the new one
+            const existingHistory = requestData.apiData?.partialReceiptHistory || [];
+            updatedHistory = [...existingHistory, {
+              id: `receipt-${Date.now()}`,
+              receivedQuantity: receiveData.receivedQuantity,
+              receivedDate: receiveData.receivedDate,
+              notes: receiveData.notes,
+              receivedBy: currentUser?.name || 'Supervisor',
+              timestamp: new Date().toISOString(),
+              status: newStatus,
+            }];
+
+            // Calculate total received quantity
+            totalReceived = updatedHistory.reduce((sum, receipt) => 
+              sum + (receipt.receivedQuantity || 0), 0
+            );
+          }
+        } else if (newStatus === IndentStatus.FULLY_RECEIVED) {
+          // For fully received, first receive the remaining quantity if provided
+          if (additionalData?.receivedQuantity && additionalData?.receivedDate) {
+            const receiveData = {
+              receivedQuantity: Number(additionalData.receivedQuantity),
+              receivedDate: String(additionalData.receivedDate),
+              notes: String(additionalData.notes || ''),
+            };
+
+            // Call the receive item API to save the final receipt
             await materialPurchasesApi.receiveItem(
-              Number(firstPurchase.id),
-              firstPurchase.items[0].id,
+              purchaseId,
+              itemId,
               receiveData
             );
           }
 
-          // Update with partial receipt history
-          updatedIndent = await materialIndentsApi.update(numericId, {
-            status: newStatus as IndentStatus,
-            partialReceiptHistory: updatedHistory,
-            totalReceivedQuantity: totalReceived,
-            ...additionalData,
-          });
+          // Then close the purchase order to mark as fully received
+          const closedPurchase = await materialPurchasesApi.close(purchaseId);
+          console.log('Purchase order closed:', closedPurchase);
         }
+
+        // Refresh the data to get the updated status from backend
+        updatedIndent = await materialIndentsApi.getById(numericId);
       } else {
         // For other status changes
         updatedIndent = await materialIndentsApi.update(numericId, {
           status: newStatus as IndentStatus,
-          ...additionalData,
+          items: [], // Send empty array to satisfy backend validation
         });
       }
 
       // Refresh the data from API to get the latest state
       if (requestData?.apiData?.id) {
-        const updatedIndent = await materialIndentsApi.getById(requestData.apiData.id);
-        setRequestData(prev => prev ? { ...prev, apiData: updatedIndent, status: updatedIndent.status } : null);
+        const refreshedIndent = await materialIndentsApi.getById(requestData.apiData.id);
+        
+        // Build partial receipt history from purchase items
+        const partialReceiptHistory: Array<{
+          id: string;
+          receivedQuantity: number;
+          receivedDate: string;
+          notes: string;
+          receivedBy: string;
+          timestamp: string;
+          status: IndentStatus;
+        }> = [];
+        
+        // Get selected vendor name from indent items
+        const selectedVendorName = refreshedIndent.items?.[0]?.selectedQuotation?.vendorName || 'Unknown Vendor';
+        
+        // Check if backend provides partialReceiptHistory directly
+        if (refreshedIndent.partialReceiptHistory && Array.isArray(refreshedIndent.partialReceiptHistory) && refreshedIndent.partialReceiptHistory.length > 0) {
+          // Use the backend's partialReceiptHistory if available (this has individual receipts)
+          console.log('Using backend partialReceiptHistory (after refresh):', refreshedIndent.partialReceiptHistory);
+          refreshedIndent.partialReceiptHistory.forEach((receipt: any) => {
+            partialReceiptHistory.push({
+              id: receipt.id || `receipt-${Date.now()}-${Math.random()}`,
+              receivedQuantity: receipt.receivedQuantity || 0,
+              receivedDate: receipt.receivedDate || new Date().toISOString().split('T')[0],
+              notes: receipt.notes || '',
+              receivedBy: receipt.receivedBy || selectedVendorName,
+              timestamp: receipt.timestamp || receipt.createdAt || new Date().toISOString(),
+              status: receipt.status || IndentStatus.PARTIALLY_RECEIVED,
+            });
+          });
+        } else {
+          // Fallback: Extract from purchase items (this only shows cumulative, not individual receipts)
+          console.log('Backend does not provide partialReceiptHistory (after refresh), using purchase items (cumulative only)');
+          if (refreshedIndent.purchases && refreshedIndent.purchases.length > 0) {
+            refreshedIndent.purchases.forEach((purchase) => {
+              if (purchase.items && Array.isArray(purchase.items)) {
+                purchase.items.forEach((item) => {
+                  // Check if this item has received quantity
+                  if (item.receivedQuantity && item.receivedQuantity > 0) {
+                    // WARNING: This only shows cumulative total, not individual receipts
+                    // Backend needs to implement individual receipt tracking
+                    partialReceiptHistory.push({
+                      id: `receipt-${purchase.id}-${item.id}`,
+                      receivedQuantity: item.receivedQuantity,
+                      receivedDate: item.receivedDate || purchase.orderDate,
+                      notes: item.notes || '',
+                      receivedBy: item.receivedBy || selectedVendorName,
+                      timestamp: item.updatedAt || new Date().toISOString(),
+                      status: item.status === 'fully_received' ? IndentStatus.FULLY_RECEIVED : IndentStatus.PARTIALLY_RECEIVED,
+                    });
+                  }
+                });
+              }
+            });
+          }
+        }
+        
+        // Calculate total received quantity from all receipts
+        const totalReceivedQuantity = partialReceiptHistory.reduce((sum, receipt) => 
+          sum + (receipt.receivedQuantity || 0), 0
+        );
+
+        console.log('Partial Receipt History (After Status Update):', {
+          purchaseCount: refreshedIndent.purchases?.length || 0,
+          receiptsFound: partialReceiptHistory.length,
+          totalReceivedQuantity,
+          partialReceiptHistory,
+          purchaseItems: refreshedIndent.purchases?.map(p => ({
+            id: p.id,
+            items: p.items?.map(i => ({
+              id: i.id,
+              materialName: i.materialName,
+              receivedQuantity: i.receivedQuantity,
+              receivedDate: i.receivedDate,
+              receivedBy: i.receivedBy,
+              status: i.status,
+            }))
+          })),
+        });
+
+        // Transform the refreshed data to match the RequestData interface
+        const transformedData: RequestData = {
+          id: formatPurchaseId(refreshedIndent.uniqueId, refreshedIndent.branch?.code),
+          requestedBy: refreshedIndent.requestedBy?.name || 'Unknown',
+          location: refreshedIndent.branch?.name || 'Unknown',
+          date: refreshedIndent.requestDate,
+          status: refreshedIndent.status,
+          apiData: {
+            ...refreshedIndent,
+            partialReceiptHistory,
+            totalReceivedQuantity,
+          },
+          items: refreshedIndent.items.map((item) => ({
+            id: item.id.toString(),
+            srNo: formatPurchaseId(refreshedIndent.uniqueId, refreshedIndent.branch?.code),
+            productName: item.material.name,
+            machineName: item.machine?.name || 'N/A',
+            specifications: item.specifications || item.material.specifications || '',
+            oldStock: item.currentStock,
+            reqQuantity: item.requestedQuantity.toString(),
+            measureUnit: item.material.measureUnitId?.toString() || 'units',
+            notes: item.notes || '',
+            imagePreviews: item.imagePaths || [],
+            purposeType: PurposeType.MACHINE,
+            vendorQuotations: item.quotations.map((quotation) => ({
+              id: quotation.id.toString(),
+              vendorName: quotation.vendorName,
+              contactPerson: quotation.contactPerson,
+              phone: quotation.phone,
+              price: quotation.price || '0',
+              quotedPrice: `₹${quotation.quotationAmount}`,
+              notes: quotation.notes,
+              quotationFile: null,
+              isSelected: quotation.isSelected,
+              filePaths: quotation.filePaths || [],
+            })),
+          })),
+          selectedVendors: requestData?.selectedVendors || {},
+          receiptHistory: refreshedIndent.purchases.map((purchase) => ({
+            id: purchase.id.toString(),
+            date: purchase.orderDate,
+            materialName: refreshedIndent.items[0]?.material.name || 'Unknown',
+            quantity: refreshedIndent.items[0]?.requestedQuantity.toString() || '0',
+            purchaseOrderNumber: purchase.purchaseOrderNumber,
+            totalValue: purchase.totalValue,
+            notes: purchase.additionalNotes,
+            status: 'purchased',
+            items: purchase.items,
+          })),
+          partialReceiptHistory,
+          totalReceivedQuantity,
+        };
+        
+        setRequestData(transformedData);
       }
 
       // Status-specific success messages
@@ -529,7 +774,7 @@ const RequestDetails: React.FC = () => {
           successMessage = 'Purchase order has been created successfully';
           break;
         case IndentStatus.PARTIALLY_RECEIVED:
-          const receiptCount = requestData.apiData?.partialReceiptHistory?.length || 0;
+          const receiptCount = (requestData.apiData?.partialReceiptHistory?.length || 0) + 1;
           successMessage = `Material partially received (Receipt #${receiptCount}) and status updated`;
           break;
         case IndentStatus.FULLY_RECEIVED:
@@ -546,12 +791,18 @@ const RequestDetails: React.FC = () => {
         title: 'Success',
         description: successMessage,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating status:', error);
+      console.error('Error response:', error?.response?.data);
+
+      const errorMessage = error?.response?.data?.message?.join(', ') || 
+                           error?.response?.data?.error || 
+                           error?.message || 
+                           'Failed to update the request status. Please try again.';
 
       toast({
         title: 'Status Update Failed',
-        description: 'Failed to update the request status. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
@@ -613,19 +864,23 @@ const RequestDetails: React.FC = () => {
     if (!requestData || !requestData.apiData) return;
 
     try {
-      // Extract numeric ID from the request ID
-      const numericId = parseInt(
-        requestData.id.split('/').pop()?.split('-').pop() || '0',
-        10
-      );
+      // Use the API data ID directly
+      const numericId = requestData.apiData.id;
 
-      if (isNaN(numericId) || numericId <= 0) {
-        throw new Error('Invalid request ID format');
+      if (!numericId || numericId <= 0) {
+        throw new Error('Invalid request ID');
       }
+
+      console.log('Resubmitting request:', {
+        numericId,
+        currentStatus: requestData.status,
+        itemsCount: requestData.items.length,
+      });
 
       // Update the material indent status to pending_approval
       const updatedIndent = await materialIndentsApi.update(numericId, {
         status: IndentStatus.PENDING_APPROVAL,
+        items: [], // Send empty array to satisfy backend validation
         additionalNotes: requestData.items.some((item) => item.notes)
           ? `Resubmitted by ${
               currentUser?.name || 'Supervisor'
@@ -636,6 +891,8 @@ const RequestDetails: React.FC = () => {
               currentUser?.name || 'Supervisor'
             } on ${new Date().toLocaleDateString()}.`,
       });
+
+      console.log('Resubmission successful:', updatedIndent);
 
       // Update local state with API response
       const updatedData = {
@@ -651,12 +908,19 @@ const RequestDetails: React.FC = () => {
         description:
           'Request has been resubmitted for approval with updated vendor quotations',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error resubmitting request:', error);
+      console.error('Error response:', error?.response?.data);
+
+      const errorMessage = error?.response?.data?.message?.join?.(', ') || 
+                           error?.response?.data?.message ||
+                           error?.response?.data?.error || 
+                           error?.message || 
+                           'Failed to resubmit the request. Please try again.';
 
       toast({
         title: 'Resubmission Failed',
-        description: 'Failed to resubmit the request. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
@@ -835,6 +1099,7 @@ const RequestDetails: React.FC = () => {
           status: indent.status,
           requestedBy: indent.requestedBy?.name,
           location: indent.branch?.name || 'Unknown',
+          purchasedFrom: firstQuotation?.vendorName || 'N/A', // Add vendor name from approved quotation
         };
       });
     } else {
@@ -847,77 +1112,11 @@ const RequestDetails: React.FC = () => {
         perMeasureQuantity: '1', // Default value
         requestedValue: item.totalValue || '0',
         currentValue: item.totalValue || '0',
+        purchasedFrom: 'N/A', // For supervisor view, vendor info not available in receipt history
       }));
     }
   };
 
-  // New function to handle approval with selected vendors
-  const handleApproveWithSelection = async () => {
-    if (!requestData || !requestData.apiData) {
-      toast({
-        title: 'Error',
-        description: 'No request data available.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Check if all items have vendors selected
-    if (!checkAllVendorsSelected()) {
-      toast({
-        title: 'Error',
-        description: 'Please select vendors for all items before approving.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      // Approve all items with their selected quotations
-      const approvalPromises = requestData.apiData.items.map(async (item) => {
-        const selectedQuotationId = selectedVendors[item.id.toString()];
-        if (!selectedQuotationId) {
-          throw new Error(`No vendor selected for item ${item.material.name}`);
-        }
-        
-      const approvalData: ApproveRejectMaterialIndentRequest = {
-        status: 'approved',
-          itemId: item.id,
-          quotationId: parseInt(selectedQuotationId),
-      };
-
-        return materialIndentsApi.approve(requestData.apiData.id, approvalData);
-      });
-
-      // Wait for all approvals to complete
-      await Promise.all(approvalPromises);
-
-      toast({
-        title: 'Success',
-        description: 'Material indent approved successfully.',
-      });
-
-      setIsApprovalDialogOpen(false);
-      setSelectedVendors({});
-
-      // Refresh the request data
-      const updatedIndent = await materialIndentsApi.getById(
-        requestData.apiData.id
-      );
-      setRequestData((prev) =>
-        prev
-          ? { ...prev, apiData: updatedIndent, status: updatedIndent.status }
-          : null
-      );
-    } catch (error) {
-      console.error('Error approving indent:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to approve material indent. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
 
   // New function to handle rejection with reason
   const handleRejectWithReason = async () => {
@@ -931,7 +1130,12 @@ const RequestDetails: React.FC = () => {
     }
 
     try {
-      await materialIndentsApi.reject(requestData.apiData.id, rejectionReason);
+      await materialIndentsApi.reject(requestData.apiData.id, {
+        status: 'reverted',
+        rejectionReason: rejectionReason,
+        itemId: requestData.apiData.items?.[0]?.id || 0, // Use first item ID or default
+        quotationId: 0, // Not required for rejection
+      });
 
       toast({
         title: 'Success',
@@ -1225,6 +1429,7 @@ const RequestDetails: React.FC = () => {
                   requestId={requestData.id}
                   hasVendorSelected={checkAllVendorsSelected()}
                   partialReceiptHistory={requestData.apiData?.partialReceiptHistory || []}
+                  requiredQuantity={requestData.apiData?.items?.[0]?.requestedQuantity || 0}
                 />
               ) : (
                 <Badge className='mt-1'>{requestData.status}</Badge>
@@ -1324,70 +1529,6 @@ const RequestDetails: React.FC = () => {
                 selectedVendors={selectedVendors}
                 onVendorSelection={(newSelection) => setSelectedVendors(newSelection)}
               />
-
-              {/* Partial Receipt History */}
-              {requestData.status === 'partially_received' && 
-               requestData.apiData?.partialReceiptHistory && 
-               requestData.apiData.partialReceiptHistory.length > 0 && (
-                <Card className='border-0 shadow-sm'>
-                  <CardContent className='p-6'>
-                    <h3 className='text-lg font-semibold mb-4 flex items-center gap-2'>
-                      <Truck className='w-5 h-5' />
-                      Partial Receipt History
-                    </h3>
-                    <div className='space-y-3'>
-                      {requestData.apiData.partialReceiptHistory.map((receipt, index) => (
-                        <div key={receipt.id} className='flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg'>
-                          <div className='flex-1'>
-                            <div className='flex items-center gap-2 mb-1'>
-                              <span className='text-sm font-medium text-orange-800'>
-                                Receipt #{index + 1}
-                              </span>
-                              <span className='text-xs text-orange-600'>
-                                {formatDateToDDMMYYYY(receipt.receivedDate)}
-                              </span>
-                            </div>
-                            <div className='text-sm text-orange-700'>
-                              <strong>Quantity:</strong> {receipt.receivedQuantity} units
-                            </div>
-                            {receipt.notes && (
-                              <div className='text-sm text-orange-600'>
-                                <strong>Notes:</strong> {receipt.notes}
-                              </div>
-                            )}
-                            <div className='text-xs text-orange-500'>
-                              Received by: {receipt.receivedBy} • {new Date(receipt.timestamp).toLocaleString()}
-                            </div>
-                          </div>
-                          <div className='text-right'>
-                            <div className='text-sm font-medium text-orange-800'>
-                              {receipt.receivedQuantity} units
-                            </div>
-                            <div className='text-xs text-orange-600'>
-                              #{index + 1}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      
-                      {/* Total Summary */}
-                      <div className='mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
-                        <div className='flex items-center justify-between'>
-                          <span className='font-medium text-blue-800'>Total Received:</span>
-                          <span className='font-bold text-blue-900'>
-                            {requestData.apiData.partialReceiptHistory.reduce((sum, receipt) => 
-                              sum + (receipt.receivedQuantity || 0), 0
-                            )} units
-                          </span>
-                        </div>
-                        <div className='text-sm text-blue-600 mt-1'>
-                          {requestData.apiData.partialReceiptHistory.length} partial receipt(s)
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </>
           )}
         </div>
@@ -1455,77 +1596,29 @@ const RequestDetails: React.FC = () => {
       </div>
 
       {/* Approval Dialog */}
-      <Dialog
-        open={isApprovalDialogOpen}
-        onOpenChange={setIsApprovalDialogOpen}
-      >
-        <DialogContent className='max-w-2xl'>
-          <DialogHeader>
-            <DialogTitle>Approve Material Indent</DialogTitle>
-          </DialogHeader>
-          <div className='space-y-4'>
-            {requestData?.apiData && (
-              <div className='space-y-4'>
-                <div className='p-4 bg-green-50 border border-green-200 rounded-lg'>
-                  <h3 className='font-semibold text-green-800 mb-2'>
-                    Indent Details
-                  </h3>
-                  <p>
-                    <strong>ID:</strong> {requestData.apiData.uniqueId.toUpperCase()}
-                  </p>
-                  <p>
-                    <strong>Requested By:</strong>{' '}
-                    {requestData.apiData.requestedBy?.name}
-                  </p>
-                  <p>
-                    <strong>Date:</strong>{' '}
-                    {new Date(requestData.apiData.requestDate)
-                      .toLocaleDateString('en-GB')
-                      .split('/')
-                      .join(' - ')}
-                  </p>
-                  
-                  {/* Selected Vendors */}
-                  {Object.keys(selectedVendors).length > 0 && (
-                    <div className='mt-3 pt-3 border-t border-green-200'>
-                      <p className='font-semibold text-green-800 mb-2'>Selected Vendors:</p>
-                      {requestData.apiData.items.map((item) => {
-                        const selectedQuotationId = selectedVendors[item.id.toString()];
-                        if (!selectedQuotationId) return null;
-                        
-                        const selectedQuotation = item.quotations.find(q => q.id.toString() === selectedQuotationId);
-                        if (!selectedQuotation) return null;
-                        
-                        return (
-                          <div key={item.id} className='text-sm'>
-                            <strong>{item.material.name}:</strong> {selectedQuotation.vendorName} - ₹{selectedQuotation.quotationAmount}
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-                </div>
-
-                <div className='flex justify-end gap-2'>
-                  <Button
-                    variant='outline'
-                    onClick={() => setIsApprovalDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleApproveWithSelection}
-                    className='bg-green-600 hover:bg-green-700'
-                  >
-                    <CheckCircle className='w-4 h-4 mr-2' />
-                    Confirm Approve
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {requestData?.apiData && (
+        <ConfirmApproveDialog
+          isOpen={isApprovalDialogOpen}
+          onClose={() => setIsApprovalDialogOpen(false)}
+          onSuccess={async () => {
+            // Refresh the request data after successful approval
+            const updatedIndent = await materialIndentsApi.getById(requestData.apiData.id);
+            setRequestData((prev) =>
+              prev
+                ? { ...prev, apiData: updatedIndent, status: updatedIndent.status }
+                : null
+            );
+            setSelectedVendors({});
+            
+            toast({
+              title: 'Success',
+              description: 'Material indent approved successfully.',
+            });
+          }}
+          materialIndent={requestData.apiData}
+          preSelectedVendors={selectedVendors}
+        />
+      )}
 
       {/* Rejection Dialog */}
       <Dialog

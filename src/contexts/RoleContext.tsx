@@ -34,7 +34,7 @@ export const useRole = () => {
 
 // Derive a legacy role label from permissions to keep existing UI logic working
 export const deriveUserRole = (permissions: string[]): UserRole => {
-  // Owner-like access: only if the user can approve material indents
+  // Owner-like access: if the user can approve material indents
   if (permissions.includes('inventory:material-indents:approve')) {
     return 'company_owner';
   }

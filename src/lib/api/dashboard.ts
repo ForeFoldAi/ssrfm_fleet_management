@@ -2,6 +2,33 @@ import api from './axios';
 import { Branch, Material, Machine } from './types';
 
 // Dashboard Types
+export interface ExpenseData {
+  total: number;
+  period: string;
+  comparison: string;
+}
+
+export interface MaterialExpenseByUnit {
+  materialType: string;
+  unitOneAmount: number;
+  unitTwoAmount: number;
+}
+
+export interface MachineExpenseByUnit {
+  machineType: string;
+  unitOneAmount: number;
+  unitTwoAmount: number;
+}
+
+export interface DashboardExpensesResponse {
+  totalExpenses: ExpenseData;
+  unitOneExpenses: ExpenseData;
+  unitTwoExpenses: ExpenseData;
+  machineExpensesByUnit: MachineExpenseByUnit[];
+  machineTotalExpenses: any[];
+  materialExpensesByUnit: MaterialExpenseByUnit[];
+}
+
 export interface DashboardStats {
   totalExpenses: number;
   pendingApprovals: number;
@@ -49,7 +76,7 @@ export interface DashboardData {
 }
 
 export interface DashboardQueryParams {
-  dateRangeType?: 'this_month' | 'last_month' | 'this_quarter' | 'this_year' | 'custom';
+  dateRangeType?: 'this_month' | 'last_month' | 'last_3_months' | 'last_6_months' | 'custom';
   startDate?: string;
   endDate?: string;
   unitId?: number;
@@ -60,7 +87,7 @@ export const dashboardApi = {
   /**
    * Get expenses data with various filters
    */
-  getExpenses: async (params: DashboardQueryParams = {}): Promise<any> => {
+  getExpenses: async (params: DashboardQueryParams = {}): Promise<DashboardExpensesResponse> => {
     const queryParams = new URLSearchParams();
 
     if (params.dateRangeType) queryParams.append('dateRangeType', params.dateRangeType);
@@ -72,7 +99,7 @@ export const dashboardApi = {
     const queryString = queryParams.toString();
     const url = `/dashboard/expenses${queryString ? `?${queryString}` : ''}`;
 
-    const response = await api.get(url);
+    const response = await api.get<DashboardExpensesResponse>(url);
     return response.data;
   },
 

@@ -7,12 +7,21 @@ import { MaterialsTab } from "../components/MaterialsTab";
 import { MachinesTab } from "../components/MachinesTab";
 import { MaterialIssuesTab } from "../components/MaterialIssuesTab";
 import { MaterialOrderBookTab } from "@/components/MaterialOrderBookTab";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 const MaterialsInventory = () => {
-  const [activeTab, setActiveTab] = useState("materials");
+  const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Initialize activeTab from URL params, localStorage, or default to "materials"
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl) {
+      return tabFromUrl;
+    }
+    return localStorage.getItem('materials-inventory-active-tab') || "materials";
+  });
   
   // Check if we're on a nested route (like material-request)
   const isNestedRoute = location.pathname.includes('/material-request');
@@ -25,6 +34,20 @@ const MaterialsInventory = () => {
       navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state, location.pathname, navigate]);
+
+  // Persist activeTab to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('materials-inventory-active-tab', activeTab);
+  }, [activeTab]);
+
+  // Handle tab changes and update URL
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    // Update URL params
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set('tab', newTab);
+    setSearchParams(newSearchParams, { replace: true });
+  };
   
   // If we're on a nested route, render the outlet instead of the main content
   if (isNestedRoute) {
@@ -42,7 +65,7 @@ const MaterialsInventory = () => {
       </div>
       */}
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-4/5 grid-cols-4 h-auto p-1 bg-secondary/10 rounded-lg shadow-sm">
            <TabsTrigger 
             value="materials" 
@@ -87,23 +110,28 @@ const MaterialsInventory = () => {
           </TabsTrigger>
         </TabsList>
 
-
-        <TabsContent value="material-issues" className="mt-4">
+        {/* Custom Tab Content - Keep all components mounted to prevent reloading */}
+        <div className="mt-4">
+          {/* Material Issues Tab */}
+          <div className={activeTab === "material-issues" ? "block" : "hidden"}>
           <MaterialIssuesTab />
-        </TabsContent>
+          </div>
 
-        <TabsContent value="materials" className="mt-4">
+          {/* Materials Tab */}
+          <div className={activeTab === "materials" ? "block" : "hidden"}>
           <MaterialsTab />
-        </TabsContent>
+          </div>
 
-<TabsContent value="material-order-book" className="mt-4">
+          {/* Material Order Book Tab */}
+          <div className={activeTab === "material-order-book" ? "block" : "hidden"}>
           <MaterialOrderBookTab />
-        </TabsContent>
+          </div>
 
-
-        <TabsContent value="machines" className="mt-4">
+          {/* Machines Tab */}
+          <div className={activeTab === "machines" ? "block" : "hidden"}>
           <MachinesTab />
-        </TabsContent>
+          </div>
+        </div>
       </Tabs>
       
       {/* Fixed Footer */}

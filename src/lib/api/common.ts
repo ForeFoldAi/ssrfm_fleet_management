@@ -46,6 +46,7 @@ export const createUnit = async (data: { name: string; description: string }): P
 
 /**
  * Get all machine types with pagination
+ * @deprecated Use machineTypesApi.getAll() instead
  */
 export const getMachineTypes = async (
   params: QueryParams = {}
@@ -69,12 +70,13 @@ export const getMachineTypes = async (
   const queryString = queryParams.toString();
   const url = `/inventory/machine-types${queryString ? `?${queryString}` : ''}`;
 
-  const response = await api.get<PaginatedResponse<Unit>>(url);
+  const response = await api.get<PaginatedResponse<MachineType>>(url);
   return response.data;
 };
 
 /**
  * Create a new machine type
+ * @deprecated Use machineTypesApi.create() instead
  */
 export const createMachineType = async (data: { name: string }): Promise<MachineType> => {
   const response = await api.post<MachineType>('/inventory/machine-types', data);

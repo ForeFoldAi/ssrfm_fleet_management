@@ -42,6 +42,9 @@ export const materialIndentsApi = {
       }
     });
 
+    // Always include complete item details
+    queryParams.append('include', 'items,items.material,items.machine,items.quotations');
+
     const queryString = queryParams.toString();
     const url = `/inventory/material-indents${
       queryString ? `?${queryString}` : ''
@@ -52,11 +55,11 @@ export const materialIndentsApi = {
   },
 
   /**
-   * Get a material indent by ID
+   * Get a material indent by ID with complete item details
    */
   getById: async (id: number): Promise<MaterialIndent> => {
     const response = await api.get<MaterialIndent>(
-      `/inventory/material-indents/${id}`
+      `/inventory/material-indents/${id}?include=items,items.material,items.machine,items.quotations`
     );
     return response.data;
   },
@@ -87,7 +90,7 @@ export const materialIndentsApi = {
     id: number,
     materialIndent: Partial<MaterialIndent>
   ): Promise<MaterialIndent> => {
-    const response = await api.put<MaterialIndent>(
+    const response = await api.patch<MaterialIndent>(
       `/inventory/material-indents/${id}`,
       materialIndent
     );
@@ -108,10 +111,12 @@ export const materialIndentsApi = {
     id: number,
     payload: ApproveRejectMaterialIndentRequest
   ): Promise<MaterialIndent> => {
+    console.log('API: Approving material indent', { id, payload });
     const response = await api.post<MaterialIndent>(
       `/inventory/material-indents/${id}/approve`,
       payload
     );
+    console.log('API: Approval response', response.data);
     return response.data;
   },
 
@@ -120,28 +125,29 @@ export const materialIndentsApi = {
    */
   reject: async (
     id: number,
-    rejectionReason: string
+    payload: ApproveRejectMaterialIndentRequest
   ): Promise<MaterialIndent> => {
     const response = await api.post<MaterialIndent>(
       `/inventory/material-indents/${id}/reject`,
-      {
-        rejectionReason,
-      }
+      payload
     );
     return response.data;
   },
 
   /**
-   * Revert a material indent
+   * Revert a material indent using the approve API endpoint
    */
   revert: async (
     id: number,
     revertReason: string
   ): Promise<MaterialIndent> => {
     const response = await api.post<MaterialIndent>(
-      `/inventory/material-indents/${id}/revert`,
+      `/inventory/material-indents/${id}/approve`,
       {
-        revertReason,
+        status: 'reverted',
+        rejectionReason: revertReason,
+        itemId: 0, // Default item ID for revert
+        quotationId: 0, // Default quotation ID for revert
       }
     );
     return response.data;
@@ -180,6 +186,39 @@ export const materialIndentsApi = {
       `/inventory/material-indents/${indentId}/items/${itemId}/quotation`
     );
     return response.data.urls || [];
+  },
+
+  /**
+   * Get detailed information for a specific material indent item
+   */
+  getItemDetails: async (
+    indentId: number,
+    itemId: number
+  ): Promise<MaterialIndent['items'][0]> => {
+    const response = await api.get<MaterialIndent['items'][0]>(
+      `/inventory/material-indents/${indentId}/items/${itemId}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Get all items for a material indent with complete details
+   */
+  getIndentItems: async (indentId: number): Promise<MaterialIndent['items']> => {
+    const response = await api.get<MaterialIndent['items']>(
+      `/inventory/material-indents/${indentId}/items?include=material,machine,quotations`
+    );
+    return response.data;
+  },
+
+  /**
+   * Refresh material indent data to ensure all fields are populated
+   */
+  refreshIndentData: async (id: number): Promise<MaterialIndent> => {
+    const response = await api.get<MaterialIndent>(
+      `/inventory/material-indents/${id}?include=items,items.material,items.machine,items.quotations,items.material.measureUnit`
+    );
+    return response.data;
   },
 };
 

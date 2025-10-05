@@ -36,9 +36,9 @@ export const MobileNavigation = () => {
   const getNavigationItems = () => {
     const userRole = currentUser?.role;
 
-    // Dashboard item - exclude for supervisor-like users
+    // Dashboard item - show for company owners and users with approval permissions
     const baseItems =
-      userRole !== 'supervisor'
+      userRole === 'company_owner' || hasPermission('inventory:material-indents:approve')
         ? [
             {
               to: '/',
@@ -91,6 +91,12 @@ export const MobileNavigation = () => {
               key={item.to}
               to={item.to}
               end={item.to === '/'}
+              onClick={() => {
+                // Set navigation flag when user explicitly clicks on dashboard
+                if (item.to === '/') {
+                  sessionStorage.setItem('navigation-flag', 'true');
+                }
+              }}
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center p-2 rounded-[20px] transition-all duration-200 min-w-0 flex-1 ${
                   isActive

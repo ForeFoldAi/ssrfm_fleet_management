@@ -413,7 +413,11 @@ const StockManagement = () => {
       </div>
 
       {/* Tabs for Different Views */}
-      <Tabs defaultValue="stock-overview" className="w-full">
+      <Tabs 
+        value={localStorage.getItem('stock-management-active-tab') || "stock-overview"} 
+        onValueChange={(value) => localStorage.setItem('stock-management-active-tab', value)}
+        className="w-full"
+      >
         <TabsList className="grid w-full md:w-auto grid-cols-2 lg:grid-cols-3 h-auto p-2 bg-secondary rounded-xl">
           <TabsTrigger 
             value="stock-overview" 

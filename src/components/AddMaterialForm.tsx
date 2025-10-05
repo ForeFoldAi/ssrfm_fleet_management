@@ -109,20 +109,7 @@ export const AddMaterialForm = ({
     fetchData();
   }, [isOpen]);
 
-  // Dummy data for categories and measure units in case API fails
-  const categories = [
-    'Mechanical Components',
-    'Lubricants',
-    'Adhesives & Sealants',
-    'Processing Equipment',
-    'Electrical',
-    'Safety',
-    'Raw Materials',
-    'Consumables',
-    'Spare Parts',
-    'Tools',
-    'Other',
-  ];
+  
 
   const measureUnits = [
     'pieces',
@@ -142,20 +129,7 @@ export const AddMaterialForm = ({
     'other',
   ];
 
-  const locations = [
-    'Parts Storage A-1',
-    'Parts Storage A-2',
-    'Chemical Storage B-1',
-    'Chemical Storage B-2',
-    'Equipment Storage C-1',
-    'Equipment Storage C-2',
-    'Raw Material Storage',
-    'Finished Goods Storage',
-    'Maintenance Workshop',
-    'Production Floor A',
-    'Production Floor B',
-    'Other',
-  ];
+ 
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -232,12 +206,11 @@ export const AddMaterialForm = ({
     ) {
       newErrors.customMeasureUnit = 'Custom measure unit is required';
     }
-    if (!formData.currentStock.trim())
-      newErrors.currentStock = 'Current stock is required';
-    if (!formData.totalValue.trim())
-      newErrors.totalValue = 'Total value is required';
-
-    // Numeric validations
+    
+    // Remove the required validation for currentStock and totalValue
+    // since backend handles default values of 0
+    
+    // Numeric validations - only validate if values are provided
     if (formData.currentStock && isNaN(Number(formData.currentStock))) {
       newErrors.currentStock = 'Current stock must be a number';
     }
@@ -274,8 +247,9 @@ export const AddMaterialForm = ({
       console.log('Using default categoryId:', categoryId);
       console.log('Selected unit:', formData.measureUnit, 'ID:', measureUnitId);
 
-      const currentStockNum = Number(formData.currentStock);
-      const totalValueNum = Number(formData.totalValue);
+      // Handle empty values - use 0 as default if empty
+      const currentStockNum = formData.currentStock.trim() ? Number(formData.currentStock) : 0;
+      const totalValueNum = formData.totalValue.trim() ? Number(formData.totalValue) : 0;
 
       const apiMaterial: ApiMaterial = {
         name: formData.name,
@@ -437,26 +411,33 @@ export const AddMaterialForm = ({
               </div>
 
               <div className='space-y-1'>
-                <Label htmlFor='maker' className='text-sm font-medium'>
-                  Model/Version
+                <Label htmlFor='specifications' className='text-sm font-medium'>
+                  Specifications * (Max 30 characters)
                 </Label>
                 <Input
-                  id='maker'
-                  placeholder='Enter model or version'
-                  value={formData.maker}
-                  onChange={(e) => handleInputChange('maker', e.target.value)}
+                  id='specifications'
+                  placeholder='Enter detailed specifications'
+                  value={formData.specifications}
+                  onChange={(e) => {
+                    const value = e.target.value.slice(0, 30);
+                    handleInputChange('specifications', value);
+                  }}
+                  maxLength={30}
                   className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
                 />
-                {errors.maker && (
+                <div className='text-xs text-muted-foreground'>
+                  {formData.specifications.length}/30 characters
+                </div>
+                {errors.specifications && (
                   <p className='text-destructive text-xs mt-1'>
-                    {errors.maker}
+                    {errors.specifications}
                   </p>
                 )}
               </div>
             </div>
 
             {/* Second Row */}
-            <div className='grid grid-cols-1 gap-4'>
+            <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
               <div className='space-y-1'>
                 <Label htmlFor='measureUnit' className='text-sm font-medium'>
                   Measure Unit *
@@ -498,6 +479,24 @@ export const AddMaterialForm = ({
                 {errors.measureUnit && (
                   <p className='text-destructive text-xs mt-1'>
                     {errors.measureUnit}
+                  </p>
+                )}
+              </div>
+
+              <div className='space-y-1'>
+                <Label htmlFor='maker' className='text-sm font-medium'>
+                  Model/Version
+                </Label>
+                <Input
+                  id='maker'
+                  placeholder='Enter model or version'
+                  value={formData.maker}
+                  onChange={(e) => handleInputChange('maker', e.target.value)}
+                  className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
+                />
+                {errors.maker && (
+                  <p className='text-destructive text-xs mt-1'>
+                    {errors.maker}
                   </p>
                 )}
               </div>
@@ -565,12 +564,12 @@ export const AddMaterialForm = ({
             <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
             <div className='space-y-1'>
               <Label htmlFor='currentStock' className='text-sm font-medium'>
-                Current Stock *
+                Current Stock
               </Label>
               <Input
                 id='currentStock'
                 type='number'
-                placeholder='0'
+                placeholder='0 (default)'
                 value={formData.currentStock}
                 onChange={(e) =>
                   handleInputChange('currentStock', e.target.value)
@@ -586,13 +585,13 @@ export const AddMaterialForm = ({
 
               <div className='space-y-1'>
                 <Label htmlFor='totalValue' className='text-sm font-medium'>
-                  Total Value (₹) *
+                  Total Value (₹)
                 </Label>
                 <Input
                   id='totalValue'
                   type='number'
                   step='0.01'
-                  placeholder='0.00'
+                  placeholder='0.00 (default)'
                   value={formData.totalValue}
                   onChange={(e) =>
                     handleInputChange('totalValue', e.target.value)
@@ -607,31 +606,6 @@ export const AddMaterialForm = ({
               </div>
             </div>
 
-            {/* Specifications */}
-            <div className='space-y-1'>
-              <Label htmlFor='specifications' className='text-sm font-medium'>
-                Specifications * (Max 30 characters)
-              </Label>
-              <Textarea
-                id='specifications'
-                placeholder='Enter detailed specifications and technical details'
-                value={formData.specifications}
-                onChange={(e) => {
-                  const value = e.target.value.slice(0, 30);
-                  handleInputChange('specifications', value);
-                }}
-                maxLength={30}
-                className='min-h-[80px] px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-              />
-              <div className='text-xs text-muted-foreground'>
-                {formData.specifications.length}/30 characters
-              </div>
-              {errors.specifications && (
-                <p className='text-destructive text-xs mt-1'>
-                  {errors.specifications}
-                </p>
-              )}
-            </div>
 
             <div className='space-y-1'>
               <Label htmlFor='notes' className='text-sm font-medium'>

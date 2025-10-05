@@ -5,11 +5,8 @@ import {
   Search,
   List,
   Table,
-  Edit,
-  Eye,
   Settings,
   MapPin,
-  FileText,
   Building2,
   Loader2,
   AlertCircle,
@@ -17,10 +14,14 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  WifiOff,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  RotateCcw,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Label } from './ui/label';
 import { Card, CardContent } from './ui/card';
 import {
   Table as TableComponent,
@@ -38,29 +39,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog';
 import { AddMachineForm } from './AddMachineForm';
 import { useRole } from '../contexts/RoleContext';
-import { Machine, PaginatedResponse } from '../lib/api/types';
+import type { Machine, PaginatedResponse } from '../lib/api/types.d';
+import { MachineStatus } from '../lib/api/types.d';
 import { machinesApi } from '../lib/api/machines';
 import { branchesApi } from '../lib/api/branches';
-import { Branch } from '../lib/api/types';
+import type { Branch } from '../lib/api/types.d';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from './ui/pagination';
 import { toast } from '../hooks/use-toast';
+
+type SortField = 'name' | 'status' | 'lastService' | 'nextMaintenanceDue' | 'createdAt';
+type SortOrder = 'ASC' | 'DESC';
 
 export const MachinesTab = () => {
   const { currentUser } = useRole();
@@ -70,19 +60,23 @@ export const MachinesTab = () => {
   const [filterUnit, setFilterUnit] = useState('all');
   const [isAddMachineOpen, setIsAddMachineOpen] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState<TransformedMachine | null>(null);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false); // Add edit mode state
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [machinesData, setMachinesData] =
     useState<PaginatedResponse<Machine> | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5); // Changed default to 5 to match MaterialOrderBookTab
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [error, setError] = useState<string | null>(null);
 
   // Available branches (units) for company owner - fetched from API
   const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField>('createdAt');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('DESC');
 
   // Define interface for transformed machine data
   interface TransformedMachine {
@@ -97,6 +91,15 @@ export const MachinesTab = () => {
     unit: string;
     unitName: string;
     branch: string;
+    // Manufacturing Details
+    manufacturer: string;
+    model: string;
+    serialNumber: string;
+    capacity: string;
+    purchaseDate: string;
+    warrantyExpiry: string;
+    installationDate: string;
+    additionalNotes: string;
   }
 
   // Helper function to format date to dd-mm-yyyy
@@ -110,6 +113,43 @@ export const MachinesTab = () => {
 
   // Transformed machines data for UI - initialize with empty array to avoid showing dummy data
   const [machines, setMachines] = useState<TransformedMachine[]>([]);
+
+  // Handle column sorting - only for API-supported fields
+  const handleSort = (field: SortField) => {
+    // Only allow sorting on fields that the API supports
+    const supportedSortFields: SortField[] = ['name', 'status', 'lastService', 'nextMaintenanceDue', 'createdAt'];
+    
+    if (!supportedSortFields.includes(field)) {
+      // Show a message for unsupported sort fields
+      toast({
+        title: 'Sorting Not Available',
+        description: 'Sorting is not available for this column.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (sortField === field) {
+      // Toggle sort order if same field
+      setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+    } else {
+      // Set new field with ascending order
+      setSortField(field);
+      setSortOrder('ASC');
+    }
+  };
+
+  // Get sort icon for column header
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className='w-4 h-4 text-muted-foreground' />;
+    }
+    return sortOrder === 'ASC' ? (
+      <ArrowUp className='w-4 h-4 text-primary' />
+    ) : (
+      <ArrowDown className='w-4 h-4 text-primary' />
+    );
+  };
 
   // Fetch branches for company owner
   useEffect(() => {
@@ -134,6 +174,20 @@ export const MachinesTab = () => {
     fetchBranches();
   }, [currentUser?.role]);
 
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Fetch machines from API
   const fetchMachines = async () => {
     try {
@@ -142,8 +196,8 @@ export const MachinesTab = () => {
       const params = {
         page: currentPage,
         limit: itemsPerPage,
-        sortBy: 'id',
-        sortOrder: 'ASC' as const,
+        sortBy: sortField,
+        sortOrder: sortOrder,
         ...(searchQuery && { search: searchQuery }),
         ...(filterUnit !== 'all' &&
           currentUser?.role === 'company_owner' && {
@@ -173,6 +227,15 @@ export const MachinesTab = () => {
           unit: `unit-${machine.unit?.id || 1}`,
           unitName: machine.unit?.name || 'Unknown Unit',
           branch: machine.branch?.name || 'Unknown Location',
+          // Manufacturing Details
+          manufacturer: machine.manufacturer || '',
+          model: machine.model || '',
+          serialNumber: machine.serialNumber || '',
+          capacity: machine.capacity || '',
+          purchaseDate: machine.purchaseDate ? formatDate(machine.purchaseDate) : '',
+          warrantyExpiry: machine.warrantyExpiry ? formatDate(machine.warrantyExpiry) : '',
+          installationDate: machine.installationDate ? formatDate(machine.installationDate) : '',
+          additionalNotes: machine.additionalNotes || '',
         };
       });
 
@@ -199,11 +262,11 @@ export const MachinesTab = () => {
     }
   };
 
-  // Load machines on component mount and when pagination changes
+  // Load machines on component mount and when pagination/sorting changes
   useEffect(() => {
     fetchMachines();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, itemsPerPage, searchQuery, filterUnit]);
+  }, [currentPage, itemsPerPage, searchQuery, filterUnit, sortField, sortOrder]);
 
   // Update the handleAddMachine function to be async and add refresh to other operations
   const handleAddMachine = async (machineData: Machine) => {
@@ -251,18 +314,21 @@ export const MachinesTab = () => {
       machine.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
       machine.branch.toLowerCase().includes(searchQuery.toLowerCase());
 
-    // Simple search filtering
-    const shouldInclude = matchesSearch;
+    // Unit filtering - only apply if not 'all' and user is company owner
+    const matchesUnit = 
+      filterUnit === 'all' || 
+      currentUser?.role !== 'company_owner' ||
+      machine.unit === `unit-${filterUnit}`;
 
-    return shouldInclude;
+    return matchesSearch && matchesUnit;
   });
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      Active: 'badge-status bg-success/10 text-success ring-1 ring-success/20',
-      Maintenance:
+      [MachineStatus.ACTIVE]: 'badge-status bg-success/10 text-success ring-1 ring-success/20',
+      [MachineStatus.UNDER_MAINTENANCE]:
         'badge-status bg-warning/10 text-warning ring-1 ring-warning/20',
-      Inactive:
+      [MachineStatus.INACTIVE]:
         'badge-status bg-destructive/10 text-destructive ring-1 ring-destructive/20',
     };
     return (
@@ -271,7 +337,7 @@ export const MachinesTab = () => {
     );
   };
 
-  // Handle machine name click - directly open edit form
+  // Handle machine name click - open edit form with pre-filled data
   const handleMachineClick = (machine: TransformedMachine) => {
     setSelectedMachine(machine);
     setIsEditMode(true);
@@ -280,6 +346,16 @@ export const MachinesTab = () => {
 
   return (
     <div className='space-y-4 sm:space-y-6'>
+      {/* Network Status Alert */}
+      {!isOnline && (
+        <Alert className="border-red-200 bg-red-50 text-red-800">
+          <WifiOff className="h-4 w-4" />
+          <AlertDescription>
+            You are currently offline. Some features may not work properly. Please check your internet connection.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {/* Header with Actions */}
       <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4'>
         {/* Left side: Title and View Toggle Buttons */}
@@ -307,7 +383,7 @@ export const MachinesTab = () => {
           </div>
         </div>
 
-        {/* Right side: Search, Unit Filter and Add Machine Button */}
+        {/* Right side: Search, Unit Filter, Reload and Add Machine Button */}
         <div className='flex flex-col sm:flex-row gap-3 items-start sm:items-center'>
           <div className='relative'>
             <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4' />
@@ -323,9 +399,7 @@ export const MachinesTab = () => {
           {currentUser?.role === 'company_owner' && (
             <Select value={filterUnit} onValueChange={setFilterUnit}>
               <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-                <SelectValue placeholder='Select Unit'>
-                  {isLoadingBranches ? 'Loading...' : 'Select Unit'}
-                </SelectValue>
+                <SelectValue placeholder={isLoadingBranches ? 'Loading...' : 'Select Unit'} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='all'>All Units</SelectItem>
@@ -348,6 +422,22 @@ export const MachinesTab = () => {
             </Select>
           )}
 
+          {/* Reload Button */}
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={fetchMachines}
+            disabled={isLoading}
+            className='w-full sm:w-auto'
+          >
+            {isLoading ? (
+              <Loader2 className='w-4 h-4 animate-spin' />
+            ) : (
+              <RotateCcw className='w-4 h-4' />
+            )}
+            <span className='ml-2'>Reload</span>
+          </Button>
+
           <Button
             className='btn-primary w-full sm:w-auto text-sm sm:text-base'
             onClick={() => setIsAddMachineOpen(true)}
@@ -363,7 +453,23 @@ export const MachinesTab = () => {
         <Alert variant='destructive' className='mb-4'>
           <AlertCircle className='h-4 w-4' />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription className='flex items-center justify-between'>
+            <span>{error}</span>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={fetchMachines}
+              disabled={isLoading}
+              className='ml-4'
+            >
+              {isLoading ? (
+                <Loader2 className='w-4 h-4 animate-spin' />
+              ) : (
+                <RotateCcw className='w-4 h-4' />
+              )}
+              <span className='ml-2'>Retry</span>
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
 
@@ -449,7 +555,14 @@ export const MachinesTab = () => {
                 <TableHeader>
                   <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
                     <TableHead className='min-w-[150px] text-foreground font-semibold'>
-                      Machine
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('name')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Machine
+                        {getSortIcon('name')}
+                      </Button>
                     </TableHead>
                     <TableHead className='min-w-[150px] text-foreground font-semibold'>
                       Type
@@ -458,13 +571,34 @@ export const MachinesTab = () => {
                       Unit
                     </TableHead>
                     <TableHead className='min-w-[100px] text-foreground font-semibold'>
-                      Status
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('status')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Status
+                        {getSortIcon('status')}
+                      </Button>
                     </TableHead>
                     <TableHead className='min-w-[120px] text-foreground font-semibold'>
-                      Last Service
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('lastService')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Last Service
+                        {getSortIcon('lastService')}
+                      </Button>
                     </TableHead>
                     <TableHead className='min-w-[140px] text-foreground font-semibold'>
-                      Next Maintenance Due
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('nextMaintenanceDue')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Next Maintenance Due
+                        {getSortIcon('nextMaintenanceDue')}
+                      </Button>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -563,7 +697,6 @@ export const MachinesTab = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value='5'>5</SelectItem>
                   <SelectItem value='10'>10</SelectItem>
                   <SelectItem value='20'>20</SelectItem>
                   <SelectItem value='50'>50</SelectItem>
@@ -662,96 +795,8 @@ export const MachinesTab = () => {
         </div>
       )}
 
-      {/* Machine View/Edit Modal */}
-      {selectedMachine && (
-        <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-          <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
-            <DialogHeader>
-              <DialogTitle className='flex items-center gap-3 text-xl'>
-                <div className='w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center'>
-                  <Settings className='w-6 h-6 text-primary' />
-                </div>
-                Machine Details - {selectedMachine.name}
-              </DialogTitle>
-            </DialogHeader>
 
-            <div className='space-y-6'>
-              {/* Basic Information */}
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                <div className='space-y-4'>
-                  <div>
-                    <Label className='text-sm font-medium text-muted-foreground'>Machine Name</Label>
-                    <p className='text-lg font-semibold text-foreground'>{selectedMachine.name}</p>
-                  </div>
-                  <div>
-                    <Label className='text-sm font-medium text-muted-foreground'>Type</Label>
-                    <p className='text-foreground'>{selectedMachine.type}</p>
-                  </div>
-                  <div>
-                    <Label className='text-sm font-medium text-muted-foreground'>Status</Label>
-                    <Badge className={`${getStatusBadge(selectedMachine.status)} text-xs`}>
-                      {selectedMachine.status}
-                    </Badge>
-                  </div>
-                  <div>
-                    <Label className='text-sm font-medium text-muted-foreground'>Unit</Label>
-                    <p className='text-foreground'>{selectedMachine.unitName}</p>
-                  </div>
-                </div>
-
-                <div className='space-y-4'>
-                  <div>
-                    <Label className='text-sm font-medium text-muted-foreground'>Branch</Label>
-                    <p className='text-foreground'>{selectedMachine.branch}</p>
-                  </div>
-                  <div>
-                    <Label className='text-sm font-medium text-muted-foreground'>Created Date</Label>
-                    <p className='text-foreground'>{selectedMachine.createdDate}</p>
-                  </div>
-                  <div>
-                    <Label className='text-sm font-medium text-muted-foreground'>Last Service</Label>
-                    <p className='text-foreground'>{selectedMachine.lastMaintenance}</p>
-                  </div>
-                  <div>
-                    <Label className='text-sm font-medium text-muted-foreground'>Next Maintenance Due</Label>
-                    <p className='text-foreground'>{selectedMachine.nextMaintenanceDue}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Specifications */}
-              <div>
-                <Label className='text-sm font-medium text-muted-foreground'>Specifications</Label>
-                <p className='text-foreground mt-2 p-4 bg-muted/30 rounded-lg'>
-                  {selectedMachine.specifications}
-                </p>
-              </div>
-            </div>
-
-            <div className='flex justify-end gap-4 pt-6 border-t'>
-              <Button
-                variant='outline'
-                onClick={() => {
-                  handleEditMachine(selectedMachine);
-                  setIsViewModalOpen(false);
-                }}
-                className='gap-2'
-              >
-                <Edit className='w-4 h-4' />
-                Edit Machine
-              </Button>
-              <Button
-                variant='outline'
-                onClick={() => setIsViewModalOpen(false)}
-              >
-                Close
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Add Machine Form */}
+      {/* Add/Edit Machine Form */}
       <AddMachineForm
         isOpen={isAddMachineOpen}
         onClose={() => {

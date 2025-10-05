@@ -53,13 +53,13 @@ export const VendorQuotationSelector: React.FC<VendorQuotationSelectorProps> = (
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {item.vendorQuotations.length > 0 ? (
+            {item.vendorQuotations.filter(q => q.isSelected).length > 0 ? (
               <RadioGroup
                 value={selectedVendors[item.id] || ''}
                 onValueChange={(value) => onVendorSelect(item.id, value)}
                 className="space-y-4"
               >
-                {item.vendorQuotations.map((quotation) => (
+                {item.vendorQuotations.filter(q => q.isSelected).map((quotation) => (
                   <div key={quotation.id} className="flex items-start space-x-3">
                     <RadioGroupItem
                       value={quotation.id}

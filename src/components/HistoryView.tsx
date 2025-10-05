@@ -102,47 +102,49 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   );
 
   const renderOwnerHistory = () => (
-    <Card className='border border-gray-200 w-full'>
+    <Card className='rounded-lg shadow-sm'>
       <CardHeader className='pb-3'>
         <CardTitle className='flex items-center gap-2 text-lg'>
           <Building2 className='w-5 h-5 text-primary' />
-          {title || `Last 5 Material Received`}
+          {title || `Last 5 Material Transactions`}
         </CardTitle>
       </CardHeader>
       <CardContent className='pt-0'>
         {filteredHistoryData.length > 0 ? (
-          <div className='overflow-x-auto w-full border border-gray-300 rounded-md'>
-            <Table className='min-w-full'>
+          <div className='overflow-x-auto'>
+            <Table>
               <TableHeader>
-                <TableRow className='bg-gray-100 border-b border-gray-300'>
-                  <TableHead className='font-semibold text-sm border-r border-gray-300'>
+                <TableRow>
+                  <TableHead className='text-foreground font-semibold'>
                     Purchased ID
                   </TableHead>
-                  <TableHead className='font-semibold text-sm border-r border-gray-300'>
+                  <TableHead className='text-foreground font-semibold'>
                     Purchased Date
                   </TableHead>
-                  <TableHead className='font-semibold text-sm border-r border-gray-300'>
+                  <TableHead className='text-foreground font-semibold'>
                     Purchased Price
                   </TableHead>
-                  <TableHead className='font-semibold text-sm'>
+                  <TableHead className='text-foreground font-semibold'>
                     Purchased From
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredHistoryData.map((item) => (
-                  <TableRow key={item.id} className='border-b border-gray-200 hover:bg-gray-50'>
-                    <TableCell className='font-medium text-sm border-r border-gray-300'>{item.id}</TableCell>
-                    <TableCell className='text-sm border-r border-gray-300'>
+                  <TableRow key={item.id} className='hover:bg-muted/30'>
+                    <TableCell className='font-medium text-foreground'>
+                      {item.id}
+                    </TableCell>
+                    <TableCell className='text-muted-foreground'>
                       <div className='flex items-center gap-1'>
                         <Calendar className='w-3 h-3 text-muted-foreground' />
                         <span>{formatDateToDDMMYYYY(item.date)}</span>
                       </div>
                     </TableCell>
-                    <TableCell className='font-medium text-sm border-r border-gray-300'>
+                    <TableCell className='font-medium text-foreground'>
                       ₹{item.purchaseValue}
                     </TableCell>
-                    <TableCell className='text-sm'>
+                    <TableCell className='text-muted-foreground'>
                       {item.purchasedFrom || 'N/A'}
                     </TableCell>
                   </TableRow>
@@ -165,48 +167,50 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   );
 
   const renderSupervisorHistory = () => (
-    <Card className='border border-gray-200 w-full'>
+    <Card className='rounded-lg shadow-sm'>
       <CardHeader className='pb-3'>
         <CardTitle className='flex items-center gap-2 text-lg'>
           <Package className='w-5 h-5 text-primary' />
-          {title || `Last 5 Material Received`}
+          {title || `Last 5 Material Transactions`}
           {requestId && <Badge variant='secondary'>{requestId}</Badge>}
         </CardTitle>
       </CardHeader>
       <CardContent className='pt-0'>
         {filteredHistoryData.length > 0 ? (
-          <div className='overflow-x-auto w-full border border-gray-300 rounded-md'>
-            <Table className='min-w-full'>
+          <div className='overflow-x-auto'>
+            <Table>
               <TableHeader>
-                <TableRow className='bg-gray-100 border-b border-gray-300'>
-                  <TableHead className='font-semibold text-sm border-r border-gray-300'>
+                <TableRow>
+                  <TableHead className='text-foreground font-semibold'>
                     Purchased ID
                   </TableHead>
-                  <TableHead className='font-semibold text-sm border-r border-gray-300'>
+                  <TableHead className='text-foreground font-semibold'>
                     Purchased Date
                   </TableHead>
-                  <TableHead className='font-semibold text-sm border-r border-gray-300'>
+                  <TableHead className='text-foreground font-semibold'>
                     Purchased Price
                   </TableHead>
-                  <TableHead className='font-semibold text-sm'>
+                  <TableHead className='text-foreground font-semibold'>
                     Purchased From
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredHistoryData.map((item) => (
-                  <TableRow key={item.id} className='border-b border-gray-200 hover:bg-gray-50'>
-                    <TableCell className='font-medium text-sm border-r border-gray-300'>{item.id}</TableCell>
-                    <TableCell className='text-sm border-r border-gray-300'>
+                  <TableRow key={item.id} className='hover:bg-muted/30'>
+                    <TableCell className='font-medium text-foreground'>
+                      {item.id}
+                    </TableCell>
+                    <TableCell className='text-muted-foreground'>
                       <div className='flex items-center gap-1'>
                         <Calendar className='w-3 h-3 text-muted-foreground' />
                         <span>{formatDateToDDMMYYYY(item.date)}</span>
                       </div>
                     </TableCell>
-                    <TableCell className='font-medium text-sm border-r border-gray-300'>
+                    <TableCell className='font-medium text-foreground'>
                       ₹{item.purchaseValue}
                     </TableCell>
-                    <TableCell className='text-sm'>
+                    <TableCell className='text-muted-foreground'>
                       {item.purchasedFrom || 'N/A'}
                     </TableCell>
                   </TableRow>

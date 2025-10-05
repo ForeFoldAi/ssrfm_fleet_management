@@ -24,6 +24,7 @@ import {
 } from './ui/select';
 import { toast } from '../hooks/use-toast';
 import { useRole } from '../contexts/RoleContext';
+import { materialIndentsApi } from '../lib/api/material-indents';
 
 interface RequestStatusManagerProps {
   request: any;
@@ -57,6 +58,7 @@ export const RequestStatusManager = ({
     'approve' | 'revert' | 'update_received' | null
   >(null);
   const [revertReason, setRevertReason] = useState('');
+  const [isReverting, setIsReverting] = useState(false);
   const [receivedForm, setReceivedForm] = useState<ReceivedFormData>({
     purchasedPrice: '',
     purchasedQuantity: '',
@@ -75,26 +77,57 @@ export const RequestStatusManager = ({
     hasPermission('inventory:material-indents:update') &&
     (request.status === 'ordered' || request.status === 'partially_received');
 
-  const handleOwnerApproval = () => {
+  const handleOwnerApproval = async () => {
     if (!canApprove) return;
 
-    onStatusUpdate(request.id, 'approved', {
-      approvedBy: currentUser.name,
-      approvedDate: new Date().toISOString(),
-      statusDescription: 'Approved by Owner - Ready for ordering',
-      currentStage: 'Approved',
-      progressStage: 2,
-    });
+    try {
+      // Extract numeric ID from the request - handle both string and number IDs
+      const requestId = typeof request.id === 'string' ? parseInt(request.id) : request.id;
+      
+      if (!requestId || isNaN(requestId)) {
+        throw new Error('Invalid request ID');
+      }
 
-    toast({
-      title: 'Request Approved',
-      description: `Request ${request.id} has been approved. Supervisor can now update to Ordered status.`,
-    });
+      // Call the update API endpoint to change status to approved
+      const updatedRequest = await materialIndentsApi.update(requestId, {
+        status: 'approved',
+        additionalNotes: `Approved by Owner: ${currentUser.name} on ${new Date().toISOString()}`,
+      });
 
-    onClose();
+      // Update local state through the parent component
+      onStatusUpdate(request.id, 'approved', {
+        approvedBy: currentUser.name,
+        approvedDate: new Date().toISOString(),
+        statusDescription: 'Approved by Owner - Ready for ordering',
+        currentStage: 'Approved',
+        progressStage: 2,
+      });
+
+      toast({
+        title: 'Request Approved',
+        description: `Request ${request.id} has been approved. Supervisor can now update to Ordered status.`,
+      });
+
+      onClose();
+    } catch (error) {
+      console.error('Error approving request:', error);
+      
+      let errorMessage = 'Failed to approve request. Please try again.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        title: 'Approval Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleOwnerRevert = () => {
+  const handleOwnerRevert = async () => {
     if (!canApprove || !revertReason.trim()) {
       toast({
         title: 'Revert Reason Required',
@@ -104,42 +137,104 @@ export const RequestStatusManager = ({
       return;
     }
 
-    onStatusUpdate(request.id, 'reverted', {
-      revertedBy: currentUser.name,
-      revertedDate: new Date().toISOString(),
-      revertReason: revertReason,
-      statusDescription: `Reverted by Owner: ${revertReason}`,
-      currentStage: 'Reverted - Resubmission Required',
-      progressStage: 0,
-    });
+    setIsReverting(true);
+    try {
+      // Extract numeric ID from the request - handle both string and number IDs
+      const requestId = typeof request.id === 'string' ? parseInt(request.id) : request.id;
+      
+      if (!requestId || isNaN(requestId)) {
+        throw new Error('Invalid request ID');
+      }
 
-    toast({
-      title: 'Request Reverted',
-      description: `Request ${request.id} has been reverted. Indent form must be resubmitted.`,
-      variant: 'destructive',
-    });
+      // Call the revert API endpoint
+      const updatedRequest = await materialIndentsApi.revert(requestId, revertReason);
 
-    setRevertReason('');
-    onClose();
+      // Update local state through the parent component
+      onStatusUpdate(request.id, 'reverted', {
+        revertedBy: currentUser.name,
+        revertedDate: new Date().toISOString(),
+        revertReason: revertReason,
+        statusDescription: `Reverted by Owner: ${revertReason}`,
+        currentStage: 'Reverted - Resubmission Required',
+        progressStage: 0,
+      });
+
+      toast({
+        title: 'Request Reverted',
+        description: `Request ${request.id} has been reverted. Indent form must be resubmitted.`,
+        variant: 'destructive',
+      });
+
+      setRevertReason('');
+      onClose();
+    } catch (error) {
+      console.error('Error reverting request:', error);
+      
+      let errorMessage = 'Failed to revert request. Please try again.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        title: 'Revert Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsReverting(false);
+    }
   };
 
-  const handleUpdateToOrdered = () => {
+  const handleUpdateToOrdered = async () => {
     if (!canUpdateToOrdered) return;
 
-    onStatusUpdate(request.id, 'ordered', {
-      orderedBy: currentUser.name,
-      orderedDate: new Date().toISOString(),
-      statusDescription: 'Order placed with supplier by Supervisor',
-      currentStage: 'Ordered',
-      progressStage: 3,
-    });
+    try {
+      // Extract numeric ID from the request - handle both string and number IDs
+      const requestId = typeof request.id === 'string' ? parseInt(request.id) : request.id;
+      
+      if (!requestId || isNaN(requestId)) {
+        throw new Error('Invalid request ID');
+      }
 
-    toast({
-      title: 'Status Updated to Ordered',
-      description: `Request ${request.id} has been updated to Ordered status.`,
-    });
+      // Call the update API endpoint to change status to ordered
+      const updatedRequest = await materialIndentsApi.update(requestId, {
+        status: 'ordered',
+        additionalNotes: `Order placed by Supervisor: ${currentUser.name} on ${new Date().toISOString()}`,
+      });
 
-    onClose();
+      // Update local state through the parent component
+      onStatusUpdate(request.id, 'ordered', {
+        orderedBy: currentUser.name,
+        orderedDate: new Date().toISOString(),
+        statusDescription: 'Order placed with supplier by Supervisor',
+        currentStage: 'Ordered',
+        progressStage: 3,
+      });
+
+      toast({
+        title: 'Status Updated to Ordered',
+        description: `Request ${request.id} has been updated to Ordered status.`,
+      });
+
+      onClose();
+    } catch (error) {
+      console.error('Error updating to ordered status:', error);
+      
+      let errorMessage = 'Failed to update status to ordered. Please try again.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      toast({
+        title: 'Status Update Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleReceivedUpdate = () => {
@@ -396,13 +491,15 @@ export const RequestStatusManager = ({
                         onClick={handleOwnerRevert}
                         variant='destructive'
                         size='sm'
+                        disabled={isReverting}
                       >
-                        Confirm Revert
+                        {isReverting ? 'Reverting...' : 'Confirm Revert'}
                       </Button>
                       <Button
                         onClick={() => setAction(null)}
                         variant='outline'
                         size='sm'
+                        disabled={isReverting}
                       >
                         Cancel
                       </Button>

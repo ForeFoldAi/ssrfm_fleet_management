@@ -58,12 +58,14 @@ import { toast } from '../hooks/use-toast';
 import { useRole } from '../contexts/RoleContext';
 import materialsApi from '../lib/api/materials';
 import machinesApi from '../lib/api/machines';
+import { getUnits } from '../lib/api/common';
 import {
   Material,
   Machine,
   CreateMaterialIndentRequest,
   CreateMaterialIndentItemInput,
   MaterialIndent,
+  Unit,
 } from '../lib/api/types';
 import materialIndentsApi from '../lib/api/material-indents';
 
@@ -76,6 +78,12 @@ interface VendorQuotation {
   quotedPrice: string;
   notes: string;
   quotationFile?: File | null;
+}
+
+export enum PurposeType {
+  MACHINE = 'machine',
+  OTHER = 'other',
+  SPARE = 'spare',
 }
 
 interface RequestItem {
@@ -91,6 +99,7 @@ interface RequestItem {
   imagePreviews?: string[];
   notes?: string;
   vendorQuotations: VendorQuotation[];
+  purposeType: PurposeType;
 }
 
 const MaterialRequest = () => {
@@ -134,6 +143,7 @@ const MaterialRequest = () => {
       imagePreviews: [],
       notes: '',
       vendorQuotations: [],
+      purposeType: PurposeType.MACHINE,
     },
   ]);
 
@@ -146,8 +156,26 @@ const MaterialRequest = () => {
   const [isLoadingMachines, setIsLoadingMachines] = useState(false);
   const [machinesError, setMachinesError] = useState<string | null>(null);
 
+  // Add units state
+  const [availableUnits, setAvailableUnits] = useState<Unit[]>([]);
+  const [isLoadingUnits, setIsLoadingUnits] = useState(false);
+
   // Additional notes for the indent
   const [additionalNotes, setAdditionalNotes] = useState('');
+  
+  // Loading state for form submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Enhanced getUnitName function with better debugging
+  const getUnitName = (unitId?: number) => {
+    if (!unitId) {
+      console.log('No unitId provided');
+      return '';
+    }
+    const unit = availableUnits.find(u => u.id === unitId);
+    console.log(`Looking for unitId: ${unitId}, Found:`, unit, 'Available units:', availableUnits);
+    return unit?.name || '';
+  };
 
   useEffect(() => {
     const fetchMaterials = async () => {
@@ -196,8 +224,22 @@ const MaterialRequest = () => {
       }
     };
 
+    // Add fetch units function
+    const fetchUnits = async () => {
+      setIsLoadingUnits(true);
+      try {
+        const res = await getUnits({ limit: 100 });
+        setAvailableUnits(res.data || []);
+      } catch (err) {
+        console.error('Error fetching units:', err);
+      } finally {
+        setIsLoadingUnits(false);
+      }
+    };
+
     fetchMaterials();
     fetchMachines();
+    fetchUnits();
   }, []);
 
   const handleItemChange = (itemId: string, field: string, value: string) => {
@@ -287,8 +329,13 @@ const MaterialRequest = () => {
   };
 
   const handleMaterialSelect = (itemId: string, materialName: string) => {
+    console.log('Material selected:', materialName);
     const material = availableMaterials.find((m) => m.name === materialName);
+    console.log('Found material:', material);
     if (material) {
+      // Use measureUnit.name directly instead of looking up by ID
+      const unitName = material.measureUnit?.name || 'units';
+      console.log('Unit name for material:', unitName);
       setRequestItems((prev) =>
         prev.map((item) =>
           item.id === itemId
@@ -296,7 +343,7 @@ const MaterialRequest = () => {
               ...item,
               productName: material.name,
               specifications: material.specifications || '',
-              measureUnit: String(material.measureUnitId ?? ''),
+              measureUnit: unitName, // Use the unit name directly
               oldStock: material.currentStock,
             }
             : item
@@ -319,6 +366,7 @@ const MaterialRequest = () => {
       imagePreviews: [],
       notes: '',
       vendorQuotations: [],
+      purposeType: PurposeType.MACHINE,
     };
     setRequestItems((prev) => [...prev, newItem]);
   };
@@ -428,10 +476,20 @@ const MaterialRequest = () => {
         newErrors[
           `productName_${item.id}`
         ] = `Product name is required for item ${index + 1}`;
-      if (!item.machineName || !item.machineName.trim())
-        newErrors[
-          `machineName_${item.id}`
-        ] = `Machine name is required for item ${index + 1}`;
+      
+      // Validate purpose type and machine selection
+      if (item.purposeType === PurposeType.MACHINE) {
+        if (!item.machineName || !item.machineName.trim() || item.machineName === 'Spare' || item.machineName === 'Other')
+          newErrors[
+            `machineName_${item.id}`
+          ] = `Machine selection is required for item ${index + 1}`;
+      } else if (item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER) {
+        if (!item.notes || !item.notes.trim())
+          newErrors[
+            `notes_${item.id}`
+          ] = `Notes are required for ${item.purposeType} purpose in item ${index + 1}`;
+      }
+      
       if (!item.reqQuantity.trim())
         newErrors[
           `reqQuantity_${item.id}`
@@ -459,6 +517,8 @@ const MaterialRequest = () => {
       });
       return;
     }
+    
+    setIsSubmitting(true);
     try {
       // Build JSON structure for items as API expects
       const itemsPayload: CreateMaterialIndentItemInput[] = requestItems.map(
@@ -475,8 +535,9 @@ const MaterialRequest = () => {
             materialId: material?.id || 0,
             specifications: item.specifications || '',
             requestedQuantity: Number(item.reqQuantity),
-            machineId: machine?.id,
-            machineName: machine?.id ? undefined : item.machineName, // Send machineName if no machineId (for Spare/Other)
+            purposeType: item.purposeType,
+            machineId: item.purposeType === PurposeType.MACHINE ? machine?.id : undefined,
+            machineName: item.purposeType === PurposeType.MACHINE ? undefined : item.machineName, // Send machineName for Spare/Other
             itemImageCount: item.images?.length || 0,
             vendorQuotations: (item.vendorQuotations || []).map((v) => ({
               vendorName: v.vendorName,
@@ -591,6 +652,7 @@ const MaterialRequest = () => {
             imagePreviews: [],
             notes: '',
             vendorQuotations: [],
+            purposeType: PurposeType.MACHINE,
           },
         ]);
         setAdditionalNotes('');
@@ -604,6 +666,8 @@ const MaterialRequest = () => {
         description: 'An unexpected error occurred during submission',
         variant: 'destructive',
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -635,8 +699,11 @@ const MaterialRequest = () => {
                 <TableHead className='border border-gray-300 font-semibold w-40'>
                   VENDOR QUOTATIONS
                 </TableHead>
+                <TableHead className='border border-gray-300 font-semibold w-32'>
+                  PURPOSE TYPE
+                </TableHead>
                 <TableHead className='border border-gray-300 font-semibold w-52'>
-                  MACHINE NAME*
+                  MACHINE NAME
                 </TableHead>
                 <TableHead className='border border-gray-300 font-semibold w-40'>
                   NOTES
@@ -694,6 +761,7 @@ const MaterialRequest = () => {
                     </div>
                   </TableCell>
                   <TableCell className='border border-gray-300 text-center'>
+                    <div className='flex items-center gap-2'>
                     <Input
                       type='number'
                       value={item.oldStock}
@@ -705,6 +773,10 @@ const MaterialRequest = () => {
                       min='0'
                       className='border-0 p-0 h-auto w-20 text-center focus:ring-0 focus:outline-none rounded-none'
                     />
+                      <span className='text-sm text-gray-600'>
+                        {item.measureUnit}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell className='border border-gray-300'>
                     <div className='flex items-center gap-2'>
@@ -844,24 +916,56 @@ const MaterialRequest = () => {
                   </TableCell>
                   <TableCell className='border border-gray-300'>
                     <Select
-                      value={item.machineName}
-                      onValueChange={(value) =>
-                        handleItemChange(item.id, 'machineName', value)
-                      }
+                      value={item.purposeType}
+                      onValueChange={(value) => {
+                        handleItemChange(item.id, 'purposeType', value);
+                        // Reset machine name when purpose type changes
+                        if (value === PurposeType.SPARE || value === PurposeType.OTHER) {
+                          handleItemChange(item.id, 'machineName', value === PurposeType.SPARE ? 'Spare' : 'Other');
+                        } else {
+                          handleItemChange(item.id, 'machineName', '');
+                        }
+                      }}
                     >
                       <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none'>
-                        <SelectValue placeholder='Select Machine *' />
+                        <SelectValue placeholder='Select Purpose *' />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value='Spare'>Spare</SelectItem>
-                        <SelectItem value='Other'>Other</SelectItem>
-                        {availableMachines.map((machine) => (
-                          <SelectItem key={machine.id} value={machine.name}>
-                            {machine.name}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value={PurposeType.MACHINE}>Machine</SelectItem>
+                        <SelectItem value={PurposeType.SPARE}>Spare</SelectItem>
+                        <SelectItem value={PurposeType.OTHER}>Other</SelectItem>
                       </SelectContent>
                     </Select>
+                    {errors[`purposeType_${item.id}`] && (
+                      <p className='text-red-500 text-xs mt-1'>
+                        {errors[`purposeType_${item.id}`]}
+                      </p>
+                    )}
+                  </TableCell>
+                  <TableCell className='border border-gray-300'>
+                    {item.purposeType === PurposeType.MACHINE ? (
+                      <Select
+                        value={item.machineName}
+                        onValueChange={(value) =>
+                          handleItemChange(item.id, 'machineName', value)
+                        }
+                      >
+                        <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none'>
+                          <SelectValue placeholder='Select Machine *' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableMachines.map((machine) => (
+                            <SelectItem key={machine.id} value={machine.name}>
+                              {machine.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className='text-sm text-gray-600 p-2'>
+                        {item.purposeType === PurposeType.SPARE ? 'Spare' : 'Other'}
+                      </div>
+                    )}
                     {errors[`machineName_${item.id}`] && (
                       <p className='text-red-500 text-xs mt-1'>
                         {errors[`machineName_${item.id}`]}
@@ -875,10 +979,15 @@ const MaterialRequest = () => {
                       onChange={(e) =>
                         handleItemChange(item.id, 'notes', e.target.value)
                       }
-                      placeholder='Add notes...'
+                      placeholder={item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER ? 'Required for Spare/Other purpose...' : 'Add notes...'}
                       className='border-0 p-0 h-auto min-h-[60px] resize-none focus:ring-0 focus:outline-none rounded-none'
                       rows={2}
                     />
+                    {errors[`notes_${item.id}`] && (
+                      <p className='text-red-500 text-xs mt-1'>
+                        {errors[`notes_${item.id}`]}
+                      </p>
+                    )}
                   </TableCell>
                   <TableCell className='border border-gray-300'>
                     <Button
@@ -905,8 +1014,42 @@ const MaterialRequest = () => {
       {requestItems.map((item) => (
         <Card key={item.id} className='border-0 shadow-sm'>
           <CardContent className='p-6'>
+            <div className='space-y-6'>
+              {/* Header with SR.NO and Actions */}
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-4'>
+                  <div className='w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center'>
+                    <span className='text-sm font-bold text-primary'>
+                      {String(item.srNo).padStart(2, '0')}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className='text-lg font-semibold text-foreground'>
+                      Item {item.srNo}
+                    </h3>
+                    <p className='text-sm text-muted-foreground'>
+                      Material Request Item
+                    </p>
+                  </div>
+                </div>
+                {requestItems.length > 1 && (
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => removeItem(item.id)}
+                    className='text-destructive hover:text-destructive h-10'
+                  >
+                    <Trash2 className='w-4 h-4 mr-2' />
+                    Remove Item
+                  </Button>
+                )}
+              </div>
+
+              {/* Main Content Grid */}
             <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+                {/* Left Column */}
               <div className='space-y-6'>
+                  {/* Materials */}
                 <div className='space-y-2'>
                   <Label className='text-sm font-medium'>Materials *</Label>
                   <Select
@@ -933,36 +1076,7 @@ const MaterialRequest = () => {
                   )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label className='text-sm font-medium'>
-                    Machine Name *
-                  </Label>
-                  <Select
-                    value={item.machineName}
-                    onValueChange={(value) =>
-                      handleItemChange(item.id, 'machineName', value)
-                    }
-                  >
-                    <SelectTrigger className='h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
-                      <SelectValue placeholder='Select Machine *' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='Spare'>Spare</SelectItem>
-                      <SelectItem value='Other'>Other</SelectItem>
-                      {availableMachines.map((machine) => (
-                        <SelectItem key={machine.id} value={machine.name}>
-                          {machine.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors[`machineName_${item.id}`] && (
-                    <p className='text-destructive text-sm mt-1'>
-                      {errors[`machineName_${item.id}`]}
-                    </p>
-                  )}
-                </div>
-
+                  {/* Specifications */}
                 <div className='space-y-2'>
                   <Label className='text-sm font-medium'>Specifications</Label>
                   <Textarea
@@ -973,21 +1087,22 @@ const MaterialRequest = () => {
                     }}
                     placeholder='Enter detailed specifications (max 30 chars)'
                     maxLength={30}
+                      readOnly
                     className='min-h-[50px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200'
                   />
                   <div className='text-xs text-muted-foreground'>
                     {item.specifications.length}/30 characters
-                  </div>
                 </div>
               </div>
 
-              <div className='space-y-6'>
-                <div className='grid grid-cols-2 gap-4'>
+                  {/* Current Stock */}
                   <div className='space-y-2'>
-                    <Label className='text-sm font-medium'>Old Stock</Label>
+                    <Label className='text-sm font-medium'>Current Stock</Label>
+                    <div className='flex items-center gap-2'>
                     <Input
                       type='number'
                       value={item.oldStock}
+                        readOnly
                       onChange={(e) =>
                         handleItemChange(item.id, 'oldStock', e.target.value)
                       }
@@ -995,13 +1110,20 @@ const MaterialRequest = () => {
                       min='0'
                       className='h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
                     />
+                      <span className='text-sm text-muted-foreground'>
+                        {item.measureUnit}
+                      </span>
                   </div>
+                  </div>
+
+                  {/* Required Quantity */}
                   <div className='space-y-2'>
                     <Label className='text-sm font-medium'>
                       Required Quantity *
                     </Label>
                     <div className='flex items-center gap-2'>
                       <Input
+                        id={`reqQuantity-${item.id}`}
                         type='number'
                         value={item.reqQuantity}
                         onChange={(e) =>
@@ -1027,6 +1149,77 @@ const MaterialRequest = () => {
                   </div>
                 </div>
 
+                {/* Right Column */}
+                <div className='space-y-6'>
+                  {/* Purpose Type */}
+                  <div className='space-y-2'>
+                    <Label className='text-sm font-medium'>
+                      Purpose Type *
+                    </Label>
+                    <Select
+                      value={item.purposeType}
+                      onValueChange={(value) => {
+                        handleItemChange(item.id, 'purposeType', value);
+                        // Reset machine name when purpose type changes
+                        if (value === PurposeType.SPARE || value === PurposeType.OTHER) {
+                          handleItemChange(item.id, 'machineName', value === PurposeType.SPARE ? 'Spare' : 'Other');
+                        } else {
+                          handleItemChange(item.id, 'machineName', '');
+                        }
+                      }}
+                    >
+                      <SelectTrigger className='h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
+                        <SelectValue placeholder='Select Purpose *' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={PurposeType.MACHINE}>Machine</SelectItem>
+                        <SelectItem value={PurposeType.SPARE}>Spare</SelectItem>
+                        <SelectItem value={PurposeType.OTHER}>Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors[`purposeType_${item.id}`] && (
+                      <p className='text-destructive text-sm mt-1'>
+                        {errors[`purposeType_${item.id}`]}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Machine Name */}
+                  <div className='space-y-2'>
+                    <Label className='text-sm font-medium'>
+                      Machine Name *
+                    </Label>
+                    {item.purposeType === PurposeType.MACHINE ? (
+                      <Select
+                        value={item.machineName}
+                        onValueChange={(value) =>
+                          handleItemChange(item.id, 'machineName', value)
+                        }
+                      >
+                        <SelectTrigger className='h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
+                          <SelectValue placeholder='Select Machine *' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableMachines.map((machine) => (
+                            <SelectItem key={machine.id} value={machine.name}>
+                              {machine.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className='h-11 px-4 py-2 border border-input bg-muted rounded-[5px] text-sm flex items-center text-muted-foreground'>
+                        {item.purposeType === PurposeType.SPARE ? 'Spare' : 'Other'}
+                      </div>
+                    )}
+                    {errors[`machineName_${item.id}`] && (
+                      <p className='text-destructive text-sm mt-1'>
+                        {errors[`machineName_${item.id}`]}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Images */}
                 <div className='space-y-2'>
                   <Label className='text-sm font-medium'>Images</Label>
                   <div className='space-y-4'>
@@ -1072,6 +1265,7 @@ const MaterialRequest = () => {
                   </div>
                 </div>
 
+                  {/* Vendor Quotations */}
                 <div className='space-y-2'>
                   <Label className='text-sm font-medium'>
                     Vendor Quotations ({item.vendorQuotations.length}/4)
@@ -1127,19 +1321,28 @@ const MaterialRequest = () => {
                   )}
                 </div>
 
-                {requestItems.length > 1 && (
-                  <div className='flex justify-end'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => removeItem(item.id)}
-                      className='text-destructive hover:text-destructive h-10'
-                    >
-                      <Trash2 className='w-4 h-4 mr-2' />
-                      Remove Item
-                    </Button>
+                  {/* Notes */}
+                  <div className='space-y-2'>
+                    <Label className='text-sm font-medium'>
+                      Notes {item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER ? '*' : ''}
+                    </Label>
+                    <Textarea
+                      id={`notes-${item.id}`}
+                      value={item.notes || ''}
+                      onChange={(e) =>
+                        handleItemChange(item.id, 'notes', e.target.value)
+                      }
+                      placeholder={item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER ? 'Required for Spare/Other purpose...' : 'Add notes...'}
+                      className='min-h-[60px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200'
+                      rows={2}
+                    />
+                    {errors[`notes_${item.id}`] && (
+                      <p className='text-destructive text-sm mt-1'>
+                        {errors[`notes_${item.id}`]}
+                      </p>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </CardContent>
@@ -1213,8 +1416,20 @@ const MaterialRequest = () => {
 
         {/* Form Actions */}
         <div className='flex justify-center gap-4 pt-6'>
-          <Button type='submit' size='lg' className='min-w-48 gap-2'>
-            Submit
+          <Button 
+            type='submit' 
+            size='lg' 
+            className='min-w-48 gap-2'
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                Submitting...
+              </>
+            ) : (
+              'Submit'
+            )}
           </Button>
           <Button
             type='button'
@@ -1222,6 +1437,7 @@ const MaterialRequest = () => {
             variant='outline'
             onClick={() => navigate('/materials-inventory')}
             className='min-w-48 gap-2'
+            disabled={isSubmitting}
           >
             <X className='w-5 h-5' />
             Cancel

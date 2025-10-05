@@ -24,9 +24,11 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { toast } from '../hooks/use-toast';
 import { machinesApi } from '../lib/api/machines';
-import { Machine, MachineType, Unit, User } from '../lib/api/types';
+import type { Machine, MachineType, Unit, User, Branch } from '../lib/api/types.d';
+import { MachineStatus } from '../lib/api/types.d';
 import { useRole } from '../contexts/RoleContext';
 import { getMachineTypes, getUnits, createMachineType, createUnit } from '@/lib/api/common';
+import { branchesApi } from '@/lib/api/branches';
 
 interface AddMachineFormProps {
   isOpen: boolean;
@@ -41,9 +43,17 @@ interface AddMachineFormProps {
     lastMaintenance: string;
     nextMaintenanceDue: string;
     specifications: string;
-    unit: string;
-    unitName: string;
     branch: string;
+    branchName: string;
+    // Manufacturing Details
+    manufacturer: string;
+    model: string;
+    serialNumber: string;
+    capacity: string;
+    purchaseDate: string;
+    warrantyExpiry: string;
+    installationDate: string;
+    additionalNotes: string;
   } | null;
 }
 
@@ -57,8 +67,8 @@ export const AddMachineForm = ({
   const [formData, setFormData] = useState({
     name: '',
     typeId: 0,
-    unitId: 0,
-    status: 'Active',
+    branchId: 0,
+    status: MachineStatus.ACTIVE,
     specifications: '',
     manufacturer: '',
     model: '',
@@ -75,15 +85,12 @@ export const AddMachineForm = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [machineTypes, setMachineTypes] = useState<MachineType[]>([]);
-  const [units, setUnits] = useState<Unit[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // New state for custom inputs
   const [showCustomTypeInput, setShowCustomTypeInput] = useState(false);
-  const [showCustomUnitInput, setShowCustomUnitInput] = useState(false);
   const [customTypeName, setCustomTypeName] = useState('');
-  const [customUnitName, setCustomUnitName] = useState('');
-  const [customUnitDescription, setCustomUnitDescription] = useState('');
 
   // Get the full user data from localStorage to access branch information
   const getFullUserData = (): User | null => {
@@ -91,37 +98,83 @@ export const AddMachineForm = ({
     return userStr ? JSON.parse(userStr) : null;
   };
 
+  // Utility function to convert date from API format to HTML date input format (yyyy-MM-dd)
+  const convertDateForInput = (dateString: string | null | undefined): string => {
+    if (!dateString || dateString === '' || dateString === 'Not serviced' || dateString === 'Not scheduled') {
+      return '';
+    }
+    
+    try {
+      // Try to parse the date string - handle various formats
+      let date: Date;
+      
+      // If it's already in ISO format (yyyy-MM-dd or yyyy-MM-ddTHH:mm:ss)
+      if (dateString.includes('T') || /^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+        date = new Date(dateString);
+      } else if (/^\d{2}-\d{2}-\d{4}/.test(dateString)) {
+        // Handle dd-MM-yyyy format
+        const parts = dateString.split('-');
+        date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+      } else if (/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+        // Handle yyyy-MM-dd format
+        date = new Date(dateString);
+      } else {
+        // Try to parse as-is
+        date = new Date(dateString);
+      }
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateString);
+        return '';
+      }
+      
+      // Convert to yyyy-MM-dd format
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      console.error('Error converting date:', dateString, error);
+      return '';
+    }
+  };
+
   // Prefill form data when editing
   useEffect(() => {
     if (editingData && isOpen) {
-      // Find the typeId and unitId from the fetched data
+      // Find the typeId and branchId from the fetched data
       const typeId = machineTypes.find(type => type.name === editingData.type)?.id || 0;
-      const unitId = units.find(unit => unit.name === editingData.unitName)?.id || 0;
+      const branchId = branches.find(branch => branch.name === editingData.branchName)?.id || 0;
       
       setFormData({
         name: editingData.name,
         typeId: typeId,
-        unitId: unitId,
-        status: editingData.status,
+        branchId: branchId,
+        status: editingData.status as MachineStatus,
         specifications: editingData.specifications,
-        manufacturer: '',
-        model: '',
-        serialNumber: '',
-        purchaseDate: '',
-        warrantyExpiry: '',
-        capacity: '',
-        installationDate: '',
-        lastService: editingData.lastMaintenance !== 'Not serviced' ? editingData.lastMaintenance : '',
-        nextMaintenanceDue: editingData.nextMaintenanceDue !== 'Not scheduled' ? editingData.nextMaintenanceDue : '',
-        additionalNotes: '',
+        manufacturer: editingData.manufacturer,
+        model: editingData.model,
+        serialNumber: editingData.serialNumber,
+        purchaseDate: convertDateForInput(editingData.purchaseDate),
+        warrantyExpiry: convertDateForInput(editingData.warrantyExpiry),
+        capacity: editingData.capacity,
+        installationDate: convertDateForInput(editingData.installationDate),
+        lastService: convertDateForInput(editingData.lastMaintenance),
+        nextMaintenanceDue: convertDateForInput(editingData.nextMaintenanceDue),
+        additionalNotes: editingData.additionalNotes,
       });
     } else if (!editingData && isOpen) {
       // Reset form when adding new machine
+      const fullUserData = getFullUserData();
+      const defaultBranchId = fullUserData?.branch?.id || 0;
+      
       setFormData({
         name: '',
         typeId: 0,
-        unitId: 0,
-        status: 'Active',
+        branchId: defaultBranchId,
+        status: MachineStatus.ACTIVE,
         specifications: '',
         manufacturer: '',
         model: '',
@@ -135,9 +188,9 @@ export const AddMachineForm = ({
         additionalNotes: '',
       });
     }
-  }, [editingData, isOpen, machineTypes, units]);
+  }, [editingData, isOpen, machineTypes, branches]);
 
-  // Fetch machine types and units on component mount
+  // Fetch machine types and branches on component mount
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -147,15 +200,28 @@ export const AddMachineForm = ({
         });
         setMachineTypes(typesResponse.data || []);
 
-        const unitsResponse = await getUnits({
-          limit: 100,
-        });
-        setUnits(unitsResponse.data || []);
+        // Fetch branches based on user role
+        const fullUserData = getFullUserData();
+        if (fullUserData) {
+          if (currentUser?.role === 'company_owner') {
+            // Company owner can see all branches of their company
+            const branchesResponse = await branchesApi.getByCompanyId(fullUserData.company.id, {
+              limit: 100,
+            });
+            setBranches(branchesResponse.data || []);
+          } else {
+            // Supervisor can only see their own branch
+            const userBranch = fullUserData.branch;
+            if (userBranch) {
+              setBranches([userBranch]);
+            }
+          }
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
         toast({
           title: 'Error',
-          description: 'Failed to load machine types and units.',
+          description: 'Failed to load machine types and branches.',
           variant: 'destructive',
         });
       } finally {
@@ -166,16 +232,16 @@ export const AddMachineForm = ({
     if (isOpen) {
       fetchData();
     }
-  }, [isOpen]);
+  }, [isOpen, currentUser?.role]);
 
   const statusOptions = [
-    { value: 'Active', label: 'Active', description: 'Machine is operational' },
+    { value: MachineStatus.ACTIVE, label: 'Active', description: 'Machine is operational' },
     {
-      value: 'Maintenance',
+      value: MachineStatus.UNDER_MAINTENANCE,
       label: 'Under Maintenance',
       description: 'Currently being serviced',
     },
-    { value: 'Inactive', label: 'Inactive', description: 'Not in use' },
+    { value: MachineStatus.INACTIVE, label: 'Inactive', description: 'Not in use' },
   ];
 
   const handleInputChange = (field: string, value: string) => {
@@ -191,16 +257,11 @@ export const AddMachineForm = ({
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
 
-    // Handle "Other" selection
+    // Handle "Other" selection for machine type
     if (field === 'typeId' && value === 0) {
       setShowCustomTypeInput(true);
-      setShowCustomUnitInput(false);
-    } else if (field === 'unitId' && value === 0) {
-      setShowCustomUnitInput(true);
-      setShowCustomTypeInput(false);
     } else {
       setShowCustomTypeInput(false);
-      setShowCustomUnitInput(false);
     }
   };
 
@@ -241,49 +302,23 @@ export const AddMachineForm = ({
         console.error('Error headers:', error.response.headers);
       }
       
-      toast({
-        title: 'Error',
-        description: `Failed to create machine type: ${error.response?.data?.message || error.message || 'Unknown error'}`,
-        variant: 'destructive',
-      });
+      // Check if it's a 500 error (server error)
+      if (error.response?.status === 500) {
+        toast({
+          title: 'Server Error',
+          description: 'Unable to create machine type. The server is experiencing issues. Please try again later or contact support.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Error',
+          description: `Failed to create machine type: ${error.response?.data?.message || error.message || 'Unknown error'}`,
+          variant: 'destructive',
+        });
+      }
     }
   };
 
-  // Function to create new unit
-  const handleCreateUnit = async () => {
-    if (!customUnitName.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a unit name.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      const newUnit = await createUnit({ 
-        name: customUnitName.trim(),
-        description: customUnitDescription.trim() || 'Custom unit'
-      });
-      setUnits(prev => [...prev, newUnit]);
-      setFormData(prev => ({ ...prev, unitId: newUnit.id }));
-      setShowCustomUnitInput(false);
-      setCustomUnitName('');
-      setCustomUnitDescription('');
-      
-      toast({
-        title: 'Success',
-        description: `Unit "${newUnit.name}" has been created.`,
-      });
-    } catch (error) {
-      console.error('Error creating unit:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create unit. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,8 +326,8 @@ export const AddMachineForm = ({
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) newErrors.name = 'Machine name is required';
-    if (!formData.typeId) newErrors.typeId = 'Machine type is required';
-    if (!formData.unitId) newErrors.unitId = 'Unit is required';
+    if (!formData.typeId && formData.typeId !== 0) newErrors.typeId = 'Machine type is required';
+    if (!formData.branchId && formData.branchId !== 0) newErrors.branchId = 'Branch is required';
     if (!formData.specifications.trim())
       newErrors.specifications = 'Specifications are required';
     if (!formData.manufacturer.trim())
@@ -303,11 +338,11 @@ export const AddMachineForm = ({
     if (Object.keys(newErrors).length === 0) {
       setIsSubmitting(true);
       try {
-        // Prepare the payload - don't include branch as it's handled by the backend
+        // Prepare the payload
         const machinePayload = {
           name: formData.name.trim(),
           typeId: Number(formData.typeId),
-          unitId: Number(formData.unitId),
+          branchId: Number(formData.branchId),
           status: formData.status,
           specifications: formData.specifications.trim(),
           manufacturer: formData.manufacturer.trim(),
@@ -315,60 +350,121 @@ export const AddMachineForm = ({
           serialNumber: formData.serialNumber.trim() || undefined,
           capacity: formData.capacity.trim() || undefined,
           purchaseDate: formData.purchaseDate
-            ? new Date(formData.purchaseDate).toISOString()
+            ? (() => {
+                try {
+                  const date = new Date(formData.purchaseDate);
+                  return isNaN(date.getTime()) ? undefined : date.toISOString();
+                } catch (error) {
+                  console.error('Error converting purchase date:', error);
+                  return undefined;
+                }
+              })()
             : undefined,
           warrantyExpiry: formData.warrantyExpiry
-            ? new Date(formData.warrantyExpiry).toISOString()
+            ? (() => {
+                try {
+                  const date = new Date(formData.warrantyExpiry);
+                  return isNaN(date.getTime()) ? undefined : date.toISOString();
+                } catch (error) {
+                  console.error('Error converting warranty expiry date:', error);
+                  return undefined;
+                }
+              })()
             : undefined,
           installationDate: formData.installationDate
-            ? new Date(formData.installationDate).toISOString()
+            ? (() => {
+                try {
+                  const date = new Date(formData.installationDate);
+                  return isNaN(date.getTime()) ? undefined : date.toISOString();
+                } catch (error) {
+                  console.error('Error converting installation date:', error);
+                  return undefined;
+                }
+              })()
             : undefined,
           lastService: formData.lastService
-            ? new Date(formData.lastService).toISOString()
+            ? (() => {
+                try {
+                  const date = new Date(formData.lastService);
+                  return isNaN(date.getTime()) ? undefined : date.toISOString();
+                } catch (error) {
+                  console.error('Error converting last service date:', error);
+                  return undefined;
+                }
+              })()
             : undefined,
           nextMaintenanceDue: formData.nextMaintenanceDue
-            ? new Date(formData.nextMaintenanceDue).toISOString()
+            ? (() => {
+                try {
+                  const date = new Date(formData.nextMaintenanceDue);
+                  return isNaN(date.getTime()) ? undefined : date.toISOString();
+                } catch (error) {
+                  console.error('Error converting next maintenance due date:', error);
+                  return undefined;
+                }
+              })()
             : undefined,
           additionalNotes: formData.additionalNotes.trim() || undefined,
         };
 
         console.log('Machine payload:', machinePayload);
 
-        // Call the API to create the machine
-        const response = await machinesApi.create(machinePayload);
+        let response;
+        if (editingData) {
+          // Try to update existing machine
+          try {
+            response = await machinesApi.update(editingData.id, machinePayload);
+            toast({
+              title: 'Machine Updated Successfully',
+              description: `${formData.name} has been updated.`,
+            });
+          } catch (updateError) {
+            console.error('Update failed, API may not support updates:', updateError);
+            toast({
+              title: 'Update Not Available',
+              description: 'Machine updates are not currently supported. Please contact support.',
+              variant: 'destructive',
+            });
+            return; // Exit early if update fails
+          }
+        } else {
+          // Create new machine
+          response = await machinesApi.create(machinePayload);
+          toast({
+            title: 'Machine Added Successfully',
+            description: `${formData.name} has been added to the inventory.`,
+          });
+        }
 
-        // Call the onSubmit callback with the created machine
+        // Call the onSubmit callback with the created/updated machine
         onSubmit(response);
 
-        toast({
-          title: 'Machine Added Successfully',
-          description: `${formData.name} has been added to the inventory.`,
-        });
-
-        // Reset form
-        setFormData({
-          name: '',
-          typeId: 0,
-          unitId: 0,
-          status: 'Active',
-          specifications: '',
-          manufacturer: '',
-          model: '',
-          serialNumber: '',
-          purchaseDate: '',
-          warrantyExpiry: '',
-          capacity: '',
-          installationDate: '',
-          lastService: '',
-          nextMaintenanceDue: '',
-          additionalNotes: '',
-        });
-        setErrors({});
-        setShowCustomTypeInput(false);
-        setShowCustomUnitInput(false);
-        setCustomTypeName('');
-        setCustomUnitName('');
-        setCustomUnitDescription('');
+        // Reset form only for new machines, not when editing
+        if (!editingData) {
+          const fullUserData = getFullUserData();
+          const defaultBranchId = fullUserData?.branch?.id || 0;
+          
+          setFormData({
+            name: '',
+            typeId: 0,
+            branchId: defaultBranchId,
+            status: MachineStatus.ACTIVE,
+            specifications: '',
+            manufacturer: '',
+            model: '',
+            serialNumber: '',
+            purchaseDate: '',
+            warrantyExpiry: '',
+            capacity: '',
+            installationDate: '',
+            lastService: '',
+            nextMaintenanceDue: '',
+            additionalNotes: '',
+          });
+          setErrors({});
+          setShowCustomTypeInput(false);
+          setCustomTypeName('');
+        }
         onClose();
       } catch (error) {
         console.error('Error creating machine:', error);
@@ -454,7 +550,7 @@ export const AddMachineForm = ({
                           </SelectItem>
                         ))}
                         <SelectItem key="other" value="0">
-                          Other
+                          Others
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -508,32 +604,30 @@ export const AddMachineForm = ({
                 {/* Second Row */}
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
                   <div className='space-y-1'>
-                    <Label htmlFor='unit' className='text-xs font-medium'>
-                      Measure Unit *
+                    <Label htmlFor='branch' className='text-xs font-medium'>
+                      Unit/Location *
                     </Label>
                     <Select
-                      value={formData.unitId > 0 ? formData.unitId.toString() : ''}
+                      value={formData.branchId > 0 ? formData.branchId.toString() : ''}
                       onValueChange={(value) =>
-                        handleSelectChange('unitId', parseInt(value))
+                        handleSelectChange('branchId', parseInt(value))
                       }
+                      disabled={currentUser?.role === 'supervisor'}
                     >
                       <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
-                        <SelectValue placeholder='Select Measure Unit' />
+                        <SelectValue placeholder='Select Branch' />
                       </SelectTrigger>
                       <SelectContent>
-                        {units.map((unit) => (
-                          <SelectItem key={unit.id} value={unit.id.toString()}>
-                            {unit.name}
+                        {branches.map((branch) => (
+                          <SelectItem key={branch.id} value={branch.id.toString()}>
+                            {branch.name}
                           </SelectItem>
                         ))}
-                        <SelectItem key="other" value="0">
-                          Other
-                        </SelectItem>
                       </SelectContent>
                     </Select>
-                    {errors.unitId && (
+                    {errors.branchId && (
                       <p className='text-destructive text-xs mt-1'>
-                        {errors.unitId}
+                        {errors.branchId}
                       </p>
                     )}
                   </div>
@@ -561,53 +655,6 @@ export const AddMachineForm = ({
                   </div>
                 </div>
 
-                {/* Custom Unit Input */}
-                {showCustomUnitInput && (
-                  <div className='p-3 bg-green-50 border border-green-200 rounded-lg space-y-2'>
-                    <Label className='text-xs font-medium text-green-800'>
-                      Add New Unit
-                    </Label>
-                    <div className='space-y-2'>
-                      <Input
-                        placeholder='Enter unit name'
-                        value={customUnitName}
-                        onChange={(e) => setCustomUnitName(e.target.value)}
-                        className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
-                      />
-                      <Input
-                        placeholder='Enter unit description (optional)'
-                        value={customUnitDescription}
-                        onChange={(e) => setCustomUnitDescription(e.target.value)}
-                        className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
-                      />
-                      <div className='flex gap-2'>
-                        <Button
-                          type='button'
-                          onClick={handleCreateUnit}
-                          size='sm'
-                          className='h-8 px-3 bg-green-600 hover:bg-green-700'
-                        >
-                          <Plus className='w-3 h-3 mr-1' />
-                          Add
-                        </Button>
-                        <Button
-                          type='button'
-                          onClick={() => {
-                            setShowCustomUnitInput(false);
-                            setCustomUnitName('');
-                            setCustomUnitDescription('');
-                            setFormData(prev => ({ ...prev, unitId: 0 }));
-                          }}
-                          variant='outline'
-                          size='sm'
-                          className='h-8 px-3'
-                        >
-                          <X className='w-3 h-3' />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 {/* Specifications */}
                 <div className='space-y-1'>

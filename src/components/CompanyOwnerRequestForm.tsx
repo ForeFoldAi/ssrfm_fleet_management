@@ -197,13 +197,13 @@ export const CompanyOwnerRequestForm: React.FC<CompanyOwnerRequestFormProps> = (
                       )}
                     </TableCell>
                     <TableCell className="border border-gray-300">
-                      {item.vendorQuotations.length > 0 ? (
+                      {item.vendorQuotations.filter(q => q.isSelected).length > 0 ? (
                         <div className="space-y-2 min-w-[200px]">
                           <RadioGroup
                             value={selectedVendors[item.id] || ''}
                             onValueChange={(value) => onVendorSelect(item.id, value)}
                           >
-                            {item.vendorQuotations.map((quotation) => (
+                            {item.vendorQuotations.filter(q => q.isSelected).map((quotation) => (
                               <div key={quotation.id} className="flex items-center space-x-2">
                                 <RadioGroupItem
                                   value={quotation.id}

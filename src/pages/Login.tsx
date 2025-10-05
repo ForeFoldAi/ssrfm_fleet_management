@@ -90,9 +90,7 @@ const Login = () => {
                 className='h-20 w-auto object-contain'
               />
             </div>
-            <CardTitle className='text-2xl font-bold'>
-              Welcome to SSRFM
-            </CardTitle>
+            
             <CardDescription>
               Sign in to access the Materials Management System
             </CardDescription>

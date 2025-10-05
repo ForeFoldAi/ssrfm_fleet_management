@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { IndianRupee, TrendingUp, TrendingDown, Minus, Calendar, Filter, Clock, AlertCircle, CheckCircle, Users, Building2, Loader2 } from "lucide-react";
+import { IndianRupee, TrendingUp, TrendingDown, Minus, Calendar, Filter, Clock, AlertCircle, CheckCircle, Users, Building2, Loader2, WifiOff } from "lucide-react";
 import { StatsCard } from "../../components/StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
@@ -12,27 +12,46 @@ import { branchesApi } from "../../lib/api/branches";
 import { machinesApi } from "../../lib/api/machines";
 import { materialsApi } from "../../lib/api/materials";
 import { dashboardApi } from "../../lib/api/dashboard";
+import { materialIndentsApi } from "../../lib/api/material-indents";
 import { Branch, Machine, Material } from "../../lib/api/types";
+import { useCache } from "../../contexts/CacheContext";
+import { Alert, AlertDescription } from "../../components/ui/alert";
+import { useNavigate } from "react-router-dom";
 
 const CompanyOwnerDashboard = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState("1m");
+  const cache = useCache();
+  const navigate = useNavigate();
+  const [selectedPeriod, setSelectedPeriod] = useState(() => {
+    return localStorage.getItem('dashboard-selected-period') || "this_month";
+  });
   const [branches, setBranches] = useState<Branch[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [expensesData, setExpensesData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
 
   // Time period options
   const timePeriods = [
-    { value: "1m", label: "1 Month", months: 1, dateRangeType: "this_month" },
-    { value: "3m", label: "3 Months", months: 3, dateRangeType: "custom" },
-    { value: "6m", label: "6 Months", months: 6, dateRangeType: "custom" },
+    { value: "this_month", label: "This Month", months: 1, dateRangeType: "this_month" },
+    { value: "1m", label: "1 Month", months: 1, dateRangeType: "last_month" },
+    { value: "3m", label: "3 Months", months: 3, dateRangeType: "last_3_months" },
+    { value: "6m", label: "6 Months", months: 6, dateRangeType: "last_6_months" },
     { value: "1y", label: "1 Year", months: 12, dateRangeType: "custom" },
   ];
 
-  // Fetch branches from API
-  const fetchBranches = async () => {
+  // Fetch branches from API with caching
+  const fetchBranches = async (useCache: boolean = true) => {
+    const cacheKey = 'dashboard-branches';
+    
+    if (useCache && cache.has(cacheKey)) {
+      setBranches(cache.get(cacheKey));
+      return;
+    }
+
     try {
       const response = await branchesApi.getAll({
         page: 1,
@@ -41,14 +60,22 @@ const CompanyOwnerDashboard = () => {
         sortOrder: 'ASC'
       });
       setBranches(response.data);
+      cache.set(cacheKey, response.data, 10 * 60 * 1000); // Cache for 10 minutes
     } catch (err) {
       console.error('Error fetching branches:', err);
       throw new Error('Failed to load branches');
     }
   };
 
-  // Fetch machines from API
-  const fetchMachines = async () => {
+  // Fetch machines from API with caching
+  const fetchMachines = async (useCache: boolean = true) => {
+    const cacheKey = 'dashboard-machines';
+    
+    if (useCache && cache.has(cacheKey)) {
+      setMachines(cache.get(cacheKey));
+      return;
+    }
+
     try {
       const response = await machinesApi.getAll({
         page: 1,
@@ -57,14 +84,22 @@ const CompanyOwnerDashboard = () => {
         sortOrder: 'ASC'
       });
       setMachines(response.data);
+      cache.set(cacheKey, response.data, 10 * 60 * 1000); // Cache for 10 minutes
     } catch (err) {
       console.error('Error fetching machines:', err);
       throw new Error('Failed to load machines');
     }
   };
 
-  // Fetch materials from API
-  const fetchMaterials = async () => {
+  // Fetch materials from API with caching
+  const fetchMaterials = async (useCache: boolean = true) => {
+    const cacheKey = 'dashboard-materials';
+    
+    if (useCache && cache.has(cacheKey)) {
+      setMaterials(cache.get(cacheKey));
+      return;
+    }
+
     try {
       const response = await materialsApi.getMaterials({
         page: 1,
@@ -73,18 +108,67 @@ const CompanyOwnerDashboard = () => {
         sortOrder: 'ASC'
       });
       setMaterials(response.data);
+      cache.set(cacheKey, response.data, 10 * 60 * 1000); // Cache for 10 minutes
     } catch (err) {
       console.error('Error fetching materials:', err);
       throw new Error('Failed to load materials');
     }
   };
 
-  // Fetch expenses data from dashboard API
-  const fetchExpensesData = async () => {
+  // Fetch pending approvals count
+  const fetchPendingApprovals = async (useCache: boolean = true) => {
+    const cacheKey = 'dashboard-pending-approvals';
+    
+    if (useCache && cache.has(cacheKey)) {
+      setPendingApprovalsCount(cache.get(cacheKey));
+      return;
+    }
+
+    try {
+      const response = await materialIndentsApi.getAll({
+        page: 1,
+        limit: 1,
+        status: 'pending_approval', // Only get pending_approval status, exclude approved
+        sortBy: 'id',
+        sortOrder: 'DESC',
+      });
+      
+      // Debug logging to verify we're only getting pending approvals
+      console.log('Pending approvals API response:', {
+        itemCount: response.meta.itemCount,
+        status: 'pending_approval',
+        data: response.data
+      });
+      
+      // Verify that all returned items have pending_approval status
+      if (response.data && response.data.length > 0) {
+        const nonPendingItems = response.data.filter(item => item.status !== 'pending_approval');
+        if (nonPendingItems.length > 0) {
+          console.warn('Warning: Found non-pending items in pending approvals response:', nonPendingItems);
+        }
+      }
+      
+      setPendingApprovalsCount(response.meta.itemCount);
+      cache.set(cacheKey, response.meta.itemCount, 2 * 60 * 1000); // Cache for 2 minutes
+    } catch (err) {
+      console.error('Error fetching pending approvals:', err);
+      // Keep the current count on error
+    }
+  };
+
+  // Fetch expenses data from dashboard API with caching
+  const fetchExpensesData = async (useCache: boolean = true) => {
+    const cacheKey = `dashboard-expenses-${selectedPeriod}`;
+    
+    if (useCache && cache.has(cacheKey)) {
+      setExpensesData(cache.get(cacheKey));
+      return;
+    }
+
     try {
       const currentPeriod = timePeriods.find(p => p.value === selectedPeriod);
       let params: any = {
-        dateRangeType: (currentPeriod?.dateRangeType || 'this_month') as 'this_month' | 'this_quarter' | 'this_year' | 'last_month' | 'custom'
+        dateRangeType: (currentPeriod?.dateRangeType || 'this_month') as 'this_month' | 'last_month' | 'last_3_months' | 'last_6_months' | 'custom'
       };
 
       // For custom date ranges, calculate start and end dates
@@ -92,11 +176,7 @@ const CompanyOwnerDashboard = () => {
         const endDate = new Date();
         const startDate = new Date();
         
-        if (selectedPeriod === '3m') {
-          startDate.setMonth(endDate.getMonth() - 3);
-        } else if (selectedPeriod === '6m') {
-          startDate.setMonth(endDate.getMonth() - 6);
-        } else if (selectedPeriod === '1y') {
+        if (selectedPeriod === '1y') {
           startDate.setFullYear(endDate.getFullYear() - 1);
         }
         
@@ -106,64 +186,85 @@ const CompanyOwnerDashboard = () => {
       
       const response = await dashboardApi.getExpenses(params);
       setExpensesData(response);
+      cache.set(cacheKey, response, 5 * 60 * 1000); // Cache for 5 minutes
     } catch (err) {
       console.error('Error fetching expenses data:', err);
       throw new Error('Failed to load expenses data');
     }
   };
 
-  // Fetch all data
-  const fetchData = async () => {
+  // Fetch all data with smart loading
+  const fetchData = async (showLoading: boolean = false) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       setError(null);
+      
+      // Load cached data first, then update in background
       await Promise.all([
-        fetchBranches(), 
-        fetchMachines(), 
-        fetchMaterials(),
-        fetchExpensesData()
+        fetchBranches(true), 
+        fetchMachines(true), 
+        fetchMaterials(true),
+        fetchExpensesData(true),
+        fetchPendingApprovals(true)
       ]);
+      
+      // If this is the initial load and we have cached data, mark as initialized
+      if (!isInitialized) {
+        setIsInitialized(true);
+      }
+      
+      // Update data in background without showing loading
+      setTimeout(async () => {
+        try {
+          await Promise.all([
+            fetchBranches(false), 
+            fetchMachines(false), 
+            fetchMaterials(false),
+            fetchExpensesData(false),
+            fetchPendingApprovals(false)
+          ]);
+        } catch (err) {
+          console.warn('Background data update failed:', err);
+        }
+      }, 100);
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   // Get pending approvals data from API or fallback to mock
   const getPendingApprovalsData = (period: string) => {
-    if (expensesData?.pendingApprovals !== undefined) {
-      return {
-        pendingApprovals: expensesData.pendingApprovals,
-        averageApprovalTime: "2.5 days",
-        approvalTrend: period === "1m" ? 15.2 : period === "3m" ? 8.7 : period === "6m" ? -5.3 : -12.1,
-      };
-    }
-
-    // Fallback to mock data
-    const baseCount = {
-      "1m": 8,
-      "3m": 24,
-      "6m": 45,
-      "1y": 89,
-    }[period] || 8;
+    // Use real pending approvals count from API
+    const baseCount = pendingApprovalsCount || 0;
 
     return {
       pendingApprovals: baseCount,
       averageApprovalTime: "2.5 days",
-      approvalTrend: period === "1m" ? 15.2 : period === "3m" ? 8.7 : period === "6m" ? -5.3 : -12.1,
+      approvalTrend: period === "this_month" ? 12.5 : period === "1m" ? 15.2 : period === "3m" ? 8.7 : period === "6m" ? -5.3 : -12.1,
     };
+  };
+
+  // Handle navigation to pending approvals
+  const handlePendingApprovalsClick = () => {
+    // Navigate to materials inventory with material-order-book tab and pending filter
+    navigate('/materials-inventory?tab=material-order-book&filter=pending_approval');
   };
 
   // Generate machine expenses data based on API data or fallback to calculated data
   const generateMachineExpensesData = () => {
     // If we have API data, use it
-    if (expensesData?.machineExpenses) {
-      return expensesData.machineExpenses.map((machine: any) => {
-        const chartData: any = { machine: machine.machineName };
-        branches.forEach(branch => {
-          chartData[branch.name] = machine.branchExpenses[branch.id] || 0;
-        });
+    if (expensesData?.machineExpensesByUnit && expensesData.machineExpensesByUnit.length > 0) {
+      return expensesData.machineExpensesByUnit.map((machine: any) => {
+        const chartData: any = { machine: machine.machineType || machine.machineName || 'Unknown Machine' };
+        chartData['Unit One'] = machine.unitOneAmount || 0;
+        chartData['Unit Two'] = machine.unitTwoAmount || 0;
         return chartData;
       });
     }
@@ -172,15 +273,16 @@ const CompanyOwnerDashboard = () => {
     if (machines.length === 0 || branches.length === 0) return [];
 
     const multiplier = {
+      "this_month": 1,
       "1m": 1,
       "3m": 2.8,
       "6m": 5.5,
       "1y": 11.2,
     }[selectedPeriod] || 1;
 
-    // Group machines by name/type for chart display
+    // Group machines by name for chart display
     const machineGroups = machines.reduce((acc, machine) => {
-      const machineName = machine.name;
+      const machineName = machine.name || 'Unknown Machine';
       if (!acc[machineName]) {
         acc[machineName] = [];
       }
@@ -194,11 +296,13 @@ const CompanyOwnerDashboard = () => {
       
       // Calculate expenses for each branch
       branches.forEach(branch => {
-        // Count machines in this branch for this machine type
-        const machinesInBranch = machineList.filter(m => m.branch.id === branch.id);
-        const baseExpense = 15000; // Base expense per machine
-        const expense = machinesInBranch.length * baseExpense * multiplier;
-        chartData[branch.name] = Math.round(expense);
+        if (branch && branch.id && branch.name) {
+          // Count machines in this branch for this machine type
+          const machinesInBranch = machineList.filter(m => m.branch && m.branch.id === branch.id);
+          const baseExpense = 15000; // Base expense per machine
+          const expense = machinesInBranch.length * baseExpense * multiplier;
+          chartData[branch.name] = Math.round(expense);
+        }
       });
       
       return chartData;
@@ -210,12 +314,11 @@ const CompanyOwnerDashboard = () => {
   // Generate material expenses data based on API data or fallback to calculated data
   const generateMaterialExpensesData = () => {
     // If we have API data, use it
-    if (expensesData?.materialExpenses) {
-      return expensesData.materialExpenses.map((material: any) => {
-        const chartData: any = { material: material.materialName };
-        branches.forEach(branch => {
-          chartData[branch.name] = material.branchExpenses[branch.id] || 0;
-        });
+    if (expensesData?.materialExpensesByUnit && expensesData.materialExpensesByUnit.length > 0) {
+      return expensesData.materialExpensesByUnit.map((material: any) => {
+        const chartData: any = { material: material.materialType };
+        chartData['Unit One'] = material.unitOneAmount || 0;
+        chartData['Unit Two'] = material.unitTwoAmount || 0;
         return chartData;
       });
     }
@@ -224,6 +327,7 @@ const CompanyOwnerDashboard = () => {
     if (materials.length === 0 || branches.length === 0) return [];
 
     const multiplier = {
+      "this_month": 1,
       "1m": 1,
       "3m": 2.8,
       "6m": 5.5,
@@ -246,23 +350,25 @@ const CompanyOwnerDashboard = () => {
       
       // Calculate expenses for each branch
       branches.forEach(branch => {
-        // Calculate total value for materials in this branch
-        const materialsInBranch = materialList.filter(m => {
-          // Since materials don't have branch info directly, we'll distribute them evenly
-          // or you can add branch filtering logic based on your business rules
-          return true; // For now, include all materials
-        });
-        
-        // Calculate expense based on total value and current stock
-        const totalValue = materialsInBranch.reduce((sum, material) => {
-          const materialValue = (material as any).totalValue || 0;
-          const currentStock = material.currentStock || 0;
-          return sum + (materialValue * currentStock);
-        }, 0);
-        
-        // Apply time period multiplier and distribute across branches
-        const expense = (totalValue / branches.length) * multiplier;
-        chartData[branch.name] = Math.round(expense);
+        if (branch && branch.id && branch.name) {
+          // Calculate total value for materials in this branch
+          const materialsInBranch = materialList.filter(m => {
+            // Since materials don't have branch info directly, we'll distribute them evenly
+            // or you can add branch filtering logic based on your business rules
+            return true; // For now, include all materials
+          });
+          
+          // Calculate expense based on total value and current stock
+          const totalValue = materialsInBranch.reduce((sum, material) => {
+            const materialValue = (material as any).totalValue || 0;
+            const currentStock = material.currentStock || 0;
+            return sum + (materialValue * currentStock);
+          }, 0);
+          
+          // Apply time period multiplier and distribute across branches
+          const expense = (totalValue / branches.length) * multiplier;
+          chartData[branch.name] = Math.round(expense);
+        }
       });
       
       return chartData;
@@ -275,19 +381,38 @@ const CompanyOwnerDashboard = () => {
   const materialExpensesByUnit = generateMaterialExpensesData();
   const pendingApprovalsData = getPendingApprovalsData(selectedPeriod);
 
-  // Calculate totals for actual branches based on machine expenses
+  // Debug logging for machine expenses data
+  console.log('Machine Expenses Data:', {
+    machineExpensesByUnit,
+    machines: machines.map(m => ({ id: m.id, name: m.name, type: m.type?.name })),
+    branches: branches.map(b => ({ id: b.id, name: b.name })),
+    expensesData: expensesData?.machineExpensesByUnit
+  });
+
+  // Get totals from API data or calculate from chart data
+  const allUnitsTotal = expensesData?.totalExpenses?.total || 0;
+  const unitOneTotal = expensesData?.unitOneExpenses?.total || 0;
+  const unitTwoTotal = expensesData?.unitTwoExpenses?.total || 0;
+
+  // Calculate totals for actual branches based on machine expenses (fallback)
   const totals = machineExpensesByUnit.reduce(
     (acc, row) => {
       branches.forEach(branch => {
-        if (!acc[branch.id]) acc[branch.id] = 0;
-        acc[branch.id] += row[branch.name] || 0;
+        if (branch && branch.id) {
+          if (!acc[branch.id]) acc[branch.id] = 0;
+          acc[branch.id] += row[branch.name] || 0;
+        }
       });
       return acc;
     },
     {} as Record<number, number>
   );
 
-  const allUnitsTotal = Object.values(totals).reduce((sum: number, total: number) => sum + total, 0);
+  // Use API data for unit totals if available, otherwise use calculated totals
+  const finalTotals = expensesData ? {
+    1: unitOneTotal,
+    2: unitTwoTotal
+  } : totals;
 
   const getTrendIcon = (value: number) => {
     if (value > 0) return <TrendingUp className="h-4 w-4 text-green-600" />;
@@ -305,12 +430,39 @@ const CompanyOwnerDashboard = () => {
     return timePeriods.find(p => p.value === selectedPeriod)?.label || "1 Month";
   };
 
-  // Fetch data on component mount and when period changes
+  // Persist selected period to localStorage
   useEffect(() => {
-    fetchData();
+    localStorage.setItem('dashboard-selected-period', selectedPeriod);
   }, [selectedPeriod]);
 
-  if (loading) {
+  // Fetch data on component mount and when period changes
+  useEffect(() => {
+    // Only show loading on initial load or when period changes
+    const showLoading = !isInitialized;
+    fetchData(showLoading);
+  }, [selectedPeriod]);
+
+  // Initial load
+  useEffect(() => {
+    fetchData(true);
+  }, []);
+
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Only show loading on initial load, not on background updates
+  if (loading && !isInitialized) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center gap-3">
@@ -332,7 +484,7 @@ const CompanyOwnerDashboard = () => {
             Error Loading Dashboard
           </h3>
           <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={fetchData} className="btn-primary">
+          <Button onClick={() => fetchData(true)} className="btn-primary">
             Try Again
           </Button>
         </Card>
@@ -343,6 +495,15 @@ const CompanyOwnerDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="space-y-8 p-6 max-w-7xl mx-auto">
+        {/* Network Status Alert */}
+        {!isOnline && (
+          <Alert className="border-red-200 bg-red-50 text-red-800">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              You are currently offline. Some features may not work properly. Please check your internet connection.
+            </AlertDescription>
+          </Alert>
+        )}
         {/* Header Section - Left/Right Layout */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           {/* Left Side - Title and Description */}
@@ -393,28 +554,34 @@ const CompanyOwnerDashboard = () => {
             </div>
           </Card>
 
-          {/* Dynamic Branch Cards */}
-          {branches.map((branch, index) => {
-            const colors = ['blue-500', 'orange-500', 'purple-500', 'pink-500', 'indigo-500'];
-            const color = colors[index % colors.length];
-            const total = totals[branch.id] || 0;
-            
-            return (
-              <Card key={branch.id} className={`p-6 border-l-4 border-l-${color}`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Expenses - {branch.name}</p>
-                    <p className="text-2xl font-bold">₹{total.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{branch.location}</p>
-                  </div>
-                  <Building2 className={`h-8 w-8 text-${color}`} />
-                </div>
-              </Card>
-            );
-          })}
+          {/* Unit Cards */}
+          <Card className="p-6 border-l-4 border-l-blue-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Expenses - Unit One</p>
+                <p className="text-2xl font-bold">₹{unitOneTotal.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-1">{expensesData?.unitOneExpenses?.period || 'N/A'}</p>
+              </div>
+              <Building2 className="h-8 w-8 text-blue-500" />
+            </div>
+          </Card>
+
+          <Card className="p-6 border-l-4 border-l-orange-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Expenses - Unit Two</p>
+                <p className="text-2xl font-bold">₹{unitTwoTotal.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground mt-1">{expensesData?.unitTwoExpenses?.period || 'N/A'}</p>
+              </div>
+              <Building2 className="h-8 w-8 text-orange-500" />
+            </div>
+          </Card>
 
           {/* Pending Approvals */}
-          <Card className="p-6 border-l-4 border-l-amber-500">
+          <Card 
+            className="p-6 border-l-4 border-l-amber-500 cursor-pointer hover:shadow-lg transition-all duration-200 hover:bg-amber-50/50"
+            onClick={handlePendingApprovalsClick}
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Pending Approvals</p>
@@ -427,7 +594,7 @@ const CompanyOwnerDashboard = () => {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="space-y-8">
           {/* Machine Expenses Chart */}
           <Card className="card-friendly shadow-lg border border-primary/20">
             <CardHeader className="pb-4">
@@ -451,6 +618,9 @@ const CompanyOwnerDashboard = () => {
                       dataKey="machine" 
                       tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                       axisLine={{ stroke: "hsl(var(--border))" }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
                     />
                     <YAxis 
                       tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
@@ -460,23 +630,26 @@ const CompanyOwnerDashboard = () => {
                     <ChartTooltip 
                       content={<ChartTooltipContent 
                         formatter={(value) => [`₹${Number(value).toLocaleString()}`, '']}
+                        labelFormatter={(label) => `Machine: ${label}`}
                       />} 
                     />
                     <ChartLegend />
-                    {branches.map((branch, index) => {
-                      const colors = ['#3B82F6', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1'];
-                      const color = colors[index % colors.length];
-                      return (
-                        <Bar 
-                          key={branch.id}
-                          dataKey={branch.name} 
-                          fill={color} 
-                          barSize={24} 
-                          radius={[6, 6, 0, 0]}
-                          name={branch.name}
-                        />
-                      );
-                    })}
+                    <Bar 
+                      key="Unit One"
+                      dataKey="Unit One" 
+                      fill="#3B82F6" 
+                      barSize={24} 
+                      radius={[6, 6, 0, 0]}
+                      name="Unit One"
+                    />
+                    <Bar 
+                      key="Unit Two"
+                      dataKey="Unit Two" 
+                      fill="#F59E0B" 
+                      barSize={24} 
+                      radius={[6, 6, 0, 0]}
+                      name="Unit Two"
+                    />
                   </ReBarChart>
                 </ChartContainer>
               ) : (
@@ -528,20 +701,22 @@ const CompanyOwnerDashboard = () => {
                       />} 
                     />
                     <ChartLegend />
-                    {branches.map((branch, index) => {
-                      const colors = ['#3B82F6', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1'];
-                      const color = colors[index % colors.length];
-                      return (
-                        <Bar 
-                          key={branch.id}
-                          dataKey={branch.name} 
-                          fill={color} 
-                          barSize={24} 
-                          radius={[0, 6, 6, 0]}
-                          name={branch.name}
-                        />
-                      );
-                    })}
+                    <Bar 
+                      key="Unit One"
+                      dataKey="Unit One" 
+                      fill="#3B82F6" 
+                      barSize={24} 
+                      radius={[0, 6, 6, 0]}
+                      name="Unit One"
+                    />
+                    <Bar 
+                      key="Unit Two"
+                      dataKey="Unit Two" 
+                      fill="#F59E0B" 
+                      barSize={24} 
+                      radius={[0, 6, 6, 0]}
+                      name="Unit Two"
+                    />
                   </ReBarChart>
                 </ChartContainer>
               ) : (

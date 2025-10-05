@@ -93,6 +93,12 @@ export interface QueryParams {
 }
 
 // Machine Types
+export enum MachineStatus {
+  ACTIVE = 'Active',
+  UNDER_MAINTENANCE = 'Under Maintenance',
+  INACTIVE = 'Inactive',
+}
+
 export interface MachineType {
   id: number;
   name: string;
@@ -130,6 +136,7 @@ export interface Machine {
   branch: Branch;
   typeId?: number;
   unitId?: number;
+  branchId?: number;
 }
 
 export interface MaterialCategory {
@@ -149,10 +156,17 @@ export interface Material {
   unitId?: number;
   categoryId?: number;
   measureUnitId?: number;
-  makerBrand: string; // Make/Brand instead of category
+  measureUnit?: {
+    id: number;
+    name: string;
+    description: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  makerBrand: string;
   currentStock: number;
-  totalValue?: number; // Add totalValue field
-  averageValue?: number; // Add averageValue field from API
+  totalValue?: number;
+  averageValue?: number;
   minStockLevel?: number;
   maxStockLevel?: number;
   additionalNotes?: string;
@@ -278,10 +292,17 @@ export interface CreateVendorQuotationInput {
   notes?: string;
 }
 
+export enum PurposeType {
+  MACHINE = 'machine',
+  OTHER = 'other',
+  SPARE = 'spare',
+}
+
 export interface CreateMaterialIndentItemInput {
   materialId: number;
   specifications?: string;
   requestedQuantity: number;
+  purposeType: PurposeType;
   machineId?: number;
   machineName?: string; // For cases like "Spare" or "Other" where machineId doesn't exist
   itemImageCount?: number; // number of files appended under itemFiles for this item
@@ -368,7 +389,7 @@ export interface ReceiveMaterialPurchaseItemResponse {
 
 // Approve/Reject Material Indent Request
 export interface ApproveRejectMaterialIndentRequest {
-  status: 'approved' | 'rejected';
+  status: 'approved' | 'reverted';
   rejectionReason?: string;
   itemId: number;
   quotationId: number;
@@ -384,4 +405,16 @@ export interface ApproveRejectMaterialIndentResponse {
   updatedAt: string;
   approvedBy?: User;
   items: MaterialIndentItem[];
+}
+
+export enum IndentStatus {
+  DRAFT = 'draft',
+  PENDING_APPROVAL = 'pending_approval',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  REVERTED = 'reverted',
+  ORDERED = 'ordered',
+  PARTIALLY_RECEIVED = 'partially_received',
+  FULLY_RECEIVED = 'fully_received',
+  CLOSED = 'closed',
 }

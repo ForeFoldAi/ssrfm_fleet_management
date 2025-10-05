@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { TopHeaderSimple } from "./TopHeaderSimple";
 import { Sidebar } from "./Sidebar";
 import { MobileNavigation } from "./MobileNavigation";
@@ -20,10 +20,19 @@ export const Layout = () => {
   const { logout, currentUser } = useRole();
   const { isExpanded } = useSidebar();
   const navigate = useNavigate();
+  const location = useLocation();
   const [notificationCount, setNotificationCount] = useState(0);
   const [notifications, setNotifications] = useState<MaterialIndent[]>([]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+
+  // Track current path for refresh persistence
+  useEffect(() => {
+    // Store current path in localStorage for refresh persistence
+    if (location.pathname !== '/login') {
+      localStorage.setItem('last-visited-path', location.pathname);
+    }
+  }, [location.pathname]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -118,9 +127,7 @@ export const Layout = () => {
               alt="Sree Sai Logo" 
               className="h-10 w-auto object-contain"
             />
-            <div>
-              <h1 className="text-lg font-bold text-white">SSRFM</h1>
-            </div>
+            
           </div>
           <div className="flex items-center space-x-2">
             {/* Notification Icon - Only for Company Owner */}

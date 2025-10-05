@@ -45,6 +45,12 @@ import { materialsApi } from '../lib/api/materials';
 import { materialIssuesApi } from '../lib/api/material-issues';
 import { machinesApi } from '../lib/api/machines';
 
+export enum PurposeType {
+  MACHINE = 'machine',
+  OTHER = 'other',
+  SPARE = 'spare',
+}
+
 interface MaterialIssueFormProps {
   isOpen: boolean;
   onClose: () => void;
@@ -53,6 +59,7 @@ interface MaterialIssueFormProps {
 }
 
 interface MaterialItemFormData {
+  id: string; // Add unique ID for React keys
   srNo: number;
   materialId: number;
   nameOfMaterial: string;
@@ -66,6 +73,8 @@ interface MaterialItemFormData {
   purpose: string;
   machineId: number;
   machineName: string;
+  purposeType: PurposeType;
+  notes: string;
 }
 
 export const MaterialIssueForm = ({
@@ -92,6 +101,7 @@ export const MaterialIssueForm = ({
     // Material items (supporting multiple items)
     items: [
       {
+        id: `item-${Date.now()}-${Math.random()}`, // Generate unique ID
         srNo: 1,
         materialId: 0,
         nameOfMaterial: '',
@@ -105,6 +115,8 @@ export const MaterialIssueForm = ({
         purpose: '',
         machineId: 0,
         machineName: '',
+        purposeType: PurposeType.MACHINE,
+        notes: '',
       } as MaterialItemFormData,
     ],
     // Additional fields
@@ -123,6 +135,7 @@ export const MaterialIssueForm = ({
         ? (editingIssue.allItems as Array<Record<string, unknown>>).map(
             (item, index) =>
               ({
+                id: `edit-item-${index}-${Date.now()}`, // Generate unique ID for editing
                 srNo: index + 1,
                 materialId: Number(
                   item.material
@@ -139,22 +152,40 @@ export const MaterialIssueForm = ({
                 stockAfterIssue: Number(item.stockAfterIssue || 0),
                 measureUnit: String(
                   item.material
-                    ? (item.material as Record<string, unknown>).makerBrand ||
-                        ''
-                    : ''
+                    ? ((item.material as Record<string, unknown>).measureUnit as Record<string, unknown>)?.name ||
+                        'units'
+                    : 'units'
                 ),
                 receiverName: String(item.receiverName || ''),
                 image: null as File | null,
                 imagePreview: item.imagePath
-                  ? `http://localhost:3000/${String(item.imagePath)}`
+                  ? (() => {
+                      // For view mode, we need to get the issue ID from the parent component
+                      // Since editingIssue doesn't have an id in view mode, we'll use a different approach
+                      if (editingIssue?.id) {
+                        return materialIssuesApi.getItemImageUrl(Number(editingIssue.id), Number(item.id));
+                      }
+                      // For view mode without editingIssue.id, construct URL from imagePath
+                      const imagePath = String(item.imagePath);
+                      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+                        return imagePath;
+                      }
+                      if (imagePath.startsWith('/')) {
+                        return `${import.meta.env.VITE_APP_API_BASE_URL || 'https://0ehawyo6gg.execute-api.ap-south-1.amazonaws.com/dev'}${imagePath}`;
+                      }
+                      return `${import.meta.env.VITE_APP_API_BASE_URL || 'https://0ehawyo6gg.execute-api.ap-south-1.amazonaws.com/dev'}/${imagePath}`;
+                    })()
                   : '',
                 purpose: String(item.purpose || ''),
                 machineId: Number(item.machineId || 0),
                 machineName: String(item.machineName || ''),
+                purposeType: (item.purposeType as PurposeType) || PurposeType.MACHINE,
+                notes: String(item.notes || ''),
               } as MaterialItemFormData)
           )
         : [
             {
+              id: `edit-single-item-${Date.now()}`, // Generate unique ID for single item editing
               srNo: 1,
               materialId: Number(editingIssue.materialId || 0),
               nameOfMaterial: String(editingIssue.materialName || ''),
@@ -164,10 +195,29 @@ export const MaterialIssueForm = ({
               measureUnit: String(editingIssue.measureUnit || ''),
               receiverName: String(editingIssue.recipientName || ''),
               image: null,
-              imagePreview: '',
+              imagePreview: editingIssue.imagePath
+                ? (() => {
+                    // For view mode, we need to get the issue ID from the parent component
+                    // Since editingIssue doesn't have an id in view mode, we'll use a different approach
+                    if (editingIssue.id) {
+                      return materialIssuesApi.getItemImageUrl(Number(editingIssue.id), Number(editingIssue.id));
+                    }
+                    // For view mode without editingIssue.id, construct URL from imagePath
+                    const imagePath = String(editingIssue.imagePath);
+                    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+                      return imagePath;
+                    }
+                    if (imagePath.startsWith('/')) {
+                      return `${import.meta.env.VITE_APP_API_BASE_URL || 'https://0ehawyo6gg.execute-api.ap-south-1.amazonaws.com/dev'}${imagePath}`;
+                    }
+                    return `${import.meta.env.VITE_APP_API_BASE_URL || 'https://0ehawyo6gg.execute-api.ap-south-1.amazonaws.com/dev'}/${imagePath}`;
+                  })()
+                : '',
               purpose: String(editingIssue.purpose || ''),
               machineId: Number(editingIssue.machineId || 0),
               machineName: String(editingIssue.machineName || ''),
+              purposeType: (editingIssue.purposeType as PurposeType) || PurposeType.MACHINE,
+              notes: String(editingIssue.notes || ''),
             } as MaterialItemFormData,
           ];
 
@@ -182,6 +232,7 @@ export const MaterialIssueForm = ({
         date: new Date().toISOString().split('T')[0],
         items: [
           {
+            id: `new-item-${Date.now()}-${Math.random()}`, // Generate unique ID for new item
             srNo: 1,
             materialId: 0,
             nameOfMaterial: '',
@@ -195,6 +246,8 @@ export const MaterialIssueForm = ({
             purpose: '',
             machineId: 0,
             machineName: '',
+            purposeType: PurposeType.MACHINE,
+            notes: '',
           } as MaterialItemFormData,
         ],
         additionalNotes: '',
@@ -337,8 +390,16 @@ export const MaterialIssueForm = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log('Form submission started');
+    console.log('Form data:', formData);
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      console.log('Form validation failed');
+      return;
+    }
+    
+    console.log('Form validation passed');
     setIsSubmitting(true);
 
     try {
@@ -346,6 +407,8 @@ export const MaterialIssueForm = ({
       const validItems = formData.items.filter(
         (item) => item.nameOfMaterial && item.issuedQty
       );
+      
+      console.log('Valid items:', validItems);
 
       let successCount = 0;
       let failureCount = 0;
@@ -358,29 +421,42 @@ export const MaterialIssueForm = ({
         const singleItemForm = new FormData();
         singleItemForm.append('additionalNotes', formData.additionalNotes);
         singleItemForm.append('issueDate', formData.date);
-        singleItemForm.append(
-          'items',
-          JSON.stringify([
-            {
-              materialId: item.materialId,
-              issuedQuantity: parseInt(item.issuedQty),
-              receiverName: item.receiverName,
-              purpose: item.purpose,
-              machineId: item.machineId,
-              machineName: item.machineName, // Add machineName to payload
-            },
-          ])
-        );
+        
+        const itemPayload = {
+          materialId: item.materialId,
+          issuedQuantity: parseInt(item.issuedQty),
+          receiverName: item.receiverName,
+          purpose: item.purpose,
+          purposeType: item.machineName === "Other" ? PurposeType.OTHER : PurposeType.MACHINE,
+          ...(item.machineName === "Other" 
+            ? { machineName: "Other" }
+            : { machineId: item.machineId }
+          ),
+          notes: item.notes,
+        };
+        
+        console.log('Item payload:', itemPayload);
+        singleItemForm.append('items', JSON.stringify([itemPayload]));
+        
         if (item.image) {
           singleItemForm.append('files', item.image);
         }
+        
+        // Debug: Log FormData contents
+        console.log('FormData contents:');
+        for (let [key, value] of singleItemForm.entries()) {
+          console.log(`${key}:`, value);
+        }
 
         try {
+          console.log('Sending API request for item:', i + 1);
           const resp = await materialIssuesApi.create(singleItemForm);
+          console.log('API response:', resp);
           lastSuccessResponse = resp;
           successCount++;
         } catch (err) {
           console.error('Error issuing item:', err);
+          console.error('Error details:', err);
           failureCount++;
         }
       }
@@ -412,6 +488,7 @@ export const MaterialIssueForm = ({
         date: new Date().toISOString().split('T')[0],
         items: [
           {
+            id: `reset-item-${Date.now()}-${Math.random()}`, // Generate unique ID for reset
             srNo: 1,
             materialId: 0,
             nameOfMaterial: '',
@@ -425,6 +502,8 @@ export const MaterialIssueForm = ({
             purpose: '',
             machineId: 0,
             machineName: '',
+            purposeType: PurposeType.MACHINE,
+            notes: '',
           } as MaterialItemFormData,
         ],
         additionalNotes: '',
@@ -488,6 +567,7 @@ export const MaterialIssueForm = ({
               type='button'
               onClick={() => {
                 const newItem = {
+                  id: `item-${Date.now()}-${Math.random()}`, // Generate unique ID for new item
                   srNo: formData.items.length + 1,
                   nameOfMaterial: '',
                   existingStock: 0,
@@ -501,6 +581,8 @@ export const MaterialIssueForm = ({
                   purpose: '',
                   machineId: 0,
                   machineName: '',
+                  purposeType: PurposeType.MACHINE,
+                  notes: '',
                 };
                 setFormData((prev) => ({
                   ...prev,
@@ -557,7 +639,7 @@ export const MaterialIssueForm = ({
                   </TableHeader>
                   <TableBody>
                     {formData.items.map((item, index) => (
-                      <TableRow key={index}>
+                      <TableRow key={item.id}>
                         <TableCell className='border border-gray-300 text-center font-semibold text-xs px-2 py-1'>
                           {item.srNo}
                         </TableCell>
@@ -574,7 +656,7 @@ export const MaterialIssueForm = ({
                                   ...item,
                                   nameOfMaterial: material.name,
                                   existingStock: material.currentStock,
-                                  measureUnit: material.makerBrand || '',
+                                  measureUnit: material.measureUnit?.name || 'units',
                                   stockAfterIssue:
                                     material.currentStock -
                                     Number(item.issuedQty || 0),
@@ -625,7 +707,7 @@ export const MaterialIssueForm = ({
                         </TableCell>
                         <TableCell className='border border-gray-300 text-center px-2 py-1'>
                           <div className='font-semibold text-xs'>
-                            {item.existingStock}
+                            {item.existingStock} {item.measureUnit || 'units'}
                           </div>
                         </TableCell>
                         <TableCell className='border border-gray-300 text-center px-2 py-1'>
@@ -653,6 +735,9 @@ export const MaterialIssueForm = ({
                               disabled={!!editingIssue}
                               className='border-0 p-2 h-10 w-16 text-center text-sm outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm'
                             />
+                            <span className='text-xs text-gray-600'>
+                              {item.measureUnit || 'units'}
+                            </span>
                           </div>
                           {errors[`issuedQty_${index}`] && (
                             <p className='text-destructive text-xs mt-1'>
@@ -662,7 +747,7 @@ export const MaterialIssueForm = ({
                         </TableCell>
                         <TableCell className='border border-gray-300 text-center px-2 py-1'>
                           <div className='font-semibold text-xs'>
-                            {item.stockAfterIssue}
+                            {item.stockAfterIssue} {item.measureUnit || 'units'}
                           </div>
                         </TableCell>
                         <TableCell className='border border-gray-300 px-2 py-1'>
@@ -688,35 +773,29 @@ export const MaterialIssueForm = ({
                           <Select
                             value={item.machineName || ''}
                             onValueChange={(value) => {
+                              const newItems = [...formData.items];
                               if (value === "Other") {
-                                // Just set machineName to "Other" without showing custom input
-                                const newItems = [...formData.items];
                                 newItems[index] = {
                                   ...item,
                                   machineName: "Other",
-                                  machineId: 0, // Use 0 for Other
+                                  machineId: 0,
                                 };
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  items: newItems,
-                                }));
                               } else {
                                 const machine = availableMachines.find(
                                   (m) => m.name === value
                                 );
                                 if (machine) {
-                                  const newItems = [...formData.items];
                                   newItems[index] = {
                                     ...item,
                                     machineName: machine.name,
                                     machineId: machine.id,
                                   };
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    items: newItems,
-                                  }));
                                 }
                               }
+                              setFormData((prev) => ({
+                                ...prev,
+                                items: newItems,
+                              }));
                             }}
                             disabled={isLoadingMachines || !!editingIssue}
                           >
@@ -736,19 +815,19 @@ export const MaterialIssueForm = ({
                                   {machinesError}
                                 </div>
                               ) : (
-                                [
-                                  ...availableMachines.map((machine) => (
+                                <>
+                                  <SelectItem value="Other">
+                                    others
+                                  </SelectItem>
+                                  {availableMachines.map((machine) => (
                                     <SelectItem
                                       key={machine.id}
                                       value={machine.name}
                                     >
                                       {machine.name}
                                     </SelectItem>
-                                  )),
-                                  <SelectItem key="other" value="Other">
-                                    Other
-                                  </SelectItem>
-                                ]
+                                  ))}
+                                </>
                               )}
                             </SelectContent>
                           </Select>
@@ -852,6 +931,11 @@ export const MaterialIssueForm = ({
                             disabled={!!editingIssue}
                             className='border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm'
                           />
+                          {errors[`purpose_${index}`] && (
+                            <p className='text-destructive text-xs mt-1'>
+                              {errors[`purpose_${index}`]}
+                            </p>
+                          )}
                         </TableCell>
                         <TableCell className='border border-gray-300 px-2 py-1'>
                           <Button
@@ -959,3 +1043,4 @@ export const MaterialIssueForm = ({
     </Dialog>
   );
 };
+

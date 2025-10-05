@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Clock,
   CheckCircle,
@@ -21,6 +22,7 @@ import {
   Send,
   Search,
   FileEdit,
+  Edit,
   Building2,
   Loader2,
   ChevronUp,
@@ -31,7 +33,7 @@ import {
   ShoppingCart,
   CheckCircle2,
   X,
-  
+  WifiOff,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -72,15 +74,18 @@ import {
 } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
+import { Alert, AlertDescription } from '../components/ui/alert';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRole } from '../contexts/RoleContext';
 import { MaterialIssueForm } from '../components/MaterialIssueForm';
 import { RequestStatusManager } from '../components/RequestStatusManager';
-import { ResubmitForm } from '../components/ResubmitForm';
+import { RequisitionIndentForm } from '../components/RequisitionIndentForm';
 import { useRequestWorkflow } from '../hooks/useRequestWorkflow';
 import { HistoryView } from '../components/HistoryView';
 import { generatePurchaseId, parseLocationFromId, formatDateToDDMMYYYY } from '../lib/utils';
 import materialIndentsApi, { IndentStatus } from '../lib/api/material-indents';
+import materialsApi from '../lib/api/materials';
+import machinesApi from '../lib/api/machines';
 import {
   materialPurchasesApi,
   MaterialPurchaseStatus,
@@ -93,25 +98,50 @@ import {
   MaterialPurchase,
   ApproveRejectMaterialIndentRequest,
   ReceiveMaterialPurchaseItemRequest,
+  Material,
+  Machine,
 } from '../lib/api/types';
 import { toast } from '../hooks/use-toast';
 
 export const MaterialOrderBookTab = () => {
   const { currentUser, hasPermission } = useRole();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState(() => {
+    const filterFromUrl = searchParams.get('filter');
+    return filterFromUrl || 'all';
+  });
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterUnit, setFilterUnit] = useState('all');
   const [viewMode, setViewMode] = useState<'list' | 'table'>('table');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isIssueFormOpen, setIsIssueFormOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [selectedRequestForStatus, setSelectedRequestForStatus] =
     useState<MaterialIndent | null>(null);
   const [isStatusManagerOpen, setIsStatusManagerOpen] = useState(false);
   const [selectedRequestForResubmit, setSelectedRequestForResubmit] =
     useState<MaterialIndent | null>(null);
   const [isResubmitFormOpen, setIsResubmitFormOpen] = useState(false);
+  
+  // State for RequisitionIndentForm
+  const [resubmitFormData, setResubmitFormData] = useState<any>(null);
+  const [availableMaterials, setAvailableMaterials] = useState<any[]>([]);
+  const [availableMachines, setAvailableMachines] = useState<string[]>([]);
+  const [availableMachinesData, setAvailableMachinesData] = useState<Machine[]>([]);
+  const [isLoadingResubmitForm, setIsLoadingResubmitForm] = useState(false);
+
+  // Debug effect to monitor state changes
+  useEffect(() => {
+    console.log('State changed:', {
+      isResubmitFormOpen,
+      selectedRequestForResubmit: selectedRequestForResubmit?.id,
+      resubmitFormData: resubmitFormData?.id,
+      availableMaterials: availableMaterials.length,
+      availableMachines: availableMachines.length
+    });
+  }, [isResubmitFormOpen, selectedRequestForResubmit, resubmitFormData, availableMaterials, availableMachines]);
 
   // New state for approval/rejection workflow
   const [selectedIndentForApproval, setSelectedIndentForApproval] =
@@ -148,7 +178,7 @@ export const MaterialOrderBookTab = () => {
   const [materialIndents, setMaterialIndents] = useState<MaterialIndent[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta>({
     page: 1,
-    limit: 5, // Changed default to 5
+    limit: 10,
     itemCount: 0,
     pageCount: 0,
     hasPreviousPage: false,
@@ -184,10 +214,23 @@ export const MaterialOrderBookTab = () => {
     fetchBranches();
   }, []);
 
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   // Fetch material indents
   const fetchMaterialIndents = useCallback(
-    async (page = 1, limit = 5) => {
-      // Changed default to 5
+    async (page = 1, limit = 10) => {
       setIsLoading(true);
       setError(null);
 
@@ -215,6 +258,10 @@ export const MaterialOrderBookTab = () => {
         if (filterUnit !== 'all') {
           params.branchId = filterUnit;
         }
+
+        // Debug logging
+        console.log('API call params:', params);
+        console.log('Current filters - Status:', filterStatus, 'Unit:', filterUnit);
 
         const response = await materialIndentsApi.getAll(params);
 
@@ -256,19 +303,46 @@ export const MaterialOrderBookTab = () => {
 
   // Handle column sorting
   const handleSort = (column: string) => {
-    if (sortBy === column) {
+    // Map UI column names to API field names
+    const columnToFieldMap: { [key: string]: string } = {
+      'uniqueId': 'uniqueId',
+      'materialName': 'items.material.name',
+      'quantity': 'items.requestedQuantity',
+      'unitPrice': 'items.selectedQuotation.quotationAmount',
+      'value': 'items.selectedQuotation.quotationAmount',
+      'status': 'status',
+      'requestDate': 'requestDate',
+      'machineName': 'items.machine.name'
+    };
+
+    const apiField = columnToFieldMap[column] || column;
+
+    if (sortBy === apiField) {
       // Toggle sort order if same column
       setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
     } else {
       // Set new column and default to ASC
-      setSortBy(column);
+      setSortBy(apiField);
       setSortOrder('ASC');
     }
   };
 
   // Get sort icon for column
   const getSortIcon = (column: string) => {
-    if (sortBy !== column) {
+    const columnToFieldMap: { [key: string]: string } = {
+      'uniqueId': 'uniqueId',
+      'materialName': 'items.material.name',
+      'quantity': 'items.requestedQuantity',
+      'unitPrice': 'items.selectedQuotation.quotationAmount',
+      'value': 'items.selectedQuotation.quotationAmount',
+      'status': 'status',
+      'requestDate': 'requestDate',
+      'machineName': 'items.machine.name'
+    };
+
+    const apiField = columnToFieldMap[column] || column;
+
+    if (sortBy !== apiField) {
       return <ArrowUpDown className='w-4 h-4 text-muted-foreground' />;
     }
     return sortOrder === 'ASC' ? (
@@ -283,7 +357,6 @@ export const MaterialOrderBookTab = () => {
     initializeRequest,
     updateRequestStatus,
     approveRequest,
-    revertRequest,
     updateMaterialReceipt,
     getRequestWorkflow,
     canPerformAction,
@@ -337,6 +410,14 @@ export const MaterialOrderBookTab = () => {
     fetchMaterialIndents,
   ]);
 
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    if (pagination.page !== 1) {
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }
+  }, [filterStatus, filterUnit, searchTerm]);
+
   // Legacy state for backward compatibility
   interface LegacyRequest {
     id: string;
@@ -377,6 +458,8 @@ export const MaterialOrderBookTab = () => {
         return 'bg-yellow-500 text-white border-yellow-600 hover:bg-yellow-500 hover:text-white';
       case IndentStatus.APPROVED:
         return 'bg-green-500 text-white border-green-600 hover:bg-green-500 hover:text-white';
+      case IndentStatus.REVERTED:
+        return 'bg-orange-500 text-white border-orange-600 hover:bg-orange-500 hover:text-white';
       case IndentStatus.ORDERED:
         return 'bg-blue-500 text-white border-blue-600 hover:bg-blue-500 hover:text-white';
       case IndentStatus.PARTIALLY_RECEIVED:
@@ -430,6 +513,8 @@ export const MaterialOrderBookTab = () => {
         return 1;
       case IndentStatus.APPROVED:
         return 2;
+      case IndentStatus.REVERTED:
+        return 0;
       case IndentStatus.ORDERED:
         return 3;
       case IndentStatus.PARTIALLY_RECEIVED:
@@ -453,6 +538,8 @@ export const MaterialOrderBookTab = () => {
         return <Clock className='w-4 h-4' />;
       case IndentStatus.APPROVED:
         return <CheckCircle className='w-4 h-4' />;
+      case IndentStatus.REVERTED:
+        return <AlertTriangle className='w-4 h-4' />;
       case IndentStatus.ORDERED:
         return <Package className='w-4 h-4' />;
       case IndentStatus.PARTIALLY_RECEIVED:
@@ -476,6 +563,8 @@ export const MaterialOrderBookTab = () => {
         return 'Pending Approval';
       case IndentStatus.APPROVED:
         return 'Approved';
+      case IndentStatus.REVERTED:
+        return 'Reverted';
       case IndentStatus.ORDERED:
         return 'Ordered';
       case IndentStatus.PARTIALLY_RECEIVED:
@@ -515,15 +604,160 @@ export const MaterialOrderBookTab = () => {
     setIsStatusManagerOpen(true);
   };
 
-  const openResubmitForm = (request: MaterialIndent | LegacyRequest) => {
-    setSelectedRequestForResubmit(request as MaterialIndent);
-    setIsResubmitFormOpen(true);
+  const openResubmitForm = async (request: MaterialIndent | LegacyRequest) => {
+    console.log('Opening resubmit form with request:', request);
+    setIsLoadingResubmitForm(true);
+    
+    try {
+      setSelectedRequestForResubmit(request as MaterialIndent);
+      
+      // Transform MaterialIndent data to RequisitionIndentForm format
+      const transformedData = transformIndentToFormData(request as MaterialIndent);
+      console.log('Transformed data:', transformedData);
+      setResubmitFormData(transformedData);
+      
+      // Fetch materials and machines data
+      await fetchFormData();
+      
+      setIsResubmitFormOpen(true);
+    } catch (error) {
+      console.error('Error opening resubmit form:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to open resubmit form. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoadingResubmitForm(false);
+    }
   };
 
-  const handleStatusUpdate = async (requestId: string, newStatus: string) => {
+  // Transform MaterialIndent to RequisitionIndentForm data format
+  const transformIndentToFormData = (indent: MaterialIndent) => {
+    return {
+      id: indent.id.toString(),
+      items: indent.items.map((item, index) => ({
+        id: item.id.toString(),
+        srNo: String(index + 1),
+        productName: item.material?.name || '',
+        machineName: item.machine?.name || '',
+        specifications: item.specifications || '',
+        oldStock: item.currentStock || 0,
+        reqQuantity: item.requestedQuantity?.toString() || '',
+        measureUnit: item.material?.measureUnit?.name || 'units',
+        images: [],
+        imagePreviews: item.imagePaths || [],
+        notes: item.notes || '',
+        vendorQuotations: (item.quotations || []).map(quotation => ({
+          id: quotation.id.toString(),
+          vendorName: quotation.vendorName || '',
+          contactPerson: quotation.contactPerson || '',
+          phone: quotation.phone || '',
+          price: quotation.price || '0',
+          quotedPrice: quotation.quotationAmount || '0',
+          notes: quotation.notes || '',
+          quotationFile: null,
+          isSelected: quotation.isSelected || false,
+          filePaths: quotation.filePaths || []
+        })),
+        purposeType: 'machine' // Default to machine, can be enhanced later
+      })),
+      requestedBy: indent.requestedBy?.name || '',
+      location: indent.branch?.location || '',
+      date: indent.requestDate || '',
+      status: indent.status || '',
+      apiData: {
+        partialReceiptHistory: indent.partialReceiptHistory || [],
+        totalReceivedQuantity: indent.totalReceivedQuantity || 0
+      }
+    };
+  };
+
+  // Fetch materials and machines data for the form
+  const fetchFormData = async () => {
     try {
-      // Call the API to update the status
-      await materialIndentsApi.update(parseInt(requestId), { status: newStatus });
+      // Fetch materials
+      const materialsResponse = await materialsApi.getMaterials({
+        limit: 100,
+        sortBy: 'name',
+        sortOrder: 'ASC'
+      });
+      setAvailableMaterials(materialsResponse.data);
+
+      // Fetch machines
+      const machinesResponse = await machinesApi.getAll({
+        limit: 100,
+        sortBy: 'name',
+        sortOrder: 'ASC'
+      });
+      setAvailableMachinesData(machinesResponse.data);
+      setAvailableMachines(machinesResponse.data.map(machine => machine.name));
+    } catch (error) {
+      console.error('Error fetching form data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load form data',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleStatusUpdate = async (requestId: string, newStatus: string, updateData?: any) => {
+    try {
+      // Find the request to get the numeric ID
+      const request = allRequests.find(req => req.id === requestId);
+      if (!request) {
+        throw new Error('Request not found');
+      }
+      
+      // Use the numeric ID for API calls
+      const numericId = request.originalId || parseInt(requestId);
+      if (isNaN(numericId)) {
+        throw new Error('Invalid request ID');
+      }
+      
+      // Use specific API endpoints for different status updates
+      if (newStatus === 'reverted' && updateData?.revertReason) {
+        // Use the dedicated revert API endpoint
+        await materialIndentsApi.revert(numericId, updateData.revertReason);
+      } else if (newStatus === 'approved') {
+        // For approval, we need to use the generic update endpoint
+        // since the approve API requires specific item and quotation data
+        const updatePayload: any = { status: newStatus };
+        if (updateData?.approvedBy) {
+          updatePayload.approvedBy = updateData.approvedBy;
+          updatePayload.approvedDate = updateData.approvedDate;
+        }
+        await materialIndentsApi.update(numericId, updatePayload);
+      } else {
+        // For other status updates, use the generic update endpoint
+        const updatePayload: any = { status: newStatus };
+        
+        // Add additional data if provided
+        if (updateData) {
+          // Handle order-specific data
+          if (newStatus === 'ordered' && updateData.orderedBy) {
+            updatePayload.orderedBy = updateData.orderedBy;
+            updatePayload.orderedDate = updateData.orderedDate;
+          }
+          
+          // Handle receipt-specific data
+          if ((newStatus === 'partially_received' || newStatus === 'material_received') && updateData.receivedBy) {
+            updatePayload.receivedBy = updateData.receivedBy;
+            updatePayload.receivedDate = updateData.receivedDate;
+            updatePayload.purchasedPrice = updateData.purchasedPrice;
+            updatePayload.purchasedQuantity = updateData.purchasedQuantity;
+            updatePayload.purchasedFrom = updateData.purchasedFrom;
+            updatePayload.invoiceNumber = updateData.invoiceNumber;
+            updatePayload.qualityCheck = updateData.qualityCheck;
+            updatePayload.notes = updateData.notes;
+            updatePayload.partialReceipts = updateData.partialReceipts;
+            updatePayload.totalReceivedQuantity = updateData.totalReceivedQuantity;
+          }
+        }
+        
+        await materialIndentsApi.update(numericId, updatePayload);
+      }
       
       // Refresh the data from API
       await fetchMaterialIndents(pagination.page, pagination.limit);
@@ -544,8 +778,48 @@ export const MaterialOrderBookTab = () => {
 
   const handleResubmitRequest = async (requestData: Record<string, unknown>) => {
     try {
-      // Call the API to resubmit the request
-      await materialIndentsApi.create(requestData);
+      console.log('Starting resubmit request with data:', requestData);
+      
+      // Validate required fields
+      if (!requestData.items || !Array.isArray(requestData.items) || requestData.items.length === 0) {
+        throw new Error('No items found in the request data');
+      }
+
+      // Validate each item has required fields
+      for (const item of requestData.items) {
+        if (!item.productName) {
+          throw new Error('Product name is required for all items');
+        }
+        if (!item.reqQuantity || Number(item.reqQuantity) <= 0) {
+          throw new Error('Valid requested quantity is required for all items');
+        }
+      }
+      
+      // Check if we have a selected request to resubmit
+      if (!selectedRequestForResubmit) {
+        throw new Error('No request selected for resubmission');
+      }
+      
+      // Transform the form data back to API format
+      const apiData = transformFormDataToApiFormat(requestData);
+      
+      console.log('Calling API with transformed data:', apiData);
+      console.log('Creating new indent from original ID:', selectedRequestForResubmit.id);
+      
+      // Create a new indent for resubmission (since reverted indents cannot be updated)
+      const response = await materialIndentsApi.create({
+        ...apiData,
+        uniqueId: selectedRequestForResubmit.uniqueId, // Preserve the original uniqueId
+        status: 'pending_approval', // Set status to pending approval
+        // Add reference to original indent in additional notes
+        additionalNotes: `${apiData.additionalNotes}\n\nResubmitted from original indent ID: ${selectedRequestForResubmit.id}`,
+      });
+      console.log('API response:', response);
+      
+      // Close the dialog
+      setIsResubmitFormOpen(false);
+      setSelectedRequestForResubmit(null);
+      setResubmitFormData(null);
       
       // Refresh the data from API
       await fetchMaterialIndents(pagination.page, pagination.limit);
@@ -556,11 +830,127 @@ export const MaterialOrderBookTab = () => {
       });
     } catch (error) {
       console.error('Failed to resubmit request:', error);
+      
+      // Extract more detailed error information
+      let errorMessage = 'Failed to resubmit request. Please try again.';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      // Check for Axios error response
+      const axiosError = error as {
+        response?: { 
+          data?: { 
+            message?: string;
+            error?: string;
+          };
+          status?: number;
+        };
+      };
+      
+      if (axiosError.response?.status === 500) {
+        errorMessage = 'Server error occurred. Please check the console for details.';
+      } else if (axiosError.response?.data?.message) {
+        errorMessage = axiosError.response.data.message;
+      } else if (axiosError.response?.data?.error) {
+        errorMessage = axiosError.response.data.error;
+      }
+      
       toast({
         title: 'Error',
-        description: 'Failed to resubmit request. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
+    }
+  };
+
+  // Transform form data back to API format
+  const transformFormDataToApiFormat = (formData: any) => {
+    console.log('Transforming form data to API format:', formData);
+    
+    const apiData = {
+      additionalNotes: `Resubmitted after addressing revert reason: ${selectedRequestForResubmit?.rejectionReason || 'N/A'}`,
+      items: formData.items.map((item: any) => {
+        const material = availableMaterials.find(m => m.name === item.productName);
+        if (!material) {
+          console.error('Material not found for:', item.productName);
+          throw new Error(`Material "${item.productName}" not found in available materials`);
+        }
+
+        // Map purpose type to enum values
+        let purposeType = 'machine';
+        if (item.purposeType === 'spare') {
+          purposeType = 'spare';
+        } else if (item.purposeType === 'other') {
+          purposeType = 'other';
+        }
+
+        const itemData: any = {
+          materialId: material.id,
+          specifications: item.specifications || '',
+          requestedQuantity: Number(item.reqQuantity) || 0,
+          purposeType: purposeType,
+          notes: item.notes || '',
+        };
+
+        // Handle machine ID properly
+        if (item.purposeType === 'machine' && item.machineName) {
+          // Find the machine ID from the available machines data
+          const machine = availableMachinesData.find(m => m.name === item.machineName);
+          
+          if (machine) {
+            itemData.machineId = machine.id;
+            console.log(`Found machine ID ${machine.id} for machine: ${item.machineName}`);
+          } else {
+            console.warn('Machine not found in available machines:', item.machineName);
+            // Don't include machineId if not found
+          }
+        } else if (item.purposeType !== 'machine') {
+          itemData.machineName = item.machineName || item.purposeType;
+        }
+
+        // Handle vendor quotations
+        if (item.vendorQuotations && item.vendorQuotations.length > 0) {
+          itemData.vendorQuotations = item.vendorQuotations.map((quotation: any) => ({
+            vendorName: quotation.vendorName,
+            contactPerson: quotation.contactPerson || '',
+            phone: quotation.phone || '',
+            price: Number(quotation.price) || 0,
+            quotationAmount: Number(quotation.quotedPrice) || 0,
+            notes: quotation.notes || ''
+          }));
+        }
+
+        return itemData;
+      })
+    };
+
+    console.log('Transformed API data:', apiData);
+    return apiData;
+  };
+
+  // Handle item changes in the form
+  const handleItemChange = (itemId: string, field: string, value: string) => {
+    if (resubmitFormData) {
+      setResubmitFormData(prev => ({
+        ...prev,
+        items: prev.items.map((item: any) => 
+          item.id === itemId ? { ...item, [field]: value } : item
+        )
+      }));
+    }
+  };
+
+  // Handle vendor quotation changes
+  const handleVendorQuotationChange = (itemId: string, quotations: any[]) => {
+    if (resubmitFormData) {
+      setResubmitFormData(prev => ({
+        ...prev,
+        items: prev.items.map((item: any) => 
+          item.id === itemId ? { ...item, vendorQuotations: quotations } : item
+        )
+      }));
     }
   };
 
@@ -582,6 +972,16 @@ export const MaterialOrderBookTab = () => {
         quotationId: selectedQuotationId,
       };
 
+      console.log('Approval data being sent:', {
+        indentId: selectedIndentForApproval.id,
+        approvalData,
+        selectedIndent: selectedIndentForApproval,
+        selectedItem: selectedIndentForApproval.items.find(item => item.id === selectedItemId),
+        selectedQuotation: selectedIndentForApproval.items
+          .find(item => item.id === selectedItemId)
+          ?.quotations.find(q => q.id === selectedQuotationId)
+      });
+
       await materialIndentsApi.approve(
         selectedIndentForApproval.id,
         approvalData
@@ -599,9 +999,36 @@ export const MaterialOrderBookTab = () => {
       fetchMaterialIndents(pagination.page, pagination.limit);
     } catch (error) {
       console.error('Error approving indent:', error);
+      
+      // Extract more detailed error information
+      let errorMessage = 'Failed to approve material indent. Please try again.';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      // Check for Axios error response
+      const axiosError = error as {
+        response?: { 
+          data?: { 
+            message?: string;
+            error?: string;
+          };
+          status?: number;
+        };
+      };
+      
+      if (axiosError.response?.status === 502) {
+        errorMessage = 'Server error occurred (502). Please check the console for details.';
+      } else if (axiosError.response?.data?.message) {
+        errorMessage = axiosError.response.data.message;
+      } else if (axiosError.response?.data?.error) {
+        errorMessage = axiosError.response.data.error;
+      }
+      
       toast({
         title: 'Error',
-        description: 'Failed to approve material indent. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
@@ -621,7 +1048,12 @@ export const MaterialOrderBookTab = () => {
     try {
       await materialIndentsApi.reject(
         selectedIndentForApproval.id,
-        rejectionReason
+        {
+          status: 'reverted',
+          rejectionReason: rejectionReason,
+          itemId: 0,
+          quotationId: 0,
+        }
       );
 
       toast({
@@ -799,7 +1231,7 @@ export const MaterialOrderBookTab = () => {
       specifications:
         firstItem?.specifications || firstItem?.material.specifications || '',
       maker: firstItem?.material.makerBrand || 'N/A',
-      quantity: firstItem ? `${firstItem.requestedQuantity} units` : '0',
+      quantity: firstItem ? `${firstItem.requestedQuantity} ${firstItem.material.measureUnit?.name || firstItem.material.unit || 'units'}` : '0',
       unitPrice: shouldShowPrice && firstQuotation ? `₹${firstQuotation.quotationAmount}` : '',
       value: shouldShowPrice && firstQuotation
         ? `₹${
@@ -833,7 +1265,7 @@ export const MaterialOrderBookTab = () => {
     };
   };
 
-  // Client-side filtering for search
+  // Client-side filtering for search only (status and unit filters are handled by API)
   const filterIndents = (indents: MaterialIndent[]) => {
     if (!searchTerm) return indents;
 
@@ -858,8 +1290,9 @@ export const MaterialOrderBookTab = () => {
 
   // Get filtered and transformed indents for UI
   const getFilteredIndents = () => {
-    const filteredData = filterIndents(materialIndents);
-    return filteredData.map(transformApiIndentToUiFormat);
+    // Only apply client-side search filtering, status and unit filters are handled by API
+    const searchFilteredData = filterIndents(materialIndents);
+    return searchFilteredData.map(transformApiIndentToUiFormat);
   };
 
   const filteredRequests = getFilteredIndents();
@@ -887,8 +1320,30 @@ export const MaterialOrderBookTab = () => {
   };
 
   // Navigation handler for request details
-  const handleRequestClick = (requestId: string) => {
-    // URL encode the requestId to handle special characters like '/'
+  const handleRequestClick = (requestId: string, requestStatus?: string) => {
+    console.log('handleRequestClick called with:', { requestId, requestStatus });
+    
+    // If status is reverted and user is supervisor, open resubmit form
+    if (requestStatus === 'reverted' && hasPermission('inventory:material-indents:update')) {
+      console.log('Status is reverted, looking for original indent...');
+      
+      // Find the original MaterialIndent from the API data, not the transformed UI data
+      const originalIndent = materialIndents.find(indent => {
+        const indentIdStr = indent.id.toString();
+        const requestIdStr = requestId.toString();
+        
+        return indentIdStr === requestIdStr;
+      });
+      
+      console.log('Found original indent:', originalIndent);
+      
+      if (originalIndent) {
+        openResubmitForm(originalIndent);
+        return;
+      }
+    }
+    
+    // Default behavior - navigate to request details
     const encodedRequestId = encodeURIComponent(requestId);
     navigate(`/request-details/${encodedRequestId}`);
   };
@@ -1068,13 +1523,22 @@ export const MaterialOrderBookTab = () => {
                       </Button>
                     </TableCell>
                     <TableCell className='font-medium'>
-                      <Button
-                        variant='link'
-                        className='p-0 h-auto font-medium text-primary hover:underline'
-                        onClick={() => handleRequestClick(request.id)}
-                      >
-                        {request.id}
-                      </Button>
+                    <Button
+                      variant='link'
+                      className={`p-0 h-auto font-medium hover:underline ${
+                        request.status === 'reverted' && hasPermission('inventory:material-indents:update')
+                          ? 'text-orange-600 hover:text-orange-700'
+                          : 'text-primary'
+                      }`}
+                      onClick={() => handleRequestClick(request.originalId || request.id, request.status)}
+                      title={
+                        request.status === 'reverted' && hasPermission('inventory:material-indents:update')
+                          ? 'Click to edit and resubmit form'
+                          : 'Click to view details'
+                      }
+                    >
+                      {request.id}
+                    </Button>
                     </TableCell>
                     <TableCell>
                       <div className='font-medium'>
@@ -1108,465 +1572,7 @@ export const MaterialOrderBookTab = () => {
                     </TableCell>
                   </TableRow>
 
-                  {/* Expanded Detail Row */}
-                  {expandedRows.has(request.id) && (
-                    <TableRow>
-                      <TableCell colSpan={9} className='p-0'>
-                        <div className='bg-muted/30 p-6 border-t'>
-                          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-                            {/* Left Column - Request Details */}
-                            <div className='space-y-4'>
-                              <div>
-                                <h3 className='font-semibold text-lg mb-3'>
-                                  Request Details
-                                </h3>
-                                <div className='space-y-3'>
-                                  <div className='grid grid-cols-2 gap-4 text-sm'>
-                                    <div>
-                                      <span className='font-medium text-muted-foreground'>
-                                        Purchase ID:
-                                      </span>
-                                      <div className='font-medium'>
-                                        {request.id}
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <span className='font-medium text-muted-foreground'>
-                                        Quantity:
-                                      </span>
-                                      <div className='font-medium'>
-                                        {request.quantity}
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <span className='font-medium text-muted-foreground'>
-                                        Total Value:
-                                      </span>
-                                      <div className='font-medium'>
-                                        {request.value}
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <span className='font-medium text-muted-foreground'>
-                                        Purchased For:
-                                      </span>
-                                      <div className='font-medium'>
-                                        {request.machineId}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div>
-                                    <span className='font-medium text-muted-foreground'>
-                                      Specifications:
-                                    </span>
-                                    <div className='text-sm mt-1 p-3 bg-background rounded border'>
-                                      {request.specifications}
-                                    </div>
-                                  </div>
-
-                                  <div>
-                                    <span className='font-medium text-muted-foreground'>
-                                      Purpose:
-                                    </span>
-                                    <div className='text-sm mt-1'>
-                                      {request.materialPurpose}
-                                    </div>
-                                  </div>
-
-                                  {request.additionalNotes && (
-                                    <div>
-                                      <span className='font-medium text-muted-foreground'>
-                                        Additional Notes:
-                                      </span>
-                                      <div className='text-sm mt-1 p-3 bg-background rounded border'>
-                                        {request.additionalNotes}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Vendor Quotations Section - Only for Company Owners and Pending Approval */}
-                                  {currentUser?.role === 'company_owner' && 
-                                   request.status === 'pending_approval' && 
-                                   request.originalIndent?.items && (
-                                    <div>
-                                      <span className='font-medium text-muted-foreground'>
-                                        Vendor Quotations:
-                                      </span>
-                                      <div className='mt-2 space-y-3'>
-                                        {request.originalIndent.items.map((item) => (
-                                          <div key={item.id} className='p-3 bg-background rounded border'>
-                                            <div className='font-medium text-sm mb-2'>
-                                              {item.material.name} - Qty: {item.requestedQuantity}
-                                            </div>
-                                            {item.quotations && item.quotations.length > 0 ? (
-                                              <div className='space-y-2'>
-                                                {item.quotations.map((quotation) => (
-                                                  <div 
-                                                    key={quotation.id} 
-                                                    className={`p-2 rounded border cursor-pointer transition-colors ${
-                                                      item.selectedQuotation?.id === quotation.id
-                                                        ? 'bg-green-50 border-green-200'
-                                                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                                                    }`}
-                                                    onClick={() => {
-                                                      // Update the selected quotation for this item
-                                                      const updatedIndent = {
-                                                        ...request.originalIndent,
-                                                        items: request.originalIndent.items.map(i => 
-                                                          i.id === item.id 
-                                                            ? { ...i, selectedQuotation: quotation }
-                                                            : i
-                                                        )
-                                                      };
-                                                      setSelectedIndentForApproval(updatedIndent);
-                                                    }}
-                                                  >
-                                                    <div className='flex items-center justify-between'>
-                                                      <div>
-                                                        <div className='font-medium text-sm'>
-                                                          {quotation.vendorName}
-                                                        </div>
-                                                        <div className='text-xs text-muted-foreground'>
-                                                          {quotation.contactPerson && `Contact: ${quotation.contactPerson}`}
-                                                        </div>
-                                                      </div>
-                                                      <div className='text-right'>
-                                                        <div className='font-bold text-primary'>
-                                                          ₹{quotation.quotationAmount}
-                                                        </div>
-                                                        <div className='text-xs text-muted-foreground'>
-                                                          per unit
-                                                        </div>
-                                                      </div>
-                                                    </div>
-                                                    {item.selectedQuotation?.id === quotation.id && (
-                                                      <div className='mt-1 flex items-center gap-1 text-green-600'>
-                                                        <CheckCircle className='w-3 h-3' />
-                                                        <span className='text-xs'>Selected</span>
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            ) : (
-                                              <div className='text-center py-4 text-muted-foreground'>
-                                                <FileText className='w-6 h-6 mx-auto mb-2 opacity-50' />
-                                                <div className='text-xs'>No quotations available</div>
-                                              </div>
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Right Column - Status & Progress */}
-                            <div className='space-y-4'>
-                              <div>
-                                <h3 className='font-semibold text-lg mb-3'>
-                                  Status & Progress
-                                </h3>
-
-                                {/* Progress Bar */}
-                                <ProgressBar stage={request.progressStage} />
-
-                                {/* Status Information */}
-                                <div className='space-y-3'>
-                                  <div className='p-3 bg-background rounded border'>
-                                    <div className='text-sm font-medium mb-2'>
-                                      Current Status
-                                    </div>
-                                    <div className='text-sm text-muted-foreground'>
-                                      {request.statusDescription}
-                                    </div>
-                                  </div>
-
-                                  {/* Status-specific information */}
-                                  {request.status === 'approved' && (
-                                    <div className='bg-secondary/10 border border-secondary rounded-lg p-3'>
-                                      <div className='text-sm'>
-                                        <strong className='text-foreground'>
-                                          Approved:
-                                        </strong>{' '}
-                                        {request.approvedBy} on{' '}
-                                        {request.approvedDate}
-                                      </div>
-                                      <div className='text-xs text-foreground mt-1'>
-                                        Ready for procurement
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {request.status === 'ordered' && (
-                                    <div className='bg-purple-50 border border-purple-200 rounded-lg p-3'>
-                                      <div className='text-sm space-y-1'>
-                                        <div>
-                                          <strong className='text-purple-800'>
-                                            Ordered:
-                                          </strong>{' '}
-                                          {request.orderedDate}
-                                        </div>
-                                        <div>
-                                          <strong className='text-purple-800'>
-                                            Supplier:
-                                          </strong>{' '}
-                                          {request.supplierName}
-                                        </div>
-                                        <div>
-                                          <strong className='text-purple-800'>
-                                            Expected Delivery:
-                                          </strong>{' '}
-                                          {request.expectedDelivery}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {request.status === 'partially_received' && (
-                                    <div className='bg-orange-50 border border-orange-200 rounded-lg p-3'>
-                                      <div className='text-sm space-y-1'>
-                                        <div>
-                                          <strong className='text-orange-800'>
-                                            Partially Received:
-                                          </strong>{' '}
-                                          {request.receivedDate}
-                                        </div>
-                                        <div>
-                                          <strong className='text-orange-800'>
-                                            Received Quantity:
-                                          </strong>{' '}
-                                          {request.purchasedQuantity} of{' '}
-                                          {request.quantity}
-                                        </div>
-                                        <div>
-                                          <strong className='text-orange-800'>
-                                            Supplier:
-                                          </strong>{' '}
-                                          {request.purchasedFrom}
-                                        </div>
-                                        <div>
-                                          <strong className='text-orange-800'>
-                                            Invoice:
-                                          </strong>{' '}
-                                          {request.invoiceNumber}
-                                        </div>
-                                        {request.notes && (
-                                          <div>
-                                            <strong className='text-orange-800'>
-                                              Notes:
-                                            </strong>{' '}
-                                            {request.notes}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {request.status === 'material_received' && (
-                                    <div className='bg-primary/5 border border-primary/20 rounded-lg p-3'>
-                                      <div className='text-sm space-y-1'>
-                                        <div>
-                                          <strong className='text-primary'>
-                                            Received:
-                                          </strong>{' '}
-                                          {request.receivedDate}
-                                        </div>
-                                        <div>
-                                          <strong className='text-primary'>
-                                            Quantity:
-                                          </strong>{' '}
-                                          {request.purchasedQuantity}{' '}
-                                          {request.quantity
-                                            .split(' ')
-                                            .slice(1)
-                                            .join(' ')}
-                                        </div>
-                                        <div>
-                                          <strong className='text-primary'>
-                                            Total Cost:
-                                          </strong>{' '}
-                                          ₹{request.purchasedPrice}
-                                        </div>
-                                        <div>
-                                          <strong className='text-primary'>
-                                            Supplier:
-                                          </strong>{' '}
-                                          {request.purchasedFrom}
-                                        </div>
-                                        <div>
-                                          <strong className='text-primary'>
-                                            Quality Check:
-                                          </strong>{' '}
-                                          {request.qualityCheck}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {request.status === 'issued' && (
-                                    <div className='bg-orange-50 border border-orange-200 rounded-lg p-3'>
-                                      <div className='text-sm space-y-1'>
-                                        <div>
-                                          <strong className='text-orange-800'>
-                                            Issued:
-                                          </strong>{' '}
-                                          {request.issuedDate}
-                                        </div>
-                                        <div>
-                                          <strong className='text-orange-800'>
-                                            Received By:
-                                          </strong>{' '}
-                                          {request.receivedBy}
-                                        </div>
-                                        <div>
-                                          <strong className='text-orange-800'>
-                                            Delivered:
-                                          </strong>{' '}
-                                          {request.deliveredDate}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {request.status === 'completed' && (
-                                    <div className='bg-secondary/10 border border-secondary rounded-lg p-3'>
-                                      <div className='text-sm space-y-1'>
-                                        <div>
-                                          <strong className='text-foreground'>
-                                            Completed:
-                                          </strong>{' '}
-                                          {request.completedDate}
-                                        </div>
-                                        <div>
-                                          <strong className='text-foreground'>
-                                            Received By:
-                                          </strong>{' '}
-                                          {request.receivedBy}
-                                        </div>
-                                        {request.completionNotes && (
-                                          <div>
-                                            <strong className='text-foreground'>
-                                              Notes:
-                                            </strong>{' '}
-                                            {request.completionNotes}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {request.status === 'rejected' && (
-                                    <div className='bg-red-50 border border-red-200 rounded-lg p-3'>
-                                      <div className='flex items-start gap-2'>
-                                        <AlertTriangle className='w-4 h-4 text-red-600 mt-0.5 flex-shrink-0' />
-                                        <div className='min-w-0'>
-                                          <strong className='text-red-800 text-sm'>
-                                            Rejected:
-                                          </strong>
-                                          <p className='text-red-700 text-sm mt-1 break-words'>
-                                            {request.reason}
-                                          </p>
-                                          <p className='text-red-600 text-xs mt-2'>
-                                            Rejected by {request.rejectedBy} on{' '}
-                                            {request.rejectedDate}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {request.status === 'reverted' && (
-                                    <div className='bg-red-50 border border-red-200 rounded-lg p-3'>
-                                      <div className='flex items-start gap-2'>
-                                        <XCircle className='w-4 h-4 text-red-600 mt-0.5 flex-shrink-0' />
-                                        <div className='min-w-0'>
-                                          <strong className='text-red-800 text-sm'>
-                                            Reverted:
-                                          </strong>
-                                          <p className='text-red-700 text-sm mt-1 break-words'>
-                                            {request.revertReason}
-                                          </p>
-                                          <p className='text-red-600 text-xs mt-2'>
-                                            Reverted by {request.revertedBy} on{' '}
-                                            {request.revertedDate}
-                                          </p>
-                                          <p className='text-red-600 text-xs mt-1'>
-                                            Indent form must be resubmitted with
-                                            corrections.
-                                          </p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Action Buttons */}
-                          <div className='flex gap-3 pt-4 border-t mt-6'>
-                            <Button
-                              variant='outline'
-                              className='gap-2 rounded-lg'
-                            >
-                              <Eye className='w-4 h-4' />
-                              View Full Details
-                            </Button>
-
-                            {/* Status Management Button */}
-                            {(hasPermission(
-                              'inventory:material-indents:approve'
-                            ) ||
-                              hasPermission(
-                                'inventory:material-indents:update'
-                              )) && (
-                              <Button
-                                variant='outline'
-                                className='gap-2 rounded-lg'
-                                onClick={() => openStatusManager(request)}
-                              >
-                                <CheckSquare className='w-4 h-4' />
-                                Manage Status
-                              </Button>
-                            )}
-
-                            {(request.status === 'rejected' ||
-                              request.status === 'reverted') && (
-                              <Button
-                                variant='outline'
-                                className='gap-2 rounded-lg'
-                                onClick={() =>
-                                  request.status === 'reverted'
-                                    ? openResubmitForm(request)
-                                    : null
-                                }
-                              >
-                                <Plus className='w-4 h-4' />
-                                {request.status === 'reverted'
-                                  ? 'Resubmit Indent Form'
-                                  : 'Resubmit Request'}
-                              </Button>
-                            )}
-                            {(request.status === 'ordered' ||
-                              request.status === 'issued' ||
-                              request.status === 'completed') && (
-                              <Button
-                                variant='outline'
-                                className='gap-2 rounded-lg'
-                              >
-                                <FileText className='w-4 h-4' />
-                                Track Status
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
+                
                 </>
               ))}
             </TableBody>
@@ -1667,8 +1673,17 @@ export const MaterialOrderBookTab = () => {
                   <TableCell className='font-medium'>
                     <Button
                       variant='link'
-                      className='p-0 h-auto font-medium text-primary hover:underline'
-                      onClick={() => handleRequestClick(request.originalId)}
+                      className={`p-0 h-auto font-medium hover:underline ${
+                        request.status === 'reverted' && hasPermission('inventory:material-indents:update')
+                          ? 'text-orange-600 hover:text-orange-700'
+                          : 'text-primary'
+                      }`}
+                      onClick={() => handleRequestClick(request.originalId || request.id, request.status)}
+                      title={
+                        request.status === 'reverted' && hasPermission('inventory:material-indents:update')
+                          ? 'Click to edit and resubmit form'
+                          : 'Click to view details'
+                      }
                     >
                       {request.id}
                     </Button>
@@ -1736,11 +1751,18 @@ export const MaterialOrderBookTab = () => {
       <div className='flex flex-wrap gap-2 pt-4 border-t mt-6'>
         <Button
           variant='outline'
-          className='gap-2 rounded-lg'
-          onClick={() => handleRequestClick(request.id)}
+          className={`gap-2 rounded-lg ${
+            request.status === 'reverted' && hasPermission('inventory:material-indents:update')
+              ? 'border-orange-600 text-orange-600 hover:bg-orange-50'
+              : ''
+          }`}
+          onClick={() => handleRequestClick(request.originalId || request.id, request.status)}
         >
           <Eye className='w-4 h-4' />
-          View Full Details
+          {request.status === 'reverted' && hasPermission('inventory:material-indents:update')
+            ? 'Edit & Resubmit Form'
+            : 'View Full Details'
+          }
         </Button>
 
         {canApprove && (
@@ -1755,6 +1777,8 @@ export const MaterialOrderBookTab = () => {
             disabled={!request.originalIndent?.items?.every(item => item.selectedQuotation)}
             onClick={() => {
               setSelectedIndentForApproval(request.originalIndent);
+              setSelectedItemId(null); // Reset item selection
+              setSelectedQuotationId(null); // Reset quotation selection
               setIsApprovalDialogOpen(true);
             }}
           >
@@ -1881,9 +1905,21 @@ export const MaterialOrderBookTab = () => {
           <Button
             variant='outline'
             className='gap-2 rounded-lg'
-            onClick={() =>
-              request.status === 'reverted' ? openResubmitForm(request) : null
-            }
+            onClick={() => {
+              if (request.status === 'reverted') {
+                // Find the original MaterialIndent from the API data
+                const originalIndent = materialIndents.find(indent => {
+                  const indentIdStr = indent.id.toString();
+                  const requestOriginalIdStr = request.originalId?.toString();
+                  
+                  return indentIdStr === requestOriginalIdStr;
+                });
+                
+                if (originalIndent) {
+                  openResubmitForm(originalIndent);
+                }
+              }
+            }}
           >
             <Plus className='w-4 h-4' />
             {request.status === 'reverted'
@@ -1897,6 +1933,16 @@ export const MaterialOrderBookTab = () => {
 
   return (
     <div className='space-y-6 p-4 sm:p-0'>
+      {/* Network Status Alert */}
+      {!isOnline && (
+        <Alert className="border-red-200 bg-red-50 text-red-800">
+          <WifiOff className="h-4 w-4" />
+          <AlertDescription>
+            You are currently offline. Some features may not work properly. Please check your internet connection.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {/* Main Heading */}
 
       {/* Search, Views, Status and Actions Row */}
@@ -1955,9 +2001,7 @@ export const MaterialOrderBookTab = () => {
               disabled={isLoadingBranches}
             >
               <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-                <SelectValue placeholder='Select Unit'>
-                  {isLoadingBranches ? 'Loading...' : 'Select Unit'}
-                </SelectValue>
+                <SelectValue placeholder={isLoadingBranches ? 'Loading...' : 'Select Unit'} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='all'>All Units</SelectItem>
@@ -1979,7 +2023,17 @@ export const MaterialOrderBookTab = () => {
           )}
 
           {/* Status Filter - Show all statuses for all roles */}
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <Select value={filterStatus} onValueChange={(value) => {
+            setFilterStatus(value);
+            // Update URL params
+            const newSearchParams = new URLSearchParams(searchParams);
+            if (value === 'all') {
+              newSearchParams.delete('filter');
+            } else {
+              newSearchParams.set('filter', value);
+            }
+            setSearchParams(newSearchParams, { replace: true });
+          }}>
             <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
               <SelectValue placeholder='All Status' />
             </SelectTrigger>
@@ -2091,7 +2145,6 @@ export const MaterialOrderBookTab = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value='5'>5</SelectItem>
                         <SelectItem value='10'>10</SelectItem>
                         <SelectItem value='20'>20</SelectItem>
                         <SelectItem value='50'>50</SelectItem>
@@ -2228,17 +2281,87 @@ export const MaterialOrderBookTab = () => {
         />
       )}
 
-      {/* Resubmit Form */}
+      {/* Resubmit Form using RequisitionIndentForm */}
       {selectedRequestForResubmit && (
-        <ResubmitForm
-          request={selectedRequestForResubmit}
-          isOpen={isResubmitFormOpen}
-          onClose={() => {
-            setIsResubmitFormOpen(false);
-            setSelectedRequestForResubmit(null);
-          }}
-          onSubmit={handleResubmitRequest}
-        />
+        <Dialog open={isResubmitFormOpen} onOpenChange={() => {
+          setIsResubmitFormOpen(false);
+          setSelectedRequestForResubmit(null);
+          setResubmitFormData(null);
+        }}>
+          <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Edit className="w-5 h-5 text-foreground" />
+                Resubmit Request - {selectedRequestForResubmit.id}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {isLoadingResubmitForm ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mr-2" />
+                <span>Loading form data...</span>
+              </div>
+            ) : resubmitFormData && availableMaterials.length > 0 ? (
+              <>
+                {/* Show revert reason if available */}
+                {selectedRequestForResubmit.rejectionReason && (
+                  <Alert className="border-orange-200 bg-orange-50">
+                    <AlertTriangle className="h-4 w-4 text-orange-600" />
+                    <div className="text-orange-800 font-semibold">Original Revert Reason</div>
+                    <AlertDescription className="text-orange-700">
+                      {selectedRequestForResubmit.rejectionReason}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <RequisitionIndentForm
+              requestData={resubmitFormData}
+              isReadOnly={false}
+              onItemChange={handleItemChange}
+              onVendorQuotationChange={handleVendorQuotationChange}
+              availableMaterials={availableMaterials.map(material => ({
+                name: material.name,
+                specifications: material.specifications || '',
+                measureUnit: material.measureUnit?.name || 'units',
+                category: material.category?.name || 'General'
+              }))}
+              machines={availableMachines}
+              onStatusChange={(newStatus: string, additionalData?: any) => {
+                // Handle status change if needed
+                console.log('Status changed to:', newStatus, additionalData);
+              }}
+              userRole="supervisor"
+              hasPermission={hasPermission}
+            />
+            
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button 
+                onClick={() => handleResubmitRequest(resubmitFormData)}
+                className="bg-primary hover:bg-primary/90 text-white"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                Resubmit Request
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsResubmitFormOpen(false);
+                  setSelectedRequestForResubmit(null);
+                  setResubmitFormData(null);
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <AlertTriangle className="w-8 h-8 text-red-500 mr-2" />
+                <span>Failed to load form data. Please try again.</span>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Approval Dialog */}

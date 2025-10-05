@@ -51,7 +51,7 @@ export const materialsApi = {
     id: number,
     material: Partial<Material>
   ): Promise<Material> => {
-    const response = await api.put<Material>(
+    const response = await api.patch<Material>(
       `/inventory/materials/${id}`,
       material
     );

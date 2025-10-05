@@ -94,6 +94,31 @@ export const materialIssuesApi = {
   delete: async (id: number): Promise<void> => {
     await api.delete(`/inventory/material-issues/${id}`);
   },
+
+  /**
+   * Get image for a specific material issue item
+   * @param issueId Material issue ID
+   * @param itemId Material issue item ID
+   * @returns Promise with image blob
+   */
+  getItemImage: async (issueId: number, itemId: number): Promise<Blob> => {
+    const response = await api.get(
+      `/inventory/material-issues/${issueId}/items/${itemId}/image`,
+      { responseType: 'blob' }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get image URL for a specific material issue item
+   * @param issueId Material issue ID
+   * @param itemId Material issue item ID
+   * @returns Image URL string
+   */
+  getItemImageUrl: (issueId: number, itemId: number): string => {
+    const baseUrl = import.meta.env.VITE_APP_API_BASE_URL || 'https://0ehawyo6gg.execute-api.ap-south-1.amazonaws.com/dev';
+    return `${baseUrl}/inventory/material-issues/${issueId}/items/${itemId}/image`;
+  },
 };
 
 export default materialIssuesApi;

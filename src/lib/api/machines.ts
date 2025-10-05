@@ -62,7 +62,7 @@ export const machinesApi = {
    * @returns Promise with updated machine
    */
   update: async (id: number, machine: Partial<Machine>): Promise<Machine> => {
-    const response = await api.put<Machine>(
+    const response = await api.patch<Machine>(
       `/inventory/machines/${id}`,
       machine
     );
