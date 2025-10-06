@@ -65,7 +65,8 @@ const Login = () => {
       });
 
       // Redirect
-      const redirectPath = derivedRole === 'supervisor' ? '/materials-inventory' : '/';
+      const redirectPath =
+        derivedRole === 'supervisor' ? '/materials-inventory' : '/';
       navigate(redirectPath);
     } catch (err) {
       toast({
@@ -90,7 +91,7 @@ const Login = () => {
                 className='h-20 w-auto object-contain'
               />
             </div>
-            
+
             <CardDescription>
               Sign in to access the Materials Management System
             </CardDescription>
