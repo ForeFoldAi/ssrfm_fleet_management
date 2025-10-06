@@ -63,6 +63,8 @@ interface MaterialItemFormData {
   srNo: number;
   materialId: number;
   nameOfMaterial: string;
+  makerBrand: string;
+  specifications: string;
   existingStock: number;
   issuedQty: string;
   stockAfterIssue: number;
@@ -105,6 +107,8 @@ export const MaterialIssueForm = ({
         srNo: 1,
         materialId: 0,
         nameOfMaterial: '',
+        makerBrand: '',
+        specifications: '',
         existingStock: 0,
         issuedQty: '',
         stockAfterIssue: 0,
@@ -145,6 +149,16 @@ export const MaterialIssueForm = ({
                 nameOfMaterial: String(
                   item.material
                     ? (item.material as Record<string, unknown>).name
+                    : ''
+                ),
+                makerBrand: String(
+                  item.material
+                    ? (item.material as Record<string, unknown>).makerBrand || ''
+                    : ''
+                ),
+                specifications: String(
+                  item.material
+                    ? (item.material as Record<string, unknown>).specifications || ''
                     : ''
                 ),
                 existingStock: Number(item.stockBeforeIssue || 0),
@@ -189,6 +203,8 @@ export const MaterialIssueForm = ({
               srNo: 1,
               materialId: Number(editingIssue.materialId || 0),
               nameOfMaterial: String(editingIssue.materialName || ''),
+              makerBrand: String(editingIssue.makerBrand || ''),
+              specifications: String(editingIssue.specifications || ''),
               existingStock: Number(editingIssue.existingStock || 0),
               issuedQty: String(editingIssue.issuedQuantity || 0),
               stockAfterIssue: Number(editingIssue.stockAfterIssue || 0),
@@ -236,6 +252,8 @@ export const MaterialIssueForm = ({
             srNo: 1,
             materialId: 0,
             nameOfMaterial: '',
+            makerBrand: '',
+            specifications: '',
             existingStock: 0,
             issuedQty: '',
             stockAfterIssue: 0,
@@ -444,7 +462,7 @@ export const MaterialIssueForm = ({
         
         // Debug: Log FormData contents
         console.log('FormData contents:');
-        for (let [key, value] of singleItemForm.entries()) {
+        for (const [key, value] of singleItemForm.entries()) {
           console.log(`${key}:`, value);
         }
 
@@ -492,6 +510,8 @@ export const MaterialIssueForm = ({
             srNo: 1,
             materialId: 0,
             nameOfMaterial: '',
+            makerBrand: '',
+            specifications: '',
             existingStock: 0,
             issuedQty: '',
             stockAfterIssue: 0,
@@ -552,7 +572,7 @@ export const MaterialIssueForm = ({
             <div>
               <div className='text-base font-bold'>
                 {editingIssue
-                  ? 'VIEW MATERIAL ISSUE'
+                  ? 'VIEW ISSUED MATERIAL DETAILS'
                   : 'MATERIAL ISSUE FORM'}
               </div>
             </div>
@@ -570,6 +590,8 @@ export const MaterialIssueForm = ({
                   id: `item-${Date.now()}-${Math.random()}`, // Generate unique ID for new item
                   srNo: formData.items.length + 1,
                   nameOfMaterial: '',
+                  makerBrand: '',
+                  specifications: '',
                   existingStock: 0,
                   issuedQty: '',
                   stockAfterIssue: 0,
@@ -608,8 +630,11 @@ export const MaterialIssueForm = ({
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-16'>
                         SR.NO.
                       </TableHead>
-                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-64'>
+                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-48'>
                         ISSUING MATERIAL
+                      </TableHead>
+                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-48'>
+                         SPECIFICATIONS
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-24'>
                         CURRENT STOCK
@@ -641,20 +666,36 @@ export const MaterialIssueForm = ({
                     {formData.items.map((item, index) => (
                       <TableRow key={item.id}>
                         <TableCell className='border border-gray-300 text-center font-semibold text-xs px-2 py-1'>
-                          {item.srNo}
+                          <span className={editingIssue ? 'text-black' : ''}>{item.srNo}</span>
                         </TableCell>
                         <TableCell className='border border-gray-300 px-2 py-1'>
-                          <Select
-                            value={item.nameOfMaterial}
-                            onValueChange={(value) => {
-                              const material = availableMaterials.find(
-                                (m) => m.name === value
-                              );
-                              if (material) {
-                                const newItems = [...formData.items];
+                          {editingIssue ? (
+                            <div className='text-black text-xs'>
+                              <div className='font-medium'>{item.nameOfMaterial}</div>
+                              {(() => {
+                                // Get makerBrand from item or fallback to availableMaterials
+                                const makerBrand = item.makerBrand || availableMaterials.find(m => m.name === item.nameOfMaterial)?.makerBrand || '';
+                                return makerBrand && (
+                                  <div className='text-black text-xs mt-1'>
+                                    {makerBrand}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          ) : (
+                            <Select
+                              value={item.nameOfMaterial}
+                              onValueChange={(value) => {
+                                const material = availableMaterials.find(
+                                  (m) => m.name === value
+                                );
+                                if (material) {
+                                  const newItems = [...formData.items];
                                 newItems[index] = {
                                   ...item,
                                   nameOfMaterial: material.name,
+                                  makerBrand: material.makerBrand || '',
+                                  specifications: material.specifications || '',
                                   existingStock: material.currentStock,
                                   measureUnit: material.measureUnit?.name || 'units',
                                   stockAfterIssue:
@@ -662,83 +703,106 @@ export const MaterialIssueForm = ({
                                     Number(item.issuedQty || 0),
                                   materialId: material.id,
                                 };
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  items: newItems,
-                                }));
-                              }
-                            }}
-                            disabled={isLoadingMaterials || !!editingIssue}
-                          >
-                            <SelectTrigger className='border-0 p-0 h-auto text-xs'>
-                              {isLoadingMaterials ? (
-                                <div className='flex items-center gap-2'>
-                                  <Loader2 className='h-3 w-3 animate-spin' />
-                                  <span>Loading...</span>
-                                </div>
-                              ) : (
-                                <SelectValue placeholder='Select Material' />
-                              )}
-                            </SelectTrigger>
-                            <SelectContent>
-                              {materialsError ? (
-                                <div className='p-2 text-xs text-destructive'>
-                                  {materialsError}
-                                </div>
-                              ) : (
-                                availableMaterials.map((material) => (
-                                  <SelectItem
-                                    key={material.id}
-                                    value={material.name}
-                                  >
-                                    <div className='flex flex-col'>
-                                      <span>{material.name}</span>
-                                    </div>
-                                  </SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    items: newItems,
+                                  }));
+                                }
+                              }}
+                              disabled={isLoadingMaterials || !!editingIssue}
+                            >
+                              <SelectTrigger className='border-0 p-0 h-auto text-xs'>
+                                {isLoadingMaterials ? (
+                                  <div className='flex items-center gap-2'>
+                                    <Loader2 className='h-3 w-3 animate-spin' />
+                                    <span>Loading...</span>
+                                  </div>
+                                ) : (
+                                  <SelectValue placeholder='Select Material' />
+                                )}
+                              </SelectTrigger>
+                              <SelectContent>
+                                {materialsError ? (
+                                  <div className='p-2 text-xs text-destructive'>
+                                    {materialsError}
+                                  </div>
+                                ) : (
+                                  availableMaterials.map((material) => (
+                                    <SelectItem
+                                      key={material.id}
+                                      value={material.name}
+                                    >
+                                      <div className='flex flex-col'>
+                                        <span>{material.name}</span>
+                                        {material.makerBrand && (
+                                          <span className='text-xs text-muted-foreground'>
+                                            {material.makerBrand}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
                           {errors[`nameOfMaterial_${index}`] && (
                             <p className='text-destructive text-xs mt-1'>
                               {errors[`nameOfMaterial_${index}`]}
                             </p>
                           )}
                         </TableCell>
+                        <TableCell className='border border-gray-300 px-2 py-1'>
+                          {editingIssue ? (
+                            <div className='text-black text-xs font-medium'>
+                              {item.specifications || 'No specifications'}
+                            </div>
+                          ) : (
+                            <div className='text-xs text-muted-foreground'>
+                              {item.specifications || 'specifications'}
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className='border border-gray-300 text-center px-2 py-1'>
-                          <div className='font-semibold text-xs'>
+                          <div className={`font-semibold text-xs ${editingIssue ? 'text-black' : ''}`}>
                             {item.existingStock} {item.measureUnit || 'units'}
                           </div>
                         </TableCell>
                         <TableCell className='border border-gray-300 text-center px-2 py-1'>
-                          <div className='flex items-center gap-1'>
-                            <Input
-                              type='number'
-                              value={item.issuedQty}
-                              onChange={(e) => {
-                                const issuedQty = Number(e.target.value) || 0;
-                                const newItems = [...formData.items];
-                                newItems[index] = {
-                                  ...item,
-                                  issuedQty: e.target.value,
-                                  stockAfterIssue:
-                                    item.existingStock - issuedQty,
-                                };
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  items: newItems,
-                                }));
-                              }}
-                              placeholder='Qty'
-                              min='0'
-                              max={item.existingStock}
-                              disabled={!!editingIssue}
-                              className='border-0 p-2 h-10 w-16 text-center text-sm outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm'
-                            />
-                            <span className='text-xs text-gray-600'>
-                              {item.measureUnit || 'units'}
-                            </span>
-                          </div>
+                          {editingIssue ? (
+                            <div className='text-black text-xs font-semibold'>
+                              {item.issuedQty} {item.measureUnit || 'units'}
+                            </div>
+                          ) : (
+                            <div className='flex items-center gap-1'>
+                              <Input
+                                type='number'
+                                value={item.issuedQty}
+                                onChange={(e) => {
+                                  const issuedQty = Number(e.target.value) || 0;
+                                  const newItems = [...formData.items];
+                                  newItems[index] = {
+                                    ...item,
+                                    issuedQty: e.target.value,
+                                    stockAfterIssue:
+                                      item.existingStock - issuedQty,
+                                  };
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    items: newItems,
+                                  }));
+                                }}
+                                placeholder='Qty'
+                                min='0'
+                                max={item.existingStock}
+                                disabled={!!editingIssue}
+                                className='border-0 p-2 h-10 w-16 text-center text-sm outline-none focus:outline-none hover:outline-none active:outline-none focus:ring-0 rounded-sm'
+                              />
+                              <span className='text-xs text-gray-600'>
+                                {item.measureUnit || 'units'}
+                              </span>
+                            </div>
+                          )}
                           {errors[`issuedQty_${index}`] && (
                             <p className='text-destructive text-xs mt-1'>
                               {errors[`issuedQty_${index}`]}
@@ -746,91 +810,103 @@ export const MaterialIssueForm = ({
                           )}
                         </TableCell>
                         <TableCell className='border border-gray-300 text-center px-2 py-1'>
-                          <div className='font-semibold text-xs'>
+                          <div className={`font-semibold text-xs ${editingIssue ? 'text-black' : ''}`}>
                             {item.stockAfterIssue} {item.measureUnit || 'units'}
                           </div>
                         </TableCell>
                         <TableCell className='border border-gray-300 px-2 py-1'>
-                          <Input
-                            value={item.receiverName}
-                            onChange={(e) => {
-                              const newItems = [...formData.items];
-                              newItems[index] = {
-                                ...item,
-                                receiverName: e.target.value,
-                              };
-                              setFormData((prev) => ({
-                                ...prev,
-                                items: newItems,
-                              }));
-                            }}
-                            placeholder='Receiver Name'
-                            disabled={!!editingIssue}
-                            className='border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm'
-                          />
-                        </TableCell>
-                        <TableCell className='border border-gray-300 px-2 py-1'>
-                          <Select
-                            value={item.machineName || ''}
-                            onValueChange={(value) => {
-                              const newItems = [...formData.items];
-                              if (value === "Other") {
+                          {editingIssue ? (
+                            <div className='text-black text-xs font-medium'>
+                              {item.receiverName}
+                            </div>
+                          ) : (
+                            <Input
+                              value={item.receiverName}
+                              onChange={(e) => {
+                                const newItems = [...formData.items];
                                 newItems[index] = {
                                   ...item,
-                                  machineName: "Other",
-                                  machineId: 0,
+                                  receiverName: e.target.value,
                                 };
-                              } else {
-                                const machine = availableMachines.find(
-                                  (m) => m.name === value
-                                );
-                                if (machine) {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  items: newItems,
+                                }));
+                              }}
+                              placeholder='Receiver Name'
+                              disabled={!!editingIssue}
+                              className='border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm'
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className='border border-gray-300 px-2 py-1'>
+                          {editingIssue ? (
+                            <div className='text-black text-xs font-medium'>
+                              {item.machineName}
+                            </div>
+                          ) : (
+                            <Select
+                              value={item.machineName || ''}
+                              onValueChange={(value) => {
+                                const newItems = [...formData.items];
+                                if (value === "Other") {
                                   newItems[index] = {
                                     ...item,
-                                    machineName: machine.name,
-                                    machineId: machine.id,
+                                    machineName: "Other",
+                                    machineId: 0,
                                   };
+                                } else {
+                                  const machine = availableMachines.find(
+                                    (m) => m.name === value
+                                  );
+                                  if (machine) {
+                                    newItems[index] = {
+                                      ...item,
+                                      machineName: machine.name,
+                                      machineId: machine.id,
+                                    };
+                                  }
                                 }
-                              }
-                              setFormData((prev) => ({
-                                ...prev,
-                                items: newItems,
-                              }));
-                            }}
-                            disabled={isLoadingMachines || !!editingIssue}
-                          >
-                            <SelectTrigger className='border-0 p-0 h-auto text-xs'>
-                              {isLoadingMachines ? (
-                                <div className='flex items-center gap-2'>
-                                  <Loader2 className='h-3 w-3 animate-spin' />
-                                  <span>Loading...</span>
-                                </div>
-                              ) : (
-                                <SelectValue placeholder='Select Machine *' />
-                              )}
-                            </SelectTrigger>
-                            <SelectContent>
-                              {machinesError ? (
-                                <div className='p-2 text-xs text-destructive'>
-                                  {machinesError}
-                                </div>
-                              ) : (
-                                <>
-                                  <SelectItem value="Other">
-                                    others
-                                  </SelectItem>
-                                  {availableMachines.map((machine) => (
-                                    <SelectItem
-                                      key={machine.id}
-                                      value={machine.name}
-                                    >
-                                      {machine.name}
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  items: newItems,
+                                }));
+                              }}
+                              disabled={isLoadingMachines || !!editingIssue}
+                            >
+                              <SelectTrigger className='border-0 p-0 h-auto text-xs'>
+                                {isLoadingMachines ? (
+                                  <div className='flex items-center gap-2'>
+                                    <Loader2 className='h-3 w-3 animate-spin' />
+                                    <span>Loading...</span>
+                                  </div>
+                                ) : (
+                                  <SelectValue placeholder='Select Machine *' />
+                                )}
+                              </SelectTrigger>
+                              <SelectContent>
+                                {machinesError ? (
+                                  <div className='p-2 text-xs text-destructive'>
+                                    {machinesError}
+                                  </div>
+                                ) : (
+                                  <>
+                                    <SelectItem value="Other">
+                                      others
                                     </SelectItem>
-                                  ))}
-                                </>
-                              )}
-                            </SelectContent>
-                          </Select>
+                                    {availableMachines.map((machine) => (
+                                      <SelectItem
+                                        key={machine.id}
+                                        value={machine.name}
+                                      >
+                                        {machine.name}
+                                      </SelectItem>
+                                    ))}
+                                  </>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
                           {errors[`machineId_${index}`] && (
                             <p className='text-destructive text-xs mt-1'>
                               {errors[`machineId_${index}`]}
@@ -914,23 +990,29 @@ export const MaterialIssueForm = ({
                           </div>
                         </TableCell>
                         <TableCell className='border border-gray-300 px-2 py-1'>
-                          <Input
-                            value={item.purpose}
-                            onChange={(e) => {
-                              const newItems = [...formData.items];
-                              newItems[index] = {
-                                ...item,
-                                purpose: e.target.value,
-                              };
-                              setFormData((prev) => ({
-                                ...prev,
-                                items: newItems,
-                              }));
-                            }}
-                            placeholder='Purpose'
-                            disabled={!!editingIssue}
-                            className='border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm'
-                          />
+                          {editingIssue ? (
+                            <div className='text-black text-xs font-medium'>
+                              {item.purpose}
+                            </div>
+                          ) : (
+                            <Input
+                              value={item.purpose}
+                              onChange={(e) => {
+                                const newItems = [...formData.items];
+                                newItems[index] = {
+                                  ...item,
+                                  purpose: e.target.value,
+                                };
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  items: newItems,
+                                }));
+                              }}
+                              placeholder='Purpose'
+                              disabled={!!editingIssue}
+                              className='border-0 p-1 h-8 text-xs outline-none focus:outline-none focus:ring-0 rounded-sm'
+                            />
+                          )}
                           {errors[`purpose_${index}`] && (
                             <p className='text-destructive text-xs mt-1'>
                               {errors[`purpose_${index}`]}
@@ -974,29 +1056,37 @@ export const MaterialIssueForm = ({
                 <Label htmlFor='additionalNotes' className='text-xs'>
                   Additional Notes
                 </Label>
-                <Textarea
-                  id='additionalNotes'
-                  placeholder='Any additional notes or special instructions'
-                  value={formData.additionalNotes}
-                  onChange={(e) =>
-                    handleInputChange('additionalNotes', e.target.value)
-                  }
-                  disabled={!!editingIssue}
-                  className='min-h-[60px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200'
-                />
+                {editingIssue ? (
+                  <div className='min-h-[60px] px-4 py-3 border border-input bg-background rounded-[5px] text-sm'>
+                    <div className={`text-sm ${formData.additionalNotes ? 'text-black' : 'text-muted-foreground'}`}>
+                      {formData.additionalNotes || 'No additional notes'}
+                    </div>
+                  </div>
+                ) : (
+                  <Textarea
+                    id='additionalNotes'
+                    placeholder='Any additional notes or special instructions'
+                    value={formData.additionalNotes}
+                    onChange={(e) =>
+                      handleInputChange('additionalNotes', e.target.value)
+                    }
+                    disabled={!!editingIssue}
+                    className='min-h-[60px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200'
+                  />
+                )}
               </div>
 
               <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
                 <div className='space-y-1'>
                   <Label className='text-xs'>Issued By</Label>
-                  <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs'>
+                  <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs text-black'>
                     {currentUser?.name || 'Current User'}
                   </div>
                 </div>
 
                 <div className='space-y-1'>
                   <Label className='text-xs'>Date</Label>
-                  <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs'>
+                  <div className='input-friendly bg-secondary text-center py-2 font-semibold text-xs text-black'>
                     {formatDate(formData.date)}
                   </div>
                 </div>

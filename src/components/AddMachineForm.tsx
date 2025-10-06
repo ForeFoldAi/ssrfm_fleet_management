@@ -67,7 +67,7 @@ export const AddMachineForm = ({
   const [formData, setFormData] = useState({
     name: '',
     typeId: 0,
-    branchId: 0,
+    unitId: 0,
     status: MachineStatus.ACTIVE,
     specifications: '',
     manufacturer: '',
@@ -115,11 +115,8 @@ export const AddMachineForm = ({
         // Handle dd-MM-yyyy format
         const parts = dateString.split('-');
         date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-      } else if (/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
-        // Handle yyyy-MM-dd format
-        date = new Date(dateString);
       } else {
-        // Try to parse as-is
+        // Handle yyyy-MM-dd format or try to parse as-is
         date = new Date(dateString);
       }
       
@@ -144,14 +141,14 @@ export const AddMachineForm = ({
   // Prefill form data when editing
   useEffect(() => {
     if (editingData && isOpen) {
-      // Find the typeId and branchId from the fetched data
+      // Find the typeId and unitId from the fetched data
       const typeId = machineTypes.find(type => type.name === editingData.type)?.id || 0;
-      const branchId = branches.find(branch => branch.name === editingData.branchName)?.id || 0;
+      const unitId = branches.find(branch => branch.name === editingData.branchName)?.id || 0;
       
       setFormData({
         name: editingData.name,
         typeId: typeId,
-        branchId: branchId,
+        unitId: unitId,
         status: editingData.status as MachineStatus,
         specifications: editingData.specifications,
         manufacturer: editingData.manufacturer,
@@ -168,12 +165,12 @@ export const AddMachineForm = ({
     } else if (!editingData && isOpen) {
       // Reset form when adding new machine
       const fullUserData = getFullUserData();
-      const defaultBranchId = fullUserData?.branch?.id || 0;
+      const defaultUnitId = fullUserData?.branch?.id || 0;
       
       setFormData({
         name: '',
         typeId: 0,
-        branchId: defaultBranchId,
+        unitId: defaultUnitId,
         status: MachineStatus.ACTIVE,
         specifications: '',
         manufacturer: '',
@@ -327,7 +324,7 @@ export const AddMachineForm = ({
 
     if (!formData.name.trim()) newErrors.name = 'Machine name is required';
     if (!formData.typeId && formData.typeId !== 0) newErrors.typeId = 'Machine type is required';
-    if (!formData.branchId && formData.branchId !== 0) newErrors.branchId = 'Branch is required';
+    if (!formData.unitId && formData.unitId !== 0) newErrors.unitId = 'Unit is required';
     if (!formData.specifications.trim())
       newErrors.specifications = 'Specifications are required';
     if (!formData.manufacturer.trim())
@@ -342,7 +339,7 @@ export const AddMachineForm = ({
         const machinePayload = {
           name: formData.name.trim(),
           typeId: Number(formData.typeId),
-          branchId: Number(formData.branchId),
+          unitId: Number(formData.unitId),
           status: formData.status,
           specifications: formData.specifications.trim(),
           manufacturer: formData.manufacturer.trim(),
@@ -439,15 +436,15 @@ export const AddMachineForm = ({
         // Call the onSubmit callback with the created/updated machine
         onSubmit(response);
 
-        // Reset form only for new machines, not when editing
-        if (!editingData) {
-          const fullUserData = getFullUserData();
-          const defaultBranchId = fullUserData?.branch?.id || 0;
-          
-          setFormData({
-            name: '',
-            typeId: 0,
-            branchId: defaultBranchId,
+          // Reset form only for new machines, not when editing
+          if (!editingData) {
+            const fullUserData = getFullUserData();
+            const defaultUnitId = fullUserData?.branch?.id || 0;
+            
+            setFormData({
+              name: '',
+              typeId: 0,
+              unitId: defaultUnitId,
             status: MachineStatus.ACTIVE,
             specifications: '',
             manufacturer: '',
@@ -608,9 +605,9 @@ export const AddMachineForm = ({
                       Unit/Location *
                     </Label>
                     <Select
-                      value={formData.branchId > 0 ? formData.branchId.toString() : ''}
+                      value={formData.unitId > 0 ? formData.unitId.toString() : ''}
                       onValueChange={(value) =>
-                        handleSelectChange('branchId', parseInt(value))
+                        handleSelectChange('unitId', parseInt(value))
                       }
                       disabled={currentUser?.role === 'supervisor'}
                     >
@@ -625,9 +622,9 @@ export const AddMachineForm = ({
                         ))}
                       </SelectContent>
                     </Select>
-                    {errors.branchId && (
+                    {errors.unitId && (
                       <p className='text-destructive text-xs mt-1'>
-                        {errors.branchId}
+                        {errors.unitId}
                       </p>
                     )}
                   </div>

@@ -34,6 +34,9 @@ import {
   CheckCircle2,
   X,
   WifiOff,
+  
+  Upload,
+  Download,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -124,6 +127,14 @@ export const MaterialOrderBookTab = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [selectedRequestForStatus, setSelectedRequestForStatus] =
     useState<MaterialIndent | null>(null);
+  
+  // Export functionality state
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [exportDateRange, setExportDateRange] = useState({
+    from: '',
+    to: '',
+  });
   const [isStatusManagerOpen, setIsStatusManagerOpen] = useState(false);
   const [selectedRequestForResubmit, setSelectedRequestForResubmit] =
     useState<MaterialIndent | null>(null);
@@ -159,8 +170,6 @@ export const MaterialOrderBookTab = () => {
   const [selectedIndentForApproval, setSelectedIndentForApproval] =
     useState<MaterialIndent | null>(null);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
-  const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [selectedQuotationId, setSelectedQuotationId] = useState<number | null>(
     null
@@ -329,7 +338,9 @@ export const MaterialOrderBookTab = () => {
       value: 'items.selectedQuotation.quotationAmount',
       status: 'status',
       requestDate: 'requestDate',
+      receivedDate: 'purchases.items.receivedDate',
       machineName: 'items.machine.name',
+      branch: 'branch.name',
     };
 
     const apiField = columnToFieldMap[column] || column;
@@ -354,7 +365,9 @@ export const MaterialOrderBookTab = () => {
       value: 'items.selectedQuotation.quotationAmount',
       status: 'status',
       requestDate: 'requestDate',
+      receivedDate: 'purchases.items.receivedDate',
       machineName: 'items.machine.name',
+      branch: 'branch.name',
     };
 
     const apiField = columnToFieldMap[column] || column;
@@ -480,8 +493,6 @@ export const MaterialOrderBookTab = () => {
         return 'bg-orange-500 text-white border-orange-600 hover:bg-orange-500 hover:text-white';
       case IndentStatus.FULLY_RECEIVED:
         return 'bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-500 hover:text-white';
-      case IndentStatus.CLOSED:
-        return 'bg-green-600 text-white border-green-700 hover:bg-green-600 hover:text-white';
       case IndentStatus.REJECTED:
         return 'bg-red-500 text-white border-red-600 hover:bg-red-500 hover:text-white';
       default:
@@ -512,8 +523,6 @@ export const MaterialOrderBookTab = () => {
         return 'bg-purple-500';
       case 4: // PARTIALLY_RECEIVED or FULLY_RECEIVED
         return 'bg-orange-500';
-      case 5: // CLOSED
-        return 'bg-primary';
       default:
         return 'bg-gray-300';
     }
@@ -535,8 +544,6 @@ export const MaterialOrderBookTab = () => {
         return 4;
       case IndentStatus.FULLY_RECEIVED:
         return 4;
-      case IndentStatus.CLOSED:
-        return 5;
       case IndentStatus.REJECTED:
         return 0;
       default:
@@ -560,8 +567,6 @@ export const MaterialOrderBookTab = () => {
         return <Truck className='w-4 h-4' />;
       case IndentStatus.FULLY_RECEIVED:
         return <CheckSquare className='w-4 h-4' />;
-      case IndentStatus.CLOSED:
-        return <CheckSquare className='w-4 h-4' />;
       case IndentStatus.REJECTED:
         return <XCircle className='w-4 h-4' />;
       default:
@@ -571,8 +576,6 @@ export const MaterialOrderBookTab = () => {
 
   const getStatusLabel = (status: string): string => {
     switch (status) {
-      case IndentStatus.DRAFT:
-        return 'Draft';
       case IndentStatus.PENDING_APPROVAL:
         return 'Pending Approval';
       case IndentStatus.APPROVED:
@@ -585,12 +588,8 @@ export const MaterialOrderBookTab = () => {
         return 'Partially Received';
       case IndentStatus.FULLY_RECEIVED:
         return 'Fully Received';
-      case IndentStatus.CLOSED:
-        return 'Closed';
-      case IndentStatus.REJECTED:
-        return 'Rejected';
       default:
-        return 'Unknown';
+        return 'Fully Received';
     }
   };
 
@@ -664,18 +663,20 @@ export const MaterialOrderBookTab = () => {
         images: [],
         imagePreviews: item.imagePaths || [],
         notes: item.notes || '',
-        vendorQuotations: (item.quotations || []).map((quotation) => ({
-          id: quotation.id.toString(),
-          vendorName: quotation.vendorName || '',
-          contactPerson: quotation.contactPerson || '',
-          phone: quotation.phone || '',
-          price: quotation.price || '0',
-          quotedPrice: quotation.quotationAmount || '0',
-          notes: quotation.notes || '',
-          quotationFile: null,
-          isSelected: quotation.isSelected || false,
-          filePaths: quotation.filePaths || [],
-        })),
+        vendorQuotations: (item.quotations || [])
+          .filter((quotation) => quotation.isSelected === true)
+          .map((quotation) => ({
+            id: quotation.id.toString(),
+            vendorName: quotation.vendorName || '',
+            contactPerson: quotation.contactPerson || '',
+            phone: quotation.phone || '',
+            price: quotation.price || '0',
+            quotedPrice: quotation.quotationAmount || '0',
+            notes: quotation.notes || '',
+            quotationFile: null,
+            isSelected: quotation.isSelected || false,
+            filePaths: quotation.filePaths || [],
+          })),
         purposeType: 'machine', // Default to machine, can be enhanced later
       })),
       requestedBy: indent.requestedBy?.name || '',
@@ -836,21 +837,19 @@ export const MaterialOrderBookTab = () => {
       // Transform the form data back to API format
       const apiData = transformFormDataToApiFormat(requestData);
 
-      console.log('Calling API with transformed data:', apiData);
+      console.log('Calling reSubmit API with transformed data:', apiData);
       console.log(
-        'Creating new indent from original ID:',
+        'Resubmitting indent ID:',
         selectedRequestForResubmit.id
       );
 
-      // Create a new indent for resubmission (since reverted indents cannot be updated)
+      // Use the reSubmit API method with proper data structure
       const response = await materialIndentsApi.reSubmit(
-        selectedRequestForResubmit?.id,
+        selectedRequestForResubmit.id,
         {
-          ...apiData,
-          uniqueId: selectedRequestForResubmit.uniqueId, // Preserve the original uniqueId
-          status: 'pending_approval', // Set status to pending approval
-          // Add reference to original indent in additional notes
-          additionalNotes: `${apiData.additionalNotes}\n\nResubmitted from original indent ID: ${selectedRequestForResubmit.id}`,
+          status: IndentStatus.PENDING_APPROVAL,
+          additionalNotes: apiData.additionalNotes,
+          items: apiData.items
         }
       );
       console.log('API response:', response);
@@ -912,7 +911,7 @@ export const MaterialOrderBookTab = () => {
     const apiData = {
       additionalNotes: `Resubmitted after addressing revert reason: ${
         selectedRequestForResubmit?.rejectionReason || 'N/A'
-      }`,
+      }. Changes made: ${formData.resubmissionNotes || 'N/A'}`,
       items: formData.items.map((item: any) => {
         const material = availableMaterials.find(
           (m) => m.name === item.productName
@@ -933,11 +932,13 @@ export const MaterialOrderBookTab = () => {
         }
 
         const itemData: any = {
+          id: item.id, // Include the original item ID
           materialId: material.id,
           specifications: item.specifications || '',
           requestedQuantity: Number(item.reqQuantity) || 0,
           purposeType: purposeType,
           notes: item.notes || '',
+          currentStock: item.oldStock || 0,
         };
 
         // Handle machine ID properly
@@ -963,16 +964,19 @@ export const MaterialOrderBookTab = () => {
           itemData.machineName = item.machineName || item.purposeType;
         }
 
-        // Handle vendor quotations
+        // Handle vendor quotations - include all required fields
         if (item.vendorQuotations && item.vendorQuotations.length > 0) {
-          itemData.vendorQuotations = item.vendorQuotations.map(
+          itemData.quotations = item.vendorQuotations.map(
             (quotation: any) => ({
+              id: quotation.id,
               vendorName: quotation.vendorName,
               contactPerson: quotation.contactPerson || '',
               phone: quotation.phone || '',
               price: Number(quotation.price) || 0,
-              quotationAmount: Number(quotation.quotedPrice) || 0,
+              quotationAmount: Number(quotation.quotationAmount) || 0,
               notes: quotation.notes || '',
+              isSelected: quotation.isSelected || false,
+              filePaths: quotation.filePaths || [],
             })
           );
         }
@@ -995,6 +999,185 @@ export const MaterialOrderBookTab = () => {
         ),
       }));
     }
+  };
+
+  // Handle export to CSV
+  const handleExportToCSV = async () => {
+    try {
+      setIsExporting(true);
+      
+      // Fetch all material indents with pagination (API limit is 100)
+      let allIndents: MaterialIndent[] = [];
+      let currentPage = 1;
+      let hasMorePages = true;
+      const limit = 100; // API limit
+
+      while (hasMorePages) {
+        const response = await materialIndentsApi.getAll({
+          page: currentPage,
+          limit: limit,
+          sortBy: sortBy,
+          sortOrder: sortOrder,
+          ...(filterStatus !== 'all' && { status: filterStatus }),
+          ...(filterUnit !== 'all' && { branchId: filterUnit }),
+        });
+
+        allIndents = [...allIndents, ...response.data];
+        
+        // Check if there are more pages
+        hasMorePages = response.meta?.hasNextPage || false;
+        currentPage++;
+        
+        // Safety check to prevent infinite loops
+        if (currentPage > 1000) {
+          console.warn('Export stopped at page 1000 to prevent infinite loop');
+          break;
+        }
+      }
+
+      // Filter by date range if specified
+      let filteredIndents = allIndents;
+      if (exportDateRange.from || exportDateRange.to) {
+        filteredIndents = allIndents.filter((indent) => {
+          const requestDate = new Date(indent.requestDate);
+          
+          if (exportDateRange.from && exportDateRange.to) {
+            const fromDate = new Date(exportDateRange.from);
+            const toDate = new Date(exportDateRange.to);
+            return requestDate >= fromDate && requestDate <= toDate;
+          } else if (exportDateRange.from) {
+            const fromDate = new Date(exportDateRange.from);
+            return requestDate >= fromDate;
+          } else if (exportDateRange.to) {
+            const toDate = new Date(exportDateRange.to);
+            return requestDate <= toDate;
+          }
+          
+          return true;
+        });
+      }
+
+      // Transform indents to UI format for export
+      const transformedIndents = filteredIndents.map(transformApiIndentToUiFormat);
+      
+      // Prepare CSV headers
+      const headers = [
+        'Purchase ID',
+        'Request Date',
+        'Material Name',
+        'Specifications',
+        'Maker/Brand',
+        'Quantity',
+        'Unit Price (₹)',
+        'Total Quotation Amount (₹)',
+        'Status',
+        'Requested By',
+        'Unit',
+        'Branch',
+        'Machine Name',
+        'Purpose',
+        'Received Date',
+        'Approved By',
+        'Approved Date',
+        'Additional Notes',
+        'Rejection Reason'
+      ];
+
+      // Prepare CSV data - flatten all items from all indents
+      const csvData: string[][] = [];
+      
+      filteredIndents.forEach((indent) => {
+        indent.items.forEach((item) => {
+          const transformedIndent = transformedIndents.find(t => t.originalId === indent.id);
+          // Use only the selected (approved) quotation for CSV export
+          const approvedQuotation = item.selectedQuotation;
+          
+          csvData.push([
+            `"${transformedIndent?.id || indent.uniqueId}"`,
+            `"${formatDateToDDMMYYYY(indent.requestDate)}"`,
+            `"${item.material?.name || 'N/A'}"`,
+            `"${item.specifications || item.material?.specifications || ''}"`,
+            `"${item.material?.makerBrand || 'N/A'}"`,
+            `"${item.requestedQuantity} ${item.material?.measureUnit?.name || 'units'}"`,
+            approvedQuotation ? `"₹${approvedQuotation.price}"` : '""',
+            approvedQuotation ? `"₹${approvedQuotation.quotationAmount}"` : '""',
+            `"${getStatusLabel(indent.status)}"`,
+            `"${indent.requestedBy?.name || 'Unknown'}"`,
+            `"${indent.branch?.name || 'Unknown'}"`,
+            `"${indent.branch?.location || ''}"`,
+            `"${item.machine?.name || 'N/A'}"`,
+            `"${item.notes || indent.additionalNotes || ''}"`,
+            `"${transformedIndent?.receivedDate || ''}"`,
+            `"${indent.approvedBy?.name || ''}"`,
+            `"${indent.approvalDate ? formatDateToDDMMYYYY(indent.approvalDate) : ''}"`,
+            `"${indent.additionalNotes || ''}"`,
+            `"${indent.rejectionReason || ''}"`
+          ]);
+        });
+      });
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => row.join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      
+      // Generate filename with current date
+      const currentDate = new Date().toISOString().split('T')[0];
+      let filename = `material_indents_export_${currentDate}`;
+      
+      if (exportDateRange.from || exportDateRange.to) {
+        if (exportDateRange.from && exportDateRange.to) {
+          filename += `_${exportDateRange.from}_to_${exportDateRange.to}`;
+        } else if (exportDateRange.from) {
+          filename += `_from_${exportDateRange.from}`;
+        } else if (exportDateRange.to) {
+          filename += `_to_${exportDateRange.to}`;
+        }
+      } else {
+        filename += '_all_data';
+      }
+      
+      link.setAttribute('download', `${filename}.csv`);
+      
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Close dialog
+      setIsExportDialogOpen(false);
+
+      toast({
+        title: 'Export Successful',
+        description: `Material indents data exported successfully. ${csvData.length} records downloaded.`,
+        variant: 'default',
+      });
+
+    } catch (error) {
+      console.error('Error exporting material indents:', error);
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to export material indents data. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Reset export date range
+  const resetExportDateRange = () => {
+    setExportDateRange({
+      from: '',
+      to: '',
+    });
   };
 
   // Handle vendor quotation changes
@@ -1092,43 +1275,6 @@ export const MaterialOrderBookTab = () => {
     }
   };
 
-  // New function to handle rejection
-  const handleRejectIndent = async () => {
-    if (!selectedIndentForApproval || !rejectionReason.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please provide a rejection reason.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      await materialIndentsApi.reject(selectedIndentForApproval.id, {
-        status: 'reverted',
-        rejectionReason: rejectionReason,
-        itemId: 0,
-        quotationId: 0,
-      });
-
-      toast({
-        title: 'Success',
-        description: 'Material indent rejected successfully.',
-      });
-
-      setIsRejectionDialogOpen(false);
-      setSelectedIndentForApproval(null);
-      setRejectionReason('');
-      fetchMaterialIndents(pagination.page, pagination.limit);
-    } catch (error) {
-      console.error('Error rejecting indent:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to reject material indent. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
 
   // New function to create material purchase order
   const handleCreatePurchaseOrder = async () => {
@@ -1148,11 +1294,12 @@ export const MaterialOrderBookTab = () => {
         orderDate: new Date().toISOString().split('T')[0],
         totalValue: selectedIndentForOrder.items
           .reduce((total, item) => {
-            const quotation = item.selectedQuotation || item.quotations[0];
+            // Use only the selected (approved) quotation
+            const approvedQuotation = item.selectedQuotation;
             return (
               total +
-              (quotation
-                ? Number(quotation.quotationAmount) * item.requestedQuantity
+              (approvedQuotation
+                ? Number(approvedQuotation.quotationAmount)
                 : 0)
             );
           }, 0)
@@ -1162,9 +1309,7 @@ export const MaterialOrderBookTab = () => {
           materialId: item.material.id,
           orderedQuantity: item.requestedQuantity,
           unitPrice:
-            item.selectedQuotation?.quotationAmount ||
-            item.quotations[0]?.quotationAmount ||
-            '0',
+            item.selectedQuotation?.price || '0',
           notes: item.notes || '',
         })),
       };
@@ -1268,16 +1413,50 @@ export const MaterialOrderBookTab = () => {
     // Get the first item for display purposes (if available)
     const firstItem =
       indent.items && indent.items.length > 0 ? indent.items[0] : null;
-    const firstQuotation =
-      firstItem?.selectedQuotation ||
-      (firstItem?.quotations && firstItem.quotations.length > 0
-        ? firstItem.quotations[0]
-        : null);
+    
+    // Use the selected (approved) quotation, with fallback to first quotation for received items
+    const approvedQuotation = firstItem?.selectedQuotation || 
+      (firstItem?.quotations && firstItem.quotations.length > 0 ? firstItem.quotations[0] : null);
 
-    // Only show price and value for fully_received or partially_received status
-    const shouldShowPrice =
+    // Debug logging for received items without prices
+    if ((indent.status === IndentStatus.FULLY_RECEIVED || indent.status === IndentStatus.PARTIALLY_RECEIVED) && !approvedQuotation) {
+      console.log('Received item without quotation data:', {
+        indentId: indent.id,
+        status: indent.status,
+        firstItem: firstItem,
+        selectedQuotation: firstItem?.selectedQuotation,
+        quotations: firstItem?.quotations
+      });
+    }
+
+    // Show price and value only for received statuses
+    const shouldShowPrice = approvedQuotation && (
       indent.status === IndentStatus.FULLY_RECEIVED ||
-      indent.status === IndentStatus.PARTIALLY_RECEIVED;
+      indent.status === IndentStatus.PARTIALLY_RECEIVED
+    );
+
+    // Get received date from purchase items if available
+    const getReceivedDate = () => {
+      if (indent.status === IndentStatus.FULLY_RECEIVED || 
+          indent.status === IndentStatus.PARTIALLY_RECEIVED) {
+        // Look for received dates in purchase items
+        for (const purchase of indent.purchases || []) {
+          for (const item of purchase.items || []) {
+            if (item.receivedDate) {
+              return formatDateToDDMMYYYY(item.receivedDate);
+            }
+          }
+        }
+        // Fallback to partialReceiptHistory if available
+        if (indent.partialReceiptHistory && indent.partialReceiptHistory.length > 0) {
+          const latestReceipt = indent.partialReceiptHistory[indent.partialReceiptHistory.length - 1];
+          if (latestReceipt.receivedDate) {
+            return formatDateToDDMMYYYY(latestReceipt.receivedDate);
+          }
+        }
+      }
+      return '';
+    };
 
     return {
       id: formatPurchaseId(indent.uniqueId, indent.branch?.code),
@@ -1294,15 +1473,12 @@ export const MaterialOrderBookTab = () => {
           }`
         : '0',
       unitPrice:
-        shouldShowPrice && firstQuotation
-          ? `₹${firstQuotation.quotationAmount}`
+        shouldShowPrice && approvedQuotation
+          ? `₹${approvedQuotation.price}`
           : '',
       value:
-        shouldShowPrice && firstQuotation
-          ? `₹${
-              Number(firstQuotation.quotationAmount) *
-              (firstItem?.requestedQuantity || 0)
-            }`
+        shouldShowPrice && approvedQuotation
+          ? `₹${approvedQuotation.quotationAmount}`
           : '',
       priority: 'medium', // Not available in API, using default
       materialPurpose: firstItem?.notes || indent.additionalNotes || '',
@@ -1319,6 +1495,8 @@ export const MaterialOrderBookTab = () => {
       department: 'Production', // Not available in API, using default
       unit: indent.branch?.code || '',
       unitName: indent.branch?.name || '',
+      branch: indent.branch?.name || '',
+      receivedDate: getReceivedDate(),
       approvedBy: indent.approvedBy?.name,
       approvedDate: indent.approvalDate
         ? formatDateToDDMMYYYY(indent.approvalDate)
@@ -1429,9 +1607,6 @@ export const MaterialOrderBookTab = () => {
       req.status === 'issued' ||
       req.status === 'completed'
   );
-  const rejectedRequests = filteredRequests.filter(
-    (req) => req.status === 'rejected'
-  );
 
   // SSRFM Progress Bar: Submit → Approved → Ordered → Received → Complete
   const ProgressBar = ({ stage }: { stage: number }) => {
@@ -1508,6 +1683,15 @@ export const MaterialOrderBookTab = () => {
                   </div>
                 </TableHead>
                 <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('requestDate')}
+                >
+                  <div className='flex items-center gap-2'>
+                  Requested Date
+                    {getSortIcon('requestDate')}
+                  </div>
+                </TableHead>
+                <TableHead
                   className='min-w-[150px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
                   onClick={() => handleSort('materialName')}
                 >
@@ -1539,7 +1723,7 @@ export const MaterialOrderBookTab = () => {
                   onClick={() => handleSort('value')}
                 >
                   <div className='flex items-center gap-2'>
-                    Total Value
+                    Total Quotation Amount
                     {getSortIcon('value')}
                   </div>
                 </TableHead>
@@ -1554,11 +1738,11 @@ export const MaterialOrderBookTab = () => {
                 </TableHead>
                 <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
-                  onClick={() => handleSort('requestDate')}
+                  onClick={() => handleSort('receivedDate')}
                 >
                   <div className='flex items-center gap-2'>
-                    Purchased Date
-                    {getSortIcon('requestDate')}
+                    Received Date
+                    {getSortIcon('receivedDate')}
                   </div>
                 </TableHead>
                 <TableHead
@@ -1568,6 +1752,15 @@ export const MaterialOrderBookTab = () => {
                   <div className='flex items-center gap-2'>
                     Purchased For
                     {getSortIcon('machineName')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('branch')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Branch
+                    {getSortIcon('branch')}
                   </div>
                 </TableHead>
               </TableRow>
@@ -1618,8 +1811,14 @@ export const MaterialOrderBookTab = () => {
                         {request.id}
                       </Button>
                     </TableCell>
+                    <TableCell className='text-sm'>{request.date}</TableCell>
                     <TableCell>
                       <div className='font-medium'>{request.materialName}</div>
+                      {request.maker && request.maker !== 'N/A' && (
+                        <div className='text-xs text-muted-foreground mt-1'>
+                          {request.maker}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className='text-sm'>
                       {request.quantity}
@@ -1642,9 +1841,14 @@ export const MaterialOrderBookTab = () => {
                         </span>
                       </Badge>
                     </TableCell>
-                    <TableCell className='text-sm'>{request.date}</TableCell>
+                    <TableCell className='text-sm'>
+                      {request.receivedDate || '-'}
+                    </TableCell>
                     <TableCell className='text-sm'>
                       {request.machineName}
+                    </TableCell>
+                    <TableCell className='text-sm'>
+                      {request.branch}
                     </TableCell>
                   </TableRow>
                 </>
@@ -1671,6 +1875,15 @@ export const MaterialOrderBookTab = () => {
                   <div className='flex items-center gap-2'>
                     Purchase ID
                     {getSortIcon('uniqueId')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('requestDate')}
+                >
+                  <div className='flex items-center gap-2'>
+                  Requested Date
+                    {getSortIcon('requestDate')}
                   </div>
                 </TableHead>
                 <TableHead
@@ -1705,7 +1918,7 @@ export const MaterialOrderBookTab = () => {
                   onClick={() => handleSort('value')}
                 >
                   <div className='flex items-center gap-2'>
-                    Total Value
+                    Total Quotation Amount
                     {getSortIcon('value')}
                   </div>
                 </TableHead>
@@ -1720,11 +1933,11 @@ export const MaterialOrderBookTab = () => {
                 </TableHead>
                 <TableHead
                   className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
-                  onClick={() => handleSort('requestDate')}
+                  onClick={() => handleSort('receivedDate')}
                 >
                   <div className='flex items-center gap-2'>
-                    Purchased Date
-                    {getSortIcon('requestDate')}
+                    Received Date
+                    {getSortIcon('receivedDate')}
                   </div>
                 </TableHead>
                 <TableHead
@@ -1734,6 +1947,15 @@ export const MaterialOrderBookTab = () => {
                   <div className='flex items-center gap-2'>
                     Purchased For
                     {getSortIcon('machineName')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className='min-w-[100px] text-foreground font-semibold cursor-pointer hover:bg-secondary/30'
+                  onClick={() => handleSort('branch')}
+                >
+                  <div className='flex items-center gap-2'>
+                    Branch
+                    {getSortIcon('branch')}
                   </div>
                 </TableHead>
               </TableRow>
@@ -1769,8 +1991,14 @@ export const MaterialOrderBookTab = () => {
                       {request.id}
                     </Button>
                   </TableCell>
+                  <TableCell className='text-sm'>{request.date}</TableCell>
                   <TableCell>
                     <div className='font-medium'>{request.materialName}</div>
+                    {request.maker && request.maker !== 'N/A' && (
+                      <div className='text-xs text-muted-foreground mt-1'>
+                        {request.maker}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className='text-sm'>{request.quantity}</TableCell>
                   <TableCell className='text-sm font-medium'>
@@ -1787,12 +2015,17 @@ export const MaterialOrderBookTab = () => {
                         {getStatusIcon(request.status)}
                         <span className='text-xs'>{request.currentStage}</span>
                       </span>
-                    </Badge>
-                  </TableCell>
-                  <TableCell className='text-sm'>{request.date}</TableCell>
-                  <TableCell className='text-sm'>
-                    {request.machineName}
-                  </TableCell>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className='text-sm'>
+                      {request.receivedDate || '-'}
+                    </TableCell>
+                    <TableCell className='text-sm'>
+                      {request.machineName}
+                    </TableCell>
+                    <TableCell className='text-sm'>
+                      {request.branch}
+                    </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -1816,9 +2049,6 @@ export const MaterialOrderBookTab = () => {
   // Enhanced action buttons in the expanded detail row
   const renderActionButtons = (request: any) => {
     const canApprove =
-      hasPermission('inventory:material-indents:approve') &&
-      request.status === 'pending_approval';
-    const canReject =
       hasPermission('inventory:material-indents:approve') &&
       request.status === 'pending_approval';
     const canOrder =
@@ -1881,19 +2111,6 @@ export const MaterialOrderBookTab = () => {
           </Button>
         )}
 
-        {canReject && (
-          <Button
-            variant='outline'
-            className='gap-2 rounded-lg text-red-600 border-red-600 hover:bg-red-50'
-            onClick={() => {
-              setSelectedIndentForApproval(request.originalIndent);
-              setIsRejectionDialogOpen(true);
-            }}
-          >
-            <XCircle className='w-4 h-4' />
-            Reject
-          </Button>
-        )}
 
         {canOrder && (
           <Button
@@ -2077,7 +2294,7 @@ export const MaterialOrderBookTab = () => {
             <div className='relative'>
               <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-primary/80 w-4 h-4' />
               <Input
-                placeholder='Search by materials, purchase ID, or maker...'
+                placeholder='Search by materials, purchase ID.....'
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className='w-full pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none'
@@ -2136,7 +2353,6 @@ export const MaterialOrderBookTab = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value='all'>All Status</SelectItem>
-              <SelectItem value={IndentStatus.DRAFT}>Draft</SelectItem>
               <SelectItem value={IndentStatus.PENDING_APPROVAL}>
                 Pending Approval
               </SelectItem>
@@ -2149,13 +2365,26 @@ export const MaterialOrderBookTab = () => {
               <SelectItem value={IndentStatus.FULLY_RECEIVED}>
                 Fully Received
               </SelectItem>
-              <SelectItem value={IndentStatus.CLOSED}>Closed</SelectItem>
-              <SelectItem value={IndentStatus.REJECTED}>Rejected</SelectItem>
             </SelectContent>
           </Select>
 
           {/* Action Buttons */}
           <div className='flex gap-2'>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => setIsExportDialogOpen(true)}
+              disabled={isExporting}
+              className='w-full sm:w-auto'
+            >
+              {isExporting ? (
+                <Loader2 className='w-4 h-4 animate-spin' />
+              ) : (
+                <Upload className='w-4 h-4' />
+              )}
+              <span className='ml-2'>Export</span>
+            </Button>
+            
             <Button
               asChild
               className='w-full sm:w-auto text-sm sm:text-base'
@@ -2387,10 +2616,10 @@ export const MaterialOrderBookTab = () => {
             setResubmitFormData(null);
           }}
         >
-          <DialogContent className='max-w-7xl max-h-[95vh] overflow-y-auto'>
-            <DialogHeader>
-              <DialogTitle className='flex items-center gap-2'>
-                <Edit className='w-5 h-5 text-foreground' />
+          <DialogContent className='max-w-[95vw] max-h-[80vh] w-full overflow-y-auto p-6'>
+            <DialogHeader className='pb-4'>
+              <DialogTitle className='flex items-center gap-2 text-xl'>
+                <Edit className='w-6 h-6 text-foreground' />
                 Resubmit Request - {selectedRequestForResubmit.id}
               </DialogTitle>
             </DialogHeader>
@@ -2401,7 +2630,7 @@ export const MaterialOrderBookTab = () => {
                 <span>Loading form data...</span>
               </div>
             ) : resubmitFormData && availableMaterials.length > 0 ? (
-              <>
+              <div className='space-y-6'>
                 {/* Show revert reason if available */}
                 {selectedRequestForResubmit.rejectionReason && (
                   <Alert className='border-orange-200 bg-orange-50'>
@@ -2415,7 +2644,8 @@ export const MaterialOrderBookTab = () => {
                   </Alert>
                 )}
 
-                <RequisitionIndentForm
+                <div className='min-h-[40vh]'>
+                  <RequisitionIndentForm
                   requestData={resubmitFormData}
                   isReadOnly={false}
                   onItemChange={handleItemChange}
@@ -2438,15 +2668,9 @@ export const MaterialOrderBookTab = () => {
                   userRole='supervisor'
                   hasPermission={hasPermission}
                 />
+                </div>
 
-                <div className='flex justify-end gap-3 pt-4 border-t'>
-                  <Button
-                    onClick={() => handleResubmitRequest(resubmitFormData)}
-                    className='bg-primary hover:bg-primary/90 text-white'
-                  >
-                    <Send className='w-4 h-4 mr-2' />
-                    Resubmit Request
-                  </Button>
+                <div className='flex justify-center gap-3 pt-6 border-t border-border'>
                   <Button
                     variant='outline'
                     onClick={() => {
@@ -2454,11 +2678,19 @@ export const MaterialOrderBookTab = () => {
                       setSelectedRequestForResubmit(null);
                       setResubmitFormData(null);
                     }}
+                    className='px-6 py-2'
                   >
                     Cancel
                   </Button>
+                  <Button
+                    onClick={() => handleResubmitRequest(resubmitFormData)}
+                    className='bg-primary hover:bg-primary/90 text-white px-6 py-2'
+                  >
+                    <Send className='w-4 h-4 mr-2' />
+                    Resubmit Request
+                  </Button>
                 </div>
-              </>
+              </div>
             ) : (
               <div className='flex items-center justify-center py-8'>
                 <AlertTriangle className='w-8 h-8 text-red-500 mr-2' />
@@ -2570,69 +2802,6 @@ export const MaterialOrderBookTab = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Rejection Dialog */}
-      <Dialog
-        open={isRejectionDialogOpen}
-        onOpenChange={setIsRejectionDialogOpen}
-      >
-        <DialogContent className='max-w-2xl'>
-          <DialogHeader>
-            <DialogTitle>Reject Material Indent</DialogTitle>
-          </DialogHeader>
-          <div className='space-y-4'>
-            {selectedIndentForApproval && (
-              <div className='space-y-4'>
-                <div className='p-4 bg-red-50 border border-red-200 rounded-lg'>
-                  <h3 className='font-semibold text-red-800 mb-2'>
-                    Indent Details
-                  </h3>
-                  <p>
-                    <strong>ID:</strong> {selectedIndentForApproval.uniqueId}
-                  </p>
-                  <p>
-                    <strong>Requested By:</strong>{' '}
-                    {selectedIndentForApproval.requestedBy?.name}
-                  </p>
-                  <p>
-                    <strong>Date:</strong>{' '}
-                    {formatDateToDDMMYYYY(
-                      selectedIndentForApproval.requestDate
-                    )}
-                  </p>
-                </div>
-
-                <div className='space-y-3'>
-                  <Label htmlFor='rejectionReason'>Rejection Reason *</Label>
-                  <Textarea
-                    id='rejectionReason'
-                    placeholder='Please provide a reason for rejection...'
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    className='min-h-[100px]'
-                  />
-                </div>
-
-                <div className='flex justify-end gap-2'>
-                  <Button
-                    variant='outline'
-                    onClick={() => setIsRejectionDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleRejectIndent}
-                    disabled={!rejectionReason.trim()}
-                    className='bg-red-600 hover:bg-red-700'
-                  >
-                    <XCircle className='w-4 h-4 mr-2' />
-                    Reject
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Order Creation Dialog */}
       <Dialog open={isOrderDialogOpen} onOpenChange={setIsOrderDialogOpen}>
@@ -2804,6 +2973,204 @@ export const MaterialOrderBookTab = () => {
                 </div>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent className='max-w-md'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              <Download className='w-5 h-5 text-primary' />
+              Export Material Indents to CSV
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className='space-y-4'>
+            <div className='space-y-3'>
+              <Label className='text-sm font-medium'>Export Options</Label>
+              
+              <div className='space-y-2'>
+                <Label htmlFor='exportFromDate' className='text-sm'>
+                  From Date (Optional)
+                </Label>
+                <Input
+                  id='exportFromDate'
+                  type='date'
+                  value={exportDateRange.from}
+                  onChange={(e) => setExportDateRange(prev => ({
+                    ...prev,
+                    from: e.target.value
+                  }))}
+                  className='w-full'
+                />
+              </div>
+              
+              <div className='space-y-2'>
+                <Label htmlFor='exportToDate' className='text-sm'>
+                  To Date (Optional)
+                </Label>
+                <Input
+                  id='exportToDate'
+                  type='date'
+                  value={exportDateRange.to}
+                  onChange={(e) => setExportDateRange(prev => ({
+                    ...prev,
+                    to: e.target.value
+                  }))}
+                  className='w-full'
+                />
+              </div>
+              
+              <div className='text-xs text-muted-foreground'>
+                Select dates for filtered export, or use "All Data" for complete export. Current filters (status, unit) will be applied.
+              </div>
+              
+              {/* Quick preset buttons */}
+              <div className='pt-2 border-t space-y-2'>
+                <div className='text-xs font-medium text-muted-foreground'>Quick Presets:</div>
+                <div className='grid grid-cols-2 gap-2'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // All Data - clear both dates
+                      setExportDateRange({
+                        from: '',
+                        to: ''
+                      });
+                    }}
+                    className='text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                  >
+                    All Data
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // This Month
+                      const now = new Date();
+                      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                      
+                      console.log('Setting This Month dates:', {
+                        from: firstDay.toISOString().split('T')[0],
+                        to: lastDay.toISOString().split('T')[0]
+                      });
+                      
+                      setExportDateRange({
+                        from: firstDay.toISOString().split('T')[0],
+                        to: lastDay.toISOString().split('T')[0]
+                      });
+                    }}
+                    className='text-xs'
+                  >
+                    This Month
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // Last Month
+                      const now = new Date();
+                      const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                      const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+                      
+                      console.log('Setting Last Month dates:', {
+                        from: firstDayLastMonth.toISOString().split('T')[0],
+                        to: lastDayLastMonth.toISOString().split('T')[0]
+                      });
+                      
+                      setExportDateRange({
+                        from: firstDayLastMonth.toISOString().split('T')[0],
+                        to: lastDayLastMonth.toISOString().split('T')[0]
+                      });
+                    }}
+                    className='text-xs'
+                  >
+                    Last Month
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // Last 3 Months
+                      const now = new Date();
+                      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+                      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                      
+                      console.log('Setting Last 3 Months dates:', {
+                        from: threeMonthsAgo.toISOString().split('T')[0],
+                        to: lastDay.toISOString().split('T')[0]
+                      });
+                      
+                      setExportDateRange({
+                        from: threeMonthsAgo.toISOString().split('T')[0],
+                        to: lastDay.toISOString().split('T')[0]
+                      });
+                    }}
+                    className='text-xs'
+                  >
+                    Last 3 Months
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // This Year
+                      const now = new Date();
+                      const firstDay = new Date(now.getFullYear(), 0, 1);
+                      const lastDay = new Date(now.getFullYear(), 11, 31);
+                      
+                      console.log('Setting This Year dates:', {
+                        from: firstDay.toISOString().split('T')[0],
+                        to: lastDay.toISOString().split('T')[0]
+                      });
+                      
+                      setExportDateRange({
+                        from: firstDay.toISOString().split('T')[0],
+                        to: lastDay.toISOString().split('T')[0]
+                      });
+                    }}
+                    className='text-xs'
+                  >
+                    This Year
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            <div className='flex justify-end gap-2 pt-4'>
+              <Button
+                variant='outline'
+                onClick={() => {
+                  setIsExportDialogOpen(false);
+                  resetExportDateRange();
+                }}
+                disabled={isExporting}
+              >
+                Cancel
+              </Button>
+              
+              <Button
+                onClick={handleExportToCSV}
+                disabled={isExporting}
+                className='bg-primary hover:bg-primary/90 text-white'
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className='w-4 h-4 animate-spin mr-2' />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Upload className='w-4 h-4 mr-2' />
+                    Export
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

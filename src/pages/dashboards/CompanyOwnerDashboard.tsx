@@ -167,7 +167,7 @@ const CompanyOwnerDashboard = () => {
 
     try {
       const currentPeriod = timePeriods.find(p => p.value === selectedPeriod);
-      let params: any = {
+      const params: any = {
         dateRangeType: (currentPeriod?.dateRangeType || 'this_month') as 'this_month' | 'last_month' | 'last_3_months' | 'last_6_months' | 'custom'
       };
 

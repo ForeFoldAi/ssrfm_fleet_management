@@ -78,6 +78,7 @@ interface VendorQuotation {
   quotedPrice: string;
   notes: string;
   quotationFile?: File | null;
+  isSelected?: boolean;
 }
 
 export enum PurposeType {
@@ -539,15 +540,17 @@ const MaterialRequest = () => {
             machineId: item.purposeType === PurposeType.MACHINE ? machine?.id : undefined,
             machineName: item.purposeType === PurposeType.MACHINE ? undefined : item.machineName, // Send machineName for Spare/Other
             itemImageCount: item.images?.length || 0,
-            vendorQuotations: (item.vendorQuotations || []).map((v) => ({
-              vendorName: v.vendorName,
-              contactPerson: v.contactPerson,
-              phone: v.phone,
-              price: Number(v.price || 0),
-              imageCount: v.quotationFile ? 1 : 0,
-              quotationAmount: Number(v.quotedPrice || 0),
-              notes: v.notes,
-            })),
+            vendorQuotations: (item.vendorQuotations || [])
+              .filter((v) => v.isSelected === true)
+              .map((v) => ({
+                vendorName: v.vendorName,
+                contactPerson: v.contactPerson,
+                phone: v.phone,
+                price: Number(v.price || 0),
+                imageCount: v.quotationFile ? 1 : 0,
+                quotationAmount: Number(v.quotedPrice || 0),
+                notes: v.notes,
+              })),
             notes: item.notes || '',
           };
         }
@@ -732,7 +735,14 @@ const MaterialRequest = () => {
                       <SelectContent>
                         {availableMaterials.map((material) => (
                           <SelectItem key={material.name} value={material.name}>
-                            {material.name}
+                            <div className='flex flex-col'>
+                              <div className='font-semibold'>{material.name}</div>
+                              {material.makerBrand && (
+                                <div className='text-xs text-muted-foreground'>
+                                  {material.makerBrand}
+                                </div>
+                              )}
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -888,9 +898,9 @@ const MaterialRequest = () => {
                           </Button>
                         )}
                       </div>
-                      {item.vendorQuotations.length > 0 && (
+                      {item.vendorQuotations.filter(q => q.isSelected === true).length > 0 && (
                         <div className='space-y-1'>
-                          {item.vendorQuotations.map((quotation) => (
+                          {item.vendorQuotations.filter(q => q.isSelected === true).map((quotation) => (
                             <div
                               key={quotation.id}
                               className='flex items-center justify-between gap-2 text-xs bg-gray-50 p-1 rounded border'
@@ -1064,7 +1074,14 @@ const MaterialRequest = () => {
                     <SelectContent>
                       {availableMaterials.map((material) => (
                         <SelectItem key={material.name} value={material.name}>
-                          {material.name}
+                          <div className='flex flex-col'>
+                            <div className='font-semibold'>{material.name}</div>
+                            {material.makerBrand && (
+                              <div className='text-xs text-muted-foreground'>
+                                {material.makerBrand}
+                              </div>
+                            )}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1290,9 +1307,9 @@ const MaterialRequest = () => {
                       </Button>
                     )}
                   </div>
-                  {item.vendorQuotations.length > 0 && (
+                  {item.vendorQuotations.filter(q => q.isSelected === true).length > 0 && (
                     <div className='space-y-2'>
-                      {item.vendorQuotations.map((quotation) => (
+                      {item.vendorQuotations.filter(q => q.isSelected === true).map((quotation) => (
                         <div
                           key={quotation.id}
                           className='flex items-center justify-between p-3 bg-muted/30 rounded-[5px] border'
@@ -1503,7 +1520,7 @@ const MaterialRequest = () => {
                   <TableBody>
                     {requestItems
                       .find((item) => item.id === currentItemId)
-                      ?.vendorQuotations.map((quotation, index) => (
+                      ?.vendorQuotations.filter(q => q.isSelected === true).map((quotation, index) => (
                         <TableRow key={quotation.id}>
                           <TableCell className='border-r text-center font-medium'>
                             {index + 1}
@@ -1517,11 +1534,11 @@ const MaterialRequest = () => {
                           <TableCell className='border-r'>
                             {quotation.phone}
                           </TableCell>
-                          <TableCell className='border-r font-medium'>
-                            {quotation.price}
+                          <TableCell className='border-r font-medium text-blue-600'>
+                            ₹{quotation.price}
                           </TableCell>
                           <TableCell className='border-r font-medium text-primary'>
-                            {quotation.quotedPrice}
+                            ₹{quotation.quotedPrice}
                           </TableCell>
                           <TableCell className='border-r text-sm'>
                             {quotation.notes || '-'}

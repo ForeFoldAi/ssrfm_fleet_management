@@ -27,6 +27,7 @@ interface StatusDropdownProps {
   onStatusChange: (newStatus: string, additionalData?: any) => void;
   requestId: string;
   hasVendorSelected?: boolean;
+  hasNoVendorQuotations?: boolean;
   partialReceiptHistory?: Array<{
     id: string;
     receivedQuantity: number;
@@ -53,6 +54,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
   onStatusChange,
   requestId,
   hasVendorSelected = false,
+  hasNoVendorQuotations = false,
   partialReceiptHistory = [],
   requiredQuantity = 0,
 }) => {
@@ -79,8 +81,8 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
       requiresAdditionalData: true,
     });
     
-    // Only show approve option if vendor is selected
-    if (hasVendorSelected) {
+    // Show approve option if vendor is selected OR if there are no vendor quotations
+    if (hasVendorSelected || hasNoVendorQuotations) {
       options.unshift({
         value: 'approved',
         label: 'Approved',
@@ -282,23 +284,6 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
               </div>
             )}
 
-            {selectedStatus === 'rejected' && (
-              <div className='space-y-2'>
-                <Label htmlFor='rejectReason'>Reason for Rejection *</Label>
-                <Textarea
-                  id='rejectReason'
-                  value={additionalData.notes}
-                  onChange={(e) =>
-                    setAdditionalData((prev) => ({
-                      ...prev,
-                      notes: e.target.value,
-                    }))
-                  }
-                  placeholder='Explain why this request is rejected...'
-                  className='min-h-[100px]'
-                />
-              </div>
-            )}
 
             {(selectedStatus === 'fully_received' || selectedStatus === 'partially_received') && (
               <>

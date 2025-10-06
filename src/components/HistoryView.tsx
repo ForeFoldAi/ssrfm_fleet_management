@@ -61,8 +61,6 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         return 'bg-green-500 text-white';
       case 'completed':
         return 'bg-green-600 text-white';
-      case 'material_received':
-        return 'bg-emerald-500 text-white';
       case 'partially_received':
         return 'bg-orange-500 text-white';
       case 'fully_received':
@@ -80,8 +78,6 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         return <CheckCircle className='w-3 h-3' />;
       case 'completed':
         return <CheckCircle className='w-3 h-3' />;
-      case 'material_received':
-        return <Package className='w-3 h-3' />;
       case 'partially_received':
         return <Package className='w-3 h-3' />;
       case 'fully_received':
@@ -93,11 +89,12 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
     }
   };
 
-  // Filter data to show only received materials
+  // Filter data to show only received materials and relevant statuses
   const filteredHistoryData = historyData.filter((item) => 
-    item.status === 'material_received' || 
     item.status === 'fully_received' || 
     item.status === 'partially_received' ||
+    item.status === 'ordered' ||
+    item.status === 'approved' ||
     item.status === 'completed'
   );
 

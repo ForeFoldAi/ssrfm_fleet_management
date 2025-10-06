@@ -19,6 +19,8 @@ import {
   ArrowUp,
   ArrowDown,
   RotateCcw,
+  Download,
+  Upload,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -58,6 +60,7 @@ export const MachinesTab = () => {
   const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterUnit, setFilterUnit] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [isAddMachineOpen, setIsAddMachineOpen] = useState(false);
   const [selectedMachine, setSelectedMachine] = useState<TransformedMachine | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -73,6 +76,7 @@ export const MachinesTab = () => {
   const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Sorting state
   const [sortField, setSortField] = useState<SortField>('createdAt');
@@ -91,6 +95,7 @@ export const MachinesTab = () => {
     unit: string;
     unitName: string;
     branch: string;
+    branchName: string;
     // Manufacturing Details
     manufacturer: string;
     model: string;
@@ -201,8 +206,9 @@ export const MachinesTab = () => {
         ...(searchQuery && { search: searchQuery }),
         ...(filterUnit !== 'all' &&
           currentUser?.role === 'company_owner' && {
-            branchId: filterUnit,
+            unitId: filterUnit,
           }),
+        ...(filterStatus !== 'all' && { status: filterStatus }),
       };
 
       const response = await machinesApi.getAll(params);
@@ -218,15 +224,16 @@ export const MachinesTab = () => {
           createdDate: formatDate(machine.createdAt),
           lastMaintenance: machine.lastService
             ? formatDate(machine.lastService)
-            : 'Not serviced',
+            : '-',
           nextMaintenanceDue: machine.nextMaintenanceDue
             ? formatDate(machine.nextMaintenanceDue)
-            : 'Not scheduled',
+            : '-',
           specifications:
             machine.specifications || 'No specifications available',
           unit: `unit-${machine.unit?.id || 1}`,
           unitName: machine.unit?.name || 'Unknown Unit',
           branch: machine.branch?.name || 'Unknown Location',
+          branchName: machine.branch?.name || 'Unknown Location',
           // Manufacturing Details
           manufacturer: machine.manufacturer || '',
           model: machine.model || '',
@@ -266,7 +273,7 @@ export const MachinesTab = () => {
   useEffect(() => {
     fetchMachines();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, itemsPerPage, searchQuery, filterUnit, sortField, sortOrder]);
+  }, [currentPage, itemsPerPage, searchQuery, filterUnit, filterStatus, sortField, sortOrder]);
 
   // Update the handleAddMachine function to be async and add refresh to other operations
   const handleAddMachine = async (machineData: Machine) => {
@@ -342,6 +349,164 @@ export const MachinesTab = () => {
     setSelectedMachine(machine);
     setIsEditMode(true);
     setIsAddMachineOpen(true);
+  };
+
+  // Handle export to CSV
+  const handleExportToCSV = async () => {
+    try {
+      setIsExporting(true);
+      
+      // Fetch all machines with pagination (API limit is 100)
+      let allMachines: Machine[] = [];
+      let currentPage = 1;
+      let hasMorePages = true;
+      const limit = 100; // API limit
+
+      while (hasMorePages) {
+        const response = await machinesApi.getAll({
+          page: currentPage,
+          limit: limit,
+          sortBy: sortField,
+          sortOrder: sortOrder,
+          ...(searchQuery && { search: searchQuery }),
+          ...(filterUnit !== 'all' &&
+            currentUser?.role === 'company_owner' && {
+              unitId: filterUnit,
+            }),
+          ...(filterStatus !== 'all' && { status: filterStatus }),
+        });
+
+        allMachines = [...allMachines, ...response.data];
+        
+        // Check if there are more pages
+        hasMorePages = response.meta?.hasNextPage || false;
+        currentPage++;
+        
+        // Safety check to prevent infinite loops
+        if (currentPage > 1000) {
+          console.warn('Export stopped at page 1000 to prevent infinite loop');
+          break;
+        }
+      }
+
+      // Transform machines to UI format for export
+      const transformedMachines = allMachines.map((machine) => {
+        return {
+          id: machine.id,
+          name: machine.name,
+          type: machine.type?.name || 'Unknown Type',
+          status: machine.status,
+          createdDate: formatDate(machine.createdAt),
+          lastMaintenance: machine.lastService
+            ? formatDate(machine.lastService)
+            : '-',
+          nextMaintenanceDue: machine.nextMaintenanceDue
+            ? formatDate(machine.nextMaintenanceDue)
+            : '-',
+          specifications:
+            machine.specifications || 'No specifications available',
+          unit: `unit-${machine.unit?.id || 1}`,
+          unitName: machine.unit?.name || 'Unknown Unit',
+          branch: machine.branch?.name || 'Unknown Location',
+          branchName: machine.branch?.name || 'Unknown Location',
+          // Manufacturing Details
+          manufacturer: machine.manufacturer || '',
+          model: machine.model || '',
+          serialNumber: machine.serialNumber || '',
+          capacity: machine.capacity || '',
+          purchaseDate: machine.purchaseDate ? formatDate(machine.purchaseDate) : '',
+          warrantyExpiry: machine.warrantyExpiry ? formatDate(machine.warrantyExpiry) : '',
+          installationDate: machine.installationDate ? formatDate(machine.installationDate) : '',
+          additionalNotes: machine.additionalNotes || '',
+        };
+      });
+      
+      // Prepare CSV headers
+      const headers = [
+        'Machine ID',
+        'Machine Name',
+        'Type',
+        'Status',
+        'Manufacturer',
+        'Model',
+        'Serial Number',
+        'Capacity',
+        'Unit',
+        'Branch',
+        'Location',
+        'Purchase Date',
+        'Installation Date',
+        'Warranty Expiry',
+        'Last Service',
+        'Next Maintenance Due',
+        'Specifications',
+        'Additional Notes',
+        'Created Date'
+      ];
+
+      // Prepare CSV data
+      const csvData = transformedMachines.map((machine) => {
+        return [
+          machine.id.toString(),
+          `"${machine.name}"`,
+          `"${machine.type}"`,
+          `"${machine.status}"`,
+          `"${machine.manufacturer}"`,
+          `"${machine.model}"`,
+          `"${machine.serialNumber}"`,
+          `"${machine.capacity}"`,
+          `"${machine.unitName}"`,
+          `"${machine.branch}"`,
+          `"${machine.branchName}"`,
+          `"${machine.purchaseDate}"`,
+          `"${machine.installationDate}"`,
+          `"${machine.warrantyExpiry}"`,
+          `"${machine.lastMaintenance}"`,
+          `"${machine.nextMaintenanceDue}"`,
+          `"${machine.specifications}"`,
+          `"${machine.additionalNotes}"`,
+          `"${machine.createdDate}"`
+        ];
+      });
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => row.join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      
+      // Generate filename with current date
+      const currentDate = new Date().toISOString().split('T')[0];
+      const filename = `machines_export_${currentDate}.csv`;
+      link.setAttribute('download', filename);
+      
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: 'Export Successful',
+        description: `Machines data exported successfully. ${transformedMachines.length} records downloaded.`,
+        variant: 'default',
+      });
+
+    } catch (error) {
+      console.error('Error exporting machines:', error);
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to export machines data. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -422,20 +587,48 @@ export const MachinesTab = () => {
             </Select>
           )}
 
-          {/* Reload Button */}
+          {/* Status Filter */}
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
+              <SelectValue placeholder='Select Status' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='all'>All Status</SelectItem>
+              <SelectItem value={MachineStatus.ACTIVE}>
+                <div className='flex items-center gap-2'>
+                  <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                  <span>Active</span>
+                </div>
+              </SelectItem>
+              <SelectItem value={MachineStatus.UNDER_MAINTENANCE}>
+                <div className='flex items-center gap-2'>
+                  <div className='w-2 h-2 bg-yellow-500 rounded-full'></div>
+                  <span>Under Maintenance</span>
+                </div>
+              </SelectItem>
+              <SelectItem value={MachineStatus.INACTIVE}>
+                <div className='flex items-center gap-2'>
+                  <div className='w-2 h-2 bg-red-500 rounded-full'></div>
+                  <span>Inactive</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Export Button */}
           <Button
             variant='outline'
             size='sm'
-            onClick={fetchMachines}
-            disabled={isLoading}
+            onClick={handleExportToCSV}
+            disabled={isExporting || isLoading}
             className='w-full sm:w-auto'
           >
-            {isLoading ? (
+            {isExporting ? (
               <Loader2 className='w-4 h-4 animate-spin' />
             ) : (
-              <RotateCcw className='w-4 h-4' />
+              <Upload className='w-4 h-4' />
             )}
-            <span className='ml-2'>Reload</span>
+            <span className='ml-2'>Export</span>
           </Button>
 
           <Button
@@ -467,7 +660,7 @@ export const MachinesTab = () => {
               ) : (
                 <RotateCcw className='w-4 h-4' />
               )}
-              <span className='ml-2'>Retry</span>
+              <span className='ml-2'>Reload</span>
             </Button>
           </AlertDescription>
         </Alert>
@@ -665,7 +858,20 @@ export const MachinesTab = () => {
               ? 'Try adjusting your search terms'
               : 'Start by adding your first machine'}
           </p>
-          
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={fetchMachines}
+            disabled={isLoading}
+            className='mt-2'
+          >
+            {isLoading ? (
+              <Loader2 className='w-4 h-4 animate-spin mr-2' />
+            ) : (
+              <RotateCcw className='w-4 h-4 mr-2' />
+            )}
+            Reload
+          </Button>
         </Card>
       )}
 

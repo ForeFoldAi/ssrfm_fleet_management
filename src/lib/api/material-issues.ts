@@ -1,5 +1,5 @@
 import api from './axios';
-import { Branch, MaterialIssue, PaginatedResponse, QueryParams } from './types';
+import { Branch, MaterialIssue, PaginatedResponse, QueryParams, ExportParams } from './types';
 
 export const materialIssuesApi = {
   /**
@@ -118,6 +118,66 @@ export const materialIssuesApi = {
   getItemImageUrl: (issueId: number, itemId: number): string => {
     const baseUrl = import.meta.env.VITE_APP_API_BASE_URL || 'https://0ehawyo6gg.execute-api.ap-south-1.amazonaws.com/dev';
     return `${baseUrl}/inventory/material-issues/${issueId}/items/${itemId}/image`;
+  },
+
+  /**
+   * Export material issues to Excel file
+   * @param params Export parameters (optional) - if no params provided, exports all material issues
+   * @returns Promise with blob data for Excel file download
+   * 
+   * Automatically includes proper headers:
+   * - Accept: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   * - Authorization: Bearer token (from localStorage via axios interceptor)
+   * 
+   * @example
+   * ```typescript
+   * // Export all material issues (no parameters needed)
+   * const blob = await materialIssuesApi.exportToExcel();
+   * 
+   * // Export material issues from a specific date range
+   * const blob = await materialIssuesApi.exportToExcel({
+   *   from: '2024-01-01',
+   *   to: '2025-10-10'
+   * });
+   * 
+   * // Create download link
+   * const url = window.URL.createObjectURL(blob);
+   * const link = document.createElement('a');
+   * link.href = url;
+   * link.download = 'material-issues-export.xlsx';
+   * link.click();
+   * window.URL.revokeObjectURL(url);
+   * ```
+   */
+  exportToExcel: async (params: ExportParams = {}): Promise<Blob> => {
+    const queryParams = new URLSearchParams();
+
+    // Add export parameters (all optional)
+    if (params.from) queryParams.append('from', params.from);
+    if (params.to) queryParams.append('to', params.to);
+
+    // Add any additional filter parameters
+    Object.entries(params).forEach(([key, value]) => {
+      if (
+        !['from', 'to'].includes(key) &&
+        value !== undefined
+      ) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const queryString = queryParams.toString();
+    // URL works with or without query parameters - exports all material issues if no params provided
+    const url = `/inventory/material-issues/export/xlsx${queryString ? `?${queryString}` : ''}`;
+
+    const response = await api.get(url, {
+      responseType: 'blob',
+      headers: {
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+    });
+
+    return response.data;
   },
 };
 

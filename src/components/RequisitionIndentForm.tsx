@@ -122,6 +122,7 @@ interface RequisitionIndentFormProps {
     specifications: string;
     measureUnit: string;
     category: string;
+    makerBrand?: string;
   }>;
   machines?: string[];
   onLoadItemImages?: (itemId: number) => void;
@@ -561,7 +562,18 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                     </TableCell>
                     <TableCell className='border border-gray-300'>
                       {isReadOnly ? (
-                        <div className='font-medium truncate'>{item.productName}</div>
+                        <div className='text-xs'>
+                          <div className='font-medium truncate'>{item.productName}</div>
+                          {(() => {
+                            const material = availableMaterials.find(m => m.name === item.productName);
+                            const makerBrand = material?.makerBrand || '';
+                            return makerBrand && (
+                              <div className='text-xs text-muted-foreground mt-1 truncate'>
+                                {makerBrand}
+                              </div>
+                            );
+                          })()}
+                        </div>
                       ) : (
                         <Select
                           value={item.productName}
@@ -808,9 +820,9 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                                 ))}
                               </RadioGroup>
                             ) : (
-                              // Show all quotations with selection status
+                              // Show only selected quotations
                               <div className='space-y-2'>
-                                {item.vendorQuotations.map((quotation) => (
+                                {item.vendorQuotations.filter(q => q.isSelected === true).map((quotation) => (
                                   <div
                                     key={quotation.id}
                                     className={`p-2 rounded border cursor-pointer hover:bg-gray-50 ${
@@ -1118,7 +1130,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                   <TableBody>
                     {requestData.items
                       .find((item) => item.id === currentItemId)
-                      ?.vendorQuotations.map((quotation, index) => (
+                      ?.vendorQuotations.filter(q => q.isSelected === true).map((quotation, index) => (
                         <TableRow key={quotation.id}>
                           <TableCell className='border-r text-center font-medium'>
                             {index + 1}
@@ -1441,8 +1453,12 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                         <span className='ml-2'>{selectedQuotation.phone || 'N/A'}</span>
                       </div>
                       <div>
-                        <span className='font-medium'>Quoted Price:</span>
-                        <span className='ml-2 font-bold text-green-600'>{selectedQuotation.quotedPrice}</span>
+                        <span className='font-medium'>Price:</span>
+                        <span className='ml-2 font-bold text-blue-600'>₹{selectedQuotation.price}</span>
+                      </div>
+                      <div>
+                        <span className='font-medium'>Total Quotation Amount:</span>
+                        <span className='ml-2 font-bold text-green-600'>₹{selectedQuotation.quotedPrice}</span>
                       </div>
                       {selectedQuotation.notes && (
                         <div>

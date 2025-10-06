@@ -164,8 +164,8 @@ export const ConfirmApproveDialog: React.FC<ConfirmApproveDialogProps> = ({
 
         <div className="space-y-4">
           {/* Simple Request Info */}
-          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-            <h3 className="font-semibold text-green-800 mb-2">Indent Details</h3>
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 className="font-semibold text-blue-800 mb-2">Indent Details</h3>
             <p><strong>ID:</strong> {materialIndent.uniqueId.toUpperCase()}</p>
             <p><strong>Items:</strong> {materialIndent.items.length}</p>
           </div>
@@ -184,9 +184,11 @@ export const ConfirmApproveDialog: React.FC<ConfirmApproveDialogProps> = ({
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="font-medium">{item.material.name}</span>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        (Item #{item.id})
-                      </span>
+                      {item.material.makerBrand && (
+                        <span className="text-sm text-muted-foreground ml-2">
+                          ({item.material.makerBrand})
+                        </span>
+                      )}
                     </div>
                     <div className="text-right">
                       <div className="font-semibold text-green-600">

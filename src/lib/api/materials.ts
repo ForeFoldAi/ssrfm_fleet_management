@@ -1,5 +1,5 @@
 import api from './axios';
-import { Material, PaginatedResponse, QueryParams } from './types';
+import { Material, PaginatedResponse, QueryParams, ExportParams } from './types';
 
 export const materialsApi = {
   /**
@@ -64,6 +64,66 @@ export const materialsApi = {
    */
   delete: async (id: number): Promise<void> => {
     await api.delete(`/inventory/materials/${id}`);
+  },
+
+  /**
+   * Export materials to Excel file
+   * @param params Export parameters (optional) - if no params provided, exports all materials
+   * @returns Promise with blob data for Excel file download
+   * 
+   * Automatically includes proper headers:
+   * - Accept: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   * - Authorization: Bearer token (from localStorage via axios interceptor)
+   * 
+   * @example
+   * ```typescript
+   * // Export all materials (no parameters needed)
+   * const blob = await materialsApi.exportToExcel();
+   * 
+   * // Export materials from a specific date range
+   * const blob = await materialsApi.exportToExcel({
+   *   from: '2024-01-01',
+   *   to: '2025-10-10'
+   * });
+   * 
+   * // Create download link
+   * const url = window.URL.createObjectURL(blob);
+   * const link = document.createElement('a');
+   * link.href = url;
+   * link.download = 'materials-export.xlsx';
+   * link.click();
+   * window.URL.revokeObjectURL(url);
+   * ```
+   */
+  exportToExcel: async (params: ExportParams = {}): Promise<Blob> => {
+    const queryParams = new URLSearchParams();
+
+    // Add export parameters (all optional)
+    if (params.from) queryParams.append('from', params.from);
+    if (params.to) queryParams.append('to', params.to);
+
+    // Add any additional filter parameters
+    Object.entries(params).forEach(([key, value]) => {
+      if (
+        !['from', 'to'].includes(key) &&
+        value !== undefined
+      ) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const queryString = queryParams.toString();
+    // URL works with or without query parameters - exports all materials if no params provided
+    const url = `/inventory/materials/export/xlsx${queryString ? `?${queryString}` : ''}`;
+
+    const response = await api.get(url, {
+      responseType: 'blob',
+      headers: {
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+    });
+
+    return response.data;
   },
 };
 

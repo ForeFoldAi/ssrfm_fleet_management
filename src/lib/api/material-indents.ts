@@ -3,6 +3,7 @@ import {
   ApproveRejectMaterialIndentRequest,
   PaginatedResponse,
   QueryParams,
+  ExportParams,
 } from './types';
 import { MaterialIndent } from './types';
 
@@ -15,7 +16,6 @@ export enum IndentStatus {
   ORDERED = 'ordered',
   PARTIALLY_RECEIVED = 'partially_received',
   FULLY_RECEIVED = 'fully_received',
-  CLOSED = 'closed',
 }
 
 export const materialIndentsApi = {
@@ -219,6 +219,66 @@ export const materialIndentsApi = {
     const response = await api.get<MaterialIndent>(
       `/inventory/material-indents/${id}?include=items,items.material,items.machine,items.quotations,items.material.measureUnit`
     );
+    return response.data;
+  },
+
+  /**
+   * Export material indents to Excel file
+   * @param params Export parameters (optional) - if no params provided, exports all material indents
+   * @returns Promise with blob data for Excel file download
+   * 
+   * Automatically includes proper headers:
+   * - Accept: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   * - Authorization: Bearer token (from localStorage via axios interceptor)
+   * 
+   * @example
+   * ```typescript
+   * // Export all material indents (no parameters needed)
+   * const blob = await materialIndentsApi.exportToExcel();
+   * 
+   * // Export material indents from a specific date range
+   * const blob = await materialIndentsApi.exportToExcel({
+   *   from: '2024-01-01',
+   *   to: '2025-10-10'
+   * });
+   * 
+   * // Create download link
+   * const url = window.URL.createObjectURL(blob);
+   * const link = document.createElement('a');
+   * link.href = url;
+   * link.download = 'material-indents-export.xlsx';
+   * link.click();
+   * window.URL.revokeObjectURL(url);
+   * ```
+   */
+  exportToExcel: async (params: ExportParams = {}): Promise<Blob> => {
+    const queryParams = new URLSearchParams();
+
+    // Add export parameters (all optional)
+    if (params.from) queryParams.append('from', params.from);
+    if (params.to) queryParams.append('to', params.to);
+
+    // Add any additional filter parameters
+    Object.entries(params).forEach(([key, value]) => {
+      if (
+        !['from', 'to'].includes(key) &&
+        value !== undefined
+      ) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const queryString = queryParams.toString();
+    // URL works with or without query parameters - exports all material indents if no params provided
+    const url = `/inventory/material-indents/export/xlsx${queryString ? `?${queryString}` : ''}`;
+
+    const response = await api.get(url, {
+      responseType: 'blob',
+      headers: {
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+    });
+
     return response.data;
   },
 };

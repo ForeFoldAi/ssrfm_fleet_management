@@ -25,7 +25,10 @@ import {
   ChevronsLeft,
   ChevronsRight,
   WifiOff,
+  Download,
+  Upload,
 } from 'lucide-react';
+import { formatDateToDDMMYYYY } from '../lib/utils';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
@@ -92,8 +95,8 @@ export const MaterialIssuesTab = () => {
   );
 
   // Sorting state
-  const [sortField, setSortField] = useState<SortField>('issueDate');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('DESC'); // Already set to DESC
+  const [sortField, setSortField] = useState<SortField>('id');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('DESC'); // Use ID DESC to show newest first
 
   // Helper function to format date as dd-mm-yyyy
   const formatDate = (dateString: string): string => {
@@ -109,6 +112,7 @@ export const MaterialIssuesTab = () => {
     materialId: number;
     materialName: string;
     specifications: string;
+    makerBrand: string;
     existingStock: number;
     issuedQuantity: number;
     stockAfterIssue: number;
@@ -159,6 +163,12 @@ export const MaterialIssuesTab = () => {
   const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [exportDateRange, setExportDateRange] = useState({
+    from: '',
+    to: '',
+  });
 
   useEffect(() => {
     const fetchBranches = async () => {
@@ -218,12 +228,23 @@ export const MaterialIssuesTab = () => {
     }
 
     if (sortField === field) {
-      // Toggle sort order if same field
-      setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+      // For ID, always keep DESC to show newest first
+      if (field === 'id') {
+        setSortOrder('DESC');
+      } else {
+        // Toggle sort order for other fields
+        setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+      }
     } else {
-      // Set new field with ascending order
+      // Set new field
       setSortField(field);
-      setSortOrder('ASC');
+      // For ID, always use DESC to show newest first
+      if (field === 'id') {
+        setSortOrder('DESC');
+      } else {
+        // For other fields, default to ASC
+        setSortOrder('ASC');
+      }
     }
   };
 
@@ -243,35 +264,38 @@ export const MaterialIssuesTab = () => {
   const transformApiIssueToUiFormat = (
     issue: MaterialIssue
   ): TransformedIssue => {
-    // Debug logging to see what's in the issue
-    console.log('Transforming issue:', issue);
-    console.log('Issue branch:', issue.branch);
 
     // Transform each item in the issue
-    const transformedItems = issue.items.map((item) => ({
-      materialId: item.material.id,
-      materialName: item.material.name,
-      specifications: item.material.specifications || '',
-      existingStock: item.stockBeforeIssue,
-      issuedQuantity: item.issuedQuantity,
-      stockAfterIssue: item.stockAfterIssue,
-      recipientName: item.receiverName,
-      purpose: item.purpose,
-      imagePath: item.imagePath,
-      // Updated to handle the new issuedFor structure
-      machineId: item.issuedFor?.id || 0,
-      machineName: item.issuedFor?.name || 'others',
-      // Add unit information from material
-      unitName: item.material.measureUnit?.name || 'units',
-      originalItem: item,
-    }));
+    const transformedItems = issue.items.map((item) => {
+      // Debug logging to see what's actually in the material data
+      console.log('Material data for debugging:', {
+        materialId: item.material.id,
+        materialName: item.material.name,
+        measureUnit: item.material.measureUnit,
+        hasMeasureUnit: !!item.material.measureUnit,
+        measureUnitName: item.material.measureUnit?.name
+      });
 
-    // Debug logging for branch data
-    console.log('Issue branch data:', {
-      branch: issue.branch,
-      issuedBy: issue.issuedBy,
-      issuedByBranch: issue.issuedBy?.branch,
+      return {
+        materialId: item.material.id,
+        materialName: item.material.name,
+        specifications: item.material.specifications || '',
+        makerBrand: item.material.makerBrand || '',
+        existingStock: item.stockBeforeIssue,
+        issuedQuantity: item.issuedQuantity,
+        stockAfterIssue: item.stockAfterIssue,
+        recipientName: item.receiverName,
+        purpose: item.purpose,
+        imagePath: item.imagePath,
+        // Updated to handle the new issuedFor structure
+        machineId: item.issuedFor?.id || 0,
+        machineName: item.issuedFor?.name || 'others',
+        // Add unit information from material
+        unitName: item.material.measureUnit?.name || 'units',
+        originalItem: item,
+      };
     });
+
 
     // Create a transformed issue with all items
     const transformedIssue = {
@@ -291,7 +315,6 @@ export const MaterialIssuesTab = () => {
       originalIssue: issue,
     };
 
-    console.log('Transformed issue:', transformedIssue);
     return transformedIssue;
   };
 
@@ -346,6 +369,7 @@ export const MaterialIssuesTab = () => {
         limit,
         sortBy: sortField,
         sortOrder: 'DESC', // Force DESC to show newest first
+        include: 'items.material.measureUnit,items.issuedFor,branch,issuedBy', // Include related data
       };
 
       // Add search if provided
@@ -369,6 +393,13 @@ export const MaterialIssuesTab = () => {
 
       const response = await materialIssuesApi.getAll(params);
 
+      // Debug logging to see what the API is returning
+      console.log('API Response:', response);
+      console.log('First issue data:', response.data[0]);
+      if (response.data[0]?.items?.[0]) {
+        console.log('First item material data:', response.data[0].items[0].material);
+      }
+
       setMaterialIssues(response.data);
       setMaterialIssuesData(response);
 
@@ -385,6 +416,9 @@ export const MaterialIssuesTab = () => {
 
   // Load material issues on component mount
   useEffect(() => {
+    // Ensure we start with newest items first (by ID)
+    setSortField('id');
+    setSortOrder('DESC');
     fetchMaterialIssues(); // Use default parameters
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -484,8 +518,13 @@ export const MaterialIssuesTab = () => {
 
   const handleIssueMaterial = async (issueData: MaterialIssue) => {
     try {
+      // Reset to show newest items first after creating a new issue (by ID)
+      setSortField('id');
+      setSortOrder('DESC');
+      setCurrentPage(1); // Go to first page to see the new item
+      
       // Refresh the list to show the new issue
-      await fetchMaterialIssues(currentPage, itemsPerPage);
+      await fetchMaterialIssues(1, itemsPerPage);
 
       toast({
         title: 'Success',
@@ -517,6 +556,180 @@ export const MaterialIssuesTab = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  // Export functionality
+  const exportToCSV = async () => {
+    try {
+      setIsExporting(true);
+      
+      // Fetch all material issues with pagination (API limit is 100)
+      let allIssues: MaterialIssue[] = [];
+      let currentPage = 1;
+      let hasMorePages = true;
+      const limit = 100; // API limit
+
+      while (hasMorePages) {
+        const response = await materialIssuesApi.getAll({
+          page: currentPage,
+          limit: limit,
+          sortBy: sortField,
+          sortOrder: 'DESC',
+          include: 'items.material.measureUnit,items.issuedFor,branch,issuedBy', // Include related data
+          ...(searchQuery.trim() && { search: searchQuery.trim() }),
+          ...(currentUser?.role === 'company_owner' && filterUnit !== 'all' && {
+            branchId: filterUnit,
+          }),
+        });
+
+        allIssues = [...allIssues, ...response.data];
+        
+        // Check if there are more pages
+        hasMorePages = response.meta?.hasNextPage || false;
+        currentPage++;
+        
+        // Safety check to prevent infinite loops
+        if (currentPage > 1000) {
+          console.warn('Export stopped at page 1000 to prevent infinite loop');
+          break;
+        }
+      }
+
+      // Filter by date range if specified
+      let filteredIssues = allIssues;
+      if (exportDateRange.from || exportDateRange.to) {
+        filteredIssues = allIssues.filter((issue) => {
+          const issueDate = new Date(issue.issueDate);
+          
+          if (exportDateRange.from && exportDateRange.to) {
+            const fromDate = new Date(exportDateRange.from);
+            const toDate = new Date(exportDateRange.to);
+            return issueDate >= fromDate && issueDate <= toDate;
+          } else if (exportDateRange.from) {
+            const fromDate = new Date(exportDateRange.from);
+            return issueDate >= fromDate;
+          } else if (exportDateRange.to) {
+            const toDate = new Date(exportDateRange.to);
+            return issueDate <= toDate;
+          }
+          
+          return true;
+        });
+      }
+
+      // Transform issues to UI format for export
+      const transformedIssues = filteredIssues.map(transformApiIssueToUiFormat);
+      
+      // Prepare CSV headers
+      const headers = [
+        'Issue ID',
+        'Issue Date',
+        'Issued By',
+        'Issuing Person Designation',
+        'Unit',
+        'Unit Location',
+        'Material Name',
+        'Specifications',
+        'Model/Version',
+        'Measure Unit',
+        'Existing Stock',
+        'Issued Quantity',
+        'Stock After Issue',
+        'Recipient Name',
+        'Purpose',
+        'Issued For (Machine)',
+        'Additional Notes'
+      ];
+
+      // Prepare CSV data - flatten all items from all issues
+      const csvData: string[][] = [];
+      
+      transformedIssues.forEach((issue) => {
+        issue.items.forEach((item) => {
+          csvData.push([
+            `"${issue.id}"`,
+            `"${formatDateToDDMMYYYY(issue.issuedDate)}"`,
+            `"${issue.issuingPersonName}"`,
+            `"${issue.issuingPersonDesignation}"`,
+            `"${issue.unitName}"`,
+            `"${issue.branchLocation || ''}"`,
+            `"${item.materialName}"`,
+            `"${item.specifications}"`,
+            `"${item.makerBrand}"`,
+            `"${item.originalItem.material.measureUnit?.name || 'units'}"`,
+            (item.existingStock || 0).toString(),
+            (item.issuedQuantity || 0).toString(),
+            (item.stockAfterIssue || 0).toString(),
+            `"${item.recipientName}"`,
+            `"${item.purpose}"`,
+            `"${item.machineName}"`,
+            `"${issue.additionalNotes || ''}"`
+          ]);
+        });
+      });
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => row.join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      
+      // Generate filename with current date and date range
+      const currentDate = new Date().toISOString().split('T')[0];
+      let filename = `ssrfm_material_issues_export_${currentDate}`;
+      
+      if (exportDateRange.from || exportDateRange.to) {
+        if (exportDateRange.from && exportDateRange.to) {
+          filename += `_${exportDateRange.from}_to_${exportDateRange.to}`;
+        } else if (exportDateRange.from) {
+          filename += `_from_${exportDateRange.from}`;
+        } else if (exportDateRange.to) {
+          filename += `_to_${exportDateRange.to}`;
+        }
+      } else {
+        filename += '_all_data';
+      }
+      
+      link.setAttribute('download', `${filename}.csv`);
+      
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Close dialog
+      setIsExportDialogOpen(false);
+
+      toast({
+        title: 'Export Successful',
+        description: `Material issues data exported successfully. ${csvData.length} records downloaded.`,
+        variant: 'default',
+      });
+
+    } catch (error) {
+      console.error('Error exporting material issues:', error);
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to export material issues data. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Reset export date range
+  const resetExportDateRange = () => {
+    setExportDateRange({
+      from: '',
+      to: '',
+    });
   };
 
   // Filter issues based on search only (unit filtering is handled by API)
@@ -621,6 +834,20 @@ export const MaterialIssuesTab = () => {
               </SelectContent>
             </Select>
           )}
+
+          <Button
+            variant='outline'
+            className='w-full sm:w-auto text-sm sm:text-base'
+            onClick={() => setIsExportDialogOpen(true)}
+            disabled={isExporting || !isOnline}
+          >
+            {isExporting ? (
+              <Loader2 className='w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin' />
+            ) : (
+              <Upload className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
+            )}
+            {isExporting ? 'Exporting...' : 'Export'}
+          </Button>
 
           <Button
             className='btn-primary w-full sm:w-auto text-sm sm:text-base'
@@ -783,8 +1010,15 @@ export const MaterialIssuesTab = () => {
                           <TableCell className='text-sm py-3'>
                             <div className='flex items-center gap-2'>
                               <div className='w-2 h-2 bg-primary rounded-full'></div>
-                              <div className='font-semibold text-foreground capitalize'>
-                                {item.materialName}
+                              <div>
+                                <div className='font-semibold text-foreground capitalize'>
+                                  {item.materialName}
+                                </div>
+                                {item.makerBrand && (
+                                  <div className='text-xs text-muted-foreground mt-1'>
+                                    {item.makerBrand}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </TableCell>
@@ -802,24 +1036,25 @@ export const MaterialIssuesTab = () => {
                                 <span className='text-muted-foreground'>
                                   Existing:
                                 </span>
-                                <span className='font-semibold text-foreground'>
-                                  {item.existingStock} {item.unitName}
+                                <span className='text-foreground'>
+                                  {item.existingStock} {item.originalItem.material.measureUnit?.name || 'units'}
                                 </span>
                               </div>
-                              <div className='flex items-center justify-between text-xs'>
-                                <span className='text-muted-foreground'>
-                                  Issued:
-                                </span>
-                                <span className='font-semibold text-primary'>
-                                  {item.issuedQuantity} {item.unitName}
-                                </span>
-                              </div>
+                              <div className="flex items-center justify-between text-xs font-bold text-primary">
+  <span className="text-muted-foreground">
+    Issued:
+  </span>
+  <span>
+    {item.issuedQuantity} {item.originalItem.material.measureUnit?.name || 'units'}
+  </span>
+</div>
+
                               <div className='flex items-center justify-between text-xs'>
                                 <span className='text-muted-foreground'>
                                   After:
                                 </span>
-                                <span className='font-semibold text-foreground'>
-                                  {item.stockAfterIssue} {item.unitName}
+                                <span className='text-foreground'>
+                                  {item.stockAfterIssue} {item.originalItem.material.measureUnit?.name || 'units'}
                                 </span>
                               </div>
                             </div>
@@ -1044,8 +1279,15 @@ export const MaterialIssuesTab = () => {
                               </div>
                             </TableCell>
                             <TableCell className='text-sm'>
-                              <div className='font-medium capitalize truncate'>
-                                {item.materialName}
+                              <div>
+                                <div className='font-medium capitalize truncate'>
+                                  {item.materialName}
+                                </div>
+                                {item.makerBrand && (
+                                  <div className='text-xs text-muted-foreground mt-1 truncate'>
+                                    {item.makerBrand}
+                                  </div>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell className='text-xs text-muted-foreground truncate'>
@@ -1057,19 +1299,20 @@ export const MaterialIssuesTab = () => {
                                   <span className='text-muted-foreground'>
                                     Existing:
                                   </span>{' '}
-                                  {item.existingStock} {item.unitName}
+                                  {item.existingStock} {item.originalItem.material.measureUnit?.name || 'units'}
                                 </div>
-                                <div className='font-medium text-primary'>
-                                  <span className='text-muted-foreground'>
-                                    Issued:
-                                  </span>{' '}
-                                  {item.issuedQuantity} {item.unitName}
-                                </div>
+                                <div className="text-primary font-bold">
+  <span className="text-muted-foreground font-bold">
+    Issued:
+  </span>{' '}
+  {item.issuedQuantity} {item.originalItem.material.measureUnit?.name || 'units'}
+</div>
+
                                 <div>
                                   <span className='text-muted-foreground'>
                                     After:
                                   </span>{' '}
-                                  {item.stockAfterIssue} {item.unitName}
+                                  {item.stockAfterIssue} {item.originalItem.material.measureUnit?.name || 'units'}
                                 </div>
                               </div>
                             </TableCell>
@@ -1305,6 +1548,184 @@ export const MaterialIssuesTab = () => {
             : undefined
         }
       />
+
+      {/* Export Dialog */}
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent className='max-w-md'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              <Download className='w-5 h-5 text-primary' />
+              Export Material Issues to CSV
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className='space-y-4'>
+            <div className='space-y-3'>
+              <Label className='text-sm font-medium'>Export Options</Label>
+              
+              <div className='space-y-2'>
+                <Label htmlFor='exportFromDate' className='text-sm'>
+                  From Date (Optional)
+                </Label>
+                <Input
+                  id='exportFromDate'
+                  type='date'
+                  value={exportDateRange.from}
+                  onChange={(e) => setExportDateRange(prev => ({
+                    ...prev,
+                    from: e.target.value
+                  }))}
+                  className='w-full'
+                />
+              </div>
+              
+              <div className='space-y-2'>
+                <Label htmlFor='exportToDate' className='text-sm'>
+                  To Date (Optional)
+                </Label>
+                <Input
+                  id='exportToDate'
+                  type='date'
+                  value={exportDateRange.to}
+                  onChange={(e) => setExportDateRange(prev => ({
+                    ...prev,
+                    to: e.target.value
+                  }))}
+                  className='w-full'
+                />
+              </div>
+              
+              <div className='text-xs text-muted-foreground'>
+                Select dates for filtered export, or use "All Data" for complete export. Current filters (unit) will be applied.
+              </div>
+              
+              {/* Quick preset buttons */}
+              <div className='pt-2 border-t space-y-2'>
+                <div className='text-xs font-medium text-muted-foreground'>Quick Presets:</div>
+                <div className='grid grid-cols-2 gap-2'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // All Data - clear both dates
+                      setExportDateRange({
+                        from: '',
+                        to: ''
+                      });
+                    }}
+                    className='text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                  >
+                    All Data
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // This Month
+                      const now = new Date();
+                      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                      
+                      setExportDateRange({
+                        from: firstDay.toISOString().split('T')[0],
+                        to: lastDay.toISOString().split('T')[0]
+                      });
+                    }}
+                    className='text-xs'
+                  >
+                    This Month
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // Last Month
+                      const now = new Date();
+                      const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                      const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+                      
+                      setExportDateRange({
+                        from: firstDayLastMonth.toISOString().split('T')[0],
+                        to: lastDayLastMonth.toISOString().split('T')[0]
+                      });
+                    }}
+                    className='text-xs'
+                  >
+                    Last Month
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // Last 3 Months
+                      const now = new Date();
+                      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+                      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                      
+                      setExportDateRange({
+                        from: threeMonthsAgo.toISOString().split('T')[0],
+                        to: lastDay.toISOString().split('T')[0]
+                      });
+                    }}
+                    className='text-xs'
+                  >
+                    Last 3 Months
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // This Year
+                      const now = new Date();
+                      const firstDay = new Date(now.getFullYear(), 0, 1);
+                      const lastDay = new Date(now.getFullYear(), 11, 31);
+                      
+                      setExportDateRange({
+                        from: firstDay.toISOString().split('T')[0],
+                        to: lastDay.toISOString().split('T')[0]
+                      });
+                    }}
+                    className='text-xs'
+                  >
+                    This Year
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            <div className='flex justify-end gap-2 pt-4'>
+              <Button
+                variant='outline'
+                onClick={() => {
+                  setIsExportDialogOpen(false);
+                  resetExportDateRange();
+                }}
+                disabled={isExporting}
+              >
+                Cancel
+              </Button>
+              
+              <Button
+                onClick={exportToCSV}
+                disabled={isExporting}
+                className='bg-primary hover:bg-primary/90 text-white'
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className='w-4 h-4 animate-spin mr-2' />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Upload className='w-4 h-4 mr-2' />
+                    Export
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

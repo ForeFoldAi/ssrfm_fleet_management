@@ -92,6 +92,13 @@ export interface QueryParams {
   [key: string]: any;
 }
 
+// Export Parameters
+export interface ExportParams {
+  from?: string;
+  to?: string;
+  [key: string]: any;
+}
+
 // Machine Types
 export enum MachineStatus {
   ACTIVE = 'Active',
@@ -343,7 +350,7 @@ export interface MaterialPurchase {
   orderDate: string;
   totalValue: string;
   purchaseOrderNumber: string;
-  status: 'pending' | 'partially_received' | 'fully_received' | 'closed';
+  status: 'pending' | 'partially_received' | 'fully_received';
   additionalNotes: string;
   createdAt: string;
   updatedAt: string;
@@ -416,5 +423,4 @@ export enum IndentStatus {
   ORDERED = 'ordered',
   PARTIALLY_RECEIVED = 'partially_received',
   FULLY_RECEIVED = 'fully_received',
-  CLOSED = 'closed',
 }
