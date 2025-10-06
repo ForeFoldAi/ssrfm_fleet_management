@@ -467,7 +467,7 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
       resubmittedBy: currentUser?.name,
       resubmittedDate: new Date().toISOString(),
       resubmissionNotes: resubmissionNotes,
-      originalRevertReason: request.revertReason,
+      originalRevertReason: request.revertReason || request.rejectionReason,
       resubmissionCount: (request.resubmissionCount || 0) + 1,
       items: requestItems.map(item => ({
         ...item,
@@ -477,6 +477,7 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
       department: currentUser?.department || ""
     };
 
+    console.log('ResubmitForm: Submitting updated request:', updatedRequest);
     onSubmit(updatedRequest);
 
     toast({
@@ -974,11 +975,11 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
                             <TableCell className='border-r'>
                               {quotation.phone}
                             </TableCell>
-                            <TableCell className='border-r font-medium'>
-                              {quotation.price}
+                            <TableCell className='border-r font-medium text-blue-600'>
+                              ₹{quotation.price}
                             </TableCell>
                             <TableCell className='border-r font-medium text-primary'>
-                              {quotation.quotationAmount}
+                              ₹{quotation.quotationAmount}
                             </TableCell>
                             <TableCell className='border-r text-sm'>
                               {quotation.notes || '-'}
@@ -1016,7 +1017,7 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
                         ?.vendorQuotations.length && (
                           <TableRow>
                             <TableCell
-                              colSpan={9}
+                              colSpan={10}
                               className='text-center py-8 text-muted-foreground'
                             >
                               No vendor quotations
@@ -1211,6 +1212,9 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
                         <TableHead className='border-r font-semibold w-28'>
                           Phone
                         </TableHead>
+                        <TableHead className='border-r font-semibold w-24'>
+                          Price
+                        </TableHead>
                         <TableHead className='border-r font-semibold w-32'>
                           Total Quotation Amount
                         </TableHead>
@@ -1238,8 +1242,11 @@ export const ResubmitForm = ({ request, isOpen, onClose, onSubmit }: ResubmitFor
                           <TableCell className='border-r'>
                             {quotation.phone || '-'}
                           </TableCell>
+                          <TableCell className='border-r font-medium text-blue-600'>
+                            ₹{quotation.price}
+                          </TableCell>
                           <TableCell className='border-r font-medium text-primary'>
-                            {quotation.quotationAmount}
+                            ₹{quotation.quotationAmount}
                           </TableCell>
                           <TableCell className='border-r text-sm max-w-32'>
                             <div

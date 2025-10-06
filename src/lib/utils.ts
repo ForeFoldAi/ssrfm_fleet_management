@@ -72,7 +72,7 @@ export function parseLocationFromId(id: string): string {
   }
   
   // Handle old format: SSRFM/UNITI/R-250826001 -> Unit I
-  const oldMatch = id.match(/SSRFM\/([^\/]+)\/(R-|I-)/);
+  const oldMatch = id.match(/SSRFM\/([^/]+)\/(R-|I-)/);
   if (oldMatch) {
     const locationCode = oldMatch[1];
     

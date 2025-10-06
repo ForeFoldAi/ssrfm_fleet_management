@@ -59,6 +59,9 @@ export const CompanyOwnerRequestForm: React.FC<CompanyOwnerRequestFormProps> = (
 }) => {
   const getStatusOptions = (itemId: string) => {
     const hasVendorSelected = selectedVendors[itemId];
+    const item = requestData.items.find(i => i.id === itemId);
+    const hasNoVendorQuotations = !item?.vendorQuotations || item.vendorQuotations.length === 0;
+    
     const options = [
       {
         value: 'reverted',
@@ -69,7 +72,8 @@ export const CompanyOwnerRequestForm: React.FC<CompanyOwnerRequestFormProps> = (
      
     ];
 
-    if (hasVendorSelected) {
+    // Show approve option if vendor is selected OR if there are no vendor quotations
+    if (hasVendorSelected || hasNoVendorQuotations) {
       options.unshift({
         value: 'approved',
         label: 'Approve',
@@ -87,14 +91,11 @@ export const CompanyOwnerRequestForm: React.FC<CompanyOwnerRequestFormProps> = (
 
   const getSubmitButtonText = () => {
     const approvedCount = Object.values(selectedStatuses).filter(status => status === 'approved').length;
-    const rejectedCount = Object.values(selectedStatuses).filter(status => status === 'rejected').length;
     const revertedCount = Object.values(selectedStatuses).filter(status => status === 'reverted').length;
 
-    if (approvedCount > 0 && rejectedCount === 0 && revertedCount === 0) {
+    if (approvedCount > 0 && revertedCount === 0) {
       return `Approve ${approvedCount} Item${approvedCount > 1 ? 's' : ''}`;
-    } else if (rejectedCount > 0 && approvedCount === 0 && revertedCount === 0) {
-      return `Reject ${rejectedCount} Item${rejectedCount > 1 ? 's' : ''}`;
-    } else if (revertedCount > 0 && approvedCount === 0 && rejectedCount === 0) {
+    } else if (revertedCount > 0 && approvedCount === 0) {
       return `Revert ${revertedCount} Item${revertedCount > 1 ? 's' : ''}`;
     } else {
       return `Submit Decisions (${Object.keys(selectedStatuses).length}/${requestData.items.length})`;

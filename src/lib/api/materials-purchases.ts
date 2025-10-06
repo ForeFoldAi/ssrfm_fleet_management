@@ -5,14 +5,14 @@ import {
   MaterialPurchase,
   CreateMaterialPurchaseRequest,
   ReceiveMaterialPurchaseItemRequest,
-  ReceiveMaterialPurchaseItemResponse
+  ReceiveMaterialPurchaseItemResponse,
+  ExportParams
 } from './types';
 
 export enum MaterialPurchaseStatus {
   PENDING = 'pending',
   PARTIALLY_RECEIVED = 'partially_received',
   FULLY_RECEIVED = 'fully_received',
-  CLOSED = 'closed',
 }
 
 export const materialPurchasesApi = {
@@ -106,14 +106,65 @@ export const materialPurchasesApi = {
   },
 
   /**
-   * Close a material purchase (mark as fully received)
+   * Export material purchases to Excel file
+   * @param params Export parameters (optional) - if no params provided, exports all material purchases
+   * @returns Promise with blob data for Excel file download
+   * 
+   * Automatically includes proper headers:
+   * - Accept: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   * - Authorization: Bearer token (from localStorage via axios interceptor)
+   * 
+   * @example
+   * ```typescript
+   * // Export all material purchases (no parameters needed)
+   * const blob = await materialPurchasesApi.exportToExcel();
+   * 
+   * // Export material purchases from a specific date range
+   * const blob = await materialPurchasesApi.exportToExcel({
+   *   from: '2024-01-01',
+   *   to: '2025-10-10'
+   * });
+   * 
+   * // Create download link
+   * const url = window.URL.createObjectURL(blob);
+   * const link = document.createElement('a');
+   * link.href = url;
+   * link.download = 'material-purchases-export.xlsx';
+   * link.click();
+   * window.URL.revokeObjectURL(url);
+   * ```
    */
-  close: async (id: number): Promise<MaterialPurchase> => {
-    const response = await api.post<MaterialPurchase>(
-      `/inventory/material-purchases/${id}/close`
-    );
+  exportToExcel: async (params: ExportParams = {}): Promise<Blob> => {
+    const queryParams = new URLSearchParams();
+
+    // Add export parameters (all optional)
+    if (params.from) queryParams.append('from', params.from);
+    if (params.to) queryParams.append('to', params.to);
+
+    // Add any additional filter parameters
+    Object.entries(params).forEach(([key, value]) => {
+      if (
+        !['from', 'to'].includes(key) &&
+        value !== undefined
+      ) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const queryString = queryParams.toString();
+    // URL works with or without query parameters - exports all material purchases if no params provided
+    const url = `/inventory/material-purchases/export/xlsx${queryString ? `?${queryString}` : ''}`;
+
+    const response = await api.get(url, {
+      responseType: 'blob',
+      headers: {
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+    });
+
     return response.data;
   },
+
 };
 
 export default materialPurchasesApi;

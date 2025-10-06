@@ -4,7 +4,6 @@ import {
   Search,
   List,
   Table,
-  Edit,
   Eye,
   Package,
   FileText,
@@ -20,6 +19,8 @@ import {
   ChevronsRight,
   CheckCircle,
   WifiOff,
+  Download,
+  Upload,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -76,11 +77,10 @@ export const MaterialsTab = () => {
   const [filterUnit, setFilterUnit] = useState('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isAddMaterialOpen, setIsAddMaterialOpen] = useState(false);
-  const [isViewEditOpen, setIsViewEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedMaterial, setSelectedMaterial] = useState<Material | null>(
     null
   );
-  const [isEditMode, setIsEditMode] = useState(false);
 
   // Sorting state - Modified to show newly added materials at the top
   const [sortField, setSortField] = useState<SortField>('createdAt');
@@ -110,6 +110,7 @@ export const MaterialsTab = () => {
   // Add state for material categories
   const [materialCategories, setMaterialCategories] = useState<MaterialCategory[]>([]);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Fetch materials from API
   const fetchMaterials = async (page = 1, limit = 10) => {
@@ -254,57 +255,19 @@ export const MaterialsTab = () => {
     setExpandedRows(newExpandedRows);
   };
 
-  // Helper function to check if material can be edited (within 7 days)
-  const canEditMaterial = (createdAt: string) => {
-    const createDate = new Date(createdAt);
-    const currentDate = new Date();
-    const diffTime = Math.abs(currentDate.getTime() - createDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays <= 7;
+  // Helper function to format date for display
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
   };
 
-  // Add form submission handler
-  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // Prevent default form submission
-    
-    if (!selectedMaterial) return;
-
-    try {
-      // Get form data
-      const formData = new FormData(e.currentTarget);
-      const updatedMaterial = {
-        name: formData.get('name') as string,
-        specifications: formData.get('specifications') as string,
-        makerBrand: formData.get('makerBrand') as string,
-        currentStock: parseFloat(formData.get('currentStock') as string),
-        totalValue: parseFloat(formData.get('totalValue') as string),
-        additionalNotes: formData.get('additionalNotes') as string,
-        // Add other fields as needed
-      };
-
-      // Call the update API
-      await materialsApi.update(selectedMaterial.id, updatedMaterial);
-      
-      // Show success message
-      toast({
-        title: 'Success',
-        description: 'Material updated successfully.',
-      });
-
-      // Close the dialog
-      handleViewEditClose();
-      
-      // Refresh the materials list
-      fetchMaterials(currentPage, itemsPerPage);
-      
-    } catch (error) {
-      console.error('Error updating material:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update material. Please try again.',
-        variant: 'destructive',
-      });
-    }
+  // Handle material view
+  const handleMaterialView = (material: Material) => {
+    setSelectedMaterial(material);
+    setIsViewOpen(true);
   };
 
   // Initial data fetch
@@ -380,38 +343,122 @@ export const MaterialsTab = () => {
   };
 
   const handleMaterialClick = (material: Material) => {
-    if (canEditMaterial(material.createdAt)) {
-      setSelectedMaterial(material);
-      setIsEditMode(true);
-      setIsViewEditOpen(true);
-    } else {
-      toast({
-        title: 'Cannot Edit Material',
-        description: "This material cannot be edited as it's more than 7 days old. Only recent materials (within 7 days) can be modified.",
-        variant: 'destructive',
-      });
-    }
+    handleMaterialView(material);
   };
 
-  const handleEditClick = (e: React.MouseEvent, material: Material) => {
-    e.stopPropagation();
-    if (canEditMaterial(material.createdAt)) {
-      setSelectedMaterial(material);
-      setIsEditMode(true);
-      setIsViewEditOpen(true);
-    } else {
-      toast({
-        title: 'Cannot Edit Material',
-        description: "This material cannot be edited as it's more than 7 days old. Only recent materials (within 7 days) can be modified.",
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleViewEditClose = () => {
-    setIsViewEditOpen(false);
+  const handleViewClose = () => {
+    setIsViewOpen(false);
     setSelectedMaterial(null);
-    setIsEditMode(false);
+  };
+
+  // Export functionality
+  const exportToCSV = async () => {
+    try {
+      setIsExporting(true);
+      
+      // Fetch all materials with pagination (API limit is 100)
+      let allMaterials: Material[] = [];
+      let currentPage = 1;
+      let hasMorePages = true;
+      const limit = 100; // API limit
+
+      while (hasMorePages) {
+        const response = await materialsApi.getMaterials({
+          page: currentPage,
+          limit: limit,
+          sortBy: sortField,
+          sortOrder: sortOrder,
+          ...(searchQuery && { search: searchQuery }),
+          ...(filterUnit !== 'all' &&
+            currentUser?.role === 'company_owner' && {
+              branchId: filterUnit,
+            }),
+        });
+
+        allMaterials = [...allMaterials, ...response.data];
+        
+        // Check if there are more pages
+        hasMorePages = response.meta?.hasNextPage || false;
+        currentPage++;
+        
+        // Safety check to prevent infinite loops
+        if (currentPage > 1000) {
+          console.warn('Export stopped at page 1000 to prevent infinite loop');
+          break;
+        }
+      }
+      
+      // Prepare CSV headers
+      const headers = [
+        'Material Name',
+        'Specifications',
+        'Model/Version',
+        'Measure Unit',
+        'Current Stock',
+        'Min Stock Level',
+        'Average Price (₹)',
+        'Total Value (₹)',
+        'Stock Status',
+        'Created Date',
+        'Additional Notes'
+      ];
+
+      // Prepare CSV data
+      const csvData = allMaterials.map((material) => {
+        const stockStatus = getStockStatus(material.currentStock, material.minStockLevel);
+        return [
+          `"${material.name || ''}"`,
+          `"${material.specifications || ''}"`,
+          `"${material.makerBrand || ''}"`,
+          `"${material.measureUnit?.name || ''}"`,
+          material.currentStock || 0,
+          material.minStockLevel || 0,
+          getAveragePrice(material),
+          material.totalValue || 0,
+          `"${stockStatus}"`,
+          `"${formatDate(material.createdAt)}"`,
+          `"${material.additionalNotes || ''}"`
+        ];
+      });
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => row.join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      
+      // Generate filename with current date
+      const currentDate = new Date().toISOString().split('T')[0];
+      const filename = `materials_export_${currentDate}.csv`;
+      link.setAttribute('download', filename);
+      
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: 'Export Successful',
+        description: `Materials data exported successfully. ${allMaterials.length} records downloaded.`,
+        variant: 'default',
+      });
+
+    } catch (error) {
+      console.error('Error exporting materials:', error);
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to export materials data. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (loading && materials.length === 0) {
@@ -521,6 +568,20 @@ export const MaterialsTab = () => {
           )}
 
           <Button
+            variant='outline'
+            className='w-full sm:w-auto text-sm sm:text-base'
+            onClick={exportToCSV}
+            disabled={isExporting || !isOnline}
+          >
+            {isExporting ? (
+              <Loader2 className='w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin' />
+            ) : (
+              <Upload className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
+            )}
+            {isExporting ? 'Exporting...' : 'Export'}
+          </Button>
+
+          <Button
             className='btn-primary w-full sm:w-auto text-sm sm:text-base'
             onClick={() => setIsAddMaterialOpen(true)}
           >
@@ -557,6 +618,16 @@ export const MaterialsTab = () => {
                         {getSortIcon('name')}
                       </Button>
                     </TableHead>
+                    <TableHead className='w-36 text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('makerBrand')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Model/Version
+                        {getSortIcon('makerBrand')}
+                      </Button>
+                    </TableHead>
                     <TableHead className='w-64 text-foreground font-semibold'>
                       <Button
                         variant='ghost'
@@ -582,16 +653,6 @@ export const MaterialsTab = () => {
                     </TableHead>
                     <TableHead className='w-32 text-foreground font-semibold'>
                       Stock Indicator
-                    </TableHead>
-                    <TableHead className='w-36 text-foreground font-semibold'>
-                      <Button
-                        variant='ghost'
-                        onClick={() => handleSort('makerBrand')}
-                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                      >
-                        Model/Version
-                        {getSortIcon('makerBrand')}
-                      </Button>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -632,6 +693,11 @@ export const MaterialsTab = () => {
                           </span>
                         </TableCell>
                         <TableCell>
+                          <div className='text-sm text-muted-foreground'>
+                            {material.makerBrand}
+                          </div>
+                        </TableCell>
+                        <TableCell>
                           <div className='text-sm text-muted-foreground truncate max-w-40'>
                             {material.specifications}
                           </div>
@@ -650,11 +716,6 @@ export const MaterialsTab = () => {
                           <Badge className={getStatusBadge(stockStatus)}>
                             {stockStatus}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className='text-sm text-muted-foreground'>
-                            {material.makerBrand}
-                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -679,6 +740,16 @@ export const MaterialsTab = () => {
                       >
                         Material
                         {getSortIcon('name')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-36 text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('makerBrand')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Model/Version
+                        {getSortIcon('makerBrand')}
                       </Button>
                     </TableHead>
                     <TableHead className='w-64 text-foreground font-semibold'>
@@ -707,16 +778,6 @@ export const MaterialsTab = () => {
                     <TableHead className='w-32 text-foreground font-semibold'>
                     Stock Indicator
                     </TableHead>
-                    <TableHead className='w-36 text-foreground font-semibold'>
-                      <Button
-                        variant='ghost'
-                        onClick={() => handleSort('makerBrand')}
-                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                      >
-                        Model/Version
-                        {getSortIcon('makerBrand')}
-                      </Button>
-                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -738,6 +799,9 @@ export const MaterialsTab = () => {
                             {material.name}
                           </span>
                         </TableCell>
+                        <TableCell className='text-muted-foreground truncate max-w-32 hover:text-primary transition-colors'>
+                          {material.makerBrand}
+                        </TableCell>
                         <TableCell className='text-muted-foreground max-w-xs truncate hover:text-primary transition-colors'>
                           {material.specifications}
                         </TableCell>
@@ -751,9 +815,6 @@ export const MaterialsTab = () => {
                           <Badge className={getStatusBadge(stockStatus)}>
                             {stockStatus}
                           </Badge>
-                        </TableCell>
-                        <TableCell className='text-muted-foreground truncate max-w-32 hover:text-primary transition-colors'>
-                          {material.makerBrand}
                         </TableCell>
                       </TableRow>
                     );
@@ -936,44 +997,36 @@ export const MaterialsTab = () => {
         onSubmit={handleAddMaterial}
       />
 
-      {/* Edit Material Dialog */}
-      <Dialog open={isViewEditOpen} onOpenChange={handleViewEditClose}>
+      {/* View Material Dialog */}
+      <Dialog open={isViewOpen} onOpenChange={handleViewClose}>
         <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
           <DialogHeader className='flex flex-row items-center justify-between'>
             <DialogTitle className='text-xl font-semibold'>
-              Edit Material
+             View Material Details
             </DialogTitle>
           </DialogHeader>
 
           {selectedMaterial && (
-            <form className='space-y-6 py-4' onSubmit={handleFormSubmit}>
+            <div className='space-y-6 py-4'>
               {/* Material Information Section */}
               <div className='space-y-4'>
                 {/* First Row */}
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
                   <div className='space-y-1'>
                     <Label className='text-sm font-medium'>
-                      Material Name *
+                      Material Name
                     </Label>
-                    <Input
-                      name='name'
-                      defaultValue={selectedMaterial.name}
-                      className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-                    />
+                    <div className='h-9 px-3 py-2 bg-muted/50 border border-input rounded-[5px] text-sm font-medium'>
+                      {selectedMaterial.name}
+                    </div>
                   </div>
 
                   <div className='space-y-1'>
                     <Label className='text-sm font-medium'>
-                      Specifications * (Max 30 characters)
+                      Specifications
                     </Label>
-                    <Input
-                      name='specifications'
-                      defaultValue={selectedMaterial.specifications}
-                      maxLength={30}
-                      className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-                    />
-                    <div className='text-xs text-muted-foreground'>
-                      {selectedMaterial.specifications?.length || 0}/30 characters
+                    <div className='h-9 px-3 py-2 bg-muted/50 border border-input rounded-[5px] text-sm'>
+                      {selectedMaterial.specifications}
                     </div>
                   </div>
                 </div>
@@ -982,95 +1035,87 @@ export const MaterialsTab = () => {
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
                   <div className='space-y-1'>
                     <Label className='text-sm font-medium'>
-                      Measure Unit *
+                      Measure Unit
                     </Label>
-                    <Select defaultValue={selectedMaterial.measureUnit?.name}>
-                      <SelectTrigger className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
-                        <SelectValue placeholder='Select Measure unit' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {units.map((unit) => (
-                          <SelectItem key={unit.id} value={unit.name}>
-                            {unit.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className='h-9 px-3 py-2 bg-muted/50 border border-input rounded-[5px] text-sm'>
+                      {selectedMaterial.measureUnit?.name || 'Not specified'}
+                    </div>
                   </div>
 
                   <div className='space-y-1'>
                     <Label className='text-sm font-medium'>Model/Version</Label>
-                    <Input
-                      name='makerBrand'
-                      defaultValue={selectedMaterial.makerBrand}
-                      className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-                    />
+                    <div className='h-9 px-3 py-2 bg-muted/50 border border-input rounded-[5px] text-sm'>
+                      {selectedMaterial.makerBrand || 'Not specified'}
                   </div>
                 </div>
 
-                {/* Third Row - Current Stock (Read-only) and Total Value */}
+                </div>
+
+                {/* Third Row - Stock and Value Information */}
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
                   <div className='space-y-1'>
                     <Label className='text-sm font-medium'>
-                      Current Stock *
+                      Current Stock
                     </Label>
-                    <Input
-                      name='currentStock'
-                      type='number'
-                      step='0.01'
-                      defaultValue={selectedMaterial.currentStock}
-                      disabled={!canEditMaterial(selectedMaterial.createdAt)}
-                      className={`h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200 ${
-                        !canEditMaterial(selectedMaterial.createdAt) 
-                          ? 'bg-muted text-muted-foreground cursor-not-allowed' 
-                          : ''
-                      }`}
-                    />
-                    {!canEditMaterial(selectedMaterial.createdAt) && (
-                      <p className='text-xs text-muted-foreground'>
-                        Current stock cannot be edited for materials older than 7 days
-                      </p>
-                    )}
+                    <div className='h-9 px-3 py-2 bg-muted/50 border border-input rounded-[5px] text-sm font-medium'>
+                      {selectedMaterial.currentStock} {selectedMaterial.measureUnit?.name || 'units'}
+                    </div>
+                    <div className='space-y-1'>
+                  <Label className='text-sm font-medium'>
+                    Stock Status
+                  </Label>
+                  <div className='h-9 px-3 py-2 bg-muted/50 border border-input rounded-[5px] flex items-center'>
+                    <Badge className={getStatusBadge(getStockStatus(selectedMaterial.currentStock, selectedMaterial.minStockLevel))}>
+                      {getStockStatus(selectedMaterial.currentStock, selectedMaterial.minStockLevel)}
+                    </Badge>
+                  </div>
+                  
+                </div>
+
                   </div>
 
                   <div className='space-y-1'>
                     <Label className='text-sm font-medium'>
-                      Total Value (₹) *
+                      Total Value (₹)
                     </Label>
-                    <Input
-                      name='totalValue'
-                      type='number'
-                      step='0.01'
-                      defaultValue={(selectedMaterial as any).totalValue || '0.00'}
-                      className='h-9 px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-                    />
+                    <div className='h-9 px-3 py-2 bg-muted/50 border border-input rounded-[5px] text-sm font-medium'>
+                      ₹{getAveragePrice(selectedMaterial)}
+                    </div>
+                    
+                    <div className='space-y-1'>
+                    <Label className='text-sm font-medium'>
+                      Created Date
+                    </Label>
+                    <div className='h-9 px-3 py-2 bg-muted/50 border border-input rounded-[5px] text-sm'>
+                      {formatDate(selectedMaterial.createdAt)}
+                    </div>
+                  </div>
                   </div>
                 </div>
+
+                {/* Stock Status */}
+               
+
+               
 
                 {/* Additional Notes */}
                 <div className='space-y-1'>
                   <Label className='text-sm font-medium'>
                     Additional Notes
                   </Label>
-                  <Textarea
-                    name='additionalNotes'
-                    defaultValue={selectedMaterial.additionalNotes || ''}
-                    className='min-h-[60px] px-3 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'
-                  />
+                  <div className='min-h-[60px] px-3 py-2 bg-muted/50 border border-input rounded-[5px] text-sm'>
+                    {selectedMaterial.additionalNotes || 'No additional notes'}
+                  </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
               <div className='flex justify-end space-x-2 pt-4 border-t'>
-                <Button type='button' variant='outline' onClick={handleViewEditClose}>
-                  Cancel
-                </Button>
-                <Button type='submit'>
-                  <Edit className='w-4 h-4 mr-2' />
-                  Save Changes
+                <Button type='button' variant='outline' onClick={handleViewClose}>
+                  Close
                 </Button>
               </div>
-            </form>
+            </div>
           )}
         </DialogContent>
       </Dialog>

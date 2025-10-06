@@ -1,5 +1,5 @@
 import api from './axios';
-import { Machine, PaginatedResponse, QueryParams } from './types';
+import { Machine, PaginatedResponse, QueryParams, ExportParams } from './types';
 
 export const machinesApi = {
   /**
@@ -75,6 +75,66 @@ export const machinesApi = {
    */
   delete: async (id: number): Promise<void> => {
     await api.delete(`/inventory/machines/${id}`);
+  },
+
+  /**
+   * Export machines to Excel file
+   * @param params Export parameters (optional) - if no params provided, exports all machines
+   * @returns Promise with blob data for Excel file download
+   * 
+   * Automatically includes proper headers:
+   * - Accept: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+   * - Authorization: Bearer token (from localStorage via axios interceptor)
+   * 
+   * @example
+   * ```typescript
+   * // Export all machines (no parameters needed)
+   * const blob = await machinesApi.exportToExcel();
+   * 
+   * // Export machines from a specific date range
+   * const blob = await machinesApi.exportToExcel({
+   *   from: '2024-01-01',
+   *   to: '2025-10-10'
+   * });
+   * 
+   * // Create download link
+   * const url = window.URL.createObjectURL(blob);
+   * const link = document.createElement('a');
+   * link.href = url;
+   * link.download = 'machines-export.xlsx';
+   * link.click();
+   * window.URL.revokeObjectURL(url);
+   * ```
+   */
+  exportToExcel: async (params: ExportParams = {}): Promise<Blob> => {
+    const queryParams = new URLSearchParams();
+
+    // Add export parameters (all optional)
+    if (params.from) queryParams.append('from', params.from);
+    if (params.to) queryParams.append('to', params.to);
+
+    // Add any additional filter parameters
+    Object.entries(params).forEach(([key, value]) => {
+      if (
+        !['from', 'to'].includes(key) &&
+        value !== undefined
+      ) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const queryString = queryParams.toString();
+    // URL works with or without query parameters - exports all machines if no params provided
+    const url = `/inventory/machines/export/xlsx${queryString ? `?${queryString}` : ''}`;
+
+    const response = await api.get(url, {
+      responseType: 'blob',
+      headers: {
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+    });
+
+    return response.data;
   },
 };
 

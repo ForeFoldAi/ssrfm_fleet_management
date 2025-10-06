@@ -27,16 +27,16 @@ export const RequestForm = ({ formData, onUpdate, onNext }: RequestFormProps) =>
 
   // SSRFM specific materials for Roller Flour Mills
   const materials = [
-    { id: "bearings", name: "Bearings", measureUnit: "pieces", category: "Mechanical Components" },
-    { id: "belts", name: "Belts", measureUnit: "pieces", category: "Mechanical Components" },
-    { id: "fevicol", name: "Fevicol (Adhesive)", measureUnit: "bottles", category: "Adhesives & Sealants" },
-    { id: "motor-oil", name: "Motor Oil", measureUnit: "liters", category: "Lubricants" },
-    { id: "grinding-stones", name: "Grinding Stones", measureUnit: "pieces", category: "Processing Equipment" },
-    { id: "flour-sieves", name: "Flour Sieves", measureUnit: "pieces", category: "Processing Equipment" },
-    { id: "conveyor-belts", name: "Conveyor Belts", measureUnit: "meters", category: "Mechanical Components" },
-    { id: "electrical-wires", name: "Electrical Wires", measureUnit: "meters", category: "Electrical" },
-    { id: "switches", name: "Electrical Switches", measureUnit: "pieces", category: "Electrical" },
-    { id: "safety-equipment", name: "Safety Equipment", measureUnit: "sets", category: "Safety" }
+    { id: "bearings", name: "Bearings", makerBrand: "SKF, NSK, Timken", measureUnit: "pieces", category: "Mechanical Components" },
+    { id: "belts", name: "Belts", makerBrand: "Gates, Bando, Contitech", measureUnit: "pieces", category: "Mechanical Components" },
+    { id: "fevicol", name: "Fevicol (Adhesive)", makerBrand: "Pidilite Industries", measureUnit: "bottles", category: "Adhesives & Sealants" },
+    { id: "motor-oil", name: "Motor Oil", makerBrand: "Castrol, Shell, Mobil", measureUnit: "liters", category: "Lubricants" },
+    { id: "grinding-stones", name: "Grinding Stones", makerBrand: "Norton, 3M, Tyrolit", measureUnit: "pieces", category: "Processing Equipment" },
+    { id: "flour-sieves", name: "Flour Sieves", makerBrand: "Sweco, Kason, Russell", measureUnit: "pieces", category: "Processing Equipment" },
+    { id: "conveyor-belts", name: "Conveyor Belts", makerBrand: "Bridgestone, Goodyear, Fenner", measureUnit: "meters", category: "Mechanical Components" },
+    { id: "electrical-wires", name: "Electrical Wires", makerBrand: "Polycab, Finolex, Havells", measureUnit: "meters", category: "Electrical" },
+    { id: "switches", name: "Electrical Switches", makerBrand: "Schneider, Siemens, ABB", measureUnit: "pieces", category: "Electrical" },
+    { id: "safety-equipment", name: "Safety Equipment", makerBrand: "3M, Honeywell, MSA", measureUnit: "sets", category: "Safety" }
   ];
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, type: 'oldMaterial' | 'signature') => {
@@ -208,6 +208,7 @@ export const RequestForm = ({ formData, onUpdate, onNext }: RequestFormProps) =>
                     <Package className="w-4 h-4 text-primary" />
                     <div>
                       <div className="font-semibold">{material.name}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{material.makerBrand}</div>
                       <div className="text-sm text-muted-foreground">{material.category} • Unit: {material.measureUnit}</div>
                     </div>
                   </div>

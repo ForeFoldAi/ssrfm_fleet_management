@@ -92,7 +92,7 @@ const Login = () => {
             </div>
             
             <CardDescription>
-              Sign in to access the Materials Management System
+              Sign in to access the Operations Management System
             </CardDescription>
           </CardHeader>
           <CardContent>

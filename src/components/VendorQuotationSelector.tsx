@@ -14,6 +14,7 @@ interface VendorQuotation {
   quotedPrice: string;
   notes: string;
   quotationFile?: File | null;
+  isSelected?: boolean;
 }
 
 interface RequestItem {
@@ -39,7 +40,7 @@ export const VendorQuotationSelector: React.FC<VendorQuotationSelectorProps> = (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <h3 className="text-lg font-semibold">Vendor Selection</h3>
-        <Badge variant="secondary">Required for Approval</Badge>
+        <Badge variant="secondary">Optional</Badge>
       </div>
       
       {requestItems.map((item) => (
@@ -137,7 +138,7 @@ export const VendorQuotationSelector: React.FC<VendorQuotationSelectorProps> = (
               <div className="text-center py-8 text-muted-foreground">
                 <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No vendor quotations available for this item</p>
-                <p className="text-sm">Request cannot be approved without quotations</p>
+                <p className="text-sm">Request can still be approved without quotations</p>
               </div>
             )}
           </CardContent>
