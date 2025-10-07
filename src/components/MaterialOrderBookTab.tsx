@@ -189,8 +189,8 @@ export const MaterialOrderBookTab = () => {
       notes: '',
     });
 
-  // Sorting state
-  const [sortBy, setSortBy] = useState<string>('id');
+  // Sorting state - now for client-side sorting
+  const [sortBy, setSortBy] = useState<string>('uniqueId');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
 
   // API state
@@ -259,15 +259,11 @@ export const MaterialOrderBookTab = () => {
         const params: {
           page: number;
           limit: number;
-          sortBy: string;
-          sortOrder: 'ASC' | 'DESC';
           status?: string;
           branchId?: string;
         } = {
           page,
           limit,
-          sortBy,
-          sortOrder,
         };
 
         // Add status filter if not 'all' (for all roles including company owner)
@@ -324,55 +320,24 @@ export const MaterialOrderBookTab = () => {
         setIsLoading(false);
       }
     },
-    [filterStatus, filterUnit, sortBy, sortOrder, currentUser?.role] // Added currentUser?.role to dependencies
+    [filterStatus, filterUnit, currentUser?.role] // Removed sortBy and sortOrder from dependencies
   );
 
-  // Handle column sorting
+  // Handle column sorting - Client-side only
   const handleSort = (column: string) => {
-    // Map UI column names to API field names
-    const columnToFieldMap: { [key: string]: string } = {
-      uniqueId: 'uniqueId',
-      materialName: 'items.material.name',
-      quantity: 'items.requestedQuantity',
-      unitPrice: 'items.selectedQuotation.quotationAmount',
-      value: 'items.selectedQuotation.quotationAmount',
-      status: 'status',
-      requestDate: 'requestDate',
-      receivedDate: 'purchases.items.receivedDate',
-      machineName: 'items.machine.name',
-      branch: 'branch.name',
-    };
-
-    const apiField = columnToFieldMap[column] || column;
-
-    if (sortBy === apiField) {
+    if (sortBy === column) {
       // Toggle sort order if same column
       setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
     } else {
       // Set new column and default to ASC
-      setSortBy(apiField);
+      setSortBy(column);
       setSortOrder('ASC');
     }
   };
 
   // Get sort icon for column
   const getSortIcon = (column: string) => {
-    const columnToFieldMap: { [key: string]: string } = {
-      uniqueId: 'uniqueId',
-      materialName: 'items.material.name',
-      quantity: 'items.requestedQuantity',
-      unitPrice: 'items.selectedQuotation.quotationAmount',
-      value: 'items.selectedQuotation.quotationAmount',
-      status: 'status',
-      requestDate: 'requestDate',
-      receivedDate: 'purchases.items.receivedDate',
-      machineName: 'items.machine.name',
-      branch: 'branch.name',
-    };
-
-    const apiField = columnToFieldMap[column] || column;
-
-    if (sortBy !== apiField) {
+    if (sortBy !== column) {
       return <ArrowUpDown className='w-4 h-4 text-muted-foreground' />;
     }
     return sortOrder === 'ASC' ? (
@@ -1016,8 +981,6 @@ export const MaterialOrderBookTab = () => {
         const response = await materialIndentsApi.getAll({
           page: currentPage,
           limit: limit,
-          sortBy: sortBy,
-          sortOrder: sortOrder,
           ...(filterStatus !== 'all' && { status: filterStatus }),
           ...(filterUnit !== 'all' && { branchId: filterUnit }),
         });
@@ -1531,11 +1494,81 @@ export const MaterialOrderBookTab = () => {
     });
   };
 
+  // Sort data client-side
+  const sortData = (data: any[]) => {
+    if (!sortBy) return data;
+
+    return [...data].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortBy) {
+        case 'uniqueId':
+          aValue = a.id;
+          bValue = b.id;
+          break;
+        case 'requestDate':
+          aValue = a.date;
+          bValue = b.date;
+          break;
+        case 'materialName':
+          aValue = a.materialName?.toLowerCase() || '';
+          bValue = b.materialName?.toLowerCase() || '';
+          break;
+        case 'quantity':
+          // Extract numeric value from quantity string (e.g., "10 units" -> 10)
+          aValue = parseFloat(a.quantity) || 0;
+          bValue = parseFloat(b.quantity) || 0;
+          break;
+        case 'unitPrice':
+          // Extract numeric value from price string (e.g., "₹1000" -> 1000)
+          aValue = parseFloat(a.unitPrice?.replace(/[₹,]/g, '') || '0');
+          bValue = parseFloat(b.unitPrice?.replace(/[₹,]/g, '') || '0');
+          break;
+        case 'value':
+          // Extract numeric value from value string (e.g., "₹1000" -> 1000)
+          aValue = parseFloat(a.value?.replace(/[₹,]/g, '') || '0');
+          bValue = parseFloat(b.value?.replace(/[₹,]/g, '') || '0');
+          break;
+        case 'status':
+          aValue = a.status?.toLowerCase() || '';
+          bValue = b.status?.toLowerCase() || '';
+          break;
+        case 'receivedDate':
+          aValue = a.receivedDate || '';
+          bValue = b.receivedDate || '';
+          break;
+        case 'machineName':
+          aValue = a.machineName?.toLowerCase() || '';
+          bValue = b.machineName?.toLowerCase() || '';
+          break;
+        case 'branch':
+          aValue = a.branch?.toLowerCase() || '';
+          bValue = b.branch?.toLowerCase() || '';
+          break;
+        default:
+          aValue = a[sortBy];
+          bValue = b[sortBy];
+      }
+
+      // Handle null/undefined values
+      if (aValue === null || aValue === undefined || aValue === '') aValue = '';
+      if (bValue === null || bValue === undefined || bValue === '') bValue = '';
+
+      // Compare values
+      if (aValue < bValue) return sortOrder === 'ASC' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'ASC' ? 1 : -1;
+      return 0;
+    });
+  };
+
   // Get filtered and transformed indents for UI
   const getFilteredIndents = () => {
     // Only apply client-side search filtering, status and unit filters are handled by API
     const searchFilteredData = filterIndents(materialIndents);
-    return searchFilteredData.map(transformApiIndentToUiFormat);
+    const transformedData = searchFilteredData.map(transformApiIndentToUiFormat);
+    // Apply client-side sorting
+    return sortData(transformedData);
   };
 
   const filteredRequests = getFilteredIndents();
