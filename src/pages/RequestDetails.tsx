@@ -220,8 +220,23 @@ const RequestDetails: React.FC = () => {
           status: IndentStatus;
         }> = [];
         
-        // Get selected vendor name from indent items
-        const selectedVendorName = indentData.items?.[0]?.selectedQuotation?.vendorName || 'Unknown Vendor';
+        // Get selected vendor name from indent items (find first item with selected quotation)
+        const selectedVendorName = (() => {
+          // Try to find any item with a selected quotation
+          for (const item of indentData.items || []) {
+            if (item.selectedQuotation?.vendorName) {
+              return item.selectedQuotation.vendorName;
+            }
+          }
+          // Fallback: check if any item has quotations with isSelected=true
+          for (const item of indentData.items || []) {
+            const selectedQuotation = item.quotations?.find(q => q.isSelected === true);
+            if (selectedQuotation?.vendorName) {
+              return selectedQuotation.vendorName;
+            }
+          }
+          return 'Unknown Vendor';
+        })();
         
         // Check if backend provides partialReceiptHistory directly
         if (indentData.partialReceiptHistory && Array.isArray(indentData.partialReceiptHistory) && indentData.partialReceiptHistory.length > 0) {
@@ -303,7 +318,10 @@ const RequestDetails: React.FC = () => {
             imagePreviews: item.imagePaths || [],
             purposeType: PurposeType.MACHINE, // Add required purposeType field
             vendorQuotations: item.quotations
-              .filter((quotation) => quotation.isSelected === true)
+              // Show ALL quotations if pending_approval, only selected ones otherwise
+              .filter((quotation) => 
+                indentData.status === IndentStatus.PENDING_APPROVAL || quotation.isSelected === true
+              )
               .map((quotation) => ({
                 id: quotation.id.toString(),
                 vendorName: quotation.vendorName,
@@ -647,8 +665,23 @@ const RequestDetails: React.FC = () => {
           status: IndentStatus;
         }> = [];
         
-        // Get selected vendor name from indent items
-        const selectedVendorName = refreshedIndent.items?.[0]?.selectedQuotation?.vendorName || 'Unknown Vendor';
+        // Get selected vendor name from indent items (find first item with selected quotation)
+        const selectedVendorName = (() => {
+          // Try to find any item with a selected quotation
+          for (const item of refreshedIndent.items || []) {
+            if (item.selectedQuotation?.vendorName) {
+              return item.selectedQuotation.vendorName;
+            }
+          }
+          // Fallback: check if any item has quotations with isSelected=true
+          for (const item of refreshedIndent.items || []) {
+            const selectedQuotation = item.quotations?.find(q => q.isSelected === true);
+            if (selectedQuotation?.vendorName) {
+              return selectedQuotation.vendorName;
+            }
+          }
+          return 'Unknown Vendor';
+        })();
         
         // Check if backend provides partialReceiptHistory directly
         if (refreshedIndent.partialReceiptHistory && Array.isArray(refreshedIndent.partialReceiptHistory) && refreshedIndent.partialReceiptHistory.length > 0) {
@@ -740,7 +773,10 @@ const RequestDetails: React.FC = () => {
             imagePreviews: item.imagePaths || [],
             purposeType: PurposeType.MACHINE,
             vendorQuotations: item.quotations
-              .filter((quotation) => quotation.isSelected === true)
+              // Show ALL quotations if pending_approval, only selected ones otherwise
+              .filter((quotation) => 
+                refreshedIndent.status === IndentStatus.PENDING_APPROVAL || quotation.isSelected === true
+              )
               .map((quotation) => ({
                 id: quotation.id.toString(),
                 vendorName: quotation.vendorName,

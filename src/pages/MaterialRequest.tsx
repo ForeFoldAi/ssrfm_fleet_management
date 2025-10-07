@@ -167,6 +167,9 @@ const MaterialRequest = () => {
   // Loading state for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Combined loading state for initial data fetch
+  const isInitialLoading = isLoadingMaterials || isLoadingMachines || isLoadingUnits;
+
   // Enhanced getUnitName function with better debugging
   const getUnitName = (unitId?: number) => {
     if (!unitId) {
@@ -416,6 +419,7 @@ const MaterialRequest = () => {
       const newQuotation: VendorQuotation = {
         ...vendorFormData,
         id: String(Date.now()),
+        isSelected: true, // Set to true by default so it shows in Current Quotations
       };
 
       setRequestItems((prev) =>
@@ -702,9 +706,6 @@ const MaterialRequest = () => {
                 <TableHead className='border border-gray-300 font-semibold w-40'>
                   VENDOR QUOTATIONS
                 </TableHead>
-                <TableHead className='border border-gray-300 font-semibold w-32'>
-                  PURPOSE TYPE
-                </TableHead>
                 <TableHead className='border border-gray-300 font-semibold w-52'>
                   MACHINE NAME
                 </TableHead>
@@ -926,56 +927,32 @@ const MaterialRequest = () => {
                   </TableCell>
                   <TableCell className='border border-gray-300'>
                     <Select
-                      value={item.purposeType}
+                      value={item.machineName}
                       onValueChange={(value) => {
-                        handleItemChange(item.id, 'purposeType', value);
-                        // Reset machine name when purpose type changes
-                        if (value === PurposeType.SPARE || value === PurposeType.OTHER) {
-                          handleItemChange(item.id, 'machineName', value === PurposeType.SPARE ? 'Spare' : 'Other');
+                        handleItemChange(item.id, 'machineName', value);
+                        // Update purposeType based on selection
+                        if (value === 'Spare') {
+                          handleItemChange(item.id, 'purposeType', PurposeType.SPARE);
+                        } else if (value === 'Other') {
+                          handleItemChange(item.id, 'purposeType', PurposeType.OTHER);
                         } else {
-                          handleItemChange(item.id, 'machineName', '');
+                          handleItemChange(item.id, 'purposeType', PurposeType.MACHINE);
                         }
                       }}
                     >
                       <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none'>
-                        <SelectValue placeholder='Select Purpose *' />
+                        <SelectValue placeholder='Select Machine *' />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={PurposeType.MACHINE}>Machine</SelectItem>
-                        <SelectItem value={PurposeType.SPARE}>Spare</SelectItem>
-                        <SelectItem value={PurposeType.OTHER}>Other</SelectItem>
+                        {availableMachines.map((machine) => (
+                          <SelectItem key={machine.id} value={machine.name}>
+                            {machine.name}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value='Other'>Other</SelectItem>
+                        <SelectItem value='Spare'>Spare</SelectItem>
                       </SelectContent>
                     </Select>
-                    {errors[`purposeType_${item.id}`] && (
-                      <p className='text-red-500 text-xs mt-1'>
-                        {errors[`purposeType_${item.id}`]}
-                      </p>
-                    )}
-                  </TableCell>
-                  <TableCell className='border border-gray-300'>
-                    {item.purposeType === PurposeType.MACHINE ? (
-                      <Select
-                        value={item.machineName}
-                        onValueChange={(value) =>
-                          handleItemChange(item.id, 'machineName', value)
-                        }
-                      >
-                        <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none'>
-                          <SelectValue placeholder='Select Machine *' />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableMachines.map((machine) => (
-                            <SelectItem key={machine.id} value={machine.name}>
-                              {machine.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <div className='text-sm text-gray-600 p-2'>
-                        {item.purposeType === PurposeType.SPARE ? 'Spare' : 'Other'}
-                      </div>
-                    )}
                     {errors[`machineName_${item.id}`] && (
                       <p className='text-red-500 text-xs mt-1'>
                         {errors[`machineName_${item.id}`]}
@@ -1169,66 +1146,38 @@ const MaterialRequest = () => {
                 {/* Right Column */}
                 <div className='space-y-6'>
                   {/* Purpose Type */}
-                  <div className='space-y-2'>
-                    <Label className='text-sm font-medium'>
-                      Purpose Type *
-                    </Label>
-                    <Select
-                      value={item.purposeType}
-                      onValueChange={(value) => {
-                        handleItemChange(item.id, 'purposeType', value);
-                        // Reset machine name when purpose type changes
-                        if (value === PurposeType.SPARE || value === PurposeType.OTHER) {
-                          handleItemChange(item.id, 'machineName', value === PurposeType.SPARE ? 'Spare' : 'Other');
-                        } else {
-                          handleItemChange(item.id, 'machineName', '');
-                        }
-                      }}
-                    >
-                      <SelectTrigger className='h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
-                        <SelectValue placeholder='Select Purpose *' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={PurposeType.MACHINE}>Machine</SelectItem>
-                        <SelectItem value={PurposeType.SPARE}>Spare</SelectItem>
-                        <SelectItem value={PurposeType.OTHER}>Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {errors[`purposeType_${item.id}`] && (
-                      <p className='text-destructive text-sm mt-1'>
-                        {errors[`purposeType_${item.id}`]}
-                      </p>
-                    )}
-                  </div>
-
                   {/* Machine Name */}
                   <div className='space-y-2'>
                     <Label className='text-sm font-medium'>
                       Machine Name *
                     </Label>
-                    {item.purposeType === PurposeType.MACHINE ? (
-                      <Select
-                        value={item.machineName}
-                        onValueChange={(value) =>
-                          handleItemChange(item.id, 'machineName', value)
+                    <Select
+                      value={item.machineName}
+                      onValueChange={(value) => {
+                        handleItemChange(item.id, 'machineName', value);
+                        // Update purposeType based on selection
+                        if (value === 'Spare') {
+                          handleItemChange(item.id, 'purposeType', PurposeType.SPARE);
+                        } else if (value === 'Other') {
+                          handleItemChange(item.id, 'purposeType', PurposeType.OTHER);
+                        } else {
+                          handleItemChange(item.id, 'purposeType', PurposeType.MACHINE);
                         }
-                      >
-                        <SelectTrigger className='h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
-                          <SelectValue placeholder='Select Machine *' />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableMachines.map((machine) => (
-                            <SelectItem key={machine.id} value={machine.name}>
-                              {machine.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <div className='h-11 px-4 py-2 border border-input bg-muted rounded-[5px] text-sm flex items-center text-muted-foreground'>
-                        {item.purposeType === PurposeType.SPARE ? 'Spare' : 'Other'}
-                      </div>
-                    )}
+                      }}
+                    >
+                      <SelectTrigger className='h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
+                        <SelectValue placeholder='Select Machine *' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableMachines.map((machine) => (
+                          <SelectItem key={machine.id} value={machine.name}>
+                            {machine.name}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value='Other'>Other</SelectItem>
+                        <SelectItem value='Spare'>Spare</SelectItem>
+                      </SelectContent>
+                    </Select>
                     {errors[`machineName_${item.id}`] && (
                       <p className='text-destructive text-sm mt-1'>
                         {errors[`machineName_${item.id}`]}
@@ -1367,6 +1316,57 @@ const MaterialRequest = () => {
       ))}
     </div>
   );
+
+  // Show loading screen until all data is fetched
+  if (isInitialLoading) {
+    return (
+      <div className='flex flex-col items-center justify-center min-h-[60vh] space-y-4'>
+        <div className='relative'>
+          <div className='w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin'></div>
+        </div>
+        <div className='text-center space-y-2'>
+          <h3 className='text-lg font-semibold text-foreground'>Loading Material Request Form</h3>
+          <p className='text-sm text-muted-foreground'>
+            Fetching materials, machines, and units...
+          </p>
+          <div className='flex items-center justify-center gap-2 text-xs text-muted-foreground'>
+            <div className='flex items-center gap-1'>
+              {isLoadingMaterials ? (
+                <div className='w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin'></div>
+              ) : (
+                <svg className='w-3 h-3 text-green-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 13l4 4L19 7' />
+                </svg>
+              )}
+              <span>Materials</span>
+            </div>
+            <span>•</span>
+            <div className='flex items-center gap-1'>
+              {isLoadingMachines ? (
+                <div className='w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin'></div>
+              ) : (
+                <svg className='w-3 h-3 text-green-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 13l4 4L19 7' />
+                </svg>
+              )}
+              <span>Machines</span>
+            </div>
+            <span>•</span>
+            <div className='flex items-center gap-1'>
+              {isLoadingUnits ? (
+                <div className='w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin'></div>
+              ) : (
+                <svg className='w-3 h-3 text-green-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 13l4 4L19 7' />
+                </svg>
+              )}
+              <span>Units</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='space-y-4 sm:space-y-6 p-4 sm:p-0'>

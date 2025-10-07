@@ -64,9 +64,21 @@ const Login = () => {
         description: `Welcome back, ${apiUser?.name || 'User'}!`,
       });
 
-      // Redirect
-      const redirectPath =
-        derivedRole === 'supervisor' ? '/materials-inventory' : '/';
+      // Role-based redirect logic (always go to role-specific default since logout clears last visited path)
+      const getRoleRedirectPath = (role: UserRole) => {
+        console.log('Login: Redirecting to role-specific page for:', role);
+        switch (role) {
+          case 'supervisor':
+            return '/materials-inventory';
+          case 'company_owner':
+            return '/'; // This will show CompanyOwnerDashboard
+          default:
+            return '/';
+        }
+      };
+
+      const redirectPath = getRoleRedirectPath(derivedRole);
+      
       navigate(redirectPath);
     } catch (err) {
       toast({

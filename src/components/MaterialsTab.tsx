@@ -67,7 +67,9 @@ type SortField =
   | 'specifications'
   | 'currentStock'
   | 'makerBrand'
-  | 'createdAt';
+  | 'createdAt'
+  | 'averagePrice'
+  | 'stockStatus';
 type SortOrder = 'ASC' | 'DESC';
 
 export const MaterialsTab = () => {
@@ -88,6 +90,7 @@ export const MaterialsTab = () => {
 
   // API state management - updated to match MachinesTab structure
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [sortedMaterials, setSortedMaterials] = useState<Material[]>([]);
   const [availableBranches, setAvailableBranches] = useState<Branch[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
@@ -113,16 +116,22 @@ export const MaterialsTab = () => {
   const [isExporting, setIsExporting] = useState(false);
 
   // Fetch materials from API
-  const fetchMaterials = async (page = 1, limit = 10) => {
+  const fetchMaterials = async (page = 1, limit = 10, customSortField?: SortField, customSortOrder?: SortOrder) => {
     try {
       setLoading(true);
       setError(null);
 
-      const params = {
+      // Use custom sort values if provided, otherwise use state values
+      const activeSortField = customSortField || sortField;
+      const activeSortOrder = customSortOrder || sortOrder;
+
+      // Only include API-supported sort fields in the request
+      const apiSupportedFields = ['name', 'specifications', 'currentStock', 'makerBrand', 'createdAt'];
+      const shouldIncludeSort = apiSupportedFields.includes(activeSortField);
+
+      const params: any = {
         page,
         limit,
-        sortBy: sortField,
-        sortOrder: sortOrder,
         ...(searchQuery && { search: searchQuery }),
         ...(filterUnit !== 'all' &&
           currentUser?.role === 'company_owner' && {
@@ -130,16 +139,65 @@ export const MaterialsTab = () => {
           }),
       };
 
-      // Debug logging
-      console.log('Materials API call params:', params);
-      console.log('Current filters - Unit:', filterUnit, 'Search:', searchQuery);
+      // Only add sort params if the field is API-supported
+      if (shouldIncludeSort) {
+        params.sortBy = activeSortField;
+        params.sortOrder = activeSortOrder;
+      }
 
       const response = await materialsApi.getMaterials(params);
       setMaterialsData(response);
       setMaterials(response.data);
-    } catch (err) {
+      
+      // If sorting by frontend-only fields, apply sorting immediately
+      if (!shouldIncludeSort && (activeSortField === 'averagePrice' || activeSortField === 'stockStatus')) {
+        const sorted = sortMaterials(response.data, activeSortField, activeSortOrder);
+        setSortedMaterials(sorted);
+      } else {
+        setSortedMaterials(response.data);
+      }
+    } catch (err: any) {
       console.error('Error fetching materials:', err);
-      setError('Failed to load materials. Please try again.');
+      
+      // Enhanced error handling
+      let errorMessage = 'Failed to load materials. Please try again.';
+      
+      if (err.response) {
+        // Server responded with error status
+        const status = err.response.status;
+        const data = err.response.data;
+        
+        console.error('API Error Response:', {
+          status,
+          data,
+          url: err.config?.url,
+          method: err.config?.method
+        });
+        
+        if (status === 401) {
+          errorMessage = 'Authentication failed. Please log in again.';
+        } else if (status === 403) {
+          errorMessage = 'You do not have permission to access materials.';
+        } else if (status === 404) {
+          errorMessage = 'Materials endpoint not found.';
+        } else if (status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (data?.message) {
+          errorMessage = data.message;
+        } else {
+          errorMessage = `Request failed with status ${status}`;
+        }
+      } else if (err.request) {
+        // Request was made but no response received
+        console.error('Network Error:', err.request);
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else {
+        // Something else happened
+        console.error('Unexpected Error:', err.message);
+        errorMessage = err.message || 'An unexpected error occurred.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -153,11 +211,36 @@ export const MaterialsTab = () => {
       setIsLoadingBranches(true);
       const response = await branchesApi.getAll({ limit: 100 });
       setAvailableBranches(response.data);
-    } catch (err) {
-      console.error('Error fetching units:', err);
+    } catch (err: any) {
+      console.error('Error fetching branches:', err);
+      
+      // Enhanced error handling
+      let errorMessage = 'Failed to load branches. Please try again.';
+      
+      if (err.response) {
+        const status = err.response.status;
+        const data = err.response.data;
+        
+        if (status === 401) {
+          errorMessage = 'Authentication failed. Please log in again.';
+        } else if (status === 403) {
+          errorMessage = 'You do not have permission to access branches.';
+        } else if (status === 404) {
+          errorMessage = 'Branches endpoint not found.';
+        } else if (status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (data?.message) {
+          errorMessage = data.message;
+        }
+      } else if (err.request) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else {
+        errorMessage = err.message || 'An unexpected error occurred.';
+      }
+      
       toast({
         title: 'Error',
-        description: 'Failed to load units. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -169,7 +252,6 @@ export const MaterialsTab = () => {
   const fetchUnits = async () => {
     try {
       const response = await getUnits({ limit: 100 });
-      console.log('Fetched units:', response.data);
       setUnits(response.data || []);
     } catch (err) {
       console.error('Error fetching units:', err);
@@ -186,16 +268,12 @@ export const MaterialsTab = () => {
     }
   };
 
-  // Get unit name by ID - Enhanced debugging
+  // Get unit name by ID
   const getUnitName = (measureUnitId?: number) => {
-    console.log('getUnitName called with measureUnitId:', measureUnitId);
-    console.log('Available units:', units);
     if (!measureUnitId) {
-      console.log('No measureUnitId provided');
       return '';
     }
     const unit = units.find(u => u.id === measureUnitId);
-    console.log('Found unit:', unit);
     return unit?.name || '';
   };
 
@@ -221,15 +299,78 @@ export const MaterialsTab = () => {
     return (totalValue / currentStock).toFixed(2);
   };
 
+  // Frontend sorting function
+  const sortMaterials = (materials: Material[], field: SortField, order: SortOrder): Material[] => {
+    return [...materials].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (field) {
+        case 'averagePrice':
+          aValue = parseFloat(getAveragePrice(a)) || 0;
+          bValue = parseFloat(getAveragePrice(b)) || 0;
+          break;
+        case 'stockStatus':
+          const aStatus = getStockStatus(a.currentStock, a.minStockLevel);
+          const bStatus = getStockStatus(b.currentStock, b.minStockLevel);
+          // Define status priority: In Stock = 0, Low Stock = 1, Out of Stock = 2
+          const statusPriority = { 'In Stock': 0, 'Low Stock': 1, 'Out of Stock': 2 };
+          aValue = statusPriority[aStatus as keyof typeof statusPriority] ?? 3;
+          bValue = statusPriority[bStatus as keyof typeof statusPriority] ?? 3;
+          break;
+        case 'name':
+          aValue = a.name?.toLowerCase() || '';
+          bValue = b.name?.toLowerCase() || '';
+          break;
+        case 'specifications':
+          aValue = a.specifications?.toLowerCase() || '';
+          bValue = b.specifications?.toLowerCase() || '';
+          break;
+        case 'currentStock':
+          aValue = a.currentStock || 0;
+          bValue = b.currentStock || 0;
+          break;
+        case 'makerBrand':
+          aValue = a.makerBrand?.toLowerCase() || '';
+          bValue = b.makerBrand?.toLowerCase() || '';
+          break;
+        case 'createdAt':
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return order === 'ASC' ? -1 : 1;
+      if (aValue > bValue) return order === 'ASC' ? 1 : -1;
+      return 0;
+    });
+  };
+
   // Handle column sorting
   const handleSort = (field: SortField) => {
+    let newSortField = field;
+    let newSortOrder = sortOrder;
+
     if (sortField === field) {
       // Toggle sort order if same field
-      setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+      newSortOrder = sortOrder === 'ASC' ? 'DESC' : 'ASC';
     } else {
       // Set new field with ascending order
-      setSortField(field);
-      setSortOrder('ASC');
+      newSortOrder = 'ASC';
+    }
+
+    setSortField(newSortField);
+    setSortOrder(newSortOrder);
+
+    // For frontend-only sorting fields, sort immediately without API call
+    if (field === 'averagePrice' || field === 'stockStatus') {
+      const sorted = sortMaterials(materials, newSortField, newSortOrder);
+      setSortedMaterials(sorted);
+    } else {
+      // For API-supported fields, trigger API call with new sort params
+      fetchMaterials(currentPage, itemsPerPage, newSortField, newSortOrder);
     }
   };
 
@@ -293,7 +434,7 @@ export const MaterialsTab = () => {
     };
   }, []);
 
-  // Refetch when search, filter, or sorting changes
+  // Refetch when search or filter changes (but not for frontend-only sorting)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchMaterials(1, itemsPerPage);
@@ -301,7 +442,7 @@ export const MaterialsTab = () => {
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, filterUnit, sortField, sortOrder, itemsPerPage]);
+  }, [searchQuery, filterUnit, itemsPerPage]);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -315,6 +456,18 @@ export const MaterialsTab = () => {
     fetchMaterials(currentPage, itemsPerPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, itemsPerPage]);
+
+  // Apply frontend sorting when materials change and we're using frontend sort fields
+  useEffect(() => {
+    if (sortField === 'averagePrice' || sortField === 'stockStatus') {
+      // Apply frontend sorting
+      const sorted = sortMaterials(materials, sortField, sortOrder);
+      setSortedMaterials(sorted);
+    } else {
+      // Just use materials as-is (API already sorted them)
+      setSortedMaterials(materials);
+    }
+  }, [materials, sortField, sortOrder]);
 
   const handleAddMaterial = (materialData: Material) => {
     // Refresh the materials list after adding
@@ -461,7 +614,7 @@ export const MaterialsTab = () => {
     }
   };
 
-  if (loading && materials.length === 0) {
+  if (loading && sortedMaterials.length === 0) {
     return (
       <div className='flex items-center justify-center p-8'>
         <div className='flex items-center gap-3'>
@@ -592,7 +745,7 @@ export const MaterialsTab = () => {
       </div>
 
       {/* Loading indicator for subsequent loads */}
-      {loading && materials.length > 0 && (
+      {loading && sortedMaterials.length > 0 && (
         <div className='flex items-center justify-center p-4'>
           <Loader2 className='w-5 h-5 animate-spin text-primary' />
         </div>
@@ -649,17 +802,29 @@ export const MaterialsTab = () => {
                       </Button>
                     </TableHead>
                     <TableHead className='w-40 text-foreground font-semibold'>
-                      Avg.Purchased Price (₹)
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('averagePrice')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Avg.Purchased Price (₹)
+                        {getSortIcon('averagePrice')}
+                      </Button>
                     </TableHead>
                     <TableHead className='w-32 text-foreground font-semibold'>
-                      Stock Indicator
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('stockStatus')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Stock Indicator
+                        {getSortIcon('stockStatus')}
+                      </Button>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {materials.map((material) => {
-                    // Debug: Log material structure
-                    console.log('Material object:', material);
+                  {sortedMaterials.map((material) => {
                     const stockStatus = getStockStatus(
                       material.currentStock,
                       material.minStockLevel
@@ -773,17 +938,29 @@ export const MaterialsTab = () => {
                       </Button>
                     </TableHead>
                     <TableHead className='w-40 text-foreground font-semibold'>
-                    Avg.Purchased Price (₹)
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('averagePrice')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Avg.Purchased Price (₹)
+                        {getSortIcon('averagePrice')}
+                      </Button>
                     </TableHead>
                     <TableHead className='w-32 text-foreground font-semibold'>
-                    Stock Indicator
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('stockStatus')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Stock Indicator
+                        {getSortIcon('stockStatus')}
+                      </Button>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {materials.map((material) => {
-                    // Debug: Log the complete material object to understand its structure
-                    console.log('Complete material object for:', material.name, material);
+                  {sortedMaterials.map((material) => {
                     const stockStatus = getStockStatus(
                       material.currentStock,
                       material.minStockLevel
@@ -973,7 +1150,7 @@ export const MaterialsTab = () => {
       )}
 
       {/* Empty State */}
-      {materials.length === 0 && !loading && (
+      {sortedMaterials.length === 0 && !loading && (
         <Card className='rounded-lg shadow-sm p-8 text-center'>
           <div className='w-12 h-12 sm:w-16 sm:h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4'>
             <Package className='w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground' />

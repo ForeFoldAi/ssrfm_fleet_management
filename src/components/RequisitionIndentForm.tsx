@@ -534,9 +534,6 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                   <TableHead className='border border-gray-300 font-semibold min-w-[120px]'>
                     VENDOR QUOTATIONS
                   </TableHead>
-                  <TableHead className='border border-gray-300 font-semibold min-w-[100px]'>
-                    PURPOSE TYPE
-                  </TableHead>
                   <TableHead className='border border-gray-300 font-semibold min-w-[120px]'>
                     MACHINE NAME
                   </TableHead>
@@ -783,53 +780,86 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                         {/* Show all quotations with name and price only */}
                         {item.vendorQuotations.length > 0 && (
                           <div className='space-y-2'>
-                            {userRole === 'company_owner' && 
-                             requestData.status === 'pending_approval' ? (
-                              // Show radio buttons for company owner approval
-                              <RadioGroup
-                                value={selectedVendorsState[item.id] || ''}
-                                onValueChange={(value) => handleVendorSelection(item.id, value)}
-                              >
-                                {item.vendorQuotations.map((quotation) => (
-                                  <div key={quotation.id} className="flex items-center space-x-2 p-2 border border-gray-200 rounded cursor-pointer hover:bg-gray-50">
-                                    <RadioGroupItem
-                                      value={quotation.id}
-                                      id={`${item.id}-${quotation.id}`}
-                                    />
-                                    <Label
-                                      htmlFor={`${item.id}-${quotation.id}`}
-                                      className="text-sm cursor-pointer flex-1 min-w-0"
-                                    >
-                                      <div className="font-medium text-gray-900 truncate">{quotation.vendorName}</div>
-                                      <div className="text-xs font-medium text-green-600">
-                                        {quotation.quotedPrice}
+                            {requestData.status === 'pending_approval' ? (
+                              // PENDING APPROVAL: Show all quotations for both supervisor and company owner
+                              <>
+                                {userRole === 'company_owner' ? (
+                                  // Company owner gets radio buttons to select
+                                  <RadioGroup
+                                    value={selectedVendorsState[item.id] || ''}
+                                    onValueChange={(value) => handleVendorSelection(item.id, value)}
+                                  >
+                                    {item.vendorQuotations.map((quotation) => (
+                                      <div key={quotation.id} className="flex items-center space-x-2 p-2 border border-gray-200 rounded cursor-pointer hover:bg-gray-50">
+                                        <RadioGroupItem
+                                          value={quotation.id}
+                                          id={`${item.id}-${quotation.id}`}
+                                        />
+                                        <Label
+                                          htmlFor={`${item.id}-${quotation.id}`}
+                                          className="text-sm cursor-pointer flex-1 min-w-0"
+                                        >
+                                          <div className="font-medium text-gray-900 truncate">{quotation.vendorName}</div>
+                                          <div className="text-xs font-medium text-green-600">
+                                            {quotation.quotedPrice}
+                                          </div>
+                                        </Label>
+                                        <Button
+                                          variant='outline'
+                                          size='sm'
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            showQuotationDetails(quotation, item);
+                                          }}
+                                          className='h-6 w-6 p-0 ml-2 flex-shrink-0'
+                                        >
+                                          <Eye className='w-3 h-3' />
+                                        </Button>
                                       </div>
-                                    </Label>
-                                    <Button
-                                      variant='outline'
-                                      size='sm'
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        showQuotationDetails(quotation, item);
-                                      }}
-                                      className='h-6 w-6 p-0 ml-2 flex-shrink-0'
-                                    >
-                                      <Eye className='w-3 h-3' />
-                                    </Button>
+                                    ))}
+                                  </RadioGroup>
+                                ) : (
+                                  // Supervisor sees all quotations (read-only view)
+                                  <div className='space-y-2'>
+                                    {item.vendorQuotations.map((quotation) => (
+                                      <div
+                                        key={quotation.id}
+                                        className="p-2 rounded border cursor-pointer hover:bg-gray-50 bg-gray-50 border-gray-200"
+                                        onClick={() => showQuotationDetails(quotation, item)}
+                                      >
+                                        <div className="flex justify-between items-center">
+                                          <div className="min-w-0 flex-1">
+                                            <div className="font-medium text-gray-900 truncate">
+                                              {quotation.vendorName}
+                                            </div>
+                                            <div className="text-xs font-medium text-green-600">
+                                              {quotation.quotedPrice}
+                                            </div>
+                                          </div>
+                                          <Button
+                                            variant='outline'
+                                            size='sm'
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              showQuotationDetails(quotation, item);
+                                            }}
+                                            className='h-6 w-6 p-0 ml-2 flex-shrink-0'
+                                          >
+                                            <Eye className='w-3 h-3' />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
-                              </RadioGroup>
+                                )}
+                              </>
                             ) : (
-                              // Show only selected quotations
+                              // AFTER APPROVAL: Show only selected quotations (approved, ordered, received, etc.)
                               <div className='space-y-2'>
                                 {item.vendorQuotations.filter(q => q.isSelected === true).map((quotation) => (
                                   <div
                                     key={quotation.id}
-                                    className={`p-2 rounded border cursor-pointer hover:bg-gray-50 ${
-                                      quotation.isSelected 
-                                        ? 'bg-green-50 border-green-200' 
-                                        : 'bg-gray-50 border-gray-200'
-                                    }`}
+                                    className="p-2 rounded border cursor-pointer hover:bg-gray-50 bg-green-50 border-green-200"
                                     onClick={() => showQuotationDetails(quotation, item)}
                                   >
                                     <div className="flex justify-between items-center">
@@ -841,11 +871,9 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                                           {quotation.quotedPrice}
                                         </div>
                                       </div>
-                                      {quotation.isSelected && (
-                                        <div className="text-xs bg-green-600 text-white px-2 py-1 rounded flex-shrink-0">
-                                          ✓
-                                        </div>
-                                      )}
+                                      <div className="text-xs bg-green-600 text-white px-2 py-1 rounded flex-shrink-0">
+                                        ✓ 
+                                      </div>
                                     </div>
                                   </div>
                                 ))}
@@ -888,33 +916,6 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                           </div>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell className='border border-gray-300'>
-                      {isReadOnly ? (
-                        <div className='truncate'>{item.purposeType || 'Machine'}</div>
-                      ) : (
-                        <Select
-                          value={item.purposeType || PurposeType.MACHINE}
-                          onValueChange={(value) => {
-                            handleItemChange(item.id, 'purposeType', value);
-                            // Reset machine name when purpose type changes
-                            if (value === PurposeType.SPARE || value === PurposeType.OTHER) {
-                              handleItemChange(item.id, 'machineName', value === PurposeType.SPARE ? 'Spare' : 'Other');
-                            } else {
-                              handleItemChange(item.id, 'machineName', '');
-                            }
-                          }}
-                        >
-                          <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none w-full'>
-                            <SelectValue placeholder='Select Purpose *' />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={PurposeType.MACHINE}>Machine</SelectItem>
-                            <SelectItem value={PurposeType.SPARE}>Spare</SelectItem>
-                            <SelectItem value={PurposeType.OTHER}>Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
                     </TableCell>
                     <TableCell className='border border-gray-300'>
                       {isReadOnly ? (
@@ -1130,7 +1131,8 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                   <TableBody>
                     {requestData.items
                       .find((item) => item.id === currentItemId)
-                      ?.vendorQuotations.filter(q => q.isSelected === true).map((quotation, index) => (
+                      ?.vendorQuotations
+                      .map((quotation, index) => (
                         <TableRow key={quotation.id}>
                           <TableCell className='border-r text-center font-medium'>
                             {index + 1}
@@ -1676,3 +1678,4 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
     </div>
   );
 };
+

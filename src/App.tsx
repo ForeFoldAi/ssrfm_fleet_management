@@ -8,6 +8,7 @@ import { StockProvider } from './contexts/StockContext';
 import { SidebarProvider } from './contexts/SidebarContext';
 import { CacheProvider } from './contexts/CacheContext';
 import { Layout } from './components/Layout';
+import { NavigationTracker } from './components/NavigationTracker';
 import Dashboard from './pages/Dashboard';
 import MaterialsInventory from './pages/MaterialsInventory';
 import MaterialRequest from './pages/MaterialRequest';
@@ -72,28 +73,17 @@ const RoleBasedHome = () => {
 
   const isOwnerLike = hasPermission('inventory:material-indents:approve');
 
-  // Only redirect to last visited path on initial load (not when user explicitly navigates to dashboard)
-  // Check if this is a page refresh by looking for a specific flag
-  const isPageRefresh = !sessionStorage.getItem('navigation-flag');
-  
-  if (isPageRefresh) {
-    // Check if user was on a specific page before refresh
-    const lastVisitedPath = localStorage.getItem('last-visited-path');
-    
-    // If user has a last visited path and it's not the root, redirect there
-    if (lastVisitedPath && lastVisitedPath !== '/' && lastVisitedPath !== '/login') {
-      // Clear the stored path to prevent infinite redirects
-      localStorage.removeItem('last-visited-path');
-      return <Navigate to={lastVisitedPath} replace />;
-    }
-  } else {
-    // User explicitly navigated to dashboard, clear the navigation flag
-    sessionStorage.removeItem('navigation-flag');
+  // For company owners, show the dashboard directly
+  if (isOwnerLike) {
+    return <Dashboard />;
   }
 
-  if (!isOwnerLike && hasPermission('inventory:materials:read')) {
+  // For supervisors and other users, redirect to materials inventory
+  if (hasPermission('inventory:materials:read')) {
     return <Navigate to='/materials-inventory' replace />;
   }
+
+  // Fallback to dashboard
   return <Dashboard />;
 };
 
@@ -179,6 +169,7 @@ const App = () => (
               <Toaster />
               <Sonner />
               <BrowserRouter>
+                <NavigationTracker />
                 <AppRoutes />
               </BrowserRouter>
             </TooltipProvider>

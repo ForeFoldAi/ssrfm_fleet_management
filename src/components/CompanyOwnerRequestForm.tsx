@@ -16,6 +16,7 @@ interface VendorQuotation {
   quotedPrice: string;
   notes: string;
   quotationFile?: File | null;
+  isSelected?: boolean;
 }
 
 interface RequestItem {

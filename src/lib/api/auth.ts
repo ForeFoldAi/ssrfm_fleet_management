@@ -31,6 +31,11 @@ export const authService = {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('permissions');
+    localStorage.removeItem('roles');
+    // Clear the last visited path so next login always goes to role-specific default
+    localStorage.removeItem('last-visited-path');
+    console.log('AuthService: Cleared last visited path on logout');
   },
 
   /**

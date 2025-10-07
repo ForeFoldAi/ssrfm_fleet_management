@@ -148,6 +148,7 @@ export const MaterialOrderBookTab = () => {
     []
   );
   const [isLoadingResubmitForm, setIsLoadingResubmitForm] = useState(false);
+  const [loadingResubmitId, setLoadingResubmitId] = useState<string | null>(null);
 
   // Debug effect to monitor state changes
   useEffect(() => {
@@ -189,7 +190,7 @@ export const MaterialOrderBookTab = () => {
       notes: '',
     });
 
-  // Sorting state - now for client-side sorting
+  // Sorting state - now for client-side sorting (newest/highest Purchase ID on top by default)
   const [sortBy, setSortBy] = useState<string>('uniqueId');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
 
@@ -220,11 +221,36 @@ export const MaterialOrderBookTab = () => {
       try {
         const response = await branchesApi.getAll({ limit: 100 });
         setAvailableBranches(response.data);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching branches:', error);
+        
+        // Enhanced error handling
+        let errorMessage = 'Failed to load branches. Please try again.';
+        
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          
+          if (status === 401) {
+            errorMessage = 'Authentication failed. Please log in again.';
+          } else if (status === 403) {
+            errorMessage = 'You do not have permission to access branches.';
+          } else if (status === 404) {
+            errorMessage = 'Branches endpoint not found.';
+          } else if (status >= 500) {
+            errorMessage = 'Server error. Please try again later.';
+          } else if (data?.message) {
+            errorMessage = data.message;
+          }
+        } else if (error.request) {
+          errorMessage = 'Network error. Please check your internet connection.';
+        } else {
+          errorMessage = error.message || 'An unexpected error occurred.';
+        }
+        
         toast({
           title: 'Error',
-          description: 'Failed to load branches. Please try again.',
+          description: errorMessage,
           variant: 'destructive',
         });
       } finally {
@@ -261,6 +287,8 @@ export const MaterialOrderBookTab = () => {
           limit: number;
           status?: string;
           branchId?: string;
+          sortBy?: string;
+          sortOrder?: 'ASC' | 'DESC';
         } = {
           page,
           limit,
@@ -276,13 +304,21 @@ export const MaterialOrderBookTab = () => {
           params.branchId = filterUnit;
         }
 
+        // Add sorting parameters for server-side sorting (newest Purchase ID on top)
+        params.sortBy = 'id'; // Sort by the database ID
+        params.sortOrder = sortOrder; // Use current sort order (default: DESC)
+
         // Debug logging
         console.log('API call params:', params);
         console.log(
           'Current filters - Status:',
           filterStatus,
           'Unit:',
-          filterUnit
+          filterUnit,
+          'SortBy:',
+          params.sortBy,
+          'SortOrder:',
+          params.sortOrder
         );
 
         const response = await materialIndentsApi.getAll(params);
@@ -297,41 +333,65 @@ export const MaterialOrderBookTab = () => {
         });
 
         setMaterialIndents(response.data);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching material indents:', error);
-
+        
+        // Enhanced error handling
         let errorMessage = 'Failed to load material indents. Please try again.';
-
-        if (error instanceof Error) {
-          errorMessage = error.message;
+        
+        if (error.response) {
+          // Server responded with error status
+          const status = error.response.status;
+          const data = error.response.data;
+          
+          console.error('API Error Response:', {
+            status,
+            data,
+            url: error.config?.url,
+            method: error.config?.method
+          });
+          
+          if (status === 401) {
+            errorMessage = 'Authentication failed. Please log in again.';
+          } else if (status === 403) {
+            errorMessage = 'You do not have permission to access material indents.';
+          } else if (status === 404) {
+            errorMessage = 'Material indents endpoint not found.';
+          } else if (status >= 500) {
+            errorMessage = 'Server error. Please try again later.';
+          } else if (data?.message) {
+            errorMessage = data.message;
+          } else {
+            errorMessage = `Request failed with status ${status}`;
+          }
+        } else if (error.request) {
+          // Request was made but no response received
+          console.error('Network Error:', error.request);
+          errorMessage = 'Network error. Please check your internet connection.';
+        } else {
+          // Something else happened
+          console.error('Unexpected Error:', error.message);
+          errorMessage = error.message || 'An unexpected error occurred.';
         }
-
-        // Check for Axios error response
-        const axiosError = error as {
-          response?: { data?: { message?: string } };
-        };
-        if (axiosError.response?.data?.message) {
-          errorMessage = axiosError.response.data.message;
-        }
-
+        
         setError(errorMessage);
         setMaterialIndents([]);
       } finally {
         setIsLoading(false);
       }
     },
-    [filterStatus, filterUnit, currentUser?.role] // Removed sortBy and sortOrder from dependencies
+    [filterStatus, filterUnit, sortBy, sortOrder, currentUser?.role] // Added sortBy and sortOrder for server-side sorting
   );
 
-  // Handle column sorting - Client-side only
+  // Handle column sorting - Triggers server-side sorting and data refetch
   const handleSort = (column: string) => {
     if (sortBy === column) {
       // Toggle sort order if same column
       setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
     } else {
-      // Set new column and default to ASC
+      // Set new column and default to DESC for Purchase ID (newest first)
       setSortBy(column);
-      setSortOrder('ASC');
+      setSortOrder(column === 'uniqueId' ? 'DESC' : 'ASC');
     }
   };
 
@@ -387,7 +447,7 @@ export const MaterialOrderBookTab = () => {
     [key: string]: unknown; // For other properties
   }
 
-  // Fetch material indents when filters change
+  // Fetch material indents when filters or sorting changes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchMaterialIndents(pagination.page, pagination.limit);
@@ -398,17 +458,19 @@ export const MaterialOrderBookTab = () => {
     searchTerm,
     filterStatus,
     filterUnit,
+    sortBy,
+    sortOrder,
     pagination.page,
     pagination.limit,
     fetchMaterialIndents,
   ]);
 
-  // Reset to first page when filters change
+  // Reset to first page when filters or sorting changes
   useEffect(() => {
     if (pagination.page !== 1) {
       setPagination((prev) => ({ ...prev, page: 1 }));
     }
-  }, [filterStatus, filterUnit, searchTerm]);
+  }, [filterStatus, filterUnit, searchTerm, sortBy, sortOrder]);
 
   // Legacy state for backward compatibility
   interface LegacyRequest {
@@ -600,6 +662,9 @@ export const MaterialOrderBookTab = () => {
       await fetchFormData();
 
       setIsResubmitFormOpen(true);
+      
+      // Clear loading state after form opens
+      setLoadingResubmitId(null);
     } catch (error) {
       console.error('Error opening resubmit form:', error);
       toast({
@@ -607,6 +672,8 @@ export const MaterialOrderBookTab = () => {
         description: 'Failed to open resubmit form. Please try again.',
         variant: 'destructive',
       });
+      // Clear loading state on error
+      setLoadingResubmitId(null);
     } finally {
       setIsLoadingResubmitForm(false);
     }
@@ -629,7 +696,6 @@ export const MaterialOrderBookTab = () => {
         imagePreviews: item.imagePaths || [],
         notes: item.notes || '',
         vendorQuotations: (item.quotations || [])
-          .filter((quotation) => quotation.isSelected === true)
           .map((quotation) => ({
             id: quotation.id.toString(),
             vendorName: quotation.vendorName || '',
@@ -823,6 +889,7 @@ export const MaterialOrderBookTab = () => {
       setIsResubmitFormOpen(false);
       setSelectedRequestForResubmit(null);
       setResubmitFormData(null);
+      setLoadingResubmitId(null);
 
       // Refresh the data from API
       await fetchMaterialIndents(pagination.page, pagination.limit);
@@ -866,6 +933,9 @@ export const MaterialOrderBookTab = () => {
         description: errorMessage,
         variant: 'destructive',
       });
+      
+      // Clear loading state on error
+      setLoadingResubmitId(null);
     }
   };
 
@@ -1494,8 +1564,9 @@ export const MaterialOrderBookTab = () => {
     });
   };
 
-  // Sort data client-side
+  // Sort data client-side (used for search-filtered results only; main sorting is server-side)
   const sortData = (data: any[]) => {
+    // Server handles primary sorting, this is backup for client-side filtered data
     if (!sortBy) return data;
 
     return [...data].sort((a, b) => {
@@ -1504,12 +1575,14 @@ export const MaterialOrderBookTab = () => {
 
       switch (sortBy) {
         case 'uniqueId':
-          aValue = a.id;
-          bValue = b.id;
+          // Sort by the original numeric ID for proper ordering of newest items
+          aValue = a.originalId || 0;
+          bValue = b.originalId || 0;
           break;
         case 'requestDate':
-          aValue = a.date;
-          bValue = b.date;
+          // Convert date strings to timestamps for proper chronological sorting
+          aValue = new Date(a.date.split('/').reverse().join('-')).getTime() || 0;
+          bValue = new Date(b.date.split('/').reverse().join('-')).getTime() || 0;
           break;
         case 'materialName':
           aValue = a.materialName?.toLowerCase() || '';
@@ -1609,6 +1682,16 @@ export const MaterialOrderBookTab = () => {
     ) {
       console.log('Status is reverted, looking for original indent...');
 
+      // Set loading state for this specific request
+      setLoadingResubmitId(requestId);
+
+      // Show loading toast
+      toast({
+        title: 'Loading Resubmit Form',
+        description: 'Please wait while we prepare the form...',
+        duration: 2000,
+      });
+
       // Find the original MaterialIndent from the API data, not the transformed UI data
       const originalIndent = materialIndents.find((indent) => {
         const indentIdStr = indent.id.toString();
@@ -1622,6 +1705,9 @@ export const MaterialOrderBookTab = () => {
       if (originalIndent) {
         openResubmitForm(originalIndent);
         return;
+      } else {
+        // Clear loading state if indent not found
+        setLoadingResubmitId(null);
       }
     }
 
@@ -1834,6 +1920,7 @@ export const MaterialOrderBookTab = () => {
                             request.status
                           )
                         }
+                        disabled={loadingResubmitId === (request.originalId || request.id).toString()}
                         title={
                           request.status === 'reverted' &&
                           hasPermission('inventory:material-indents:update')
@@ -1841,7 +1928,14 @@ export const MaterialOrderBookTab = () => {
                             : 'Click to view details'
                         }
                       >
-                        {request.id}
+                        {loadingResubmitId === (request.originalId || request.id).toString() ? (
+                          <span className='flex items-center gap-2'>
+                            <Loader2 className='w-4 h-4 animate-spin' />
+                            {request.id}
+                          </span>
+                        ) : (
+                          request.id
+                        )}
                       </Button>
                     </TableCell>
                     <TableCell className='text-sm'>{request.date}</TableCell>
@@ -2014,6 +2108,7 @@ export const MaterialOrderBookTab = () => {
                           request.status
                         )
                       }
+                      disabled={loadingResubmitId === (request.originalId || request.id).toString()}
                       title={
                         request.status === 'reverted' &&
                         hasPermission('inventory:material-indents:update')
@@ -2021,7 +2116,14 @@ export const MaterialOrderBookTab = () => {
                           : 'Click to view details'
                       }
                     >
-                      {request.id}
+                      {loadingResubmitId === (request.originalId || request.id).toString() ? (
+                        <span className='flex items-center gap-2'>
+                          <Loader2 className='w-4 h-4 animate-spin' />
+                          {request.id}
+                        </span>
+                      ) : (
+                        request.id
+                      )}
                     </Button>
                   </TableCell>
                   <TableCell className='text-sm'>{request.date}</TableCell>
@@ -2104,11 +2206,18 @@ export const MaterialOrderBookTab = () => {
           onClick={() =>
             handleRequestClick(request.originalId || request.id, request.status)
           }
+          disabled={loadingResubmitId === (request.originalId || request.id).toString()}
         >
-          <Eye className='w-4 h-4' />
+          {loadingResubmitId === (request.originalId || request.id).toString() ? (
+            <Loader2 className='w-4 h-4 animate-spin' />
+          ) : (
+            <Eye className='w-4 h-4' />
+          )}
           {request.status === 'reverted' &&
           hasPermission('inventory:material-indents:update')
-            ? 'Edit & Resubmit Form'
+            ? loadingResubmitId === (request.originalId || request.id).toString()
+              ? 'Loading...'
+              : 'Edit & Resubmit Form'
             : 'View Full Details'}
         </Button>
 
@@ -2248,6 +2357,16 @@ export const MaterialOrderBookTab = () => {
             className='gap-2 rounded-lg'
             onClick={() => {
               if (request.status === 'reverted') {
+                // Set loading state
+                setLoadingResubmitId((request.originalId || request.id).toString());
+                
+                // Show loading toast
+                toast({
+                  title: 'Loading Resubmit Form',
+                  description: 'Please wait while we prepare the form...',
+                  duration: 2000,
+                });
+                
                 // Find the original MaterialIndent from the API data
                 const originalIndent = materialIndents.find((indent) => {
                   const indentIdStr = indent.id.toString();
@@ -2258,13 +2377,22 @@ export const MaterialOrderBookTab = () => {
 
                 if (originalIndent) {
                   openResubmitForm(originalIndent);
+                } else {
+                  setLoadingResubmitId(null);
                 }
               }
             }}
+            disabled={loadingResubmitId === (request.originalId || request.id).toString()}
           >
-            <Plus className='w-4 h-4' />
+            {loadingResubmitId === (request.originalId || request.id).toString() ? (
+              <Loader2 className='w-4 h-4 animate-spin' />
+            ) : (
+              <Plus className='w-4 h-4' />
+            )}
             {request.status === 'reverted'
-              ? 'Resubmit Indent Form'
+              ? loadingResubmitId === (request.originalId || request.id).toString()
+                ? 'Loading...'
+                : 'Resubmit Indent Form'
               : 'Resubmit Request'}
           </Button>
         )}
@@ -2647,6 +2775,7 @@ export const MaterialOrderBookTab = () => {
             setIsResubmitFormOpen(false);
             setSelectedRequestForResubmit(null);
             setResubmitFormData(null);
+            setLoadingResubmitId(null);
           }}
         >
           <DialogContent className='max-w-[95vw] max-h-[80vh] w-full overflow-y-auto p-6'>
@@ -2710,6 +2839,7 @@ export const MaterialOrderBookTab = () => {
                       setIsResubmitFormOpen(false);
                       setSelectedRequestForResubmit(null);
                       setResubmitFormData(null);
+                      setLoadingResubmitId(null);
                     }}
                     className='px-6 py-2'
                   >
@@ -3076,7 +3206,7 @@ export const MaterialOrderBookTab = () => {
                     }}
                     className='text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
                   >
-                    All Data
+                    All 
                   </Button>
                   <Button
                     variant='outline'

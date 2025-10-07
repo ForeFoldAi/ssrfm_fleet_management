@@ -51,7 +51,7 @@ import type { Branch } from '../lib/api/types.d';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { toast } from '../hooks/use-toast';
 
-type SortField = 'name' | 'status' | 'lastService' | 'nextMaintenanceDue' | 'createdAt';
+type SortField = 'name' | 'type' | 'unit' | 'status' | 'lastService' | 'nextMaintenanceDue' | 'createdAt';
 type SortOrder = 'ASC' | 'DESC';
 
 export const MachinesTab = () => {
@@ -118,30 +118,80 @@ export const MachinesTab = () => {
 
   // Transformed machines data for UI - initialize with empty array to avoid showing dummy data
   const [machines, setMachines] = useState<TransformedMachine[]>([]);
+  const [sortedMachines, setSortedMachines] = useState<TransformedMachine[]>([]);
 
-  // Handle column sorting - only for API-supported fields
+  // Frontend sorting function for machines
+  const sortMachinesData = (machines: TransformedMachine[], field: SortField, order: SortOrder): TransformedMachine[] => {
+    return [...machines].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (field) {
+        case 'name':
+          aValue = a.name?.toLowerCase() || '';
+          bValue = b.name?.toLowerCase() || '';
+          break;
+        case 'type':
+          aValue = a.type?.toLowerCase() || '';
+          bValue = b.type?.toLowerCase() || '';
+          break;
+        case 'unit':
+          aValue = a.unitName?.toLowerCase() || '';
+          bValue = b.unitName?.toLowerCase() || '';
+          break;
+        case 'status':
+          // Sort by status priority: Active > Under Maintenance > Inactive
+          const statusPriority = {
+            [MachineStatus.ACTIVE]: 0,
+            [MachineStatus.UNDER_MAINTENANCE]: 1,
+            [MachineStatus.INACTIVE]: 2,
+          };
+          aValue = statusPriority[a.status as MachineStatus] ?? 3;
+          bValue = statusPriority[b.status as MachineStatus] ?? 3;
+          break;
+        case 'lastService':
+          // Sort by date, handle '-' as oldest
+          aValue = a.lastMaintenance === '-' ? 0 : new Date(a.lastMaintenance.split('-').reverse().join('-')).getTime();
+          bValue = b.lastMaintenance === '-' ? 0 : new Date(b.lastMaintenance.split('-').reverse().join('-')).getTime();
+          break;
+        case 'nextMaintenanceDue':
+          // Sort by date, handle '-' as oldest
+          aValue = a.nextMaintenanceDue === '-' ? 0 : new Date(a.nextMaintenanceDue.split('-').reverse().join('-')).getTime();
+          bValue = b.nextMaintenanceDue === '-' ? 0 : new Date(b.nextMaintenanceDue.split('-').reverse().join('-')).getTime();
+          break;
+        case 'createdAt':
+          aValue = new Date(a.createdDate.split('-').reverse().join('-')).getTime();
+          bValue = new Date(b.createdDate.split('-').reverse().join('-')).getTime();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return order === 'ASC' ? -1 : 1;
+      if (aValue > bValue) return order === 'ASC' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  // Handle column sorting - all fields use frontend sorting now
   const handleSort = (field: SortField) => {
-    // Only allow sorting on fields that the API supports
-    const supportedSortFields: SortField[] = ['name', 'status', 'lastService', 'nextMaintenanceDue', 'createdAt'];
-    
-    if (!supportedSortFields.includes(field)) {
-      // Show a message for unsupported sort fields
-      toast({
-        title: 'Sorting Not Available',
-        description: 'Sorting is not available for this column.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    let newSortOrder = sortOrder;
 
     if (sortField === field) {
       // Toggle sort order if same field
-      setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+      newSortOrder = sortOrder === 'ASC' ? 'DESC' : 'ASC';
     } else {
       // Set new field with ascending order
-      setSortField(field);
-      setSortOrder('ASC');
+      newSortOrder = 'ASC';
     }
+
+    setSortField(field);
+    setSortOrder(newSortOrder);
+
+    // Apply frontend sorting immediately
+    console.log('Frontend sorting by:', field, 'Order:', newSortOrder);
+    const sorted = sortMachinesData(machines, field, newSortOrder);
+    setSortedMachines(sorted);
   };
 
   // Get sort icon for column header
@@ -164,11 +214,36 @@ export const MachinesTab = () => {
       try {
         const response = await branchesApi.getAll({ limit: 100 });
         setAvailableBranches(response.data);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching branches:', error);
+        
+        // Enhanced error handling
+        let errorMessage = 'Failed to load branches. Please try again.';
+        
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          
+          if (status === 401) {
+            errorMessage = 'Authentication failed. Please log in again.';
+          } else if (status === 403) {
+            errorMessage = 'You do not have permission to access branches.';
+          } else if (status === 404) {
+            errorMessage = 'Branches endpoint not found.';
+          } else if (status >= 500) {
+            errorMessage = 'Server error. Please try again later.';
+          } else if (data?.message) {
+            errorMessage = data.message;
+          }
+        } else if (error.request) {
+          errorMessage = 'Network error. Please check your internet connection.';
+        } else {
+          errorMessage = error.message || 'An unexpected error occurred.';
+        }
+        
         toast({
           title: 'Error',
-          description: 'Failed to load units. Please try again.',
+          description: errorMessage,
           variant: 'destructive',
         });
       } finally {
@@ -201,14 +276,13 @@ export const MachinesTab = () => {
       const params = {
         page: currentPage,
         limit: itemsPerPage,
-        sortBy: sortField,
-        sortOrder: sortOrder,
+        // Remove API sorting - we'll sort on frontend
         ...(searchQuery && { search: searchQuery }),
         ...(filterUnit !== 'all' &&
           currentUser?.role === 'company_owner' && {
             unitId: filterUnit,
           }),
-        ...(filterStatus !== 'all' && { status: filterStatus }),
+        // Remove status filter from API - we'll filter on frontend
       };
 
       const response = await machinesApi.getAll(params);
@@ -247,33 +321,70 @@ export const MachinesTab = () => {
       });
 
       setMachines(transformedMachines);
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      // Cast to a common API error structure
-      interface ApiErrorResponse {
-        response?: {
-          data?: {
-            message?: string;
-          };
-        };
-      }
-      const apiError = (error as ApiErrorResponse)?.response?.data?.message;
+      
+      // Apply current sorting to the transformed machines
+      const sorted = sortMachinesData(transformedMachines, sortField, sortOrder);
+      setSortedMachines(sorted);
+    } catch (error: any) {
       console.error('Error fetching machines:', error);
-      setError(
-        apiError || errorMessage || 'Failed to load machines. Please try again.'
-      );
+      
+      // Enhanced error handling
+      let errorMessage = 'Failed to load machines. Please try again.';
+      
+      if (error.response) {
+        // Server responded with error status
+        const status = error.response.status;
+        const data = error.response.data;
+        
+        console.error('API Error Response:', {
+          status,
+          data,
+          url: error.config?.url,
+          method: error.config?.method
+        });
+        
+        if (status === 401) {
+          errorMessage = 'Authentication failed. Please log in again.';
+        } else if (status === 403) {
+          errorMessage = 'You do not have permission to access machines.';
+        } else if (status === 404) {
+          errorMessage = 'Machines endpoint not found.';
+        } else if (status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (data?.message) {
+          errorMessage = data.message;
+        } else {
+          errorMessage = `Request failed with status ${status}`;
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error('Network Error:', error.request);
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else {
+        // Something else happened
+        console.error('Unexpected Error:', error.message);
+        errorMessage = error.message || 'An unexpected error occurred.';
+      }
+      
+      setError(errorMessage);
       setMachines([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Load machines on component mount and when pagination/sorting changes
+  // Load machines on component mount and when pagination/filters change (not sorting or status - those are frontend only)
   useEffect(() => {
     fetchMachines();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, itemsPerPage, searchQuery, filterUnit, filterStatus, sortField, sortOrder]);
+  }, [currentPage, itemsPerPage, searchQuery, filterUnit]);
+
+  // Apply frontend sorting when machines change
+  useEffect(() => {
+    console.log('Applying frontend sort on machines change:', sortField, sortOrder);
+    const sorted = sortMachinesData(machines, sortField, sortOrder);
+    setSortedMachines(sorted);
+  }, [machines, sortField, sortOrder]);
 
   // Update the handleAddMachine function to be async and add refresh to other operations
   const handleAddMachine = async (machineData: Machine) => {
@@ -315,19 +426,11 @@ export const MachinesTab = () => {
     setIsAddMachineOpen(true);
   };
 
-  const filteredMachines = machines.filter((machine) => {
-    const matchesSearch =
-      machine.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      machine.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      machine.branch.toLowerCase().includes(searchQuery.toLowerCase());
-
-    // Unit filtering - only apply if not 'all' and user is company owner
-    const matchesUnit = 
-      filterUnit === 'all' || 
-      currentUser?.role !== 'company_owner' ||
-      machine.unit === `unit-${filterUnit}`;
-
-    return matchesSearch && matchesUnit;
+  // Apply frontend status filtering to sorted machines
+  const displayMachines = sortedMachines.filter((machine) => {
+    // Status filtering - frontend only
+    if (filterStatus === 'all') return true;
+    return machine.status === filterStatus;
   });
 
   const getStatusBadge = (status: string) => {
@@ -366,14 +469,12 @@ export const MachinesTab = () => {
         const response = await machinesApi.getAll({
           page: currentPage,
           limit: limit,
-          sortBy: sortField,
-          sortOrder: sortOrder,
           ...(searchQuery && { search: searchQuery }),
           ...(filterUnit !== 'all' &&
             currentUser?.role === 'company_owner' && {
               unitId: filterUnit,
             }),
-          ...(filterStatus !== 'all' && { status: filterStatus }),
+          // Status filter will be applied to transformed data on frontend
         });
 
         allMachines = [...allMachines, ...response.data];
@@ -389,8 +490,8 @@ export const MachinesTab = () => {
         }
       }
 
-      // Transform machines to UI format for export
-      const transformedMachines = allMachines.map((machine) => {
+      // Transform machines to UI format
+      const allTransformedMachines = allMachines.map((machine) => {
         return {
           id: machine.id,
           name: machine.name,
@@ -419,6 +520,12 @@ export const MachinesTab = () => {
           installationDate: machine.installationDate ? formatDate(machine.installationDate) : '',
           additionalNotes: machine.additionalNotes || '',
         };
+      });
+      
+      // Apply status filter to export data (frontend filtering)
+      const transformedMachines = allTransformedMachines.filter((machine) => {
+        if (filterStatus === 'all') return true;
+        return machine.status === filterStatus;
       });
       
       // Prepare CSV headers
@@ -675,7 +782,7 @@ export const MachinesTab = () => {
       ) : /* Content */
       viewMode === 'list' ? (
         <div className='space-y-3'>
-          {filteredMachines.map((machine) => (
+          {displayMachines.map((machine) => (
             <div
               key={machine.id}
               className='card-friendly p-3 sm:p-4 hover:bg-secondary/30 transition-colors duration-200'
@@ -758,10 +865,24 @@ export const MachinesTab = () => {
                       </Button>
                     </TableHead>
                     <TableHead className='min-w-[150px] text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('type')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
                       Type
+                        {getSortIcon('type')}
+                      </Button>
                     </TableHead>
                     <TableHead className='min-w-[120px] text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('unit')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
                       Unit
+                        {getSortIcon('unit')}
+                      </Button>
                     </TableHead>
                     <TableHead className='min-w-[100px] text-foreground font-semibold'>
                       <Button
@@ -796,7 +917,7 @@ export const MachinesTab = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredMachines.map((machine) => (
+                  {displayMachines.map((machine) => (
                     <TableRow
                       key={machine.id}
                       className='hover:bg-muted/30 border-b border-secondary/20'
@@ -845,7 +966,7 @@ export const MachinesTab = () => {
       )}
 
       {/* Empty State */}
-      {!isLoading && filteredMachines.length === 0 && (
+      {!isLoading && displayMachines.length === 0 && (
         <Card className='rounded-lg shadow-sm p-8 text-center'>
           <div className='w-12 h-12 sm:w-16 sm:h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4'>
             <Settings className='w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground' />

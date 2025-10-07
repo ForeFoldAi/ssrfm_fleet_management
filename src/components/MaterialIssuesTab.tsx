@@ -145,6 +145,7 @@ export const MaterialIssuesTab = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [materialIssues, setMaterialIssues] = useState<MaterialIssue[]>([]);
+  const [sortedIssues, setSortedIssues] = useState<TransformedIssue[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [materialIssuesData, setMaterialIssuesData] = useState<{
@@ -177,11 +178,36 @@ export const MaterialIssuesTab = () => {
       try {
         const response = await branchesApi.getAll({ limit: 100 });
         setAvailableBranches(response.data);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching branches:', error);
+        
+        // Enhanced error handling
+        let errorMessage = 'Failed to load branches. Please try again.';
+        
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          
+          if (status === 401) {
+            errorMessage = 'Authentication failed. Please log in again.';
+          } else if (status === 403) {
+            errorMessage = 'You do not have permission to access branches.';
+          } else if (status === 404) {
+            errorMessage = 'Branches endpoint not found.';
+          } else if (status >= 500) {
+            errorMessage = 'Server error. Please try again later.';
+          } else if (data?.message) {
+            errorMessage = data.message;
+          }
+        } else if (error.request) {
+          errorMessage = 'Network error. Please check your internet connection.';
+        } else {
+          errorMessage = error.message || 'An unexpected error occurred.';
+        }
+        
         toast({
           title: 'Error',
-          description: 'Failed to load units. Please try again.',
+          description: errorMessage,
           variant: 'destructive',
         });
       } finally {
@@ -206,46 +232,89 @@ export const MaterialIssuesTab = () => {
     };
   }, []);
 
-  // Handle column sorting - only for API-supported fields
-  const handleSort = (field: SortField) => {
-    // Only allow sorting on fields that the API supports
-    const supportedSortFields: SortField[] = [
-      'id',
-      'issueDate',
-      'issuedBy',
-      'branch',
-      'uniqueId',
-    ];
+  // Frontend sorting function for transformed issues
+  const sortIssues = (issues: TransformedIssue[], field: SortField, order: SortOrder): TransformedIssue[] => {
+    return [...issues].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
 
-    if (!supportedSortFields.includes(field)) {
-      // Show a message for unsupported sort fields
-      toast({
-        title: 'Sorting Not Available',
-        description: 'Sorting is not available for this column.',
-        variant: 'destructive',
-      });
-      return;
-    }
+      switch (field) {
+        case 'id':
+        case 'uniqueId':
+          aValue = parseInt(a.id) || 0;
+          bValue = parseInt(b.id) || 0;
+          break;
+        case 'issueDate':
+          aValue = new Date(a.issuedDate).getTime();
+          bValue = new Date(b.issuedDate).getTime();
+          break;
+        case 'issuedBy':
+          aValue = a.issuingPersonName?.toLowerCase() || '';
+          bValue = b.issuingPersonName?.toLowerCase() || '';
+          break;
+        case 'branch':
+          aValue = a.unitName?.toLowerCase() || '';
+          bValue = b.unitName?.toLowerCase() || '';
+          break;
+        case 'materialName':
+          // Sort by first item's material name
+          aValue = a.items[0]?.materialName?.toLowerCase() || '';
+          bValue = b.items[0]?.materialName?.toLowerCase() || '';
+          break;
+        case 'specifications':
+          // Sort by first item's specifications
+          aValue = a.items[0]?.specifications?.toLowerCase() || '';
+          bValue = b.items[0]?.specifications?.toLowerCase() || '';
+          break;
+        case 'stockInfo':
+          // Sort by first item's issued quantity
+          aValue = a.items[0]?.issuedQuantity || 0;
+          bValue = b.items[0]?.issuedQuantity || 0;
+          break;
+        case 'issuedFor':
+          // Sort by first item's machine name
+          aValue = a.items[0]?.machineName?.toLowerCase() || '';
+          bValue = b.items[0]?.machineName?.toLowerCase() || '';
+          break;
+        case 'issuedTo':
+          // Sort by first item's recipient name
+          aValue = a.items[0]?.recipientName?.toLowerCase() || '';
+          bValue = b.items[0]?.recipientName?.toLowerCase() || '';
+          break;
+        case 'purpose':
+          // Sort by first item's purpose
+          aValue = a.items[0]?.purpose?.toLowerCase() || '';
+          bValue = b.items[0]?.purpose?.toLowerCase() || '';
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return order === 'ASC' ? -1 : 1;
+      if (aValue > bValue) return order === 'ASC' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  // Handle column sorting - all fields use frontend sorting now
+  const handleSort = (field: SortField) => {
+    let newSortOrder = sortOrder;
 
     if (sortField === field) {
-      // For ID, always keep DESC to show newest first
-      if (field === 'id') {
-        setSortOrder('DESC');
-      } else {
-        // Toggle sort order for other fields
-        setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
-      }
+      // Toggle sort order if same field
+      newSortOrder = sortOrder === 'ASC' ? 'DESC' : 'ASC';
     } else {
-      // Set new field
-      setSortField(field);
-      // For ID, always use DESC to show newest first
-      if (field === 'id') {
-        setSortOrder('DESC');
-      } else {
-        // For other fields, default to ASC
-        setSortOrder('ASC');
-      }
+      // Set new field with descending order for ID (to show newest first)
+      newSortOrder = field === 'id' || field === 'uniqueId' ? 'DESC' : 'ASC';
     }
+
+    setSortField(field);
+    setSortOrder(newSortOrder);
+
+    // Apply frontend sorting immediately
+    console.log('Frontend sorting by:', field, 'Order:', newSortOrder);
+    const sorted = sortIssues(issuedMaterials, field, newSortOrder);
+    setSortedIssues(sorted);
   };
 
   // Get sort icon for column header
@@ -367,8 +436,7 @@ export const MaterialIssuesTab = () => {
       const params: any = {
         page,
         limit,
-        sortBy: sortField,
-        sortOrder: 'DESC', // Force DESC to show newest first
+        // Remove API sorting - we'll sort on frontend
         include: 'items.material.measureUnit,items.issuedFor,branch,issuedBy', // Include related data
       };
 
@@ -406,9 +474,52 @@ export const MaterialIssuesTab = () => {
       // Transform the data for UI display
       const transformedIssues = response.data.map(transformApiIssueToUiFormat);
       setIssuedMaterials(transformedIssues);
-    } catch (err: unknown) {
-      const error = err as { message?: string };
-      setError(error.message || 'Failed to fetch material issues');
+      
+      // Apply current sorting to the transformed issues
+      const sorted = sortIssues(transformedIssues, sortField, sortOrder);
+      setSortedIssues(sorted);
+    } catch (err: any) {
+      console.error('Error fetching material issues:', err);
+      
+      // Enhanced error handling
+      let errorMessage = 'Failed to load material issues. Please try again.';
+      
+      if (err.response) {
+        // Server responded with error status
+        const status = err.response.status;
+        const data = err.response.data;
+        
+        console.error('API Error Response:', {
+          status,
+          data,
+          url: err.config?.url,
+          method: err.config?.method
+        });
+        
+        if (status === 401) {
+          errorMessage = 'Authentication failed. Please log in again.';
+        } else if (status === 403) {
+          errorMessage = 'You do not have permission to access material issues.';
+        } else if (status === 404) {
+          errorMessage = 'Material issues endpoint not found.';
+        } else if (status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (data?.message) {
+          errorMessage = data.message;
+        } else {
+          errorMessage = `Request failed with status ${status}`;
+        }
+      } else if (err.request) {
+        // Request was made but no response received
+        console.error('Network Error:', err.request);
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else {
+        // Something else happened
+        console.error('Unexpected Error:', err.message);
+        errorMessage = err.message || 'An unexpected error occurred.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -423,7 +534,7 @@ export const MaterialIssuesTab = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Refetch when search, filter, or sorting changes
+  // Refetch when search or filter changes (not sorting - that's frontend only)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchMaterialIssues(1, itemsPerPage);
@@ -431,7 +542,7 @@ export const MaterialIssuesTab = () => {
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, filterUnit, sortField, sortOrder, itemsPerPage]);
+  }, [searchQuery, filterUnit, itemsPerPage]);
 
   // Reset to first page when filters change
   useEffect(() => {
@@ -491,6 +602,13 @@ export const MaterialIssuesTab = () => {
   const [issuedMaterials, setIssuedMaterials] = useState<TransformedIssue[]>(
     []
   );
+
+  // Apply frontend sorting when issuedMaterials change
+  useEffect(() => {
+    console.log('Applying frontend sort on issues change:', sortField, sortOrder);
+    const sorted = sortIssues(issuedMaterials, sortField, sortOrder);
+    setSortedIssues(sorted);
+  }, [issuedMaterials, sortField, sortOrder]);
 
   interface IssuedItem {
     materialId: number;
@@ -732,27 +850,8 @@ export const MaterialIssuesTab = () => {
     });
   };
 
-  // Filter issues based on search only (unit filtering is handled by API)
-  const filteredIssues = issuedMaterials.filter((issue) => {
-    if (!issue) return false;
-
-    // Only apply client-side search filtering, unit filtering is handled by API
-    if (!searchQuery.trim()) return true;
-
-    // Search in all items' material names and recipient names
-    const materialNameMatch = issue.items.some((item) =>
-      item.materialName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    const recipientNameMatch = issue.items.some((item) =>
-      item.recipientName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    // Also search in issue ID
-    const idMatch = issue.id.toLowerCase().includes(searchQuery.toLowerCase());
-
-    return materialNameMatch || recipientNameMatch || idMatch;
-  });
+  // Use sortedIssues for display (search and unit filtering are handled by API)
+  const displayIssues = sortedIssues;
 
   return (
     <div className='space-y-4 sm:space-y-6'>
@@ -876,7 +975,7 @@ export const MaterialIssuesTab = () => {
           <p className='text-muted-foreground mb-4'>{error}</p>
           <Button onClick={() => fetchMaterialIssues()}>Try Again</Button>
         </Card>
-      ) : filteredIssues.length > 0 ? (
+      ) : displayIssues.length > 0 ? (
         viewMode === 'table' ? (
           // Table View for Material Issues - Individual Items
           <Card className='rounded-lg shadow-sm border border-primary/10'>
@@ -988,7 +1087,7 @@ export const MaterialIssuesTab = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredIssues.flatMap((issue) =>
+                    {displayIssues.flatMap((issue) =>
                       issue.items.map((item, itemIndex) => (
                         <TableRow
                           key={`${issue.id}-item-${itemIndex}`}
@@ -1228,7 +1327,7 @@ export const MaterialIssuesTab = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredIssues
+                    {displayIssues
                       .slice(
                         (currentPage - 1) * itemsPerPage,
                         currentPage * itemsPerPage
@@ -1615,7 +1714,7 @@ export const MaterialIssuesTab = () => {
                     }}
                     className='text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
                   >
-                    All Data
+                    All
                   </Button>
                   <Button
                     variant='outline'
