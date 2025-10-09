@@ -3,16 +3,15 @@ import { useRole } from "../contexts/RoleContext";
 import CompanyOwnerDashboard from "./dashboards/CompanyOwnerDashboard";
 
 const Dashboard = () => {
-  const { currentUser, hasPermission } = useRole();
+  const { currentUser, isCompanyLevel } = useRole();
 
   if (!currentUser) {
     return <div>Loading...</div>;
   }
 
-  // Permission-based selection - show CompanyOwnerDashboard for company owners or users with approval permissions
-  const isOwnerLike = currentUser.role === 'company_owner' || hasPermission('inventory:material-indents:approve');
-
-  if (isOwnerLike) {
+  // FIXED: Only show CompanyOwnerDashboard for users with isCompanyLevel = true
+  // This prevents Supervisors (isBranchLevel = true) from accessing company-wide dashboards
+  if (isCompanyLevel()) {
     return <CompanyOwnerDashboard />;
   }
 

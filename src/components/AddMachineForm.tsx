@@ -513,7 +513,7 @@ export const AddMachineForm = ({
                     </Label>
                     <Input
                       id='name'
-                      placeholder='e.g., Main Flour Mill #01'
+                      placeholder='Enter machine name'
                       value={formData.name}
                       onChange={(e) =>
                         handleInputChange('name', e.target.value)

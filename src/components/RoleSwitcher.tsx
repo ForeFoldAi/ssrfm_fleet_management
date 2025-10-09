@@ -19,19 +19,22 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// Compute display labels based on permissions (not roles)
-const getDisplayConfig = (hasPermission: (p: string) => boolean) => {
-  // Owner-like
-  if (hasPermission('inventory:material-indents:approve')) {
+// Compute display labels based on userType flags and permissions
+const getDisplayConfig = (
+  hasPermission: (p: string) => boolean,
+  isCompanyLevel: () => boolean
+) => {
+  // FIXED: Check isCompanyLevel flag for Company Owner
+  if (isCompanyLevel()) {
     return {
-      label: 'Company Owner',
+      label: 'Management',
       icon: User,
       color: 'bg-purple-500',
       description: 'Full Business Control',
     } as const;
   }
 
-  // Inventory manager-like
+  // Inventory manager-like (branch-level with specific permissions)
   if (
     hasPermission('inventory:materials:read') &&
     (hasPermission('inventory:materials:create') ||
@@ -39,14 +42,14 @@ const getDisplayConfig = (hasPermission: (p: string) => boolean) => {
       hasPermission('inventory:materials:delete'))
   ) {
     return {
-      label: 'Inventory Manager',
+      label: 'Data Submitter',
       icon: User,
       color: 'bg-accent',
       description: 'Inventory & Approvals',
     } as const;
   }
 
-  // Default
+  // Default (Branch-level supervisor)
   return {
     label: 'Site Supervisor',
     icon: User,
@@ -56,11 +59,11 @@ const getDisplayConfig = (hasPermission: (p: string) => boolean) => {
 };
 
 export const RoleSwitcher = () => {
-  const { currentUser, hasPermission, logout } = useRole();
+  const { currentUser, hasPermission, isCompanyLevel, logout } = useRole();
 
   if (!currentUser) return null;
 
-  const currentConfig = getDisplayConfig(hasPermission);
+  const currentConfig = getDisplayConfig(hasPermission, isCompanyLevel);
   const CurrentIcon = currentConfig.icon;
 
   const handleLogout = () => {

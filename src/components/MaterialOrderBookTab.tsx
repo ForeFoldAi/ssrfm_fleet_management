@@ -149,6 +149,7 @@ export const MaterialOrderBookTab = () => {
   );
   const [isLoadingResubmitForm, setIsLoadingResubmitForm] = useState(false);
   const [loadingResubmitId, setLoadingResubmitId] = useState<string | null>(null);
+  const [isSubmittingResubmit, setIsSubmittingResubmit] = useState(false);
 
   // Debug effect to monitor state changes
   useEffect(() => {
@@ -839,6 +840,7 @@ export const MaterialOrderBookTab = () => {
     requestData: Record<string, unknown>
   ) => {
     try {
+      setIsSubmittingResubmit(true);
       console.log('Starting resubmit request with data:', requestData);
 
       // Validate required fields
@@ -890,6 +892,7 @@ export const MaterialOrderBookTab = () => {
       setSelectedRequestForResubmit(null);
       setResubmitFormData(null);
       setLoadingResubmitId(null);
+      setIsSubmittingResubmit(false);
 
       // Refresh the data from API
       await fetchMaterialIndents(pagination.page, pagination.limit);
@@ -936,6 +939,7 @@ export const MaterialOrderBookTab = () => {
       
       // Clear loading state on error
       setLoadingResubmitId(null);
+      setIsSubmittingResubmit(false);
     }
   };
 
@@ -2848,17 +2852,29 @@ export const MaterialOrderBookTab = () => {
                       setSelectedRequestForResubmit(null);
                       setResubmitFormData(null);
                       setLoadingResubmitId(null);
+                      setIsSubmittingResubmit(false);
                     }}
                     className='px-6 py-2'
+                    disabled={isSubmittingResubmit}
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={() => handleResubmitRequest(resubmitFormData)}
                     className='bg-primary hover:bg-primary/90 text-white px-6 py-2'
+                    disabled={isSubmittingResubmit}
                   >
-                    <Send className='w-4 h-4 mr-2' />
-                    Resubmit Request
+                    {isSubmittingResubmit ? (
+                      <>
+                        <Loader2 className='w-4 h-4 mr-2 animate-spin' />
+                        Resubmitting...
+                      </>
+                    ) : (
+                      <>
+                        <Send className='w-4 h-4 mr-2' />
+                        Resubmit Request
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>

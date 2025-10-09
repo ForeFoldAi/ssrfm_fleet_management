@@ -126,7 +126,7 @@ interface RequestData {
 const RequestDetails: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
-  const { currentUser, hasPermission } = useRole();
+  const { currentUser, hasPermission, isCompanyLevel } = useRole();
 
   // Decode the requestId to handle URL encoded characters
   const decodedRequestId = requestId ? decodeURIComponent(requestId) : null;
@@ -1059,11 +1059,11 @@ const RequestDetails: React.FC = () => {
   const shouldShowStatusDropdown = () => {
     if (!requestData) return false;
 
-    if (hasPermission('inventory:material-indents:approve')) {
+    if (isCompanyLevel() && hasPermission('inventory:material-indents:approve')) {
       return requestData.status === 'pending_approval';
     }
 
-    if (hasPermission('inventory:material-indents:update')) {
+    if (!isCompanyLevel() && hasPermission('inventory:material-indents:update')) {
       return ['approved', 'ordered', 'partially_received'].includes(
         requestData.status
       );
@@ -1139,59 +1139,70 @@ const RequestDetails: React.FC = () => {
     }
   };
 
-  // Fetch last five material indents
+  // Fetch last five material indents for the current material
   useEffect(() => {
     const fetchLastFiveIndents = async () => {
       if (!hasPermission('inventory:material-indents:read:all')) return;
+      if (!requestData?.apiData?.items?.[0]?.material?.id) return;
 
       setIsLoadingHistory(true);
       setHistoryError(null);
 
       try {
-        const indents = await materialIndentsApi.getLastFive();
+        // Get the material ID from the first item in the request
+        const materialId = requestData.apiData.items[0].material.id;
+        console.log('Fetching last 5 indents for material ID:', materialId);
+        
+        const indents = await materialIndentsApi.getLastFive(materialId);
         setLastFiveIndents(indents);
       } catch (error) {
         console.error('Error fetching last five indents:', error);
-        setHistoryError('Failed to load recent requests history.');
+        setHistoryError('Failed to load recent Last 5 Material Transactions.');
       } finally {
         setIsLoadingHistory(false);
       }
     };
 
     fetchLastFiveIndents();
-  }, [hasPermission]);
+  }, [hasPermission, requestData?.apiData?.items]);
 
   const getHistoryData = () => {
     if (!requestData) return [];
 
     if (hasPermission('inventory:material-indents:read:all')) {
-      // Use the last five indents from API
-      return lastFiveIndents.map((indent) => {
-        // Get the first item for display purposes
-        const firstItem =
-          indent.items && indent.items.length > 0 ? indent.items[0] : null;
-        const firstQuotation =
-          firstItem?.selectedQuotation ||
-          (firstItem?.quotations && firstItem.quotations.length > 0
-            ? firstItem.quotations[0]
-            : null);
+      // Use the last five indents from API - filter only partially_received and fully_received
+      return lastFiveIndents
+        .filter((indent) => 
+          indent.status === IndentStatus.PARTIALLY_RECEIVED || 
+          indent.status === IndentStatus.FULLY_RECEIVED
+        )
+        .map((indent) => {
+          // Get the first item for display purposes
+          const firstItem =
+            indent.items && indent.items.length > 0 ? indent.items[0] : null;
+          const firstQuotation =
+            firstItem?.selectedQuotation ||
+            (firstItem?.quotations && firstItem.quotations.length > 0
+              ? firstItem.quotations[0]
+              : null);
 
-        return {
-          id: formatPurchaseId(indent.uniqueId, indent.branch?.code), // Apply formatting here too
-          date: indent.requestDate,
-          materialName: firstItem?.material?.name || 'Unknown',
-          quantity: firstItem ? `${firstItem.requestedQuantity}` : '0',
-          purchaseValue: firstQuotation ? firstQuotation.quotationAmount : '0',
-          previousMaterialValue: '0', // Default value
-          perMeasureQuantity: '1', // Default value
-          requestedValue: firstQuotation ? firstQuotation.quotationAmount : '0',
-          currentValue: firstQuotation ? firstQuotation.quotationAmount : '0',
-          status: indent.status,
-          requestedBy: indent.requestedBy?.name,
-          location: indent.branch?.name || 'Unknown',
-          purchasedFrom: firstQuotation?.vendorName || 'N/A', // Add vendor name from approved quotation
-        };
-      });
+          return {
+            id: formatPurchaseId(indent.uniqueId, indent.branch?.code), // Apply formatting here too
+            date: indent.requestDate,
+            materialName: firstItem?.material?.name || 'Unknown',
+            quantity: firstItem ? `${firstItem.requestedQuantity}` : '0',
+            purchaseValue: firstQuotation ? firstQuotation.quotationAmount : '0',
+            previousMaterialValue: '0', // Default value
+            perMeasureQuantity: '1', // Default value
+            requestedValue: firstQuotation ? firstQuotation.quotationAmount : '0',
+            currentValue: firstQuotation ? firstQuotation.quotationAmount : '0',
+            status: indent.status,
+            requestedBy: indent.requestedBy?.name,
+            location: indent.branch?.name || 'Unknown',
+            purchasedFrom: firstQuotation?.vendorName || 'N/A', // Add vendor name from approved quotation
+          };
+        })
+        .slice(0, 5); // Take only the first 5 after filtering
     } else {
       // For supervisor, show receipt history from current indent
       // Return receipt history for supervisor, but ensure it matches the HistoryItem interface
@@ -1342,7 +1353,7 @@ const RequestDetails: React.FC = () => {
       <StatusDropdown
         currentStatus={requestData.status}
         userRole={
-          hasPermission('inventory:material-indents:approve')
+          isCompanyLevel()
             ? 'company_owner'
             : 'supervisor'
         }
@@ -1477,7 +1488,7 @@ const RequestDetails: React.FC = () => {
                 <StatusDropdown
                   currentStatus={requestData.status}
                   userRole={
-                    hasPermission('inventory:material-indents:approve')
+                    isCompanyLevel()
                       ? 'company_owner'
                       : 'supervisor'
                   }
@@ -1510,21 +1521,7 @@ const RequestDetails: React.FC = () => {
               </Button>
             )}
 
-            {hasPermission('inventory:material-indents:update') &&
-              requestData.status === IndentStatus.REVERTED && (
-                <Button 
-                  onClick={handleResubmit} 
-                  disabled={isResubmitting}
-                  className='gap-2'
-                >
-                  {isResubmitting ? (
-                    <Loader2 className='w-4 h-4 animate-spin' />
-                  ) : (
-                    <Package className='w-4 h-4' />
-                  )}
-                  {isResubmitting ? 'Resubmitting...' : 'Resubmit for Approval'}
-                </Button>
-              )}
+            
           </div>
         </div>
       </div>
@@ -1551,7 +1548,7 @@ const RequestDetails: React.FC = () => {
               quotationImageUrlsMap={quotationImageUrls}
               onStatusChange={handleStatusChange}
               userRole={
-                hasPermission('inventory:material-indents:approve')
+                isCompanyLevel()
                   ? 'company_owner'
                   : 'supervisor'
               }
@@ -1586,7 +1583,7 @@ const RequestDetails: React.FC = () => {
                 quotationImageUrlsMap={quotationImageUrls}
                 onStatusChange={handleStatusChange}
                 userRole={
-                  hasPermission('inventory:material-indents:approve')
+                  isCompanyLevel()
                     ? 'company_owner'
                     : 'supervisor'
                 }
@@ -1604,12 +1601,17 @@ const RequestDetails: React.FC = () => {
         {/* Request Status Card */}
 
         {/* History Section - Only for Company Owners */}
-        {hasPermission('inventory:material-indents:read:all') && (
+        {hasPermission('inventory:material-indents:read:all') && requestData?.apiData?.items?.[0]?.material && (
           <>
             {isLoadingHistory ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent Requests History</CardTitle>
+                  <CardTitle>
+                  Last 5 Material Transactions - {requestData.apiData.items[0].material.name}
+                  </CardTitle>
+                  <p className='text-sm text-muted-foreground mt-1'>
+                    Last 5 received transactions (Partially & Fully Received)
+                  </p>
                 </CardHeader>
                 <CardContent className='flex justify-center items-center py-8'>
                   <Loader2 className='h-8 w-8 animate-spin text-primary' />
@@ -1621,7 +1623,10 @@ const RequestDetails: React.FC = () => {
             ) : historyError ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent Requests History</CardTitle>
+                  <CardTitle>
+                  Last 5 Material Transactions - {requestData.apiData.items[0].material.name}
+                  </CardTitle>
+                  
                 </CardHeader>
                 <CardContent className='py-6'>
                   <div className='text-center'>
@@ -1630,15 +1635,18 @@ const RequestDetails: React.FC = () => {
                       variant='outline'
                       size='sm'
                       onClick={() => {
+                        const materialId = requestData?.apiData?.items?.[0]?.material?.id;
+                        if (!materialId) return;
+                        
                         setIsLoadingHistory(true);
                         setHistoryError(null);
                         materialIndentsApi
-                          .getLastFive()
+                          .getLastFive(materialId)
                           .then((indents) => setLastFiveIndents(indents))
                           .catch((err) => {
                             console.error('Error fetching history:', err);
                             setHistoryError(
-                              'Failed to load recent requests history.'
+                              'Failed to load recent received history for this material.'
                             );
                           })
                           .finally(() => setIsLoadingHistory(false));
@@ -1654,6 +1662,8 @@ const RequestDetails: React.FC = () => {
                 userRole='company_owner'
                 historyData={getHistoryData()}
                 requestId={requestData.id}
+                materialName={requestData.apiData.items[0].material.name}
+                title={`Last 5 Material Transactions - ${requestData.apiData.items[0].material.name}`}
               />
             )}
           </>

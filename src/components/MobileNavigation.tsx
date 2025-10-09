@@ -20,7 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from '../hooks/use-toast';
 
 export const MobileNavigation = () => {
-  const { currentUser, hasPermission, logout } = useRole();
+  const { currentUser, hasPermission, isCompanyLevel, logout } = useRole();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -34,20 +34,17 @@ export const MobileNavigation = () => {
 
   // Build nav items by permissions (not roles)
   const getNavigationItems = () => {
-    const userRole = currentUser?.role;
-
-    // Dashboard item - show for company owners and users with approval permissions
-    const baseItems =
-      userRole === 'company_owner' || hasPermission('inventory:material-indents:approve')
-        ? [
-            {
-              to: '/',
-              label: 'Home',
-              icon: Home,
-              permission: null,
-            },
-          ]
-        : [];
+    // FIXED: Dashboard item - show only for company-level users
+    const baseItems = isCompanyLevel()
+      ? [
+          {
+            to: '/',
+            label: 'Home',
+            icon: Home,
+            permission: null,
+          },
+        ]
+      : [];
 
     const items = [
       {

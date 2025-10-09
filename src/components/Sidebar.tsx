@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from '../hooks/use-toast';
 
 export const Sidebar = () => {
-  const { currentUser, hasPermission, logout } = useRole();
+  const { currentUser, hasPermission, isCompanyLevel, logout } = useRole();
   const { isExpanded, toggleSidebar } = useSidebar();
   const navigate = useNavigate();
 
@@ -31,22 +31,17 @@ export const Sidebar = () => {
 
   // Build nav items by permissions (not roles)
   const getNavigationItems = () => {
-    const userRole = currentUser?.role;
-    const hasApprovalPermission = hasPermission('inventory:material-indents:approve');
-
-
-    // Dashboard item - show for company owners and users with approval permissions
-    const baseItems =
-      userRole === 'company_owner' || hasApprovalPermission
-        ? [
-            {
-              to: '/',
-              label: 'Dashboard',
-              icon: Activity,
-              permission: null,
-            },
-          ]
-        : [];
+    // FIXED: Dashboard item - show only for company-level users
+    const baseItems = isCompanyLevel()
+      ? [
+          {
+            to: '/',
+            label: 'Dashboard',
+            icon: Activity,
+            permission: null,
+          },
+        ]
+      : [];
 
     const items: any[] = [
       {

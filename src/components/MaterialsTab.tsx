@@ -1256,7 +1256,7 @@ export const MaterialsTab = () => {
                       Total Value (₹)
                     </Label>
                     <div className='h-9 px-3 py-2 bg-muted/50 border border-input rounded-[5px] text-sm font-medium'>
-                      ₹{getAveragePrice(selectedMaterial)}
+                      ₹{selectedMaterial.totalValue?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </div>
                     
                     <div className='space-y-1'>

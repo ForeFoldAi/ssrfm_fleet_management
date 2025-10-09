@@ -65,16 +65,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Role-based Home Redirect Component
 const RoleBasedHome = () => {
-  const { currentUser, hasPermission } = useRole();
+  const { currentUser, isCompanyLevel, hasPermission } = useRole();
 
   if (!currentUser) {
     return <Navigate to='/login' replace />;
   }
 
-  const isOwnerLike = hasPermission('inventory:material-indents:approve');
-
-  // For company owners, show the dashboard directly
-  if (isOwnerLike) {
+  // FIXED: Only company-level users get the dashboard
+  if (isCompanyLevel()) {
     return <Dashboard />;
   }
 
@@ -88,15 +86,18 @@ const RoleBasedHome = () => {
 };
 
 const AppRoutes = () => {
-  const { isAuthenticated, currentUser, hasPermission } = useRole();
+  const { isAuthenticated, currentUser, isCompanyLevel, hasPermission } = useRole();
 
-  // Handle login redirect based on permissions
+  // Handle login redirect based on userType
   const getLoginRedirect = () => {
     if (!currentUser) return '/';
 
-    const isOwnerLike = hasPermission('inventory:material-indents:approve');
+    // FIXED: Check isCompanyLevel instead of permissions
+    if (isCompanyLevel()) {
+      return '/';
+    }
 
-    if (!isOwnerLike && hasPermission('inventory:materials:read')) {
+    if (hasPermission('inventory:materials:read')) {
       return '/materials-inventory';
     }
 

@@ -44,8 +44,8 @@ const Login = () => {
       const apiUser = apiResp.user;
       const permissions = authService.getPermissions();
 
-      // Derive a legacy label for UI only
-      const derivedRole = deriveUserRole(permissions) as UserRole;
+      // Derive a legacy label for UI only - FIXED to use userType
+      const derivedRole = deriveUserRole(apiUser.userType, permissions) as UserRole;
 
       // Update context user
       setCurrentUser({
@@ -54,6 +54,7 @@ const Login = () => {
         email: apiUser.email,
         role: derivedRole,
         department: apiUser.branch?.name,
+        userType: apiUser.userType, // Store userType in context
       });
 
       // Notify app to refresh permission state
