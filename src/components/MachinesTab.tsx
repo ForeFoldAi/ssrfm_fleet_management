@@ -979,20 +979,7 @@ export const MachinesTab = () => {
               ? 'Try adjusting your search terms'
               : 'Start by adding your first machine'}
           </p>
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={fetchMachines}
-            disabled={isLoading}
-            className='mt-2'
-          >
-            {isLoading ? (
-              <Loader2 className='w-4 h-4 animate-spin mr-2' />
-            ) : (
-              <RotateCcw className='w-4 h-4 mr-2' />
-            )}
-            Reload
-          </Button>
+         
         </Card>
       )}
 

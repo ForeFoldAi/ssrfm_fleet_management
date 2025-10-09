@@ -1003,6 +1003,24 @@ export const MaterialsTab = () => {
         </Card>
       )}
 
+      {/* Empty State */}
+      {sortedMaterials.length === 0 && !loading && (
+        <Card className='rounded-lg shadow-sm p-8 text-center'>
+          <div className='w-12 h-12 sm:w-16 sm:h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4'>
+            <Package className='w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground' />
+          </div>
+          <h3 className='text-base sm:text-lg font-semibold text-foreground mb-2'>
+            No materials found
+          </h3>
+          <p className='text-sm sm:text-base text-muted-foreground mb-4'>
+            {searchQuery
+              ? 'Try adjusting your search terms'
+              : 'Start by adding your first material'}
+          </p>
+         
+        </Card>
+      )}
+
       {/* Pagination - Updated to match MachinesTab */}
       {materialsData && materialsData.meta && (
         <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
@@ -1147,24 +1165,6 @@ export const MaterialsTab = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Empty State */}
-      {sortedMaterials.length === 0 && !loading && (
-        <Card className='rounded-lg shadow-sm p-8 text-center'>
-          <div className='w-12 h-12 sm:w-16 sm:h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4'>
-            <Package className='w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground' />
-          </div>
-          <h3 className='text-base sm:text-lg font-semibold text-foreground mb-2'>
-            No materials found
-          </h3>
-          <p className='text-sm sm:text-base text-muted-foreground mb-4'>
-            {searchQuery
-              ? 'Try adjusting your search terms'
-              : 'Start by adding your first material'}
-          </p>
-         
-        </Card>
       )}
 
       {/* Add Material Form */}

@@ -975,7 +975,7 @@ export const MaterialIssuesTab = () => {
           <p className='text-muted-foreground mb-4'>{error}</p>
           <Button onClick={() => fetchMaterialIssues()}>Try Again</Button>
         </Card>
-      ) : displayIssues.length > 0 ? (
+      ) : (
         viewMode === 'table' ? (
           // Table View for Material Issues - Individual Items
           <Card className='rounded-lg shadow-sm border border-primary/10'>
@@ -1087,8 +1087,9 @@ export const MaterialIssuesTab = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {displayIssues.flatMap((issue) =>
-                      issue.items.map((item, itemIndex) => (
+                    {displayIssues.length > 0 ? (
+                      displayIssues.flatMap((issue) =>
+                        issue.items.map((item, itemIndex) => (
                         <TableRow
                           key={`${issue.id}-item-${itemIndex}`}
                           className='hover:bg-primary/5 border-b border-border/50 cursor-pointer transition-colors duration-200'
@@ -1219,7 +1220,8 @@ export const MaterialIssuesTab = () => {
                           </TableCell>
                         </TableRow>
                       ))
-                    )}
+                    )
+                    ) : null}
                   </TableBody>
                 </TableComponent>
               </div>
@@ -1327,13 +1329,14 @@ export const MaterialIssuesTab = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {displayIssues
-                      .slice(
-                        (currentPage - 1) * itemsPerPage,
-                        currentPage * itemsPerPage
-                      )
-                      .flatMap((issue) =>
-                        issue.items.map((item, itemIndex) => (
+                    {displayIssues.length > 0 ? (
+                      displayIssues
+                        .slice(
+                          (currentPage - 1) * itemsPerPage,
+                          currentPage * itemsPerPage
+                        )
+                        .flatMap((issue) =>
+                          issue.items.map((item, itemIndex) => (
                           <TableRow
                             key={`${issue.id}-item-${itemIndex}`}
                             className='hover:bg-muted/30 border-b border-secondary/20 cursor-pointer'
@@ -1457,14 +1460,18 @@ export const MaterialIssuesTab = () => {
                             </TableCell>
                           </TableRow>
                         ))
-                      )}
+                      )
+                    ) : null}
                   </TableBody>
                 </TableComponent>
               </div>
             </CardContent>
           </Card>
         )
-      ) : (
+      )}
+
+      {/* Empty State */}
+      {displayIssues.length === 0 && !isLoading && (
         <Card className='rounded-lg shadow-sm p-8 text-center'>
           <Package className='w-12 h-12 text-muted-foreground mx-auto mb-4' />
           <h3 className='text-lg font-semibold text-foreground mb-2'>
@@ -1478,7 +1485,7 @@ export const MaterialIssuesTab = () => {
         </Card>
       )}
 
-      {/* Pagination - Restore the pagination section */}
+      {/* Pagination - Updated to match MaterialsTab and MachinesTab */}
       {materialIssuesData && materialIssuesData.meta && (
         <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
           {/* Page Info */}

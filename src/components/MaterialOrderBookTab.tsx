@@ -1885,8 +1885,8 @@ export const MaterialOrderBookTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests.map((request) => (
-                <>
+              {requests.length > 0 ? (
+                requests.map((request) => (
                   <TableRow
                     key={request.id}
                     className='hover:bg-muted/30 border-b border-secondary/20'
@@ -1978,8 +1978,8 @@ export const MaterialOrderBookTab = () => {
                       {request.branch}
                     </TableCell>
                   </TableRow>
-                </>
-              ))}
+                ))
+              ) : null}
             </TableBody>
           </Table>
         </div>
@@ -2088,68 +2088,69 @@ export const MaterialOrderBookTab = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {requests.map((request) => (
-                <TableRow
-                  key={request.id}
-                  className='hover:bg-muted/30 border-b border-secondary/20'
-                >
-                  <TableCell className='font-medium'>
-                    <Button
-                      variant='link'
-                      className={`p-0 h-auto font-medium hover:underline ${
-                        request.status === 'reverted' &&
-                        hasPermission('inventory:material-indents:update')
-                          ? 'text-orange-600 hover:text-orange-700'
-                          : 'text-primary'
-                      }`}
-                      onClick={() =>
-                        handleRequestClick(
-                          request.originalId || request.id,
-                          request.status
-                        )
-                      }
-                      disabled={loadingResubmitId === (request.originalId || request.id).toString()}
-                      title={
-                        request.status === 'reverted' &&
-                        hasPermission('inventory:material-indents:update')
-                          ? 'Click to edit and resubmit form'
-                          : 'Click to view details'
-                      }
-                    >
-                      {loadingResubmitId === (request.originalId || request.id).toString() ? (
-                        <span className='flex items-center gap-2'>
-                          <Loader2 className='w-4 h-4 animate-spin' />
-                          {request.id}
-                        </span>
-                      ) : (
-                        request.id
+              {requests.length > 0 ? (
+                requests.map((request) => (
+                  <TableRow
+                    key={request.id}
+                    className='hover:bg-muted/30 border-b border-secondary/20'
+                  >
+                    <TableCell className='font-medium'>
+                      <Button
+                        variant='link'
+                        className={`p-0 h-auto font-medium hover:underline ${
+                          request.status === 'reverted' &&
+                          hasPermission('inventory:material-indents:update')
+                            ? 'text-orange-600 hover:text-orange-700'
+                            : 'text-primary'
+                        }`}
+                        onClick={() =>
+                          handleRequestClick(
+                            request.originalId || request.id,
+                            request.status
+                          )
+                        }
+                        disabled={loadingResubmitId === (request.originalId || request.id).toString()}
+                        title={
+                          request.status === 'reverted' &&
+                          hasPermission('inventory:material-indents:update')
+                            ? 'Click to edit and resubmit form'
+                            : 'Click to view details'
+                        }
+                      >
+                        {loadingResubmitId === (request.originalId || request.id).toString() ? (
+                          <span className='flex items-center gap-2'>
+                            <Loader2 className='w-4 h-4 animate-spin' />
+                            {request.id}
+                          </span>
+                        ) : (
+                          request.id
+                        )}
+                      </Button>
+                    </TableCell>
+                    <TableCell className='text-sm'>{request.date}</TableCell>
+                    <TableCell>
+                      <div className='font-medium'>{request.materialName}</div>
+                      {request.maker && request.maker !== 'N/A' && (
+                        <div className='text-xs text-muted-foreground mt-1'>
+                          {request.maker}
+                        </div>
                       )}
-                    </Button>
-                  </TableCell>
-                  <TableCell className='text-sm'>{request.date}</TableCell>
-                  <TableCell>
-                    <div className='font-medium'>{request.materialName}</div>
-                    {request.maker && request.maker !== 'N/A' && (
-                      <div className='text-xs text-muted-foreground mt-1'>
-                        {request.maker}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className='text-sm'>{request.quantity}</TableCell>
-                  <TableCell className='text-sm font-medium'>
-                    {request.unitPrice || '-'}
-                  </TableCell>
-                  <TableCell className='text-sm font-medium'>
-                    {request.value || '-'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={`${getStatusColor(request.status)} border`}
-                    >
-                      <span className='flex items-center gap-1'>
-                        {getStatusIcon(request.status)}
-                        <span className='text-xs'>{request.currentStage}</span>
-                      </span>
+                    </TableCell>
+                    <TableCell className='text-sm'>{request.quantity}</TableCell>
+                    <TableCell className='text-sm font-medium'>
+                      {request.unitPrice || '-'}
+                    </TableCell>
+                    <TableCell className='text-sm font-medium'>
+                      {request.value || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={`${getStatusColor(request.status)} border`}
+                      >
+                        <span className='flex items-center gap-1'>
+                          {getStatusIcon(request.status)}
+                          <span className='text-xs'>{request.currentStage}</span>
+                        </span>
                       </Badge>
                     </TableCell>
                     <TableCell className='text-sm'>
@@ -2161,8 +2162,9 @@ export const MaterialOrderBookTab = () => {
                     <TableCell className='text-sm'>
                       {request.branch}
                     </TableCell>
-                </TableRow>
-              ))}
+                  </TableRow>
+                ))
+              ) : null}
             </TableBody>
           </Table>
         </div>
@@ -2597,150 +2599,156 @@ export const MaterialOrderBookTab = () => {
                 Try Again
               </Button>
             </Card>
-          ) : filteredRequests.length > 0 ? (
+          ) : (
             <>
+              {/* Always show table/list view with headers */}
               {viewMode === 'table' ? (
                 <TableView requests={filteredRequests} />
               ) : (
                 <ListView requests={filteredRequests} />
               )}
 
-              {/* Pagination Controls */}
-              <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
-                {/* Page Info */}
-                <div className='text-sm text-muted-foreground'>
-                  Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
-                  {Math.min(
-                    pagination.page * pagination.limit,
-                    pagination.itemCount
-                  )}{' '}
-                  of {pagination.itemCount} entries
-                </div>
+              {/* Empty State - only show when no data */}
+              {filteredRequests.length === 0 && (
+                <Card className='rounded-lg shadow-sm p-8 text-center'>
+                  <FileText className='w-12 h-12 text-muted-foreground mx-auto mb-4' />
+                  <h3 className='text-lg font-semibold text-foreground mb-2'>
+                    No Material Indents Found
+                  </h3>
+                  <p className='text-muted-foreground mb-4'>
+                    No material indents match your current filters.
+                  </p>
+                </Card>
+              )}
 
-                {/* Pagination Controls */}
-                <div className='flex items-center gap-2'>
-                  {/* Items per page selector */}
-                  <div className='flex items-center gap-2'>
-                    <span className='text-sm text-muted-foreground'>Show:</span>
-                    <Select
-                      value={pagination.limit.toString()}
-                      onValueChange={(value) =>
-                        handleLimitChange(parseInt(value))
-                      }
-                    >
-                      <SelectTrigger className='w-20 h-8'>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value='10'>10</SelectItem>
-                        <SelectItem value='20'>20</SelectItem>
-                        <SelectItem value='50'>50</SelectItem>
-                        <SelectItem value='100'>100</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <span className='text-sm text-muted-foreground'>
-                      per page
-                    </span>
+              {/* Pagination Controls - always show when data exists */}
+              {pagination && (
+                <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
+                  {/* Page Info */}
+                  <div className='text-sm text-muted-foreground'>
+                    Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
+                    {Math.min(
+                      pagination.page * pagination.limit,
+                      pagination.itemCount
+                    )}{' '}
+                    of {pagination.itemCount} entries
                   </div>
 
-                  {/* Page navigation */}
-                  <div className='flex items-center gap-1'>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => handlePageChange(1)}
-                      disabled={
-                        !pagination.hasPreviousPage || pagination.page === 1
-                      }
-                      className='h-8 w-8 p-0'
-                    >
-                      <ChevronsLeft className='w-4 h-4' />
-                    </Button>
-
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => handlePageChange(pagination.page - 1)}
-                      disabled={!pagination.hasPreviousPage}
-                      className='h-8 w-8 p-0'
-                    >
-                      <ChevronLeft className='w-4 h-4' />
-                    </Button>
-
-                    {/* Page numbers */}
-                    <div className='flex items-center gap-1 mx-2'>
-                      {Array.from(
-                        { length: Math.min(5, pagination.pageCount) },
-                        (_, i) => {
-                          let pageNum;
-                          if (pagination.pageCount <= 5) {
-                            pageNum = i + 1;
-                          } else if (pagination.page <= 3) {
-                            pageNum = i + 1;
-                          } else if (
-                            pagination.page >=
-                            pagination.pageCount - 2
-                          ) {
-                            pageNum = pagination.pageCount - 4 + i;
-                          } else {
-                            pageNum = pagination.page - 2 + i;
-                          }
-
-                          return (
-                            <Button
-                              key={pageNum}
-                              variant={
-                                pagination.page === pageNum
-                                  ? 'default'
-                                  : 'outline'
-                              }
-                              size='sm'
-                              onClick={() => handlePageChange(pageNum)}
-                              className='h-8 w-8 p-0'
-                            >
-                              {pageNum}
-                            </Button>
-                          );
+                  {/* Pagination Controls */}
+                  <div className='flex items-center gap-2'>
+                    {/* Items per page selector */}
+                    <div className='flex items-center gap-2'>
+                      <span className='text-sm text-muted-foreground'>Show:</span>
+                      <Select
+                        value={pagination.limit.toString()}
+                        onValueChange={(value) =>
+                          handleLimitChange(parseInt(value))
                         }
-                      )}
+                      >
+                        <SelectTrigger className='w-20 h-8'>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='10'>10</SelectItem>
+                          <SelectItem value='20'>20</SelectItem>
+                          <SelectItem value='50'>50</SelectItem>
+                          <SelectItem value='100'>100</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <span className='text-sm text-muted-foreground'>
+                        per page
+                      </span>
                     </div>
 
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => handlePageChange(pagination.page + 1)}
-                      disabled={!pagination.hasNextPage}
-                      className='h-8 w-8 p-0'
-                    >
-                      <ChevronRight className='w-4 h-4' />
-                    </Button>
+                    {/* Page navigation */}
+                    <div className='flex items-center gap-1'>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => handlePageChange(1)}
+                        disabled={
+                          !pagination.hasPreviousPage || pagination.page === 1
+                        }
+                        className='h-8 w-8 p-0'
+                      >
+                        <ChevronsLeft className='w-4 h-4' />
+                      </Button>
 
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => handlePageChange(pagination.pageCount)}
-                      disabled={
-                        !pagination.hasNextPage ||
-                        pagination.page === pagination.pageCount
-                      }
-                      className='h-8 w-8 p-0'
-                    >
-                      <ChevronsRight className='w-4 h-4' />
-                    </Button>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => handlePageChange(pagination.page - 1)}
+                        disabled={!pagination.hasPreviousPage}
+                        className='h-8 w-8 p-0'
+                      >
+                        <ChevronLeft className='w-4 h-4' />
+                      </Button>
+
+                      {/* Page numbers */}
+                      <div className='flex items-center gap-1 mx-2'>
+                        {Array.from(
+                          { length: Math.min(5, pagination.pageCount) },
+                          (_, i) => {
+                            let pageNum;
+                            if (pagination.pageCount <= 5) {
+                              pageNum = i + 1;
+                            } else if (pagination.page <= 3) {
+                              pageNum = i + 1;
+                            } else if (
+                              pagination.page >=
+                              pagination.pageCount - 2
+                            ) {
+                              pageNum = pagination.pageCount - 4 + i;
+                            } else {
+                              pageNum = pagination.page - 2 + i;
+                            }
+
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={
+                                  pagination.page === pageNum
+                                    ? 'default'
+                                    : 'outline'
+                                }
+                                size='sm'
+                                onClick={() => handlePageChange(pageNum)}
+                                className='h-8 w-8 p-0'
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          }
+                        )}
+                      </div>
+
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => handlePageChange(pagination.page + 1)}
+                        disabled={!pagination.hasNextPage}
+                        className='h-8 w-8 p-0'
+                      >
+                        <ChevronRight className='w-4 h-4' />
+                      </Button>
+
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() => handlePageChange(pagination.pageCount)}
+                        disabled={
+                          !pagination.hasNextPage ||
+                          pagination.page === pagination.pageCount
+                        }
+                        className='h-8 w-8 p-0'
+                      >
+                        <ChevronsRight className='w-4 h-4' />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </>
-          ) : (
-            <Card className='rounded-lg shadow-sm p-8 text-center'>
-              <FileText className='w-12 h-12 text-muted-foreground mx-auto mb-4' />
-              <h3 className='text-lg font-semibold text-foreground mb-2'>
-                No Material Indents Found
-              </h3>
-              <p className='text-muted-foreground mb-4'>
-                No material indents match your current filters.
-              </p>
-            </Card>
           )}
         </TabsContent>
       </Tabs>
