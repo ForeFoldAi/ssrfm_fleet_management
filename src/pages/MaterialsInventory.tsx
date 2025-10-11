@@ -55,7 +55,7 @@ const MaterialsInventory = () => {
   }
   
   return (
-    <div className="space-y-4 sm:space-y-6 p-4 sm:p-0">
+    <div className="space-y-4 sm:space-y-6 p-4 sm:p-0 pb-24 sm:pb-0">
       {/* Header */}
       {/*
       <div className="mb-4 sm:mb-6">
@@ -66,7 +66,8 @@ const MaterialsInventory = () => {
       */}
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-4/5 grid-cols-4 h-auto p-1 bg-secondary/10 rounded-lg shadow-sm">
+        {/* Desktop Tabs - Top positioned */}
+        <TabsList className="hidden sm:grid w-4/5 grid-cols-4 h-auto p-1 bg-secondary/10 rounded-lg shadow-sm">
            <TabsTrigger 
             value="materials" 
             className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
@@ -110,6 +111,44 @@ const MaterialsInventory = () => {
           </TabsTrigger>
         </TabsList>
 
+        {/* Mobile Tabs - Fixed at Bottom */}
+        <TabsList className="sm:hidden fixed bottom-0 left-0 right-0 z-40 grid grid-cols-4 h-auto p-2 bg-gradient-to-r from-foreground to-foreground backdrop-blur-xl shadow-2xl border-t border-warning/20">
+          <TabsTrigger 
+            value="materials" 
+            className="flex flex-col items-center gap-1 px-1 py-2 text-xs font-semibold data-[state=active]:bg-warning data-[state=active]:text-foreground data-[state=active]:shadow-sm text-white/70 data-[state=inactive]:text-white/70"
+          >
+            <Hourglass className="w-5 h-5" />
+            <span className="text-[10px] leading-tight">Stock</span>
+          </TabsTrigger>
+          
+          <TabsTrigger 
+            value="material-issues" 
+            className="flex flex-col items-center gap-1 px-1 py-2 text-xs font-semibold data-[state=active]:bg-warning data-[state=active]:text-foreground data-[state=active]:shadow-sm text-white/70 data-[state=inactive]:text-white/70"
+          >
+            <span className="relative w-5 h-5">
+              <Package className="w-5 h-5" />
+              <ArrowUpRight className="w-2 h-2 absolute -top-1 -right-1" />
+            </span>
+            <span className="text-[10px] leading-tight">Issues</span>
+          </TabsTrigger>
+          
+          <TabsTrigger 
+            value="material-order-book" 
+            className="flex flex-col items-center gap-1 px-1 py-2 text-xs font-semibold data-[state=active]:bg-warning data-[state=active]:text-foreground data-[state=active]:shadow-sm text-white/70 data-[state=inactive]:text-white/70"
+          >
+            <ShoppingBasket className="w-5 h-5" />
+            <span className="text-[10px] leading-tight">Purchased</span>
+          </TabsTrigger>
+
+          <TabsTrigger 
+            value="machines" 
+            className="flex flex-col items-center gap-1 px-1 py-2 text-xs font-semibold data-[state=active]:bg-warning data-[state=active]:text-foreground data-[state=active]:shadow-sm text-white/70 data-[state=inactive]:text-white/70"
+          >
+            <Factory className="w-5 h-5" />
+            <span className="text-[10px] leading-tight">Machines</span>
+          </TabsTrigger>
+        </TabsList>
+
         {/* Custom Tab Content - Keep all components mounted to prevent reloading */}
         <div className="mt-4">
           {/* Material Issues Tab */}
@@ -134,8 +173,8 @@ const MaterialsInventory = () => {
         </div>
       </Tabs>
       
-      {/* Fixed Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border/50 py-2 z-10">
+      {/* Fixed Footer - Hidden on mobile, shown on desktop */}
+      <div className="hidden sm:block fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border/50 py-2 z-10">
         <p className="text-center text-sm text-muted-foreground">
           Developed & Maintained by{' '}
           <a 

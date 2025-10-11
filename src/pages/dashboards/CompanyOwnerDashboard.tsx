@@ -485,7 +485,7 @@ const CompanyOwnerDashboard = () => {
           </h3>
           <p className="text-muted-foreground mb-4">{error}</p>
           <Button onClick={() => fetchData(true)} className="btn-primary">
-            Try Again
+            Reload
           </Button>
         </Card>
       </div>
@@ -494,7 +494,7 @@ const CompanyOwnerDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="space-y-8 p-6 max-w-7xl mx-auto">
+      <div className="space-y-4 sm:space-y-8 p-0 sm:p-6 max-w-7xl mx-auto">
         {/* Network Status Alert */}
         {!isOnline && (
           <Alert className="border-red-200 bg-red-50 text-red-800">
@@ -505,29 +505,29 @@ const CompanyOwnerDashboard = () => {
           </Alert>
         )}
         {/* Header Section - Left/Right Layout */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-6">
           {/* Left Side - Title and Description */}
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold text-primary">
+          <div className="space-y-1 sm:space-y-2">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary">
               Expenses Dashboard
             </h1>
           </div>
           
           {/* Right Side - Time Period Filter */}
-          <Card className="p-4 bg-card shadow-lg border border-primary/20">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                <Calendar className="h-4 w-4 text-primary" />
+          <Card className="p-3 sm:p-4 bg-card shadow-lg border border-primary/20">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-foreground">
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
                 Time Period:
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-1 sm:gap-2 w-full sm:w-auto">
                 {timePeriods.map((period) => (
                   <Button
                     key={period.value}
                     variant={selectedPeriod === period.value ? "default" : "outline"}
                     size="sm"
                     onClick={() => setSelectedPeriod(period.value)}
-                    className={`transition-all duration-200 ${
+                    className={`text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 h-auto transition-all duration-200 ${
                       selectedPeriod === period.value
                         ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
                         : "hover:bg-primary/10 border-primary/30 text-foreground"
@@ -542,90 +542,94 @@ const CompanyOwnerDashboard = () => {
         </div>
 
         {/* Stats Cards with Colored Borders */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {/* Total Expenses - All Units */}
-          <Card className="p-6 border-l-4 border-l-green-500">
+          <Card className="p-4 sm:p-6 border-l-4 border-l-green-500">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Expenses - All Units</p>
-                <p className="text-2xl font-bold">₹{allUnitsTotal.toLocaleString()}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Total Expenses - All Units</p>
+                <p className="text-xl sm:text-2xl font-bold truncate">₹{allUnitsTotal.toLocaleString()}</p>
               </div>
-              <IndianRupee className="h-8 w-8 text-green-500" />
+              <IndianRupee className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
             </div>
           </Card>
 
           {/* Unit Cards */}
-          <Card className="p-6 border-l-4 border-l-blue-500">
+          <Card className="p-4 sm:p-6 border-l-4 border-l-blue-500">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Expenses - Unit One</p>
-                <p className="text-2xl font-bold">₹{unitOneTotal.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground mt-1">{expensesData?.unitOneExpenses?.period || 'N/A'}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Total Expenses - Unit One</p>
+                <p className="text-xl sm:text-2xl font-bold truncate">₹{unitOneTotal.toLocaleString()}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{expensesData?.unitOneExpenses?.period || 'N/A'}</p>
               </div>
-              <Building2 className="h-8 w-8 text-blue-500" />
+              <Building2 className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
             </div>
           </Card>
 
-          <Card className="p-6 border-l-4 border-l-orange-500">
+          <Card className="p-4 sm:p-6 border-l-4 border-l-orange-500">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Expenses - Unit Two</p>
-                <p className="text-2xl font-bold">₹{unitTwoTotal.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground mt-1">{expensesData?.unitTwoExpenses?.period || 'N/A'}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Total Expenses - Unit Two</p>
+                <p className="text-xl sm:text-2xl font-bold truncate">₹{unitTwoTotal.toLocaleString()}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{expensesData?.unitTwoExpenses?.period || 'N/A'}</p>
               </div>
-              <Building2 className="h-8 w-8 text-orange-500" />
+              <Building2 className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500 flex-shrink-0" />
             </div>
           </Card>
 
           {/* Pending Approvals */}
           <Card 
-            className="p-6 border-l-4 border-l-amber-500 cursor-pointer hover:shadow-lg transition-all duration-200 hover:bg-amber-50/50"
+            className="p-4 sm:p-6 border-l-4 border-l-amber-500 cursor-pointer hover:shadow-lg transition-all duration-200 hover:bg-amber-50/50"
             onClick={handlePendingApprovalsClick}
           >
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Pending Approvals</p>
-                <p className="text-2xl font-bold">{pendingApprovalsData.pendingApprovals}</p>
-                <p className="text-sm text-muted-foreground mt-1">Material Requests</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Pending Approvals</p>
+                <p className="text-xl sm:text-2xl font-bold">{pendingApprovalsData.pendingApprovals}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">Material Requests</p>
               </div>
-              <AlertCircle className="h-8 w-8 text-amber-500" />
+              <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-amber-500 flex-shrink-0" />
             </div>
           </Card>
         </div>
 
         {/* Charts Section */}
-        <div className="space-y-8">
+        <div className="space-y-4 sm:space-y-8">
           {/* Machine Expenses Chart */}
           <Card className="card-friendly shadow-lg border border-primary/20">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                <div className="w-3 h-3 bg-primary rounded-full"></div>
-                Machine Expenses by Unit
-                <Badge variant="outline" className="ml-auto text-xs bg-primary/10 text-primary border-primary/30">
+            <CardHeader className="pb-3 sm:pb-4 px-3 sm:px-6 pt-3 sm:pt-6">
+              <CardTitle className="text-sm sm:text-lg lg:text-xl font-semibold flex flex-col sm:flex-row sm:items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-primary rounded-full"></div>
+                  <span className="text-sm sm:text-base lg:text-xl">Machine Expenses by Unit</span>
+                </div>
+                <Badge variant="outline" className="sm:ml-auto text-[10px] sm:text-xs bg-primary/10 text-primary border-primary/30 w-fit">
                   {getPeriodLabel()}
                 </Badge>
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Comparative analysis of machine expenses across different units
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
               {machineExpensesByUnit.length > 0 ? (
-                <ChartContainer config={{}} className="w-full h-80">
-                  <ReBarChart data={machineExpensesByUnit} margin={{ left: 20, right: 20, bottom: 20, top: 20 }}>
+                <ChartContainer config={{}} className="w-full h-64 sm:h-80">
+                  <ReBarChart data={machineExpensesByUnit} margin={{ left: 10, right: 10, bottom: 40, top: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis 
                       dataKey="machine" 
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                       axisLine={{ stroke: "hsl(var(--border))" }}
                       angle={-45}
                       textAnchor="end"
                       height={80}
+                      interval={0}
                     />
                     <YAxis 
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                       axisLine={{ stroke: "hsl(var(--border))" }}
                       tickFormatter={(value) => `₹${(value / 1000)}k`}
+                      width={40}
                     />
                     <ChartTooltip 
                       content={<ChartTooltipContent 
@@ -638,7 +642,7 @@ const CompanyOwnerDashboard = () => {
                       key="Unit One"
                       dataKey="Unit One" 
                       fill="#3B82F6" 
-                      barSize={24} 
+                      barSize={20} 
                       radius={[6, 6, 0, 0]}
                       name="Unit One"
                     />
@@ -646,17 +650,17 @@ const CompanyOwnerDashboard = () => {
                       key="Unit Two"
                       dataKey="Unit Two" 
                       fill="#F59E0B" 
-                      barSize={24} 
+                      barSize={20} 
                       radius={[6, 6, 0, 0]}
                       name="Unit Two"
                     />
                   </ReBarChart>
                 </ChartContainer>
               ) : (
-                <div className="flex items-center justify-center h-80 text-muted-foreground">
+                <div className="flex items-center justify-center h-64 sm:h-80 text-muted-foreground">
                   <div className="text-center">
-                    <Building2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>No machine data available</p>
+                    <Building2 className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs sm:text-sm">No machine data available</p>
                   </div>
                 </div>
               )}
@@ -665,35 +669,37 @@ const CompanyOwnerDashboard = () => {
 
           {/* Material Expenses Chart */}
           <Card className="card-friendly shadow-lg border border-primary/20">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                <div className="w-3 h-3 bg-primary rounded-full"></div>
-                Material Expenses
-                <Badge variant="outline" className="ml-auto text-xs bg-primary/10 text-primary border-primary/30">
+            <CardHeader className="pb-3 sm:pb-4 px-3 sm:px-6 pt-3 sm:pt-6">
+              <CardTitle className="text-sm sm:text-lg lg:text-xl font-semibold flex flex-col sm:flex-row sm:items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-primary rounded-full"></div>
+                  <span className="text-sm sm:text-base lg:text-xl">Material Expenses</span>
+                </div>
+                <Badge variant="outline" className="sm:ml-auto text-[10px] sm:text-xs bg-primary/10 text-primary border-primary/30 w-fit">
                   {getPeriodLabel()}
                 </Badge>
               </CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Material-wise expense breakdown across units
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
               {materialExpensesByUnit.length > 0 ? (
-                <ChartContainer config={{}} className="w-full h-80">
-                  <ReBarChart data={materialExpensesByUnit} layout="vertical" margin={{ left: 20, right: 20, bottom: 20, top: 20 }}>
+                <ChartContainer config={{}} className="w-full h-64 sm:h-80">
+                  <ReBarChart data={materialExpensesByUnit} layout="vertical" margin={{ left: 10, right: 10, bottom: 10, top: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis 
                       type="number"
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                      tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                       axisLine={{ stroke: "hsl(var(--border))" }}
                       tickFormatter={(value) => `₹${(value / 1000)}k`}
                     />
                     <YAxis 
                       type="category"
                       dataKey="material" 
-                      tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                      tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
                       axisLine={{ stroke: "hsl(var(--border))" }}
-                      width={120}
+                      width={80}
                     />
                     <ChartTooltip 
                       content={<ChartTooltipContent 
@@ -705,7 +711,7 @@ const CompanyOwnerDashboard = () => {
                       key="Unit One"
                       dataKey="Unit One" 
                       fill="#3B82F6" 
-                      barSize={24} 
+                      barSize={20} 
                       radius={[0, 6, 6, 0]}
                       name="Unit One"
                     />
@@ -713,17 +719,17 @@ const CompanyOwnerDashboard = () => {
                       key="Unit Two"
                       dataKey="Unit Two" 
                       fill="#F59E0B" 
-                      barSize={24} 
+                      barSize={20} 
                       radius={[0, 6, 6, 0]}
                       name="Unit Two"
                     />
                   </ReBarChart>
                 </ChartContainer>
               ) : (
-                <div className="flex items-center justify-center h-80 text-muted-foreground">
+                <div className="flex items-center justify-center h-64 sm:h-80 text-muted-foreground">
                   <div className="text-center">
-                    <Building2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>No material data available</p>
+                    <Building2 className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 opacity-50" />
+                    <p className="text-xs sm:text-sm">No material data available</p>
                   </div>
                 </div>
               )}

@@ -14,6 +14,12 @@ export interface User {
   department?: string;
   assignedMachines?: string[];
   userType?: UserType; // Add userType to User interface
+  branch?: {
+    id: number;
+    name: string;
+    code?: string;
+    location: string;
+  };
 }
 
 interface RoleContextType {
@@ -97,6 +103,12 @@ export const RoleProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             role,
             department: parsed?.branch?.name || undefined,
             userType, // Store userType in the user object
+            branch: parsed?.branch ? {
+              id: parsed.branch.id,
+              name: parsed.branch.name,
+              code: parsed.branch.code,
+              location: parsed.branch.location,
+            } : undefined,
           };
           setCurrentUser(user);
         } catch {
@@ -126,6 +138,12 @@ export const RoleProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             role,
             department: parsed?.branch?.name || prev?.department,
             userType, // Store userType in the user object
+            branch: parsed?.branch ? {
+              id: parsed.branch.id,
+              name: parsed.branch.name,
+              code: parsed.branch.code,
+              location: parsed.branch.location,
+            } : prev?.branch,
           }));
         } catch {
           // ignore parse errors

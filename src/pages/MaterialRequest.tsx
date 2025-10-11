@@ -85,6 +85,7 @@ export enum PurposeType {
   MACHINE = 'machine',
   OTHER = 'other',
   SPARE = 'spare',
+  RETURN = 'return',
 }
 
 interface RequestItem {
@@ -181,16 +182,92 @@ const MaterialRequest = () => {
     return unit?.name || '';
   };
 
+  // Filter materials based on user type and branch
+  // This ensures branch-level users (supervisor/inventory_manager) only see materials from their branch
+  const getFilteredMaterials = () => {
+    // If user is company owner or doesn't have branch restrictions, return all materials
+    if (!currentUser?.userType?.isBranchLevel || !currentUser?.branch?.id) {
+      console.log('MaterialRequest: Returning all materials (company-level user or no branch)');
+      return availableMaterials;
+    }
+
+    // For branch-level users, filter materials by their branch
+    const filtered = availableMaterials.filter((material) => {
+      // If material doesn't have branch info, include it (for backward compatibility)
+      if (!material.branch) {
+        return true;
+      }
+      return material.branch.id === currentUser.branch!.id;
+    });
+
+    console.log('MaterialRequest: Filtered materials for branch-level user:', {
+      userBranchId: currentUser.branch.id,
+      userBranchName: currentUser.branch.name,
+      totalMaterials: availableMaterials.length,
+      filteredMaterials: filtered.length,
+      filteredMaterialNames: filtered.map(m => m.name)
+    });
+
+    return filtered;
+  };
+
+  // Filter machines based on user type and branch
+  // This ensures branch-level users (supervisor/inventory_manager) only see machines from their branch
+  const getFilteredMachines = () => {
+    // If user is company owner or doesn't have branch restrictions, return all machines
+    if (!currentUser?.userType?.isBranchLevel || !currentUser?.branch?.id) {
+      console.log('MaterialRequest: Returning all machines (company-level user or no branch)');
+      return availableMachines;
+    }
+
+    // For branch-level users, filter machines by their branch
+    const filtered = availableMachines.filter((machine) => {
+      // If machine doesn't have branch info, include it (for backward compatibility)
+      if (!machine.branch) {
+        return true;
+      }
+      return machine.branch.id === currentUser.branch!.id;
+    });
+
+    console.log('MaterialRequest: Filtered machines for branch-level user:', {
+      userBranchId: currentUser.branch.id,
+      userBranchName: currentUser.branch.name,
+      totalMachines: availableMachines.length,
+      filteredMachines: filtered.length,
+      filteredMachineNames: filtered.map(m => m.name)
+    });
+
+    return filtered;
+  };
+
   useEffect(() => {
     const fetchMaterials = async () => {
       setIsLoadingMaterials(true);
       setMaterialsError(null);
       try {
-        const res = await materialsApi.getMaterials({
+        const params = {
           limit: 100,
           sortBy: 'id',
           sortOrder: 'ASC',
+          // Filter by branch for branch-level users (supervisor/inventory_manager)
+          ...((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id && {
+            branchId: currentUser.branch.id,
+          }),
+        };
+
+        // Debug logging for material filtering
+        console.log('MaterialRequest fetchMaterials - Debug Info:', {
+          currentUserRole: currentUser?.role,
+          currentUserBranch: currentUser?.branch,
+          branchId: currentUser?.branch?.id,
+          params: params,
+          isBranchLevel: currentUser?.userType?.isBranchLevel,
+          hasBranchId: currentUser?.branch?.id ? true : false,
+          fullCurrentUser: currentUser,
+          userType: currentUser?.userType,
         });
+
+        const res = await materialsApi.getMaterials(params);
         setAvailableMaterials(res.data);
       } catch (err) {
         console.error('Error fetching materials:', err);
@@ -209,11 +286,29 @@ const MaterialRequest = () => {
       setIsLoadingMachines(true);
       setMachinesError(null);
       try {
-        const res = await machinesApi.getAll({
+        const params = {
           limit: 100,
           sortBy: 'id',
           sortOrder: 'ASC',
+          // Filter by branch for branch-level users (supervisor/inventory_manager)
+          ...((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id && {
+            unitId: currentUser.branch.id.toString(),
+          }),
+        };
+
+        // Debug logging for machine filtering
+        console.log('MaterialRequest fetchMachines - Debug Info:', {
+          currentUserRole: currentUser?.role,
+          currentUserBranch: currentUser?.branch,
+          branchId: currentUser?.branch?.id,
+          params: params,
+          isBranchLevel: currentUser?.userType?.isBranchLevel,
+          hasBranchId: currentUser?.branch?.id ? true : false,
+          fullCurrentUser: currentUser,
+          userType: currentUser?.userType,
         });
+
+        const res = await machinesApi.getAll(params);
         setAvailableMachines(res.data);
       } catch (err) {
         console.error('Error fetching machines:', err);
@@ -244,7 +339,7 @@ const MaterialRequest = () => {
     fetchMaterials();
     fetchMachines();
     fetchUnits();
-  }, []);
+  }, [currentUser]);
 
   const handleItemChange = (itemId: string, field: string, value: string) => {
     if (field === 'reqQuantity' || field === 'notes') {
@@ -334,7 +429,7 @@ const MaterialRequest = () => {
 
   const handleMaterialSelect = (itemId: string, materialName: string) => {
     console.log('Material selected:', materialName);
-    const material = availableMaterials.find((m) => m.name === materialName);
+    const material = getFilteredMaterials().find((m) => m.name === materialName);
     console.log('Found material:', material);
     if (material) {
       // Use measureUnit.name directly instead of looking up by ID
@@ -373,11 +468,38 @@ const MaterialRequest = () => {
       purposeType: PurposeType.MACHINE,
     };
     setRequestItems((prev) => [...prev, newItem]);
+    
+    toast({
+      title: '➕ New Item Added',
+      description: `Item ${requestItems.length + 1} has been added to your request. Please fill in the required details.`,
+      variant: 'default',
+    });
   };
 
   const removeItem = (itemId: string) => {
     if (requestItems.length > 1) {
-      setRequestItems((prev) => prev.filter((item) => item.id !== itemId));
+      const itemToRemove = requestItems.find(item => item.id === itemId);
+      const confirmed = window.confirm(
+        `🗑️ Remove Item\n\n` +
+        `Are you sure you want to remove this item?\n` +
+        `Material: ${itemToRemove?.productName || 'Not selected'}\n\n` +
+        `This action cannot be undone.`
+      );
+      
+      if (confirmed) {
+        setRequestItems((prev) => prev.filter((item) => item.id !== itemId));
+        toast({
+          title: '✅ Item Removed',
+          description: 'The item has been successfully removed from your request.',
+          variant: 'default',
+        });
+      }
+    } else {
+      toast({
+        title: '⚠️ Cannot Remove Item',
+        description: 'You must have at least one item in your request. Add another item first if you want to remove this one.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -475,50 +597,79 @@ const MaterialRequest = () => {
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+    let hasErrors = false;
 
     requestItems.forEach((item, index) => {
-      if (!item.productName.trim())
-        newErrors[
-          `productName_${item.id}`
-        ] = `Product name is required for item ${index + 1}`;
+      const itemNumber = index + 1;
       
-      // Validate purpose type and machine selection
-      if (item.purposeType === PurposeType.MACHINE) {
-        if (!item.machineName || !item.machineName.trim() || item.machineName === 'Spare' || item.machineName === 'Other')
-          newErrors[
-            `machineName_${item.id}`
-          ] = `Machine selection is required for item ${index + 1}`;
-      } else if (item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER) {
-        if (!item.notes || !item.notes.trim())
-          newErrors[
-            `notes_${item.id}`
-          ] = `Notes are required for ${item.purposeType} purpose in item ${index + 1}`;
+      // Material selection validation
+      if (!item.productName.trim()) {
+        newErrors[`productName_${item.id}`] = `⚠️ Please select a material for Item ${itemNumber}. This is required to proceed.`;
+        hasErrors = true;
       }
       
-      if (!item.reqQuantity.trim())
-        newErrors[
-          `reqQuantity_${item.id}`
-        ] = `Required quantity is required for item ${index + 1}`;
-
-      const qty = Number(item.reqQuantity);
-      if (qty <= 0)
-        newErrors[
-          `reqQuantity_${item.id}`
-        ] = `Quantity must be greater than 0 for item ${index + 1}`;
+      // Purpose type and machine selection validation
+      if (item.purposeType === PurposeType.MACHINE) {
+        if (!item.machineName || !item.machineName.trim() || item.machineName === 'Spare' || item.machineName === 'Other' || item.machineName === 'Return') {
+          newErrors[`machineName_${item.id}`] = `⚠️ Please select a valid machine for Item ${itemNumber}. Machine selection is required for machine-related requests.`;
+          hasErrors = true;
+        }
+      } else if (item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER || item.purposeType === PurposeType.RETURN) {
+        if (!item.notes || !item.notes.trim()) {
+          newErrors[`notes_${item.id}`] = `⚠️ Please provide detailed notes for Item ${itemNumber}. Notes are required when requesting for ${item.purposeType.toLowerCase()} purpose.`;
+          hasErrors = true;
+        }
+      }
+      
+      // Quantity validation
+      if (!item.reqQuantity.trim()) {
+        newErrors[`reqQuantity_${item.id}`] = `⚠️ Please enter the required quantity for Item ${itemNumber}.`;
+        hasErrors = true;
+      } else {
+        const qty = Number(item.reqQuantity);
+        if (isNaN(qty) || qty <= 0) {
+          newErrors[`reqQuantity_${item.id}`] = `⚠️ Please enter a valid quantity greater than 0 for Item ${itemNumber}.`;
+          hasErrors = true;
+        }
+      }
     });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    
+    // Show user-friendly error summary
+    if (hasErrors) {
+      const errorCount = Object.keys(newErrors).length;
+      toast({
+        title: '❌ Form Validation Failed',
+        description: `Please fix ${errorCount} error${errorCount > 1 ? 's' : ''} before submitting. Check the highlighted fields below.`,
+        variant: 'destructive',
+      });
+    }
+    
+    return !hasErrors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
+      return;
+    }
+    
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `📋 Submit Material Request\n\n` +
+      `You are about to submit ${requestItems.length} item${requestItems.length > 1 ? 's' : ''} for approval.\n\n` +
+      `✅ This will notify the Company Owner for review and approval.\n` +
+      `📝 You can track the status in the Requests section.\n\n` +
+      `Do you want to proceed?`
+    );
+    
+    if (!confirmed) {
       toast({
-        title: 'Validation Error',
-        description: 'Please fill in all required fields',
-        variant: 'destructive',
+        title: '⏸️ Submission Cancelled',
+        description: 'Your material request has not been submitted.',
+        variant: 'default',
       });
       return;
     }
@@ -529,10 +680,10 @@ const MaterialRequest = () => {
       const itemsPayload: CreateMaterialIndentItemInput[] = requestItems.map(
         (item) => {
           // Find selected material and machine ids
-          const material = availableMaterials.find(
+          const material = getFilteredMaterials().find(
             (m) => m.name === item.productName
           );
-          const machine = availableMachines.find(
+          const machine = getFilteredMachines().find(
             (m) => m.name === item.machineName
           );
 
@@ -600,8 +751,9 @@ const MaterialRequest = () => {
 
           // Show progress toast for each successful submission
           toast({
-            title: 'Item Submitted',
-            description: `${requestItems[i].productName} submitted successfully`,
+            title: '✅ Item Submitted Successfully',
+            description: `${requestItems[i].productName} has been submitted and is pending approval.`,
+            variant: 'default',
           });
         } catch (itemError) {
           const axiosError = itemError as {
@@ -623,22 +775,23 @@ const MaterialRequest = () => {
         }
       }
 
-      // Show final summary
+      // Show final summary with user-friendly messages
       if (successFullResponse.length > 0 && failedItems.length === 0) {
         toast({
-          title: 'All Items Submitted Successfully',
-          description: `${successFullResponse.length} item(s) submitted successfully. Company Owner will be notified for approval.`,
+          title: '🎉 Request Submitted Successfully!',
+          description: `All ${successFullResponse.length} item${successFullResponse.length > 1 ? 's have' : ' has'} been submitted for approval. You will be notified once the Company Owner reviews your request.`,
+          variant: 'default',
         });
       } else if (successFullResponse.length > 0 && failedItems.length > 0) {
         toast({
-          title: 'Partial Success',
-          description: `${successFullResponse.length} item(s) submitted, ${failedItems.length} failed`,
+          title: '⚠️ Partial Success',
+          description: `${successFullResponse.length} item${successFullResponse.length > 1 ? 's were' : ' was'} submitted successfully, but ${failedItems.length} failed. Please check the failed items and try again.`,
           variant: 'destructive',
         });
       } else {
         toast({
-          title: 'All Submissions Failed',
-          description: 'No items were submitted successfully',
+          title: '❌ Submission Failed',
+          description: 'Unfortunately, none of your items could be submitted. Please check your entries and try again. Contact support if the issue persists.',
           variant: 'destructive',
         });
       }
@@ -734,7 +887,7 @@ const MaterialRequest = () => {
                         <SelectValue placeholder='Select Material' />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableMaterials.map((material) => (
+                        {getFilteredMaterials().map((material) => (
                           <SelectItem key={material.name} value={material.name}>
                             <div className='flex flex-col'>
                               <div className='font-semibold'>{material.name}</div>
@@ -749,9 +902,11 @@ const MaterialRequest = () => {
                       </SelectContent>
                     </Select>
                     {errors[`productName_${item.id}`] && (
-                      <p className='text-destructive text-xs mt-1'>
-                        {errors[`productName_${item.id}`]}
-                      </p>
+                      <div className='mt-1 p-2 bg-red-50 border border-red-200 rounded-md'>
+                        <p className='text-red-700 text-xs font-medium'>
+                          {errors[`productName_${item.id}`]}
+                        </p>
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className='border border-gray-300'>
@@ -811,9 +966,11 @@ const MaterialRequest = () => {
                       </span>
                     </div>
                     {errors[`reqQuantity_${item.id}`] && (
-                      <p className='text-destructive text-xs mt-1'>
-                        {errors[`reqQuantity_${item.id}`]}
-                      </p>
+                      <div className='mt-1 p-2 bg-red-50 border border-red-200 rounded-md'>
+                        <p className='text-red-700 text-xs font-medium'>
+                          {errors[`reqQuantity_${item.id}`]}
+                        </p>
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className='border border-gray-300'>
@@ -935,6 +1092,8 @@ const MaterialRequest = () => {
                           handleItemChange(item.id, 'purposeType', PurposeType.SPARE);
                         } else if (value === 'Other') {
                           handleItemChange(item.id, 'purposeType', PurposeType.OTHER);
+                        } else if (value === 'Return') {
+                          handleItemChange(item.id, 'purposeType', PurposeType.RETURN);
                         } else {
                           handleItemChange(item.id, 'purposeType', PurposeType.MACHINE);
                         }
@@ -944,19 +1103,22 @@ const MaterialRequest = () => {
                         <SelectValue placeholder='Select Machine *' />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableMachines.map((machine) => (
+                        {getFilteredMachines().map((machine) => (
                           <SelectItem key={machine.id} value={machine.name}>
                             {machine.name}
                           </SelectItem>
                         ))}
                         <SelectItem value='Other'>Other</SelectItem>
                         <SelectItem value='Spare'>Spare</SelectItem>
+                        <SelectItem value='Return'>Return</SelectItem>
                       </SelectContent>
                     </Select>
                     {errors[`machineName_${item.id}`] && (
-                      <p className='text-red-500 text-xs mt-1'>
-                        {errors[`machineName_${item.id}`]}
-                      </p>
+                      <div className='mt-1 p-2 bg-red-50 border border-red-200 rounded-md'>
+                        <p className='text-red-700 text-xs font-medium'>
+                          {errors[`machineName_${item.id}`]}
+                        </p>
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className='border border-gray-300'>
@@ -966,14 +1128,16 @@ const MaterialRequest = () => {
                       onChange={(e) =>
                         handleItemChange(item.id, 'notes', e.target.value)
                       }
-                      placeholder={item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER ? 'Required for Spare/Other purpose...' : 'Add notes...'}
+                      placeholder={item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER || item.purposeType === PurposeType.RETURN ? 'Required for Spare/Other/Return purpose...' : 'Add notes...'}
                       className='border-0 p-0 h-auto min-h-[60px] resize-none focus:ring-0 focus:outline-none rounded-none'
                       rows={2}
                     />
                     {errors[`notes_${item.id}`] && (
-                      <p className='text-red-500 text-xs mt-1'>
-                        {errors[`notes_${item.id}`]}
-                      </p>
+                      <div className='mt-1 p-2 bg-red-50 border border-red-200 rounded-md'>
+                        <p className='text-red-700 text-xs font-medium'>
+                          {errors[`notes_${item.id}`]}
+                        </p>
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className='border border-gray-300'>
@@ -1039,6 +1203,7 @@ const MaterialRequest = () => {
                   {/* Materials */}
                 <div className='space-y-2'>
                   <Label className='text-sm font-medium'>Materials *</Label>
+                  <p className='text-xs text-muted-foreground'>💡 Select the material you want to request. The system will show current stock and specifications automatically.</p>
                   <Select
                     value={item.productName}
                     onValueChange={(value) =>
@@ -1049,7 +1214,7 @@ const MaterialRequest = () => {
                       <SelectValue placeholder='Select Material' />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableMaterials.map((material) => (
+                      {getFilteredMaterials().map((material) => (
                         <SelectItem key={material.name} value={material.name}>
                           <div className='flex flex-col'>
                             <div className='font-semibold'>{material.name}</div>
@@ -1064,9 +1229,11 @@ const MaterialRequest = () => {
                     </SelectContent>
                   </Select>
                   {errors[`productName_${item.id}`] && (
-                    <p className='text-destructive text-sm mt-1'>
-                      {errors[`productName_${item.id}`]}
-                    </p>
+                    <div className='mt-1 p-2 bg-red-50 border border-red-200 rounded-md'>
+                      <p className='text-red-700 text-sm font-medium'>
+                        {errors[`productName_${item.id}`]}
+                      </p>
+                    </div>
                   )}
                 </div>
 
@@ -1115,6 +1282,7 @@ const MaterialRequest = () => {
                     <Label className='text-sm font-medium'>
                       Required Quantity *
                     </Label>
+                    <p className='text-xs text-muted-foreground'>💡 Enter the quantity you need. This will be sent for approval to the Company Owner.</p>
                     <div className='flex items-center gap-2'>
                       <Input
                         id={`reqQuantity-${item.id}`}
@@ -1136,9 +1304,11 @@ const MaterialRequest = () => {
                       </span>
                     </div>
                     {errors[`reqQuantity_${item.id}`] && (
-                      <p className='text-destructive text-sm mt-1'>
-                        {errors[`reqQuantity_${item.id}`]}
-                      </p>
+                      <div className='mt-1 p-2 bg-red-50 border border-red-200 rounded-md'>
+                        <p className='text-red-700 text-sm font-medium'>
+                          {errors[`reqQuantity_${item.id}`]}
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1151,6 +1321,7 @@ const MaterialRequest = () => {
                     <Label className='text-sm font-medium'>
                       Machine Name *
                     </Label>
+                    <p className='text-xs text-muted-foreground'>💡 Select the machine this material is for, or choose 'Spare', 'Other', or 'Return' as needed.</p>
                     <Select
                       value={item.machineName}
                       onValueChange={(value) => {
@@ -1160,6 +1331,8 @@ const MaterialRequest = () => {
                           handleItemChange(item.id, 'purposeType', PurposeType.SPARE);
                         } else if (value === 'Other') {
                           handleItemChange(item.id, 'purposeType', PurposeType.OTHER);
+                        } else if (value === 'Return') {
+                          handleItemChange(item.id, 'purposeType', PurposeType.RETURN);
                         } else {
                           handleItemChange(item.id, 'purposeType', PurposeType.MACHINE);
                         }
@@ -1169,19 +1342,22 @@ const MaterialRequest = () => {
                         <SelectValue placeholder='Select Machine *' />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableMachines.map((machine) => (
+                        {getFilteredMachines().map((machine) => (
                           <SelectItem key={machine.id} value={machine.name}>
                             {machine.name}
                           </SelectItem>
                         ))}
                         <SelectItem value='Other'>Other</SelectItem>
                         <SelectItem value='Spare'>Spare</SelectItem>
+                        <SelectItem value='Return'>Return</SelectItem>
                       </SelectContent>
                     </Select>
                     {errors[`machineName_${item.id}`] && (
-                      <p className='text-destructive text-sm mt-1'>
-                        {errors[`machineName_${item.id}`]}
-                      </p>
+                      <div className='mt-1 p-2 bg-red-50 border border-red-200 rounded-md'>
+                        <p className='text-red-700 text-sm font-medium'>
+                          {errors[`machineName_${item.id}`]}
+                        </p>
+                      </div>
                     )}
                   </div>
 
@@ -1290,22 +1466,25 @@ const MaterialRequest = () => {
                   {/* Notes */}
                   <div className='space-y-2'>
                     <Label className='text-sm font-medium'>
-                      Notes {item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER ? '*' : ''}
+                      Notes {item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER || item.purposeType === PurposeType.RETURN ? '*' : ''}
                     </Label>
+                    <p className='text-xs text-muted-foreground'>💡 {item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER || item.purposeType === PurposeType.RETURN ? 'Notes are required for Spare/Other/Return purposes. Please provide detailed information.' : 'Optional: Add any additional notes or special requirements.'}</p>
                     <Textarea
                       id={`notes-${item.id}`}
                       value={item.notes || ''}
                       onChange={(e) =>
                         handleItemChange(item.id, 'notes', e.target.value)
                       }
-                      placeholder={item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER ? 'Required for Spare/Other purpose...' : 'Add notes...'}
+                      placeholder={item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER || item.purposeType === PurposeType.RETURN ? 'Required for Spare/Other/Return purpose...' : 'Add notes...'}
                       className='min-h-[60px] px-4 py-3 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm resize-none transition-all duration-200'
                       rows={2}
                     />
                     {errors[`notes_${item.id}`] && (
-                      <p className='text-destructive text-sm mt-1'>
-                        {errors[`notes_${item.id}`]}
-                      </p>
+                      <div className='mt-1 p-2 bg-red-50 border border-red-200 rounded-md'>
+                        <p className='text-red-700 text-sm font-medium'>
+                          {errors[`notes_${item.id}`]}
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>

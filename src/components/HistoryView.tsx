@@ -142,7 +142,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                       ₹{item.purchaseValue}
                     </TableCell>
                     <TableCell className='text-muted-foreground'>
-                      {item.purchasedFrom || 'N/A'}
+                      {item.purchasedFrom || 'No Vendor'}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -208,7 +208,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                       ₹{item.purchaseValue}
                     </TableCell>
                     <TableCell className='text-muted-foreground'>
-                      {item.purchasedFrom || 'N/A'}
+                      {item.purchasedFrom || 'No Vendor'}
                     </TableCell>
                   </TableRow>
                 ))}

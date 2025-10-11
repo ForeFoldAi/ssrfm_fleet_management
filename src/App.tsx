@@ -12,8 +12,7 @@ import { NavigationTracker } from './components/NavigationTracker';
 import Dashboard from './pages/Dashboard';
 import MaterialsInventory from './pages/MaterialsInventory';
 import MaterialRequest from './pages/MaterialRequest';
-import RequestsList from './pages/RequestsList';
-import StockManagement from './pages/StockManagement';
+
 import AddStock from './pages/AddStock';
 import OrganizationalManagement from './pages/OrganizationalManagement';
 import RequestDetails from './pages/RequestDetails';
@@ -134,9 +133,7 @@ const AppRoutes = () => {
         {/* Keep the standalone material-request route for backwards compatibility */}
         <Route path='material-request' element={<MaterialRequest />} />
         
-        <Route path='requests-list' element={<RequestsList />} />
-       
-        <Route path='stock-management' element={<StockManagement />} />
+      
         <Route path='add-stock' element={<AddStock />} />
       
         <Route
@@ -149,9 +146,7 @@ const AppRoutes = () => {
 
         {/* Legacy routes for backwards compatibility */}
         <Route path='materials' element={<MaterialsInventory />} />
-        <Route path='requests' element={<RequestsList />} />
        
-        <Route path='stock' element={<StockManagement />} />
         <Route path='inventory' element={<MaterialsInventory />} />
       </Route>
       <Route path='*' element={<NotFound />} />

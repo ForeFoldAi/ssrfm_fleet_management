@@ -142,8 +142,11 @@ export const materialIndentsApi = {
   reSubmit: async (id: number, newData: Partial<MaterialIndent>) => {
     const headers =
       newData instanceof FormData
-        ? { 'Content-Type': 'multipart/form-data' }
-        : { 'Content-Type': 'application/json' };
+        ? { 'Content-Type': 'multipart/form-data'
+
+         }: { 'Content-Type': 'application/json' };
+
+       
     const response = await api.post<MaterialIndent>(
       `/inventory/material-indents/${id}/submit`,
       newData,
@@ -222,6 +225,7 @@ export const materialIndentsApi = {
     return response.data;
   },
 
+
   /**
    * Export material indents to Excel file
    * @param params Export parameters (optional) - if no params provided, exports all material indents
@@ -267,6 +271,8 @@ export const materialIndentsApi = {
         queryParams.append(key, value.toString());
       }
     });
+
+    
 
     const queryString = queryParams.toString();
     // URL works with or without query parameters - exports all material indents if no params provided

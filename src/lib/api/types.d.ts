@@ -261,10 +261,12 @@ export interface MaterialIndentItem {
   requestedQuantity: number;
   notes: string;
   imagePaths: string[];
+  purposeType?: string; // 'machine', 'spare', 'other', or 'return'
+  machineName?: string; // For cases like "Spare" or "Other" where machineId doesn't exist
   createdAt: string;
   updatedAt: string;
   material: Material;
-  machine: Machine;
+  machine?: Machine; // Made optional since it may not exist for spare/other/return
   quotations: VendorQuotation[];
   selectedQuotation?: VendorQuotation;
 }
@@ -303,6 +305,7 @@ export enum PurposeType {
   MACHINE = 'machine',
   OTHER = 'other',
   SPARE = 'spare',
+  RETURN = 'return',
 }
 
 export interface CreateMaterialIndentItemInput {
