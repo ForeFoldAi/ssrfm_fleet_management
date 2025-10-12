@@ -52,7 +52,14 @@ import type { Branch } from '../lib/api/types.d';
 import { Alert, AlertDescription } from './ui/alert';
 import { toast } from '../hooks/use-toast';
 
-type SortField = 'name' | 'type' | 'unit' | 'status' | 'lastService' | 'nextMaintenanceDue' | 'createdAt';
+type SortField =
+  | 'name'
+  | 'type'
+  | 'unit'
+  | 'status'
+  | 'lastService'
+  | 'nextMaintenanceDue'
+  | 'createdAt';
 type SortOrder = 'ASC' | 'DESC';
 
 export const MachinesTab = () => {
@@ -63,7 +70,8 @@ export const MachinesTab = () => {
   const [filterUnit, setFilterUnit] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [isAddMachineOpen, setIsAddMachineOpen] = useState(false);
-  const [selectedMachine, setSelectedMachine] = useState<TransformedMachine | null>(null);
+  const [selectedMachine, setSelectedMachine] =
+    useState<TransformedMachine | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -120,10 +128,16 @@ export const MachinesTab = () => {
 
   // Transformed machines data for UI - initialize with empty array to avoid showing dummy data
   const [machines, setMachines] = useState<TransformedMachine[]>([]);
-  const [sortedMachines, setSortedMachines] = useState<TransformedMachine[]>([]);
+  const [sortedMachines, setSortedMachines] = useState<TransformedMachine[]>(
+    []
+  );
 
   // Frontend sorting function for machines
-  const sortMachinesData = (machines: TransformedMachine[], field: SortField, order: SortOrder): TransformedMachine[] => {
+  const sortMachinesData = (
+    machines: TransformedMachine[],
+    field: SortField,
+    order: SortOrder
+  ): TransformedMachine[] => {
     return [...machines].sort((a, b) => {
       let aValue: any;
       let bValue: any;
@@ -153,17 +167,41 @@ export const MachinesTab = () => {
           break;
         case 'lastService':
           // Sort by date, handle '-' as oldest
-          aValue = a.lastMaintenance === '-' ? 0 : new Date(a.lastMaintenance.split('-').reverse().join('-')).getTime();
-          bValue = b.lastMaintenance === '-' ? 0 : new Date(b.lastMaintenance.split('-').reverse().join('-')).getTime();
+          aValue =
+            a.lastMaintenance === '-'
+              ? 0
+              : new Date(
+                  a.lastMaintenance.split('-').reverse().join('-')
+                ).getTime();
+          bValue =
+            b.lastMaintenance === '-'
+              ? 0
+              : new Date(
+                  b.lastMaintenance.split('-').reverse().join('-')
+                ).getTime();
           break;
         case 'nextMaintenanceDue':
           // Sort by date, handle '-' as oldest
-          aValue = a.nextMaintenanceDue === '-' ? 0 : new Date(a.nextMaintenanceDue.split('-').reverse().join('-')).getTime();
-          bValue = b.nextMaintenanceDue === '-' ? 0 : new Date(b.nextMaintenanceDue.split('-').reverse().join('-')).getTime();
+          aValue =
+            a.nextMaintenanceDue === '-'
+              ? 0
+              : new Date(
+                  a.nextMaintenanceDue.split('-').reverse().join('-')
+                ).getTime();
+          bValue =
+            b.nextMaintenanceDue === '-'
+              ? 0
+              : new Date(
+                  b.nextMaintenanceDue.split('-').reverse().join('-')
+                ).getTime();
           break;
         case 'createdAt':
-          aValue = new Date(a.createdDate.split('-').reverse().join('-')).getTime();
-          bValue = new Date(b.createdDate.split('-').reverse().join('-')).getTime();
+          aValue = new Date(
+            a.createdDate.split('-').reverse().join('-')
+          ).getTime();
+          bValue = new Date(
+            b.createdDate.split('-').reverse().join('-')
+          ).getTime();
           break;
         default:
           return 0;
@@ -218,14 +256,14 @@ export const MachinesTab = () => {
         setAvailableBranches(response.data);
       } catch (error: any) {
         console.error('Error fetching branches:', error);
-        
+
         // Enhanced error handling
         let errorMessage = 'Failed to load branches. Please try again.';
-        
+
         if (error.response) {
           const status = error.response.status;
           const data = error.response.data;
-          
+
           if (status === 401) {
             errorMessage = 'Authentication failed. Please log in again.';
           } else if (status === 403) {
@@ -242,7 +280,7 @@ export const MachinesTab = () => {
         } else {
           errorMessage = error.message || 'An unexpected error occurred.';
         }
-        
+
         toast({
           title: 'Error',
           description: errorMessage,
@@ -275,18 +313,21 @@ export const MachinesTab = () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const params = {
         page: currentPage,
         limit: itemsPerPage,
         // For company owner: apply selected unit filter
         ...(filterUnit !== 'all' &&
           currentUser?.role === 'company_owner' && {
-            unitId: filterUnit,
+            branchId: filterUnit,
           }),
         // For supervisor/inventory_manager (branch-level users): automatically filter by their branch
-        ...((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id && {
-            unitId: currentUser.branch.id.toString(),
+        ...((currentUser?.role === 'supervisor' ||
+          currentUser?.role === 'inventory_manager' ||
+          currentUser?.userType?.isBranchLevel) &&
+          currentUser?.branch?.id && {
+            branchId: currentUser.branch.id.toString(),
           }),
       };
 
@@ -299,31 +340,37 @@ export const MachinesTab = () => {
         isSupervisor: currentUser?.role === 'supervisor',
         hasBranchId: currentUser?.branch?.id ? true : false,
         fullCurrentUser: currentUser,
-        supervisorCondition: (currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id,
+        supervisorCondition:
+          (currentUser?.role === 'supervisor' ||
+            currentUser?.role === 'inventory_manager' ||
+            currentUser?.userType?.isBranchLevel) &&
+          currentUser?.branch?.id,
         userType: currentUser?.userType,
-        localStorageUser: localStorage.getItem('user')
+        localStorageUser: localStorage.getItem('user'),
       });
-      
+
       // Additional debug for API URL construction
       console.log('MachinesTab API URL Debug:', {
         baseUrl: '/inventory/machines',
-        queryParams: Object.keys(params).map(key => `${key}=${params[key]}`).join('&'),
-        fullParams: params
+        queryParams: Object.keys(params)
+          .map((key) => `${key}=${params[key]}`)
+          .join('&'),
+        fullParams: params,
       });
 
       const response = await machinesApi.getAll(params);
-      
+
       // Debug logging for API response
       console.log('MachinesTab API Response:', {
         totalMachines: response.data.length,
-        machines: response.data.map(m => ({
+        machines: response.data.map((m) => ({
           id: m.id,
           name: m.name,
           branch: m.branch,
-          branchId: m.branchId
-        }))
+          branchId: m.branchId,
+        })),
       });
-      
+
       setMachinesData(response);
 
       // Transform API data to match component data structure
@@ -352,36 +399,46 @@ export const MachinesTab = () => {
           model: machine.model || '',
           serialNumber: machine.serialNumber || '',
           capacity: machine.capacity || '',
-          purchaseDate: machine.purchaseDate ? formatDate(machine.purchaseDate) : '',
-          warrantyExpiry: machine.warrantyExpiry ? formatDate(machine.warrantyExpiry) : '',
-          installationDate: machine.installationDate ? formatDate(machine.installationDate) : '',
+          purchaseDate: machine.purchaseDate
+            ? formatDate(machine.purchaseDate)
+            : '',
+          warrantyExpiry: machine.warrantyExpiry
+            ? formatDate(machine.warrantyExpiry)
+            : '',
+          installationDate: machine.installationDate
+            ? formatDate(machine.installationDate)
+            : '',
           additionalNotes: machine.additionalNotes || '',
         };
       });
 
       setMachines(transformedMachines);
-      
+
       // Apply current sorting to the transformed machines
-      const sorted = sortMachinesData(transformedMachines, sortField, sortOrder);
+      const sorted = sortMachinesData(
+        transformedMachines,
+        sortField,
+        sortOrder
+      );
       setSortedMachines(sorted);
     } catch (error: any) {
       console.error('Error fetching machines:', error);
-      
+
       // Enhanced error handling
       let errorMessage = 'Failed to load machines. Please try again.';
-      
+
       if (error.response) {
         // Server responded with error status
         const status = error.response.status;
         const data = error.response.data;
-        
+
         console.error('API Error Response:', {
           status,
           data,
           url: error.config?.url,
-          method: error.config?.method
+          method: error.config?.method,
         });
-        
+
         if (status === 401) {
           errorMessage = 'Authentication failed. Please log in again.';
         } else if (status === 403) {
@@ -404,7 +461,7 @@ export const MachinesTab = () => {
         console.error('Unexpected Error:', error.message);
         errorMessage = error.message || 'An unexpected error occurred.';
       }
-      
+
       setError(errorMessage);
       setMachines([]);
     } finally {
@@ -420,7 +477,7 @@ export const MachinesTab = () => {
 
   // Handle pagination changes
   useEffect(() => {
-      fetchMachines();
+    fetchMachines();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, itemsPerPage]);
 
@@ -433,7 +490,11 @@ export const MachinesTab = () => {
 
   // Apply frontend sorting when machines change
   useEffect(() => {
-    console.log('Applying frontend sort on machines change:', sortField, sortOrder);
+    console.log(
+      'Applying frontend sort on machines change:',
+      sortField,
+      sortOrder
+    );
     const sorted = sortMachinesData(machines, sortField, sortOrder);
     setSortedMachines(sorted);
   }, [machines, sortField, sortOrder]);
@@ -481,16 +542,29 @@ export const MachinesTab = () => {
   // Apply frontend filtering (status + search + supervisor branch) to sorted machines
   const displayMachines = sortedMachines.filter((machine) => {
     // Supervisor/Inventory Manager branch filtering - FRONTEND FALLBACK
-    if ((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id) {
+    if (
+      (currentUser?.role === 'supervisor' ||
+        currentUser?.role === 'inventory_manager' ||
+        currentUser?.userType?.isBranchLevel) &&
+      currentUser?.branch?.id
+    ) {
       // Get the actual machine data from the original API response
-      const originalMachine = machinesData?.data?.find(m => m.id === machine.id);
-      if (originalMachine && originalMachine.branch?.id !== currentUser.branch.id) {
-        console.log('Frontend filtering: Hiding machine from different branch', {
-          machineId: machine.id,
-          machineBranchId: originalMachine.branch?.id,
-          supervisorBranchId: currentUser.branch.id,
-          machine: originalMachine
-        });
+      const originalMachine = machinesData?.data?.find(
+        (m) => m.id === machine.id
+      );
+      if (
+        originalMachine &&
+        originalMachine.branch?.id !== currentUser.branch.id
+      ) {
+        console.log(
+          'Frontend filtering: Hiding machine from different branch',
+          {
+            machineId: machine.id,
+            machineBranchId: originalMachine.branch?.id,
+            supervisorBranchId: currentUser.branch.id,
+            machine: originalMachine,
+          }
+        );
         return false;
       }
     }
@@ -538,7 +612,8 @@ export const MachinesTab = () => {
 
   const getStatusBadge = (status: string) => {
     const badges = {
-      [MachineStatus.ACTIVE]: 'badge-status bg-success/10 text-success ring-1 ring-success/20',
+      [MachineStatus.ACTIVE]:
+        'badge-status bg-success/10 text-success ring-1 ring-success/20',
       [MachineStatus.UNDER_MAINTENANCE]:
         'badge-status bg-warning/10 text-warning ring-1 ring-warning/20',
       [MachineStatus.INACTIVE]:
@@ -561,7 +636,7 @@ export const MachinesTab = () => {
   const handleExportToCSV = async () => {
     try {
       setIsExporting(true);
-      
+
       // Fetch all machines with pagination (API limit is 100)
       let allMachines: Machine[] = [];
       let currentPage = 1;
@@ -576,20 +651,23 @@ export const MachinesTab = () => {
           // For company owner: apply selected unit filter
           ...(filterUnit !== 'all' &&
             currentUser?.role === 'company_owner' && {
-              unitId: filterUnit,
+              branchId: filterUnit,
             }),
           // For supervisor/inventory_manager (branch-level users): automatically filter by their branch
-          ...((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id && {
-              unitId: currentUser.branch.id.toString(),
+          ...((currentUser?.role === 'supervisor' ||
+            currentUser?.role === 'inventory_manager' ||
+            currentUser?.userType?.isBranchLevel) &&
+            currentUser?.branch?.id && {
+              branchId: currentUser.branch.id.toString(),
             }),
         });
 
         allMachines = [...allMachines, ...response.data];
-        
+
         // Check if there are more pages
         hasMorePages = response.meta?.hasNextPage || false;
         currentPage++;
-        
+
         // Safety check to prevent infinite loops
         if (currentPage > 1000) {
           console.warn('Export stopped at page 1000 to prevent infinite loop');
@@ -623,13 +701,19 @@ export const MachinesTab = () => {
           model: machine.model || '',
           serialNumber: machine.serialNumber || '',
           capacity: machine.capacity || '',
-          purchaseDate: machine.purchaseDate ? formatDate(machine.purchaseDate) : '',
-          warrantyExpiry: machine.warrantyExpiry ? formatDate(machine.warrantyExpiry) : '',
-          installationDate: machine.installationDate ? formatDate(machine.installationDate) : '',
+          purchaseDate: machine.purchaseDate
+            ? formatDate(machine.purchaseDate)
+            : '',
+          warrantyExpiry: machine.warrantyExpiry
+            ? formatDate(machine.warrantyExpiry)
+            : '',
+          installationDate: machine.installationDate
+            ? formatDate(machine.installationDate)
+            : '',
           additionalNotes: machine.additionalNotes || '',
         };
       });
-      
+
       // Apply status filter to export data (frontend filtering) - no search filter
       const transformedMachines = allTransformedMachines.filter((machine) => {
         // Status filter only
@@ -638,7 +722,7 @@ export const MachinesTab = () => {
         }
         return true;
       });
-      
+
       // Prepare CSV headers
       const headers = [
         'Machine ID',
@@ -659,7 +743,7 @@ export const MachinesTab = () => {
         'Next Maintenance Due',
         'Specifications',
         'Additional Notes',
-        'Created Date'
+        'Created Date',
       ];
 
       // Prepare CSV data
@@ -683,14 +767,14 @@ export const MachinesTab = () => {
           `"${machine.nextMaintenanceDue}"`,
           `"${machine.specifications}"`,
           `"${machine.additionalNotes}"`,
-          `"${machine.createdDate}"`
+          `"${machine.createdDate}"`,
         ];
       });
 
       // Create CSV content
       const csvContent = [
         headers.join(','),
-        ...csvData.map(row => row.join(','))
+        ...csvData.map((row) => row.join(',')),
       ].join('\n');
 
       // Create and download file
@@ -698,23 +782,22 @@ export const MachinesTab = () => {
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      
+
       // Generate filename with current date
       const currentDate = new Date().toISOString().split('T')[0];
       const filename = `machines_export_${currentDate}.csv`;
       link.setAttribute('download', filename);
-      
+
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast({
         title: 'Export Successful',
         description: `Machines data exported successfully. ${transformedMachines.length} records downloaded.`,
         variant: 'default',
       });
-
     } catch (error) {
       console.error('Error exporting machines:', error);
       toast({
@@ -731,14 +814,15 @@ export const MachinesTab = () => {
     <div className='space-y-4 sm:space-y-6'>
       {/* Network Status Alert */}
       {!isOnline && (
-        <Alert className="border-red-200 bg-red-50 text-red-800">
-          <WifiOff className="h-4 w-4" />
+        <Alert className='border-red-200 bg-red-50 text-red-800'>
+          <WifiOff className='h-4 w-4' />
           <AlertDescription>
-            You are currently offline. Some features may not work properly. Please check your internet connection.
+            You are currently offline. Some features may not work properly.
+            Please check your internet connection.
           </AlertDescription>
         </Alert>
       )}
-      
+
       {/* Header with Actions */}
       <UnifiedTabSearch
         searchValue={searchQuery}
@@ -845,7 +929,9 @@ export const MachinesTab = () => {
                       {machine.branchLocation && (
                         <div className='flex items-center gap-2 text-xs text-muted-foreground'>
                           <MapPin className='w-3 h-3 flex-shrink-0' />
-                          <span className='truncate'>{machine.branchLocation}</span>
+                          <span className='truncate'>
+                            {machine.branchLocation}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -904,7 +990,7 @@ export const MachinesTab = () => {
                         onClick={() => handleSort('type')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                      Type
+                        Type
                         {getSortIcon('type')}
                       </Button>
                     </TableHead>
@@ -914,7 +1000,7 @@ export const MachinesTab = () => {
                         onClick={() => handleSort('unit')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                      Unit / Location
+                        Unit / Location
                         {getSortIcon('unit')}
                       </Button>
                     </TableHead>
@@ -1028,20 +1114,28 @@ export const MachinesTab = () => {
       )}
 
       {/* Search Results Info - Show when searching and no error */}
-      {searchQuery.trim() && !isLoading && !error && displayMachines.length > 0 && (
-        <div className='text-sm text-muted-foreground text-center py-2'>
-          Showing {displayMachines.length} machine{displayMachines.length !== 1 ? 's' : ''} matching "{searchQuery}"
-        </div>
-      )}
+      {searchQuery.trim() &&
+        !isLoading &&
+        !error &&
+        displayMachines.length > 0 && (
+          <div className='text-sm text-muted-foreground text-center py-2'>
+            Showing {displayMachines.length} machine
+            {displayMachines.length !== 1 ? 's' : ''} matching "{searchQuery}"
+          </div>
+        )}
 
       {/* Pagination - Hide when searching or when there's an error */}
       {machinesData && machinesData.meta && !searchQuery.trim() && !error && (
         <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
           {/* Page Info */}
           <div className='text-sm text-muted-foreground'>
-            Showing {((machinesData.meta.page - 1) * machinesData.meta.limit) + 1} to{' '}
-            {Math.min(machinesData.meta.page * machinesData.meta.limit, machinesData.meta.itemCount)} of{' '}
-            {machinesData.meta.itemCount} entries
+            Showing {(machinesData.meta.page - 1) * machinesData.meta.limit + 1}{' '}
+            to{' '}
+            {Math.min(
+              machinesData.meta.page * machinesData.meta.limit,
+              machinesData.meta.itemCount
+            )}{' '}
+            of {machinesData.meta.itemCount} entries
           </div>
 
           {/* Pagination Controls */}
@@ -1080,17 +1174,20 @@ export const MachinesTab = () => {
                   setCurrentPage(1);
                   fetchMachines();
                 }}
-                disabled={!machinesData.meta.hasPreviousPage || machinesData.meta.page === 1}
+                disabled={
+                  !machinesData.meta.hasPreviousPage ||
+                  machinesData.meta.page === 1
+                }
                 className='h-8 w-8 p-0'
               >
                 <ChevronsLeft className='w-4 h-4' />
               </Button>
-              
+
               <Button
                 variant='outline'
                 size='sm'
                 onClick={() => {
-                  setCurrentPage(prev => prev - 1);
+                  setCurrentPage((prev) => prev - 1);
                   fetchMachines();
                 }}
                 disabled={!machinesData.meta.hasPreviousPage}
@@ -1101,40 +1198,50 @@ export const MachinesTab = () => {
 
               {/* Page numbers */}
               <div className='flex items-center gap-1 mx-2'>
-                {Array.from({ length: Math.min(5, machinesData.meta.pageCount) }, (_, i) => {
-                  let pageNum;
-                  if (machinesData.meta.pageCount <= 5) {
-                    pageNum = i + 1;
-                  } else if (machinesData.meta.page <= 3) {
-                    pageNum = i + 1;
-                  } else if (machinesData.meta.page >= machinesData.meta.pageCount - 2) {
-                    pageNum = machinesData.meta.pageCount - 4 + i;
-                  } else {
-                    pageNum = machinesData.meta.page - 2 + i;
-                  }
+                {Array.from(
+                  { length: Math.min(5, machinesData.meta.pageCount) },
+                  (_, i) => {
+                    let pageNum;
+                    if (machinesData.meta.pageCount <= 5) {
+                      pageNum = i + 1;
+                    } else if (machinesData.meta.page <= 3) {
+                      pageNum = i + 1;
+                    } else if (
+                      machinesData.meta.page >=
+                      machinesData.meta.pageCount - 2
+                    ) {
+                      pageNum = machinesData.meta.pageCount - 4 + i;
+                    } else {
+                      pageNum = machinesData.meta.page - 2 + i;
+                    }
 
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={machinesData.meta.page === pageNum ? 'default' : 'outline'}
-                      size='sm'
-                      onClick={() => {
-                        setCurrentPage(pageNum);
-                        fetchMachines();
-                      }}
-                      className='h-8 w-8 p-0'
-                  >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={
+                          machinesData.meta.page === pageNum
+                            ? 'default'
+                            : 'outline'
+                        }
+                        size='sm'
+                        onClick={() => {
+                          setCurrentPage(pageNum);
+                          fetchMachines();
+                        }}
+                        className='h-8 w-8 p-0'
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  }
+                )}
               </div>
 
               <Button
                 variant='outline'
                 size='sm'
                 onClick={() => {
-                  setCurrentPage(prev => prev + 1);
+                  setCurrentPage((prev) => prev + 1);
                   fetchMachines();
                 }}
                 disabled={!machinesData.meta.hasNextPage}
@@ -1142,7 +1249,7 @@ export const MachinesTab = () => {
               >
                 <ChevronRight className='w-4 h-4' />
               </Button>
-              
+
               <Button
                 variant='outline'
                 size='sm'
@@ -1150,7 +1257,10 @@ export const MachinesTab = () => {
                   setCurrentPage(machinesData.meta.pageCount);
                   fetchMachines();
                 }}
-                disabled={!machinesData.meta.hasNextPage || machinesData.meta.page === machinesData.meta.pageCount}
+                disabled={
+                  !machinesData.meta.hasNextPage ||
+                  machinesData.meta.page === machinesData.meta.pageCount
+                }
                 className='h-8 w-8 p-0'
               >
                 <ChevronsRight className='w-4 h-4' />
@@ -1159,7 +1269,6 @@ export const MachinesTab = () => {
           </div>
         </div>
       )}
-
 
       {/* Add/Edit Machine Form */}
       <AddMachineForm
