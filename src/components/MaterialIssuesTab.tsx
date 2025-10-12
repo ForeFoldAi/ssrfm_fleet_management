@@ -180,14 +180,14 @@ export const MaterialIssuesTab = () => {
         setAvailableBranches(response.data);
       } catch (error: any) {
         console.error('Error fetching branches:', error);
-        
+
         // Enhanced error handling
         let errorMessage = 'Failed to load branches. Please try again.';
-        
+
         if (error.response) {
           const status = error.response.status;
           const data = error.response.data;
-          
+
           if (status === 401) {
             errorMessage = 'Authentication failed. Please log in again.';
           } else if (status === 403) {
@@ -200,11 +200,12 @@ export const MaterialIssuesTab = () => {
             errorMessage = data.message;
           }
         } else if (error.request) {
-          errorMessage = 'Network error. Please check your internet connection.';
+          errorMessage =
+            'Network error. Please check your internet connection.';
         } else {
           errorMessage = error.message || 'An unexpected error occurred.';
         }
-        
+
         toast({
           title: 'Error',
           description: errorMessage,
@@ -233,7 +234,11 @@ export const MaterialIssuesTab = () => {
   }, []);
 
   // Frontend sorting function for transformed issues
-  const sortIssues = (issues: TransformedIssue[], field: SortField, order: SortOrder): TransformedIssue[] => {
+  const sortIssues = (
+    issues: TransformedIssue[],
+    field: SortField,
+    order: SortOrder
+  ): TransformedIssue[] => {
     return [...issues].sort((a, b) => {
       let aValue: any;
       let bValue: any;
@@ -333,18 +338,8 @@ export const MaterialIssuesTab = () => {
   const transformApiIssueToUiFormat = (
     issue: MaterialIssue
   ): TransformedIssue => {
-
     // Transform each item in the issue
     const transformedItems = issue.items.map((item) => {
-      // Debug logging to see what's actually in the material data
-      console.log('Material data for debugging:', {
-        materialId: item.material.id,
-        materialName: item.material.name,
-        measureUnit: item.material.measureUnit,
-        hasMeasureUnit: !!item.material.measureUnit,
-        measureUnitName: item.material.measureUnit?.name
-      });
-
       return {
         materialId: item.material.id,
         materialName: item.material.name,
@@ -364,7 +359,6 @@ export const MaterialIssuesTab = () => {
         originalItem: item,
       };
     });
-
 
     // Create a transformed issue with all items
     const transformedIssue = {
@@ -407,26 +401,6 @@ export const MaterialIssuesTab = () => {
     return `SSRFM/UNIT${unitNumber}/I-${dateStr}/${sequence}`;
   };
 
-  // Convert number to Roman numeral (kept for backward compatibility if needed)
-  const convertToRoman = (num: number): string => {
-    const romanNumerals = [
-      { value: 10, numeral: 'X' },
-      { value: 9, numeral: 'IX' },
-      { value: 5, numeral: 'V' },
-      { value: 4, numeral: 'IV' },
-      { value: 1, numeral: 'I' },
-    ];
-
-    let result = '';
-    for (const { value, numeral } of romanNumerals) {
-      while (num >= value) {
-        result += numeral;
-        num -= value;
-      }
-    }
-    return result;
-  };
-
   // Add the missing fetchMaterialIssues function
   const fetchMaterialIssues = async (page = 1, limit = itemsPerPage) => {
     setIsLoading(true);
@@ -465,7 +439,10 @@ export const MaterialIssuesTab = () => {
       console.log('API Response:', response);
       console.log('First issue data:', response.data[0]);
       if (response.data[0]?.items?.[0]) {
-        console.log('First item material data:', response.data[0].items[0].material);
+        console.log(
+          'First item material data:',
+          response.data[0].items[0].material
+        );
       }
 
       setMaterialIssues(response.data);
@@ -474,32 +451,33 @@ export const MaterialIssuesTab = () => {
       // Transform the data for UI display
       const transformedIssues = response.data.map(transformApiIssueToUiFormat);
       setIssuedMaterials(transformedIssues);
-      
+
       // Apply current sorting to the transformed issues
       const sorted = sortIssues(transformedIssues, sortField, sortOrder);
       setSortedIssues(sorted);
     } catch (err: any) {
       console.error('Error fetching material issues:', err);
-      
+
       // Enhanced error handling
       let errorMessage = 'Failed to load material issues. Please try again.';
-      
+
       if (err.response) {
         // Server responded with error status
         const status = err.response.status;
         const data = err.response.data;
-        
+
         console.error('API Error Response:', {
           status,
           data,
           url: err.config?.url,
-          method: err.config?.method
+          method: err.config?.method,
         });
-        
+
         if (status === 401) {
           errorMessage = 'Authentication failed. Please log in again.';
         } else if (status === 403) {
-          errorMessage = 'You do not have permission to access material issues.';
+          errorMessage =
+            'You do not have permission to access material issues.';
         } else if (status === 404) {
           errorMessage = 'Material issues endpoint not found.';
         } else if (status >= 500) {
@@ -518,7 +496,7 @@ export const MaterialIssuesTab = () => {
         console.error('Unexpected Error:', err.message);
         errorMessage = err.message || 'An unexpected error occurred.';
       }
-      
+
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -582,6 +560,7 @@ export const MaterialIssuesTab = () => {
         machineId: item.machineId,
         machineName: item.machineName,
       })),
+      originalIssue: issue?.originalIssue,
     };
 
     setEditingIssue(viewData as unknown as TransformedIssue);
@@ -605,7 +584,11 @@ export const MaterialIssuesTab = () => {
 
   // Apply frontend sorting when issuedMaterials change
   useEffect(() => {
-    console.log('Applying frontend sort on issues change:', sortField, sortOrder);
+    console.log(
+      'Applying frontend sort on issues change:',
+      sortField,
+      sortOrder
+    );
     const sorted = sortIssues(issuedMaterials, sortField, sortOrder);
     setSortedIssues(sorted);
   }, [issuedMaterials, sortField, sortOrder]);
@@ -640,7 +623,7 @@ export const MaterialIssuesTab = () => {
       setSortField('id');
       setSortOrder('DESC');
       setCurrentPage(1); // Go to first page to see the new item
-      
+
       // Refresh the list to show the new issue
       await fetchMaterialIssues(1, itemsPerPage);
 
@@ -680,7 +663,7 @@ export const MaterialIssuesTab = () => {
   const exportToCSV = async () => {
     try {
       setIsExporting(true);
-      
+
       // Fetch all material issues with pagination (API limit is 100)
       let allIssues: MaterialIssue[] = [];
       let currentPage = 1;
@@ -695,17 +678,18 @@ export const MaterialIssuesTab = () => {
           sortOrder: 'DESC',
           include: 'items.material.measureUnit,items.issuedFor,branch,issuedBy', // Include related data
           ...(searchQuery.trim() && { search: searchQuery.trim() }),
-          ...(currentUser?.role === 'company_owner' && filterUnit !== 'all' && {
-            branchId: filterUnit,
-          }),
+          ...(currentUser?.role === 'company_owner' &&
+            filterUnit !== 'all' && {
+              branchId: filterUnit,
+            }),
         });
 
         allIssues = [...allIssues, ...response.data];
-        
+
         // Check if there are more pages
         hasMorePages = response.meta?.hasNextPage || false;
         currentPage++;
-        
+
         // Safety check to prevent infinite loops
         if (currentPage > 1000) {
           console.warn('Export stopped at page 1000 to prevent infinite loop');
@@ -718,7 +702,7 @@ export const MaterialIssuesTab = () => {
       if (exportDateRange.from || exportDateRange.to) {
         filteredIssues = allIssues.filter((issue) => {
           const issueDate = new Date(issue.issueDate);
-          
+
           if (exportDateRange.from && exportDateRange.to) {
             const fromDate = new Date(exportDateRange.from);
             const toDate = new Date(exportDateRange.to);
@@ -730,14 +714,14 @@ export const MaterialIssuesTab = () => {
             const toDate = new Date(exportDateRange.to);
             return issueDate <= toDate;
           }
-          
+
           return true;
         });
       }
 
       // Transform issues to UI format for export
       const transformedIssues = filteredIssues.map(transformApiIssueToUiFormat);
-      
+
       // Prepare CSV headers
       const headers = [
         'Issue ID',
@@ -756,12 +740,12 @@ export const MaterialIssuesTab = () => {
         'Recipient Name',
         'Purpose',
         'Issued For (Machine)',
-        'Additional Notes'
+        'Additional Notes',
       ];
 
       // Prepare CSV data - flatten all items from all issues
       const csvData: string[][] = [];
-      
+
       transformedIssues.forEach((issue) => {
         issue.items.forEach((item) => {
           csvData.push([
@@ -781,7 +765,7 @@ export const MaterialIssuesTab = () => {
             `"${item.recipientName}"`,
             `"${item.purpose}"`,
             `"${item.machineName}"`,
-            `"${issue.additionalNotes || ''}"`
+            `"${issue.additionalNotes || ''}"`,
           ]);
         });
       });
@@ -789,7 +773,7 @@ export const MaterialIssuesTab = () => {
       // Create CSV content
       const csvContent = [
         headers.join(','),
-        ...csvData.map(row => row.join(','))
+        ...csvData.map((row) => row.join(',')),
       ].join('\n');
 
       // Create and download file
@@ -797,11 +781,11 @@ export const MaterialIssuesTab = () => {
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      
+
       // Generate filename with current date and date range
       const currentDate = new Date().toISOString().split('T')[0];
       let filename = `ssrfm_material_issues_export_${currentDate}`;
-      
+
       if (exportDateRange.from || exportDateRange.to) {
         if (exportDateRange.from && exportDateRange.to) {
           filename += `_${exportDateRange.from}_to_${exportDateRange.to}`;
@@ -813,9 +797,9 @@ export const MaterialIssuesTab = () => {
       } else {
         filename += '_all_data';
       }
-      
+
       link.setAttribute('download', `${filename}.csv`);
-      
+
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
@@ -829,7 +813,6 @@ export const MaterialIssuesTab = () => {
         description: `Material issues data exported successfully. ${csvData.length} records downloaded.`,
         variant: 'default',
       });
-
     } catch (error) {
       console.error('Error exporting material issues:', error);
       toast({
@@ -975,398 +958,129 @@ export const MaterialIssuesTab = () => {
           <p className='text-muted-foreground mb-4'>{error}</p>
           <Button onClick={() => fetchMaterialIssues()}>Try Again</Button>
         </Card>
-      ) : (
-        viewMode === 'table' ? (
-          // Table View for Material Issues - Individual Items
-          <Card className='rounded-lg shadow-sm border border-primary/10'>
-            <CardContent className='p-0'>
-              <div className='overflow-x-auto'>
-                <TableComponent>
-                  <TableHeader>
-                    <TableRow className='bg-gradient-to-r from-primary/5 to-primary/10 border-b-2 border-primary/20'>
-                      <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('uniqueId')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Issue ID
-                          {getSortIcon('uniqueId')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[140px] text-foreground font-semibold text-sm'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('materialName')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Issued Material
-                          {getSortIcon('materialName')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('specifications')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Specifications
-                          {getSortIcon('specifications')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('stockInfo')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Stock Info
-                          {getSortIcon('stockInfo')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('issueDate')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Issued Date
-                          {getSortIcon('issueDate')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('issuedFor')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Issued For
-                          {getSortIcon('issuedFor')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('issuedTo')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Issued To
-                          {getSortIcon('issuedTo')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[130px] text-foreground font-semibold text-sm'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('issuedBy')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Issued By
-                          {getSortIcon('issuedBy')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('branch')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Unit
-                          {getSortIcon('branch')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('purpose')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Purpose
-                          {getSortIcon('purpose')}
-                        </Button>
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {displayIssues.length > 0 ? (
-                      displayIssues.flatMap((issue) =>
+      ) : viewMode === 'table' ? (
+        // Table View for Material Issues - Individual Items
+        <Card className='rounded-lg shadow-sm border border-primary/10'>
+          <CardContent className='p-0'>
+            <div className='overflow-x-auto'>
+              <TableComponent>
+                <TableHeader>
+                  <TableRow className='bg-gradient-to-r from-primary/5 to-primary/10 border-b-2 border-primary/20'>
+                    <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('uniqueId')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Issue ID
+                        {getSortIcon('uniqueId')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[140px] text-foreground font-semibold text-sm'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('materialName')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Issued Material
+                        {getSortIcon('materialName')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('specifications')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Specifications
+                        {getSortIcon('specifications')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('stockInfo')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Stock Info
+                        {getSortIcon('stockInfo')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('issueDate')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Issued Date
+                        {getSortIcon('issueDate')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('issuedFor')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Issued For
+                        {getSortIcon('issuedFor')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('issuedTo')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Issued To
+                        {getSortIcon('issuedTo')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[130px] text-foreground font-semibold text-sm'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('issuedBy')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Issued By
+                        {getSortIcon('issuedBy')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('branch')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Unit
+                        {getSortIcon('branch')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[100px] text-foreground font-semibold text-sm'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('purpose')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Purpose
+                        {getSortIcon('purpose')}
+                      </Button>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayIssues.length > 0
+                    ? displayIssues.flatMap((issue) =>
                         issue.items.map((item, itemIndex) => (
-                        <TableRow
-                          key={`${issue.id}-item-${itemIndex}`}
-                          className='hover:bg-primary/5 border-b border-border/50 cursor-pointer transition-colors duration-200'
-                          onClick={() => handleViewIssue(issue)}
-                        >
-                          <TableCell className='font-medium text-sm py-3'>
-                            <Button
-                              variant='link'
-                              className='p-0 h-auto text-left font-semibold text-primary hover:text-primary/80 text-sm uppercase'
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewIssue(issue);
-                              }}
-                            >
-                              {issue.id}
-                            </Button>
-                          </TableCell>
-                          <TableCell className='text-sm py-3'>
-                            <div className='flex items-center gap-2'>
-                              <div className='w-2 h-2 bg-primary rounded-full'></div>
-                              <div>
-                                <div className='font-semibold text-foreground capitalize'>
-                                  {item.materialName}
-                                </div>
-                                {item.makerBrand && (
-                                  <div className='text-xs text-muted-foreground mt-1'>
-                                    {item.makerBrand}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className='text-sm py-3'>
-                            <div
-                              className='text-muted-foreground max-w-[120px] truncate'
-                              title={item.specifications}
-                            >
-                              {item.specifications}
-                            </div>
-                          </TableCell>
-                          <TableCell className='text-sm py-3'>
-                            <div className='space-y-1'>
-                              <div className='flex items-center justify-between text-xs'>
-                                <span className='text-muted-foreground'>
-                                  Existing:
-                                </span>
-                                <span className='text-foreground'>
-                                  {item.existingStock} {item.originalItem.material.measureUnit?.name || 'units'}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between text-xs font-bold text-primary">
-  <span className="text-muted-foreground">
-    Issued:
-  </span>
-  <span>
-    {item.issuedQuantity} {item.originalItem.material.measureUnit?.name || 'units'}
-  </span>
-</div>
-
-                              <div className='flex items-center justify-between text-xs'>
-                                <span className='text-muted-foreground'>
-                                  After:
-                                </span>
-                                <span className='text-foreground'>
-                                  {item.stockAfterIssue} {item.originalItem.material.measureUnit?.name || 'units'}
-                                </span>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className='text-sm py-3'>
-                            <span className='text-foreground font-bold'>
-                              {formatDate(issue.issuedDate)}
-                            </span>
-                          </TableCell>
-                          <TableCell className='text-sm py-3'>
-                            <div className='flex items-center gap-2'>
-                              {item.machineName ? (
-                                <div
-                                  className='font-medium text-foreground truncate'
-                                  title={item.machineName}
-                                >
-                                  {item.machineName}
-                                </div>
-                              ) : (
-                                <div className='font-medium text-amber-600 text-xs'>
-                                  Other
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className='text-sm py-3'>
-                            <div className='font-medium text-foreground truncate'>
-                              {item.recipientName}
-                            </div>
-                          </TableCell>
-                          <TableCell className='text-sm py-3'>
-                            <div className='space-y-1'>
-                              <div className='font-semibold text-foreground truncate'>
-                                {issue.issuingPersonName}
-                              </div>
-                              <div className='text-xs text-muted-foreground truncate'>
-                                {issue.issuingPersonDesignation}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className='text-sm py-3'>
-                            <div className='space-y-1'>
-                              <Badge
-                                variant='outline'
-                                className='text-xs bg-primary/10 text-primary border-primary/30'
-                              >
-                                {issue.unitName}
-                              </Badge>
-                              {issue.branchLocation && (
-                                <div className='text-xs text-muted-foreground'>
-                                  {issue.branchLocation}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className='text-sm py-3'>
-                            <div
-                              className='text-muted-foreground truncate max-w-[100px]'
-                              title={item.purpose}
-                            >
-                              {item.purpose}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )
-                    ) : null}
-                  </TableBody>
-                </TableComponent>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          // List View for Material Issues - Individual Items
-          <Card className='rounded-lg shadow-sm'>
-            <CardContent className='p-0'>
-              <div className='overflow-hidden'>
-                <TableComponent>
-                  <TableHeader>
-                    <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
-                      <TableHead className='w-8'></TableHead>
-                      <TableHead className='w-[80px] text-foreground font-semibold'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('uniqueId')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Issue ID
-                          {getSortIcon('uniqueId')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[120px] text-foreground font-semibold'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('materialName')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Issued Material
-                          {getSortIcon('materialName')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[80px] text-foreground font-semibold'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('specifications')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Specifications
-                          {getSortIcon('specifications')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[90px] text-foreground font-semibold'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('stockInfo')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Stock Info
-                          {getSortIcon('stockInfo')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[100px] text-foreground font-semibold'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('issuedTo')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Issued To
-                          {getSortIcon('issuedTo')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[100px] text-foreground font-semibold'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('issuedBy')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Issuing Person
-                          {getSortIcon('issuedBy')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[70px] text-foreground font-semibold'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('branch')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Unit
-                          {getSortIcon('branch')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[80px] text-foreground font-semibold'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('issueDate')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Date
-                          {getSortIcon('issueDate')}
-                        </Button>
-                      </TableHead>
-                      <TableHead className='w-[100px] text-foreground font-semibold'>
-                        <Button
-                          variant='ghost'
-                          onClick={() => handleSort('issuedFor')}
-                          className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                        >
-                          Issued For
-                          {getSortIcon('issuedFor')}
-                        </Button>
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {displayIssues.length > 0 ? (
-                      displayIssues
-                        .slice(
-                          (currentPage - 1) * itemsPerPage,
-                          currentPage * itemsPerPage
-                        )
-                        .flatMap((issue) =>
-                          issue.items.map((item, itemIndex) => (
                           <TableRow
                             key={`${issue.id}-item-${itemIndex}`}
-                            className='hover:bg-muted/30 border-b border-secondary/20 cursor-pointer'
+                            className='hover:bg-primary/5 border-b border-border/50 cursor-pointer transition-colors duration-200'
                             onClick={() => handleViewIssue(issue)}
                           >
-                            <TableCell>
-                              <Button
-                                variant='ghost'
-                                size='sm'
-                                className='h-6 w-6 p-0'
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleRowExpansion(
-                                    `${issue.id}-item-${itemIndex}`
-                                  );
-                                }}
-                              >
-                                {expandedRows.has(
-                                  `${issue.id}-item-${itemIndex}`
-                                ) ? (
-                                  <ChevronDown className='w-4 h-4' />
-                                ) : (
-                                  <ChevronRight className='w-4 h-4' />
-                                )}
-                              </Button>
-                            </TableCell>
-                            <TableCell className='font-medium text-xs'>
+                            <TableCell className='font-medium text-sm py-3'>
                               <Button
                                 variant='link'
-                                className='p-0 h-auto text-left font-medium text-primary hover:text-primary/80 uppercase text-xs'
+                                className='p-0 h-auto text-left font-semibold text-primary hover:text-primary/80 text-sm uppercase'
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleViewIssue(issue);
@@ -1374,58 +1088,94 @@ export const MaterialIssuesTab = () => {
                               >
                                 {issue.id}
                               </Button>
-                              <div className='text-xs mt-1'>
-                                <Badge variant='outline' className='text-xs'>
-                                  Item {itemIndex + 1}
-                                </Badge>
+                            </TableCell>
+                            <TableCell className='text-sm py-3'>
+                              <div className='flex items-center gap-2'>
+                                <div className='w-2 h-2 bg-primary rounded-full'></div>
+                                <div>
+                                  <div className='font-semibold text-foreground capitalize'>
+                                    {item.materialName}
+                                  </div>
+                                  {item.makerBrand && (
+                                    <div className='text-xs text-muted-foreground mt-1'>
+                                      {item.makerBrand}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </TableCell>
-                            <TableCell className='text-sm'>
-                              <div>
-                                <div className='font-medium capitalize truncate'>
-                                  {item.materialName}
+                            <TableCell className='text-sm py-3'>
+                              <div
+                                className='text-muted-foreground max-w-[120px] truncate'
+                                title={item.specifications}
+                              >
+                                {item.specifications}
+                              </div>
+                            </TableCell>
+                            <TableCell className='text-sm py-3'>
+                              <div className='space-y-1'>
+                                <div className='flex items-center justify-between text-xs'>
+                                  <span className='text-muted-foreground'>
+                                    Existing:
+                                  </span>
+                                  <span className='text-foreground'>
+                                    {item.existingStock}{' '}
+                                    {item.originalItem.material.measureUnit
+                                      ?.name || 'units'}
+                                  </span>
                                 </div>
-                                {item.makerBrand && (
-                                  <div className='text-xs text-muted-foreground mt-1 truncate'>
-                                    {item.makerBrand}
+                                <div className='flex items-center justify-between text-xs font-bold text-primary'>
+                                  <span className='text-muted-foreground'>
+                                    Issued:
+                                  </span>
+                                  <span>
+                                    {item.issuedQuantity}{' '}
+                                    {item.originalItem.material.measureUnit
+                                      ?.name || 'units'}
+                                  </span>
+                                </div>
+
+                                <div className='flex items-center justify-between text-xs'>
+                                  <span className='text-muted-foreground'>
+                                    After:
+                                  </span>
+                                  <span className='text-foreground'>
+                                    {item.stockAfterIssue}{' '}
+                                    {item.originalItem.material.measureUnit
+                                      ?.name || 'units'}
+                                  </span>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className='text-sm py-3'>
+                              <span className='text-foreground font-bold'>
+                                {formatDate(issue.issuedDate)}
+                              </span>
+                            </TableCell>
+                            <TableCell className='text-sm py-3'>
+                              <div className='flex items-center gap-2'>
+                                {item.machineName ? (
+                                  <div
+                                    className='font-medium text-foreground truncate'
+                                    title={item.machineName}
+                                  >
+                                    {item.machineName}
+                                  </div>
+                                ) : (
+                                  <div className='font-medium text-amber-600 text-xs'>
+                                    Other
                                   </div>
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className='text-xs text-muted-foreground truncate'>
-                              {item.specifications}
-                            </TableCell>
-                            <TableCell className='text-xs'>
-                              <div className='space-y-0.5'>
-                                <div>
-                                  <span className='text-muted-foreground'>
-                                    Existing:
-                                  </span>{' '}
-                                  {item.existingStock} {item.originalItem.material.measureUnit?.name || 'units'}
-                                </div>
-                                <div className="text-primary font-bold">
-  <span className="text-muted-foreground font-bold">
-    Issued:
-  </span>{' '}
-  {item.issuedQuantity} {item.originalItem.material.measureUnit?.name || 'units'}
-</div>
-
-                                <div>
-                                  <span className='text-muted-foreground'>
-                                    After:
-                                  </span>{' '}
-                                  {item.stockAfterIssue} {item.originalItem.material.measureUnit?.name || 'units'}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className='text-sm'>
-                              <div className='font-medium truncate'>
+                            <TableCell className='text-sm py-3'>
+                              <div className='font-medium text-foreground truncate'>
                                 {item.recipientName}
                               </div>
                             </TableCell>
-                            <TableCell className='text-sm'>
-                              <div>
-                                <div className='font-medium truncate'>
+                            <TableCell className='text-sm py-3'>
+                              <div className='space-y-1'>
+                                <div className='font-semibold text-foreground truncate'>
                                   {issue.issuingPersonName}
                                 </div>
                                 <div className='text-xs text-muted-foreground truncate'>
@@ -1433,9 +1183,12 @@ export const MaterialIssuesTab = () => {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className='text-xs'>
+                            <TableCell className='text-sm py-3'>
                               <div className='space-y-1'>
-                                <Badge variant='outline' className='text-xs'>
+                                <Badge
+                                  variant='outline'
+                                  className='text-xs bg-primary/10 text-primary border-primary/30'
+                                >
                                   {issue.unitName}
                                 </Badge>
                                 {issue.branchLocation && (
@@ -1445,29 +1198,269 @@ export const MaterialIssuesTab = () => {
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell className='text-xs'>
-                              <span className='font-bold'>
-                                {formatDate(issue.issuedDate)}
-                              </span>
-                            </TableCell>
-                            <TableCell className='text-xs'>
+                            <TableCell className='text-sm py-3'>
                               <div
-                                className='font-medium truncate'
-                                title={item.machineName}
+                                className='text-muted-foreground truncate max-w-[100px]'
+                                title={item.purpose}
                               >
-                                {item.machineName || 'others'}
+                                {item.purpose}
                               </div>
                             </TableCell>
                           </TableRow>
                         ))
                       )
-                    ) : null}
-                  </TableBody>
-                </TableComponent>
-              </div>
-            </CardContent>
-          </Card>
-        )
+                    : null}
+                </TableBody>
+              </TableComponent>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        // List View for Material Issues - Individual Items
+        <Card className='rounded-lg shadow-sm'>
+          <CardContent className='p-0'>
+            <div className='overflow-hidden'>
+              <TableComponent>
+                <TableHeader>
+                  <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
+                    <TableHead className='w-8'></TableHead>
+                    <TableHead className='w-[80px] text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('uniqueId')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Issue ID
+                        {getSortIcon('uniqueId')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[120px] text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('materialName')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Issued Material
+                        {getSortIcon('materialName')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[80px] text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('specifications')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Specifications
+                        {getSortIcon('specifications')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[90px] text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('stockInfo')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Stock Info
+                        {getSortIcon('stockInfo')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[100px] text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('issuedTo')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Issued To
+                        {getSortIcon('issuedTo')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[100px] text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('issuedBy')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Issuing Person
+                        {getSortIcon('issuedBy')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[70px] text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('branch')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Unit
+                        {getSortIcon('branch')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[80px] text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('issueDate')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Date
+                        {getSortIcon('issueDate')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-[100px] text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('issuedFor')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Issued For
+                        {getSortIcon('issuedFor')}
+                      </Button>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {displayIssues.length > 0
+                    ? displayIssues
+                        .slice(
+                          (currentPage - 1) * itemsPerPage,
+                          currentPage * itemsPerPage
+                        )
+                        .flatMap((issue) =>
+                          issue.items.map((item, itemIndex) => (
+                            <TableRow
+                              key={`${issue.id}-item-${itemIndex}`}
+                              className='hover:bg-muted/30 border-b border-secondary/20 cursor-pointer'
+                              onClick={() => handleViewIssue(issue)}
+                            >
+                              <TableCell>
+                                <Button
+                                  variant='ghost'
+                                  size='sm'
+                                  className='h-6 w-6 p-0'
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleRowExpansion(
+                                      `${issue.id}-item-${itemIndex}`
+                                    );
+                                  }}
+                                >
+                                  {expandedRows.has(
+                                    `${issue.id}-item-${itemIndex}`
+                                  ) ? (
+                                    <ChevronDown className='w-4 h-4' />
+                                  ) : (
+                                    <ChevronRight className='w-4 h-4' />
+                                  )}
+                                </Button>
+                              </TableCell>
+                              <TableCell className='font-medium text-xs'>
+                                <Button
+                                  variant='link'
+                                  className='p-0 h-auto text-left font-medium text-primary hover:text-primary/80 uppercase text-xs'
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleViewIssue(issue);
+                                  }}
+                                >
+                                  {issue.id}
+                                </Button>
+                                <div className='text-xs mt-1'>
+                                  <Badge variant='outline' className='text-xs'>
+                                    Item {itemIndex + 1}
+                                  </Badge>
+                                </div>
+                              </TableCell>
+                              <TableCell className='text-sm'>
+                                <div>
+                                  <div className='font-medium capitalize truncate'>
+                                    {item.materialName}
+                                  </div>
+                                  {item.makerBrand && (
+                                    <div className='text-xs text-muted-foreground mt-1 truncate'>
+                                      {item.makerBrand}
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className='text-xs text-muted-foreground truncate'>
+                                {item.specifications}
+                              </TableCell>
+                              <TableCell className='text-xs'>
+                                <div className='space-y-0.5'>
+                                  <div>
+                                    <span className='text-muted-foreground'>
+                                      Existing:
+                                    </span>{' '}
+                                    {item.existingStock}{' '}
+                                    {item.originalItem.material.measureUnit
+                                      ?.name || 'units'}
+                                  </div>
+                                  <div className='text-primary font-bold'>
+                                    <span className='text-muted-foreground font-bold'>
+                                      Issued:
+                                    </span>{' '}
+                                    {item.issuedQuantity}{' '}
+                                    {item.originalItem.material.measureUnit
+                                      ?.name || 'units'}
+                                  </div>
+
+                                  <div>
+                                    <span className='text-muted-foreground'>
+                                      After:
+                                    </span>{' '}
+                                    {item.stockAfterIssue}{' '}
+                                    {item.originalItem.material.measureUnit
+                                      ?.name || 'units'}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className='text-sm'>
+                                <div className='font-medium truncate'>
+                                  {item.recipientName}
+                                </div>
+                              </TableCell>
+                              <TableCell className='text-sm'>
+                                <div>
+                                  <div className='font-medium truncate'>
+                                    {issue.issuingPersonName}
+                                  </div>
+                                  <div className='text-xs text-muted-foreground truncate'>
+                                    {issue.issuingPersonDesignation}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className='text-xs'>
+                                <div className='space-y-1'>
+                                  <Badge variant='outline' className='text-xs'>
+                                    {issue.unitName}
+                                  </Badge>
+                                  {issue.branchLocation && (
+                                    <div className='text-xs text-muted-foreground'>
+                                      {issue.branchLocation}
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className='text-xs'>
+                                <span className='font-bold'>
+                                  {formatDate(issue.issuedDate)}
+                                </span>
+                              </TableCell>
+                              <TableCell className='text-xs'>
+                                <div
+                                  className='font-medium truncate'
+                                  title={item.machineName}
+                                >
+                                  {item.machineName || 'others'}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )
+                    : null}
+                </TableBody>
+              </TableComponent>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Empty State */}
@@ -1664,11 +1657,11 @@ export const MaterialIssuesTab = () => {
               Export Material Issues to CSV
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className='space-y-4'>
             <div className='space-y-3'>
               <Label className='text-sm font-medium'>Export Options</Label>
-              
+
               <div className='space-y-2'>
                 <Label htmlFor='exportFromDate' className='text-sm'>
                   From Date (Optional)
@@ -1677,14 +1670,16 @@ export const MaterialIssuesTab = () => {
                   id='exportFromDate'
                   type='date'
                   value={exportDateRange.from}
-                  onChange={(e) => setExportDateRange(prev => ({
-                    ...prev,
-                    from: e.target.value
-                  }))}
+                  onChange={(e) =>
+                    setExportDateRange((prev) => ({
+                      ...prev,
+                      from: e.target.value,
+                    }))
+                  }
                   className='w-full'
                 />
               </div>
-              
+
               <div className='space-y-2'>
                 <Label htmlFor='exportToDate' className='text-sm'>
                   To Date (Optional)
@@ -1693,21 +1688,26 @@ export const MaterialIssuesTab = () => {
                   id='exportToDate'
                   type='date'
                   value={exportDateRange.to}
-                  onChange={(e) => setExportDateRange(prev => ({
-                    ...prev,
-                    to: e.target.value
-                  }))}
+                  onChange={(e) =>
+                    setExportDateRange((prev) => ({
+                      ...prev,
+                      to: e.target.value,
+                    }))
+                  }
                   className='w-full'
                 />
               </div>
-              
+
               <div className='text-xs text-muted-foreground'>
-                Select dates for filtered export, or use "All Data" for complete export. Current filters (unit) will be applied.
+                Select dates for filtered export, or use "All Data" for complete
+                export. Current filters (unit) will be applied.
               </div>
-              
+
               {/* Quick preset buttons */}
               <div className='pt-2 border-t space-y-2'>
-                <div className='text-xs font-medium text-muted-foreground'>Quick Presets:</div>
+                <div className='text-xs font-medium text-muted-foreground'>
+                  Quick Presets:
+                </div>
                 <div className='grid grid-cols-2 gap-2'>
                   <Button
                     variant='outline'
@@ -1716,7 +1716,7 @@ export const MaterialIssuesTab = () => {
                       // All Data - clear both dates
                       setExportDateRange({
                         from: '',
-                        to: ''
+                        to: '',
                       });
                     }}
                     className='text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
@@ -1729,12 +1729,20 @@ export const MaterialIssuesTab = () => {
                     onClick={() => {
                       // This Month
                       const now = new Date();
-                      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-                      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                      
+                      const firstDay = new Date(
+                        now.getFullYear(),
+                        now.getMonth(),
+                        1
+                      );
+                      const lastDay = new Date(
+                        now.getFullYear(),
+                        now.getMonth() + 1,
+                        0
+                      );
+
                       setExportDateRange({
                         from: firstDay.toISOString().split('T')[0],
-                        to: lastDay.toISOString().split('T')[0]
+                        to: lastDay.toISOString().split('T')[0],
                       });
                     }}
                     className='text-xs'
@@ -1747,12 +1755,20 @@ export const MaterialIssuesTab = () => {
                     onClick={() => {
                       // Last Month
                       const now = new Date();
-                      const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                      const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-                      
+                      const firstDayLastMonth = new Date(
+                        now.getFullYear(),
+                        now.getMonth() - 1,
+                        1
+                      );
+                      const lastDayLastMonth = new Date(
+                        now.getFullYear(),
+                        now.getMonth(),
+                        0
+                      );
+
                       setExportDateRange({
                         from: firstDayLastMonth.toISOString().split('T')[0],
-                        to: lastDayLastMonth.toISOString().split('T')[0]
+                        to: lastDayLastMonth.toISOString().split('T')[0],
                       });
                     }}
                     className='text-xs'
@@ -1765,12 +1781,20 @@ export const MaterialIssuesTab = () => {
                     onClick={() => {
                       // Last 3 Months
                       const now = new Date();
-                      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
-                      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                      
+                      const threeMonthsAgo = new Date(
+                        now.getFullYear(),
+                        now.getMonth() - 3,
+                        1
+                      );
+                      const lastDay = new Date(
+                        now.getFullYear(),
+                        now.getMonth() + 1,
+                        0
+                      );
+
                       setExportDateRange({
                         from: threeMonthsAgo.toISOString().split('T')[0],
-                        to: lastDay.toISOString().split('T')[0]
+                        to: lastDay.toISOString().split('T')[0],
                       });
                     }}
                     className='text-xs'
@@ -1785,10 +1809,10 @@ export const MaterialIssuesTab = () => {
                       const now = new Date();
                       const firstDay = new Date(now.getFullYear(), 0, 1);
                       const lastDay = new Date(now.getFullYear(), 11, 31);
-                      
+
                       setExportDateRange({
                         from: firstDay.toISOString().split('T')[0],
-                        to: lastDay.toISOString().split('T')[0]
+                        to: lastDay.toISOString().split('T')[0],
                       });
                     }}
                     className='text-xs'
@@ -1798,7 +1822,7 @@ export const MaterialIssuesTab = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className='flex justify-end gap-2 pt-4'>
               <Button
                 variant='outline'
@@ -1810,7 +1834,7 @@ export const MaterialIssuesTab = () => {
               >
                 Cancel
               </Button>
-              
+
               <Button
                 onClick={exportToCSV}
                 disabled={isExporting}

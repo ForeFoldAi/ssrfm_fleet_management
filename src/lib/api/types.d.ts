@@ -215,6 +215,8 @@ export interface MaterialIssueItem {
   // Keep these for backward compatibility or if the API still returns them
   machineId?: number;
   machineName?: string;
+  purposeType?: PurposeType;
+  notes?: string;
 }
 
 export interface MaterialIssue {
