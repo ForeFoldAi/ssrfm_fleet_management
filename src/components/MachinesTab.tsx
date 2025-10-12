@@ -9,7 +9,6 @@ import {
   MapPin,
   Building2,
   Loader2,
-  AlertCircle,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -19,6 +18,7 @@ import {
   ArrowUp,
   ArrowDown,
   RotateCcw,
+  RefreshCcw,
   Download,
   Upload,
 } from 'lucide-react';
@@ -42,13 +42,14 @@ import {
   SelectValue,
 } from './ui/select';
 import { AddMachineForm } from './AddMachineForm';
+import { UnifiedTabSearch } from './UnifiedTabSearch';
 import { useRole } from '../contexts/RoleContext';
 import type { Machine, PaginatedResponse } from '../lib/api/types.d';
 import { MachineStatus } from '../lib/api/types.d';
 import { machinesApi } from '../lib/api/machines';
 import { branchesApi } from '../lib/api/branches';
 import type { Branch } from '../lib/api/types.d';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Alert, AlertDescription } from './ui/alert';
 import { toast } from '../hooks/use-toast';
 
 type SortField = 'name' | 'type' | 'unit' | 'status' | 'lastService' | 'nextMaintenanceDue' | 'createdAt';
@@ -96,6 +97,7 @@ export const MachinesTab = () => {
     unitName: string;
     branch: string;
     branchName: string;
+    branchLocation?: string;
     // Manufacturing Details
     manufacturer: string;
     model: string;
@@ -236,7 +238,7 @@ export const MachinesTab = () => {
             errorMessage = data.message;
           }
         } else if (error.request) {
-          errorMessage = 'Network error. Please check your internet connection.';
+          errorMessage = 'Please Try Again';
         } else {
           errorMessage = error.message || 'An unexpected error occurred.';
         }
@@ -273,19 +275,55 @@ export const MachinesTab = () => {
     try {
       setIsLoading(true);
       setError(null);
+      
       const params = {
         page: currentPage,
         limit: itemsPerPage,
-        // Remove API sorting - we'll sort on frontend
-        ...(searchQuery && { search: searchQuery }),
+        // For company owner: apply selected unit filter
         ...(filterUnit !== 'all' &&
           currentUser?.role === 'company_owner' && {
             unitId: filterUnit,
           }),
-        // Remove status filter from API - we'll filter on frontend
+        // For supervisor/inventory_manager (branch-level users): automatically filter by their branch
+        ...((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id && {
+            unitId: currentUser.branch.id.toString(),
+          }),
       };
 
+      // Debug logging for supervisor filtering
+      console.log('MachinesTab fetchMachines - Debug Info:', {
+        currentUserRole: currentUser?.role,
+        currentUserBranch: currentUser?.branch,
+        branchId: currentUser?.branch?.id,
+        params: params,
+        isSupervisor: currentUser?.role === 'supervisor',
+        hasBranchId: currentUser?.branch?.id ? true : false,
+        fullCurrentUser: currentUser,
+        supervisorCondition: (currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id,
+        userType: currentUser?.userType,
+        localStorageUser: localStorage.getItem('user')
+      });
+      
+      // Additional debug for API URL construction
+      console.log('MachinesTab API URL Debug:', {
+        baseUrl: '/inventory/machines',
+        queryParams: Object.keys(params).map(key => `${key}=${params[key]}`).join('&'),
+        fullParams: params
+      });
+
       const response = await machinesApi.getAll(params);
+      
+      // Debug logging for API response
+      console.log('MachinesTab API Response:', {
+        totalMachines: response.data.length,
+        machines: response.data.map(m => ({
+          id: m.id,
+          name: m.name,
+          branch: m.branch,
+          branchId: m.branchId
+        }))
+      });
+      
       setMachinesData(response);
 
       // Transform API data to match component data structure
@@ -308,6 +346,7 @@ export const MachinesTab = () => {
           unitName: machine.unit?.name || 'Unknown Unit',
           branch: machine.branch?.name || 'Unknown Location',
           branchName: machine.branch?.name || 'Unknown Location',
+          branchLocation: machine.branch?.location || '',
           // Manufacturing Details
           manufacturer: machine.manufacturer || '',
           model: machine.model || '',
@@ -359,7 +398,7 @@ export const MachinesTab = () => {
       } else if (error.request) {
         // Request was made but no response received
         console.error('Network Error:', error.request);
-        errorMessage = 'Network error. Please check your internet connection.';
+        errorMessage = 'Please Try Again';
       } else {
         // Something else happened
         console.error('Unexpected Error:', error.message);
@@ -373,11 +412,24 @@ export const MachinesTab = () => {
     }
   };
 
-  // Load machines on component mount and when pagination/filters change (not sorting or status - those are frontend only)
+  // Load machines on component mount and when filters change
   useEffect(() => {
     fetchMachines();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, itemsPerPage, searchQuery, filterUnit]);
+  }, [filterUnit]);
+
+  // Handle pagination changes
+  useEffect(() => {
+      fetchMachines();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, itemsPerPage]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [filterUnit, filterStatus]);
 
   // Apply frontend sorting when machines change
   useEffect(() => {
@@ -426,11 +478,62 @@ export const MachinesTab = () => {
     setIsAddMachineOpen(true);
   };
 
-  // Apply frontend status filtering to sorted machines
+  // Apply frontend filtering (status + search + supervisor branch) to sorted machines
   const displayMachines = sortedMachines.filter((machine) => {
-    // Status filtering - frontend only
-    if (filterStatus === 'all') return true;
-    return machine.status === filterStatus;
+    // Supervisor/Inventory Manager branch filtering - FRONTEND FALLBACK
+    if ((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id) {
+      // Get the actual machine data from the original API response
+      const originalMachine = machinesData?.data?.find(m => m.id === machine.id);
+      if (originalMachine && originalMachine.branch?.id !== currentUser.branch.id) {
+        console.log('Frontend filtering: Hiding machine from different branch', {
+          machineId: machine.id,
+          machineBranchId: originalMachine.branch?.id,
+          supervisorBranchId: currentUser.branch.id,
+          machine: originalMachine
+        });
+        return false;
+      }
+    }
+
+    // Status filtering
+    if (filterStatus !== 'all' && machine.status !== filterStatus) {
+      return false;
+    }
+
+    // Search filtering - search across ALL columns
+    if (searchQuery.trim()) {
+      const searchLower = searchQuery.toLowerCase();
+      return (
+        // Basic machine info
+        machine.id?.toString().includes(searchLower) ||
+        machine.name?.toLowerCase().includes(searchLower) ||
+        machine.type?.toLowerCase().includes(searchLower) ||
+        machine.status?.toLowerCase().includes(searchLower) ||
+        // Unit and branch info
+        machine.unit?.toLowerCase().includes(searchLower) ||
+        machine.unitName?.toLowerCase().includes(searchLower) ||
+        machine.branch?.toLowerCase().includes(searchLower) ||
+        machine.branchName?.toLowerCase().includes(searchLower) ||
+        machine.branchLocation?.toLowerCase().includes(searchLower) ||
+        // Technical details
+        machine.specifications?.toLowerCase().includes(searchLower) ||
+        machine.manufacturer?.toLowerCase().includes(searchLower) ||
+        machine.model?.toLowerCase().includes(searchLower) ||
+        machine.serialNumber?.toLowerCase().includes(searchLower) ||
+        machine.capacity?.toLowerCase().includes(searchLower) ||
+        // Dates
+        machine.createdDate?.toLowerCase().includes(searchLower) ||
+        machine.lastMaintenance?.toLowerCase().includes(searchLower) ||
+        machine.nextMaintenanceDue?.toLowerCase().includes(searchLower) ||
+        machine.purchaseDate?.toLowerCase().includes(searchLower) ||
+        machine.warrantyExpiry?.toLowerCase().includes(searchLower) ||
+        machine.installationDate?.toLowerCase().includes(searchLower) ||
+        // Additional info
+        machine.additionalNotes?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return true;
   });
 
   const getStatusBadge = (status: string) => {
@@ -469,12 +572,16 @@ export const MachinesTab = () => {
         const response = await machinesApi.getAll({
           page: currentPage,
           limit: limit,
-          ...(searchQuery && { search: searchQuery }),
+          // No API search - we'll filter on frontend
+          // For company owner: apply selected unit filter
           ...(filterUnit !== 'all' &&
             currentUser?.role === 'company_owner' && {
               unitId: filterUnit,
             }),
-          // Status filter will be applied to transformed data on frontend
+          // For supervisor/inventory_manager (branch-level users): automatically filter by their branch
+          ...((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id && {
+              unitId: currentUser.branch.id.toString(),
+            }),
         });
 
         allMachines = [...allMachines, ...response.data];
@@ -510,6 +617,7 @@ export const MachinesTab = () => {
           unitName: machine.unit?.name || 'Unknown Unit',
           branch: machine.branch?.name || 'Unknown Location',
           branchName: machine.branch?.name || 'Unknown Location',
+          branchLocation: machine.branch?.location || '',
           // Manufacturing Details
           manufacturer: machine.manufacturer || '',
           model: machine.model || '',
@@ -522,10 +630,13 @@ export const MachinesTab = () => {
         };
       });
       
-      // Apply status filter to export data (frontend filtering)
+      // Apply status filter to export data (frontend filtering) - no search filter
       const transformedMachines = allTransformedMachines.filter((machine) => {
-        if (filterStatus === 'all') return true;
-        return machine.status === filterStatus;
+        // Status filter only
+        if (filterStatus !== 'all' && machine.status !== filterStatus) {
+          return false;
+        }
+        return true;
       });
       
       // Prepare CSV headers
@@ -629,158 +740,72 @@ export const MachinesTab = () => {
       )}
       
       {/* Header with Actions */}
-      <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4'>
-        {/* Left side: Title and View Toggle Buttons */}
-        <div className='flex flex-col sm:flex-row items-start sm:items-center gap-3'>
-          {/* View Toggle Buttons - Moved to left side */}
-          <div className='flex rounded-lg border border-secondary overflow-hidden bg-secondary/10 w-fit shadow-sm'>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size='sm'
-              onClick={() => setViewMode('list')}
-              className='rounded-none px-3 sm:px-4'
-            >
-              <List className='w-4 h-4' />
-              <span className='ml-1 sm:ml-2 text-xs sm:text-sm'>List</span>
-            </Button>
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'ghost'}
-              size='sm'
-              onClick={() => setViewMode('table')}
-              className='rounded-none px-3 sm:px-4'
-            >
-              <Table className='w-4 h-4' />
-              <span className='ml-1 sm:ml-2 text-xs sm:text-sm'>Table</span>
-            </Button>
-          </div>
-        </div>
+      <UnifiedTabSearch
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder='Search machines...'
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        showViewToggle={true}
+        filterUnit={filterUnit}
+        onFilterUnitChange={setFilterUnit}
+        availableBranches={availableBranches}
+        isLoadingBranches={isLoadingBranches}
+        statusFilter={filterStatus}
+        onStatusFilterChange={setFilterStatus}
+        showStatusFilter={true}
+        statusOptions={[
+          { value: 'all', label: 'All Status' },
+          {
+            value: MachineStatus.ACTIVE,
+            label: 'Active',
+            icon: <div className='w-2 h-2 bg-green-500 rounded-full' />,
+          },
+          {
+            value: MachineStatus.UNDER_MAINTENANCE,
+            label: 'Under Maintenance',
+            icon: <div className='w-2 h-2 bg-yellow-500 rounded-full' />,
+          },
+          {
+            value: MachineStatus.INACTIVE,
+            label: 'Inactive',
+            icon: <div className='w-2 h-2 bg-red-500 rounded-full' />,
+          },
+        ]}
+        onExport={handleExportToCSV}
+        isExporting={isExporting}
+        showExport={true}
+        onAdd={() => setIsAddMachineOpen(true)}
+        addLabel='Add New Machine'
+        showAddButton={true}
+        isOnline={isOnline}
+      />
 
-        {/* Right side: Search, Unit Filter, Reload and Add Machine Button */}
-        <div className='flex flex-col sm:flex-row gap-3 items-start sm:items-center'>
-          <div className='relative'>
-            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4' />
-            <Input
-              placeholder='Search machines...'
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className='pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64'
-            />
-          </div>
-
-          {/* Unit Filter - Only for Company Owner */}
-          {currentUser?.role === 'company_owner' && (
-            <Select value={filterUnit} onValueChange={setFilterUnit}>
-              <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-                <SelectValue placeholder={isLoadingBranches ? 'Loading...' : 'Select Unit'} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All Units</SelectItem>
-                {availableBranches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id.toString()}>
-                    <div className='flex items-center gap-2'>
-                      <Building2 className='w-4 h-4' />
-                      <div>
-                        <div className='font-medium'>{branch.name}</div>
-                        {branch.location && (
-                          <div className='text-xs text-muted-foreground'>
-                            {branch.location}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          {/* Status Filter */}
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-              <SelectValue placeholder='Select Status' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>All Status</SelectItem>
-              <SelectItem value={MachineStatus.ACTIVE}>
-                <div className='flex items-center gap-2'>
-                  <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                  <span>Active</span>
-                </div>
-              </SelectItem>
-              <SelectItem value={MachineStatus.UNDER_MAINTENANCE}>
-                <div className='flex items-center gap-2'>
-                  <div className='w-2 h-2 bg-yellow-500 rounded-full'></div>
-                  <span>Under Maintenance</span>
-                </div>
-              </SelectItem>
-              <SelectItem value={MachineStatus.INACTIVE}>
-                <div className='flex items-center gap-2'>
-                  <div className='w-2 h-2 bg-red-500 rounded-full'></div>
-                  <span>Inactive</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Export Button */}
-          <Button
-            variant='outline'
-            size='sm'
-            onClick={handleExportToCSV}
-            disabled={isExporting || isLoading}
-            className='w-full sm:w-auto'
-          >
-            {isExporting ? (
-              <Loader2 className='w-4 h-4 animate-spin' />
-            ) : (
-              <Upload className='w-4 h-4' />
-            )}
-            <span className='ml-2'>Export</span>
+      {/* Error State - Only show when there's an API error and we're not loading */}
+      {error && !isLoading && (
+        <Card className='rounded-lg shadow-sm p-8 text-center'>
+          <RefreshCcw className='w-12 h-12 text-red-500 mx-auto mb-4' />
+          <h3 className='text-lg font-semibold text-foreground mb-2'>
+            No Data Found, Reload Data
+          </h3>
+          <p className='text-muted-foreground mb-4'>{error}</p>
+          <Button variant='outline' onClick={() => fetchMachines()}>
+            <RefreshCcw className='w-4 h-4 mr-2' />
+            Reload
           </Button>
-
-          <Button
-            className='btn-primary w-full sm:w-auto text-sm sm:text-base'
-            onClick={() => setIsAddMachineOpen(true)}
-          >
-            <Plus className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
-            Add New Machine
-          </Button>
-        </div>
-      </div>
-
-      {/* Error State */}
-      {error && (
-        <Alert variant='destructive' className='mb-4'>
-          <AlertCircle className='h-4 w-4' />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription className='flex items-center justify-between'>
-            <span>{error}</span>
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={fetchMachines}
-              disabled={isLoading}
-              className='ml-4'
-            >
-              {isLoading ? (
-                <Loader2 className='w-4 h-4 animate-spin' />
-              ) : (
-                <RotateCcw className='w-4 h-4' />
-              )}
-              <span className='ml-2'>Reload</span>
-            </Button>
-          </AlertDescription>
-        </Alert>
+        </Card>
       )}
 
       {/* Loading State */}
-      {isLoading ? (
+      {isLoading && (
         <div className='flex justify-center items-center p-12'>
           <Loader2 className='w-8 h-8 animate-spin text-primary' />
           <span className='ml-2 text-lg'>Loading machines...</span>
         </div>
-      ) : /* Content */
-      viewMode === 'list' ? (
+      )}
+
+      {/* Content - Only show when not loading and no error */}
+      {!isLoading && !error && viewMode === 'list' && (
         <div className='space-y-3'>
           {displayMachines.map((machine) => (
             <div
@@ -810,13 +835,19 @@ export const MachinesTab = () => {
                         {machine.status}
                       </span>
                     </div>
-                    <div className='flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-2'>
-                      <MapPin className='w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0' />
-                      <span className='truncate'>{machine.branch}</span>
-                    </div>
-                    <div className='flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-2'>
-                      <Building2 className='w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0' />
-                      <span className='truncate'>{machine.unitName}</span>
+                    <div className='space-y-1 mb-2'>
+                      <Badge
+                        variant='outline'
+                        className='text-xs bg-primary/10 text-primary border-primary/30'
+                      >
+                        {machine.branchName}
+                      </Badge>
+                      {machine.branchLocation && (
+                        <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+                          <MapPin className='w-3 h-3 flex-shrink-0' />
+                          <span className='truncate'>{machine.branchLocation}</span>
+                        </div>
+                      )}
                     </div>
                     <p className='text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2'>
                       {machine.specifications}
@@ -847,7 +878,10 @@ export const MachinesTab = () => {
             </div>
           ))}
         </div>
-      ) : (
+      )}
+
+      {/* Table view - Only show when not loading and no error */}
+      {!isLoading && !error && viewMode === 'table' && (
         <Card className='rounded-lg shadow-sm'>
           <CardContent className='p-0'>
             <div className='overflow-x-auto'>
@@ -880,7 +914,7 @@ export const MachinesTab = () => {
                         onClick={() => handleSort('unit')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                      Unit
+                      Unit / Location
                         {getSortIcon('unit')}
                       </Button>
                     </TableHead>
@@ -933,12 +967,19 @@ export const MachinesTab = () => {
                       <TableCell className='text-primary font-semibold'>
                         {machine.type}
                       </TableCell>
-                      <TableCell className='text-muted-foreground'>
-                        <div className='flex items-center gap-1'>
-                          <Building2 className='w-4 h-4' />
-                          <span className='truncate max-w-24 sm:max-w-none'>
-                            {machine.branch}
-                          </span>
+                      <TableCell className='text-sm'>
+                        <div className='space-y-1'>
+                          <Badge
+                            variant='outline'
+                            className='text-xs bg-primary/10 text-primary border-primary/30'
+                          >
+                            {machine.branchName}
+                          </Badge>
+                          {machine.branchLocation && (
+                            <div className='text-xs text-muted-foreground'>
+                              {machine.branchLocation}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -965,8 +1006,8 @@ export const MachinesTab = () => {
         </Card>
       )}
 
-      {/* Empty State */}
-      {!isLoading && displayMachines.length === 0 && (
+      {/* Empty State - Only show when not loading, no error, and no machines */}
+      {!isLoading && !error && displayMachines.length === 0 && (
         <Card className='rounded-lg shadow-sm p-8 text-center'>
           <div className='w-12 h-12 sm:w-16 sm:h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4'>
             <Settings className='w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground' />
@@ -975,16 +1016,26 @@ export const MachinesTab = () => {
             No machines found
           </h3>
           <p className='text-sm sm:text-base text-muted-foreground mb-4'>
-            {searchQuery
-              ? 'Try adjusting your search terms'
+            {searchQuery.trim()
+              ? `No machines found matching "${searchQuery}"`
               : 'Start by adding your first machine'}
           </p>
-         
+          <Button variant='outline' onClick={() => fetchMachines()}>
+            <RefreshCcw className='w-4 h-4 mr-2' />
+            Reload
+          </Button>
         </Card>
       )}
 
-      {/* Pagination */}
-      {machinesData && machinesData.meta && (
+      {/* Search Results Info - Show when searching and no error */}
+      {searchQuery.trim() && !isLoading && !error && displayMachines.length > 0 && (
+        <div className='text-sm text-muted-foreground text-center py-2'>
+          Showing {displayMachines.length} machine{displayMachines.length !== 1 ? 's' : ''} matching "{searchQuery}"
+        </div>
+      )}
+
+      {/* Pagination - Hide when searching or when there's an error */}
+      {machinesData && machinesData.meta && !searchQuery.trim() && !error && (
         <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
           {/* Page Info */}
           <div className='text-sm text-muted-foreground'>

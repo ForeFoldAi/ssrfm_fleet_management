@@ -243,6 +243,54 @@ export const MaterialIssueForm = ({
   const [materialsError, setMaterialsError] = useState<string | null>(null);
   const [machinesError, setMachinesError] = useState<string | null>(null);
 
+  // Filter materials based on user type and branch
+  // Note: Materials are filtered at API level using branchId parameter
+  // This function just returns all available materials since API filtering is already applied
+  const getFilteredMaterials = () => {
+    console.log(
+      'MaterialIssueForm: Returning materials (API filtering already applied):',
+      {
+        currentUserRole: currentUser?.role,
+        currentUserBranch: currentUser?.branch,
+        totalMaterials: availableMaterials.length,
+        materialNames: availableMaterials.map((m) => m.name),
+      }
+    );
+
+    return availableMaterials;
+  };
+
+  // Filter machines based on user type and branch
+  // This ensures branch-level users (supervisor/inventory_manager) only see machines from their branch
+  const getFilteredMachines = () => {
+    // If user is company owner or doesn't have branch restrictions, return all machines
+    if (!currentUser?.userType?.isBranchLevel || !currentUser?.branch?.id) {
+      console.log(
+        'MaterialIssueForm: Returning all machines (company-level user or no branch)'
+      );
+      return availableMachines;
+    }
+
+    // For branch-level users, filter machines by their branch
+    const filtered = availableMachines.filter((machine) => {
+      // If machine doesn't have branch info, include it (for backward compatibility)
+      if (!machine.branch) {
+        return true;
+      }
+      return machine.branch.id === currentUser.branch!.id;
+    });
+
+    console.log('MaterialIssueForm: Filtered machines for branch-level user:', {
+      userBranchId: currentUser.branch.id,
+      userBranchName: currentUser.branch.name,
+      totalMachines: availableMachines.length,
+      filteredMachines: filtered.length,
+      filteredMachineNames: filtered.map((m) => m.name),
+    });
+
+    return filtered;
+  };
+
   // Fetch materials and machines from API
   useEffect(() => {
     const fetchData = async () => {
@@ -250,11 +298,32 @@ export const MaterialIssueForm = ({
       setIsLoadingMaterials(true);
       setMaterialsError(null);
       try {
-        const response = await materialsApi.getMaterials({
+        const params = {
           limit: 100,
-          sortBy: 'name',
-          sortOrder: 'ASC',
+          sortBy: 'name' as const,
+          sortOrder: 'ASC' as const,
+          // Filter by branch for branch-level users (supervisor/inventory_manager)
+          ...((currentUser?.role === 'supervisor' ||
+            currentUser?.role === 'inventory_manager' ||
+            currentUser?.userType?.isBranchLevel) &&
+            currentUser?.branch?.id && {
+              branchId: currentUser.branch.id,
+            }),
+        };
+
+        // Debug logging for material filtering
+        console.log('MaterialIssueForm fetchMaterials - Debug Info:', {
+          currentUserRole: currentUser?.role,
+          currentUserBranch: currentUser?.branch,
+          branchId: currentUser?.branch?.id,
+          params: params,
+          isBranchLevel: currentUser?.userType?.isBranchLevel,
+          hasBranchId: currentUser?.branch?.id ? true : false,
+          fullCurrentUser: currentUser,
+          userType: currentUser?.userType,
         });
+
+        const response = await materialsApi.getMaterials(params);
         setAvailableMaterials(response.data);
       } catch (error) {
         console.error('Error fetching materials:', error);
@@ -272,11 +341,32 @@ export const MaterialIssueForm = ({
       setIsLoadingMachines(true);
       setMachinesError(null);
       try {
-        const response = await machinesApi.getAll({
+        const params = {
           limit: 100,
-          sortBy: 'name',
-          sortOrder: 'ASC',
+          sortBy: 'name' as const,
+          sortOrder: 'ASC' as const,
+          // Filter by branch for branch-level users (supervisor/inventory_manager)
+          ...((currentUser?.role === 'supervisor' ||
+            currentUser?.role === 'inventory_manager' ||
+            currentUser?.userType?.isBranchLevel) &&
+            currentUser?.branch?.id && {
+              unitId: currentUser.branch.id.toString(),
+            }),
+        };
+
+        // Debug logging for machine filtering
+        console.log('MaterialIssueForm fetchMachines - Debug Info:', {
+          currentUserRole: currentUser?.role,
+          currentUserBranch: currentUser?.branch,
+          branchId: currentUser?.branch?.id,
+          params: params,
+          isBranchLevel: currentUser?.userType?.isBranchLevel,
+          hasBranchId: currentUser?.branch?.id ? true : false,
+          fullCurrentUser: currentUser,
+          userType: currentUser?.userType,
         });
+
+        const response = await machinesApi.getAll(params);
         setAvailableMachines(response.data);
       } catch (error) {
         console.error('Error fetching machines:', error);
@@ -294,7 +384,7 @@ export const MaterialIssueForm = ({
     if (isOpen) {
       fetchData();
     }
-  }, [isOpen]);
+  }, [isOpen, currentUser]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -305,64 +395,89 @@ export const MaterialIssueForm = ({
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+    let hasErrors = false;
 
     // Validate each item in the items array
     formData.items.forEach((item, index) => {
+      const itemNumber = index + 1;
+
+      // Material name validation
       if (!item.nameOfMaterial.trim()) {
         newErrors[
           `nameOfMaterial_${index}`
-        ] = `Material name is required for item ${index + 1}`;
+        ] = `⚠️ Please select a material for Item ${itemNumber}. This is required to issue materials.`;
+        hasErrors = true;
       }
 
+      // Material ID validation
       if (!item.materialId) {
         newErrors[
           `materialId_${index}`
-        ] = `Please select a valid material for item ${index + 1}`;
+        ] = `⚠️ Please select a valid material for Item ${itemNumber}. Choose from the dropdown list.`;
+        hasErrors = true;
       }
 
+      // Issued quantity validation
       if (!item.issuedQty.trim()) {
         newErrors[
           `issuedQty_${index}`
-        ] = `Issued quantity is required for item ${index + 1}`;
+        ] = `⚠️ Please enter the quantity to issue for Item ${itemNumber}.`;
+        hasErrors = true;
+      } else {
+        const issuedQty = Number(item.issuedQty);
+        if (isNaN(issuedQty) || issuedQty <= 0) {
+          newErrors[
+            `issuedQty_${index}`
+          ] = `⚠️ Please enter a valid quantity greater than 0 for Item ${itemNumber}.`;
+          hasErrors = true;
+        } else if (issuedQty > item.existingStock) {
+          newErrors[
+            `issuedQty_${index}`
+          ] = `⚠️ Cannot issue ${issuedQty} units. Available stock is only ${item.existingStock} units for Item ${itemNumber}.`;
+          hasErrors = true;
+        }
       }
 
-      const issuedQty = Number(item.issuedQty);
-      if (issuedQty <= 0) {
-        newErrors[
-          `issuedQty_${index}`
-        ] = `Issued quantity must be greater than 0 for item ${index + 1}`;
-      }
-
-      if (issuedQty > item.existingStock) {
-        newErrors[
-          `issuedQty_${index}`
-        ] = `Issued quantity cannot exceed existing stock for item ${
-          index + 1
-        }`;
-      }
-
+      // Receiver name validation
       if (!item.receiverName.trim()) {
         newErrors[
           `receiverName_${index}`
-        ] = `Receiver name is required for item ${index + 1}`;
+        ] = `⚠️ Please enter the receiver's name for Item ${itemNumber}. This helps track who received the materials.`;
+        hasErrors = true;
       }
 
+      // Purpose validation
       if (!item.purpose.trim()) {
-        newErrors[`purpose_${index}`] = `Purpose is required for item ${
-          index + 1
-        }`;
+        newErrors[
+          `purpose_${index}`
+        ] = `⚠️ Please specify the purpose for issuing Item ${itemNumber}. This helps track material usage.`;
+        hasErrors = true;
       }
 
-      // Machine selection is mandatory
+      // Machine selection validation
       if (!item.machineName) {
         newErrors[
           `machineId_${index}`
-        ] = `Machine selection is required for item ${index + 1}`;
+        ] = `⚠️ Please select a machine or specify 'Other' for Item ${itemNumber}. This helps track material allocation.`;
+        hasErrors = true;
       }
     });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    // Show user-friendly error summary
+    if (hasErrors) {
+      const errorCount = Object.keys(newErrors).length;
+      toast({
+        title: '❌ Form Validation Failed',
+        description: `Please fix ${errorCount} error${
+          errorCount > 1 ? 's' : ''
+        } before issuing materials. Check the highlighted fields below.`,
+        variant: 'destructive',
+      });
+    }
+
+    return !hasErrors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -373,6 +488,34 @@ export const MaterialIssueForm = ({
 
     if (!validateForm()) {
       console.log('Form validation failed');
+      return;
+    }
+
+    // Show confirmation dialog
+    const totalItems = formData.items.length;
+    const totalQuantity = formData.items.reduce(
+      (sum, item) => sum + Number(item.issuedQty || 0),
+      0
+    );
+
+    const confirmed = window.confirm(
+      `📦 Issue Materials Confirmation\n\n` +
+        `You are about to issue ${totalItems} item${
+          totalItems > 1 ? 's' : ''
+        } (Total: ${totalQuantity} units).\n\n` +
+        `✅ This will reduce the stock levels immediately.\n` +
+        `📝 A record will be created for tracking purposes.\n` +
+        `⚠️ This action cannot be undone.\n\n` +
+        `Do you want to proceed with issuing these materials?`
+    );
+
+    if (!confirmed) {
+      toast({
+        title: '⏸️ Issue Cancelled',
+        description:
+          'Material issue has been cancelled. No stock changes were made.',
+        variant: 'default',
+      });
       return;
     }
 
@@ -445,18 +588,23 @@ export const MaterialIssueForm = ({
         onSubmit(lastSuccessResponse);
       }
 
-      // Toast summary
+      // Toast summary with user-friendly messages
       const total = validItems.length;
       if (successCount === total) {
         toast({
-          title: 'Material Issues Created',
-          description: `${successCount} material item(s) issued successfully`,
+          title: '🎉 Materials Issued Successfully!',
+          description: `All ${successCount} item${
+            successCount > 1 ? 's have' : ' has'
+          } been issued successfully. Stock levels have been updated and records created.`,
+          variant: 'default',
         });
       } else if (successCount > 0) {
         toast({
-          title: 'Partial Success',
-          description: `${successCount} succeeded, ${failureCount} failed.`,
-          variant: 'default',
+          title: '⚠️ Partial Success',
+          description: `${successCount} item${
+            successCount > 1 ? 's were' : ' was'
+          } issued successfully, but ${failureCount} failed. Please check the failed items and try again.`,
+          variant: 'destructive',
         });
       } else {
         throw new Error('All item submissions failed.');
@@ -524,14 +672,14 @@ export const MaterialIssueForm = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='max-w-6xl max-h-[95vh] overflow-y-auto p-4'>
-        <DialogHeader className='pb-3'>
+      <DialogContent className='max-w-[98vw] max-h-[98vh] overflow-y-auto p-6'>
+        <DialogHeader className='pb-4'>
           <DialogTitle className='flex items-center gap-2'>
             <div className='w-8 h-8 bg-secondary/20 rounded-lg flex items-center justify-center'>
               <FileText className='w-4 h-4 text-foreground' />
             </div>
             <div>
-              <div className='text-base font-bold'>
+              <div className='text-lg font-bold'>
                 {editingIssue
                   ? 'VIEW ISSUED MATERIAL DETAILS'
                   : 'MATERIAL ISSUE FORM'}
@@ -571,6 +719,14 @@ export const MaterialIssueForm = ({
                     ...prev,
                     items: [...prev.items, newItem],
                   }));
+
+                  toast({
+                    title: '➕ New Item Added',
+                    description: `Item ${
+                      formData.items.length + 1
+                    } has been added. Please fill in the required details.`,
+                    variant: 'default',
+                  });
                 }}
                 className='gap-1 h-8 text-xs'
                 size='sm'
@@ -592,7 +748,7 @@ export const MaterialIssueForm = ({
                         SR.NO.
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-48'>
-                        ISSUING MATERIAL
+                        ISSUING MATERIAL *
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-48'>
                         SPECIFICATIONS
@@ -601,22 +757,22 @@ export const MaterialIssueForm = ({
                         CURRENT STOCK
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-28'>
-                        ISSUING QTY
+                        ISSUING QTY *
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-24'>
                         STOCK AFTER ISSUE
                       </TableHead>
-                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-36'>
-                        ISSUING TO
+                      <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 min-w-40'>
+                        ISSUING TO *
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-40'>
-                        ISSUING FOR
+                        ISSUING FOR *
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-32'>
                         UPLOAD IMAGE
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-48'>
-                        PURPOSE OF ISSUE
+                        PURPOSE OF ISSUE *
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-20'>
                         ACTIONS
@@ -638,10 +794,10 @@ export const MaterialIssueForm = ({
                                 {item.nameOfMaterial}
                               </div>
                               {(() => {
-                                // Get makerBrand from item or fallback to availableMaterials
+                                // Get makerBrand from item or fallback to filtered materials
                                 const makerBrand =
                                   item.makerBrand ||
-                                  availableMaterials.find(
+                                  getFilteredMaterials().find(
                                     (m) => m.name === item.nameOfMaterial
                                   )?.makerBrand ||
                                   '';
@@ -658,7 +814,7 @@ export const MaterialIssueForm = ({
                             <Select
                               value={item.nameOfMaterial}
                               onValueChange={(value) => {
-                                const material = availableMaterials.find(
+                                const material = getFilteredMaterials().find(
                                   (m) => m.name === value
                                 );
                                 if (material) {
@@ -701,7 +857,7 @@ export const MaterialIssueForm = ({
                                     {materialsError}
                                   </div>
                                 ) : (
-                                  availableMaterials.map((material) => (
+                                  getFilteredMaterials().map((material) => (
                                     <SelectItem
                                       key={material.id}
                                       value={material.name}
@@ -721,9 +877,11 @@ export const MaterialIssueForm = ({
                             </Select>
                           )}
                           {errors[`nameOfMaterial_${index}`] && (
-                            <p className='text-destructive text-xs mt-1'>
-                              {errors[`nameOfMaterial_${index}`]}
-                            </p>
+                            <div className='mt-1 p-2 bg-red-50 border border-red-200 rounded-md'>
+                              <p className='text-red-700 text-xs font-medium'>
+                                {errors[`nameOfMaterial_${index}`]}
+                              </p>
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className='border border-gray-300 px-2 py-1'>
@@ -782,9 +940,11 @@ export const MaterialIssueForm = ({
                             </div>
                           )}
                           {errors[`issuedQty_${index}`] && (
-                            <p className='text-destructive text-xs mt-1'>
-                              {errors[`issuedQty_${index}`]}
-                            </p>
+                            <div className='mt-1 p-2 bg-red-50 border border-red-200 rounded-md'>
+                              <p className='text-red-700 text-xs font-medium'>
+                                {errors[`issuedQty_${index}`]}
+                              </p>
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className='border border-gray-300 text-center px-2 py-1'>
@@ -798,7 +958,7 @@ export const MaterialIssueForm = ({
                         </TableCell>
                         <TableCell className='border border-gray-300 px-2 py-1'>
                           {editingIssue ? (
-                            <div className='text-black text-xs font-medium'>
+                            <div className='text-black text-sm font-medium break-words whitespace-normal'>
                               {item.receiverName}
                             </div>
                           ) : (
@@ -823,7 +983,7 @@ export const MaterialIssueForm = ({
                         </TableCell>
                         <TableCell className='border border-gray-300 px-2 py-1'>
                           {editingIssue ? (
-                            <div className='text-black text-xs font-medium'>
+                            <div className='text-black text-sm font-medium break-words whitespace-normal'>
                               {item.machineName}
                             </div>
                           ) : (
@@ -876,7 +1036,7 @@ export const MaterialIssueForm = ({
                                     <SelectItem value='Other'>
                                       others
                                     </SelectItem>
-                                    {availableMachines.map((machine) => (
+                                    {getFilteredMachines().map((machine) => (
                                       <SelectItem
                                         key={machine.id}
                                         value={machine.name}
@@ -890,9 +1050,11 @@ export const MaterialIssueForm = ({
                             </Select>
                           )}
                           {errors[`machineId_${index}`] && (
-                            <p className='text-destructive text-xs mt-1'>
-                              {errors[`machineId_${index}`]}
-                            </p>
+                            <div className='mt-1 p-2 bg-red-50 border border-red-200 rounded-md'>
+                              <p className='text-red-700 text-xs font-medium'>
+                                {errors[`machineId_${index}`]}
+                              </p>
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className='border border-gray-300 px-2 py-1'>
@@ -973,7 +1135,7 @@ export const MaterialIssueForm = ({
                         </TableCell>
                         <TableCell className='border border-gray-300 px-2 py-1'>
                           {editingIssue ? (
-                            <div className='text-black text-xs font-medium'>
+                            <div className='text-black text-sm font-medium break-words whitespace-normal'>
                               {item.purpose}
                             </div>
                           ) : (
@@ -996,9 +1158,11 @@ export const MaterialIssueForm = ({
                             />
                           )}
                           {errors[`purpose_${index}`] && (
-                            <p className='text-destructive text-xs mt-1'>
-                              {errors[`purpose_${index}`]}
-                            </p>
+                            <div className='mt-1 p-2 bg-red-50 border border-red-200 rounded-md'>
+                              <p className='text-red-700 text-xs font-medium'>
+                                {errors[`purpose_${index}`]}
+                              </p>
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className='border border-gray-300 px-2 py-1'>
@@ -1008,13 +1172,42 @@ export const MaterialIssueForm = ({
                             size='sm'
                             onClick={() => {
                               if (formData.items.length > 1) {
-                                const newItems = formData.items.filter(
-                                  (_, i) => i !== index
+                                const itemToRemove = formData.items[index];
+                                const confirmed = window.confirm(
+                                  `🗑️ Remove Item\n\n` +
+                                    `Are you sure you want to remove this item?\n` +
+                                    `Material: ${
+                                      itemToRemove.nameOfMaterial ||
+                                      'Not selected'
+                                    }\n` +
+                                    `Quantity: ${
+                                      itemToRemove.issuedQty || '0'
+                                    } units\n\n` +
+                                    `This action cannot be undone.`
                                 );
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  items: newItems,
-                                }));
+
+                                if (confirmed) {
+                                  const newItems = formData.items.filter(
+                                    (_, i) => i !== index
+                                  );
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    items: newItems,
+                                  }));
+                                  toast({
+                                    title: '✅ Item Removed',
+                                    description:
+                                      'The item has been successfully removed from the issue form.',
+                                    variant: 'default',
+                                  });
+                                }
+                              } else {
+                                toast({
+                                  title: '⚠️ Cannot Remove Item',
+                                  description:
+                                    'You must have at least one item in the issue form.',
+                                  variant: 'destructive',
+                                });
                               }
                             }}
                             disabled={

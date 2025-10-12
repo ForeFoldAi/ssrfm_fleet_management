@@ -57,9 +57,11 @@ interface VendorQuotation {
   phone: string;
   price: string;
   quotedPrice: string;
+  quotationAmount?: string; // Raw quotation amount from API (without currency symbol)
   notes: string;
   quotationFile?: File | null;
-  isSelected?: boolean; // Add this line
+  isSelected?: boolean;
+  filePaths?: string[]; // Add filePaths for API data
 }
 
 interface PartialReceipt {
@@ -148,6 +150,7 @@ const RequestDetails: React.FC = () => {
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const [isReceiveDialogOpen, setIsReceiveDialogOpen] = useState(false);
+  const [resetStatusDropdown, setResetStatusDropdown] = useState<(() => void) | null>(null);
   const [selectedPurchase, setSelectedPurchase] =
     useState<MaterialPurchase | null>(null);
   const [receiveData, setReceiveData] =
@@ -316,7 +319,7 @@ const RequestDetails: React.FC = () => {
             measureUnit: item.material.measureUnitId?.toString() || 'units',
             notes: item.notes || '',
             imagePreviews: item.imagePaths || [],
-            purposeType: PurposeType.MACHINE, // Add required purposeType field
+            purposeType: (item as any).purposeType || PurposeType.MACHINE, // Use actual purposeType from API data
             vendorQuotations: item.quotations
               // Show ALL quotations if pending_approval, only selected ones otherwise
               .filter((quotation) => 
@@ -329,6 +332,7 @@ const RequestDetails: React.FC = () => {
                 phone: quotation.phone,
                 price: quotation.price || '0',
                 quotedPrice: `₹${quotation.quotationAmount}`,
+                quotationAmount: quotation.quotationAmount?.toString() || '0', // Keep raw amount for API
                 notes: quotation.notes,
                 quotationFile: null,
                 isSelected: quotation.isSelected,
@@ -563,13 +567,69 @@ const RequestDetails: React.FC = () => {
         updatedIndent = await materialPurchasesApi.create(purchaseData);
       } else if (newStatus === IndentStatus.PARTIALLY_RECEIVED || 
                  newStatus === IndentStatus.FULLY_RECEIVED) {
-        // Handle material receipt using material-purchases API
+        // Check if this is a return item - return items don't need purchase orders
+        const isReturnItem = requestData.apiData?.items?.[0]?.purposeType?.toLowerCase() === 'return';
         
-        // Find the first purchase order to receive
-        const firstPurchase = requestData.receiptHistory?.[0];
-        if (!firstPurchase || !firstPurchase.items || !Array.isArray(firstPurchase.items) || firstPurchase.items.length === 0) {
-          throw new Error('No purchase order found. Please create a purchase order (status: ordered) before receiving materials.');
-        }
+        if (isReturnItem) {
+          // For return items, use the approve endpoint with a custom approach
+          // Since the approve endpoint only accepts 'approved' or 'reverted', 
+          // we'll use the approve endpoint with the item data to update to fully_received
+          const firstItem = requestData.apiData.items[0];
+          const firstQuotation = firstItem.quotations?.[0];
+          
+          // Use the approve endpoint with the item and quotation IDs
+          const approvalData: ApproveRejectMaterialIndentRequest = {
+            status: 'approved', // We'll use approved status as the base
+            itemId: firstItem.id,
+            quotationId: firstQuotation?.id || 0,
+          };
+
+          // First, ensure the item is approved
+          updatedIndent = await materialIndentsApi.approve(numericId, approvalData);
+          
+          // Then try to update to fully_received using a different approach
+          // We'll use the material-purchases API to mark as received
+          try {
+            // Create a minimal purchase order for return items
+            const purchaseData = {
+              purchaseOrderNumber: `RETURN-${requestData.apiData.uniqueId}`,
+              orderDate: new Date().toISOString().split('T')[0],
+              additionalNotes: 'Return item - no purchase required',
+              indentId: requestData.apiData.id,
+            };
+            
+            const purchaseOrder = await materialPurchasesApi.create(purchaseData);
+            
+            // Now mark the purchase order as fully received
+            if (purchaseOrder.items && purchaseOrder.items.length > 0) {
+              const receiveData = {
+                receivedQuantity: firstItem.requestedQuantity,
+                receivedDate: new Date().toISOString().split('T')[0],
+                notes: 'Return item marked as fully received',
+              };
+              
+              await materialPurchasesApi.receiveItem(
+                purchaseOrder.id,
+                purchaseOrder.items[0].id,
+                receiveData
+              );
+              
+              // Refresh to get the updated status
+              updatedIndent = await materialIndentsApi.getById(numericId);
+            }
+          } catch (purchaseError) {
+            console.warn('Could not create purchase order for return item:', purchaseError);
+            // If purchase order creation fails, at least the item is approved
+            updatedIndent = await materialIndentsApi.getById(numericId);
+          }
+        } else {
+          // Handle material receipt using material-purchases API for non-return items
+          
+          // Find the first purchase order to receive
+          const firstPurchase = requestData.receiptHistory?.[0];
+          if (!firstPurchase || !firstPurchase.items || !Array.isArray(firstPurchase.items) || firstPurchase.items.length === 0) {
+            throw new Error('No purchase order found. Please create a purchase order (status: ordered) before receiving materials.');
+          }
 
         const purchaseId = Number(firstPurchase.id);
         const itemId = firstPurchase.items[0].id;
@@ -642,6 +702,7 @@ const RequestDetails: React.FC = () => {
 
         // Refresh the data to get the updated status from backend
         updatedIndent = await materialIndentsApi.getById(numericId);
+        }
       } else {
         // For other status changes
         updatedIndent = await materialIndentsApi.update(numericId, {
@@ -784,6 +845,7 @@ const RequestDetails: React.FC = () => {
                 phone: quotation.phone,
                 price: quotation.price || '0',
                 quotedPrice: `₹${quotation.quotationAmount}`,
+                quotationAmount: quotation.quotationAmount?.toString() || '0', // Keep raw amount for API
                 notes: quotation.notes,
                 quotationFile: null,
                 isSelected: quotation.isSelected,
@@ -929,7 +991,7 @@ const RequestDetails: React.FC = () => {
       });
 
       // Use the reSubmit method specifically for reverted indents
-      const resubmitData = {
+      const resubmitData: any = {
         status: IndentStatus.PENDING_APPROVAL,
         additionalNotes: requestData.items.some((item) => item.notes)
           ? `Resubmitted by ${
@@ -940,8 +1002,26 @@ const RequestDetails: React.FC = () => {
           : `Resubmitted by ${
               currentUser?.name || 'Supervisor'
             } on ${new Date().toLocaleDateString()}.`,
-        // Send the complete items data from API to ensure backend has all required fields
-        items: requestData.apiData.items
+        // Transform items to exclude IDs (let backend create new records)
+        items: requestData.apiData.items.map((item: any) => ({
+          materialId: item.material.id,
+          specifications: item.specifications,
+          requestedQuantity: item.requestedQuantity,
+          notes: item.notes,
+          currentStock: item.currentStock,
+          machineId: item.machine?.id,
+          // Transform quotations to exclude IDs
+          quotations: item.quotations?.map((quotation: any) => ({
+            vendorName: quotation.vendorName,
+            contactPerson: quotation.contactPerson,
+            phone: quotation.phone,
+            price: quotation.price,
+            quotationAmount: quotation.quotationAmount,
+            notes: quotation.notes,
+            isSelected: quotation.isSelected,
+            filePaths: quotation.filePaths,
+          })) || []
+        }))
       };
 
       console.log('Resubmit data being sent:', resubmitData);
@@ -1191,15 +1271,15 @@ const RequestDetails: React.FC = () => {
             date: indent.requestDate,
             materialName: firstItem?.material?.name || 'Unknown',
             quantity: firstItem ? `${firstItem.requestedQuantity}` : '0',
-            purchaseValue: firstQuotation ? firstQuotation.quotationAmount : '0',
+            purchaseValue: firstQuotation ? firstQuotation.price : '0', // Use price (unit price) instead of quotationAmount
             previousMaterialValue: '0', // Default value
             perMeasureQuantity: '1', // Default value
-            requestedValue: firstQuotation ? firstQuotation.quotationAmount : '0',
-            currentValue: firstQuotation ? firstQuotation.quotationAmount : '0',
+            requestedValue: firstQuotation ? firstQuotation.price : '0', // Use price instead of quotationAmount
+            currentValue: firstQuotation ? firstQuotation.price : '0', // Use price instead of quotationAmount
             status: indent.status,
             requestedBy: indent.requestedBy?.name,
             location: indent.branch?.name || 'Unknown',
-            purchasedFrom: firstQuotation?.vendorName || 'N/A', // Add vendor name from approved quotation
+            purchasedFrom: firstQuotation?.vendorName || 'No Vendor', // Add vendor name from approved quotation
           };
         })
         .slice(0, 5); // Take only the first 5 after filtering
@@ -1213,7 +1293,7 @@ const RequestDetails: React.FC = () => {
         perMeasureQuantity: '1', // Default value
         requestedValue: item.totalValue || '0',
         currentValue: item.totalValue || '0',
-        purchasedFrom: 'N/A', // For supervisor view, vendor info not available in receipt history
+        purchasedFrom: 'No Vendor', // For supervisor view, vendor info not available in receipt history
       }));
     }
   };
@@ -1361,7 +1441,9 @@ const RequestDetails: React.FC = () => {
         requestId={requestData.id}
         hasVendorSelected={checkAllVendorsSelected()}
         hasNoVendorQuotations={checkNoVendorQuotations()}
+        onResetPending={setResetStatusDropdown}
         partialReceiptHistory={requestData.apiData?.partialReceiptHistory || []}
+        purposeType={requestData.apiData?.items?.[0]?.purposeType} // Get purposeType from first item
       />
     );
   };
@@ -1424,8 +1506,8 @@ const RequestDetails: React.FC = () => {
 
   return (
     <div className='space-y-0 p-2 sm:p-6'>
-      {/* Header */}
-      <div className='flex items-center justify-between'>
+      {/* Header - Desktop */}
+      <div className='hidden lg:flex items-center justify-between'>
         <div className='flex items-center gap-6'>
           <Button
             variant='outline'
@@ -1496,8 +1578,10 @@ const RequestDetails: React.FC = () => {
                   requestId={requestData.id}
                   hasVendorSelected={checkAllVendorsSelected()}
                   hasNoVendorQuotations={checkNoVendorQuotations()}
+                  onResetPending={setResetStatusDropdown}
                   partialReceiptHistory={requestData.apiData?.partialReceiptHistory || []}
                   requiredQuantity={requestData.apiData?.items?.[0]?.requestedQuantity || 0}
+                  purposeType={requestData.apiData?.items?.[0]?.purposeType} // Get purposeType from first item
                 />
               ) : (
                 <Badge className='mt-1'>{requestData.status}</Badge>
@@ -1524,6 +1608,111 @@ const RequestDetails: React.FC = () => {
             
           </div>
         </div>
+      </div>
+
+      {/* Header - Mobile */}
+      <div className='lg:hidden space-y-3'>
+        {/* Row 1: Back Button + Title */}
+        <div className='flex items-center gap-3'>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() =>
+              navigate('/materials-inventory', {
+                state: { activeTab: 'material-order-book' },
+              })
+            }
+            className='gap-1 px-2 py-1 flex-shrink-0'
+          >
+            <ArrowLeft className='w-4 h-4' />
+            <span className='text-xs'>Back</span>
+          </Button>
+          <div className='flex-1 min-w-0'>
+            <h1 className='text-base sm:text-lg font-bold text-foreground truncate'>
+              Request Details
+            </h1>
+            <p className='text-xs text-muted-foreground truncate'>
+              {hasPermission('inventory:material-indents:approve')
+                ? 'Review and approve'
+                : 'Manage status'}
+            </p>
+          </div>
+        </div>
+
+        {/* Row 2: Request Info Grid */}
+        <div className='grid grid-cols-2 gap-2 bg-secondary/10 p-3 rounded-lg'>
+          <div>
+            <Label className='text-[10px] font-medium text-muted-foreground'>
+              Requested By
+            </Label>
+            <div className='font-semibold text-xs truncate'>
+              {requestData.requestedBy}
+            </div>
+          </div>
+          <div>
+            <Label className='text-[10px] font-medium text-muted-foreground'>
+              Unit
+            </Label>
+            <div className='font-semibold text-xs truncate'>
+              {requestData.location}
+            </div>
+          </div>
+          <div>
+            <Label className='text-[10px] font-medium text-muted-foreground'>
+              Date
+            </Label>
+            <div className='font-semibold text-xs'>
+              {formatDateToDDMMYYYY(requestData.date)}
+            </div>
+          </div>
+          <div>
+            <Label className='text-[10px] font-medium text-muted-foreground'>
+              Status
+            </Label>
+            <div className='mt-1'>
+              {(hasPermission('inventory:material-indents:update') || 
+                hasPermission('inventory:material-indents:approve')) ? (
+                <StatusDropdown
+                  currentStatus={requestData.status}
+                  userRole={
+                    isCompanyLevel()
+                      ? 'company_owner'
+                      : 'supervisor'
+                  }
+                  onStatusChange={handleStatusChange}
+                  requestId={requestData.id}
+                  hasVendorSelected={checkAllVendorsSelected()}
+                  hasNoVendorQuotations={checkNoVendorQuotations()}
+                  onResetPending={setResetStatusDropdown}
+                  partialReceiptHistory={requestData.apiData?.partialReceiptHistory || []}
+                  requiredQuantity={requestData.apiData?.items?.[0]?.requestedQuantity || 0}
+                  purposeType={requestData.apiData?.items?.[0]?.purposeType}
+                />
+              ) : (
+                <Badge className='text-[10px]'>{requestData.status}</Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Row 3: Action Buttons (if applicable) */}
+        {(canEdit() || isEditing) && (
+          <div className='flex items-center gap-2'>
+            {canEdit() && !isEditing && (
+              <Button onClick={() => setIsEditing(true)} className='flex-1 gap-2 text-xs h-9'>
+                <FileEdit className='w-4 h-4' />
+                Edit Request
+              </Button>
+            )}
+
+            {isEditing && (
+              <Button onClick={handleSave} className='flex-1 gap-2 text-xs h-9'>
+                <Save className='w-4 h-4' />
+                Save Changes
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
@@ -1674,7 +1863,12 @@ const RequestDetails: React.FC = () => {
       {requestData?.apiData && (
         <ConfirmApproveDialog
           isOpen={isApprovalDialogOpen}
-          onClose={() => setIsApprovalDialogOpen(false)}
+          onClose={() => {
+            setIsApprovalDialogOpen(false);
+            if (resetStatusDropdown) {
+              resetStatusDropdown();
+            }
+          }}
           onSuccess={async () => {
             // Refresh the request data after successful approval
             const updatedIndent = await materialIndentsApi.getById(requestData.apiData.id);
@@ -1684,6 +1878,7 @@ const RequestDetails: React.FC = () => {
                 : null
             );
             setSelectedVendors({});
+            
             
             toast({
               title: 'Success',

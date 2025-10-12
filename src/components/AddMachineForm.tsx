@@ -339,7 +339,7 @@ export const AddMachineForm = ({
         const machinePayload = {
           name: formData.name.trim(),
           typeId: Number(formData.typeId),
-          unitId: Number(formData.unitId),
+          unitId: Number(formData.unitId), // Use unitId to match filtering logic
           status: formData.status,
           specifications: formData.specifications.trim(),
           manufacturer: formData.manufacturer.trim(),

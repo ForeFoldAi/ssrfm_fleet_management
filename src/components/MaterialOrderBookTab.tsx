@@ -37,6 +37,7 @@ import {
   
   Upload,
   Download,
+  RefreshCcw,
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import {
@@ -83,6 +84,7 @@ import { useRole } from '../contexts/RoleContext';
 import { MaterialIssueForm } from '../components/MaterialIssueForm';
 import { RequestStatusManager } from '../components/RequestStatusManager';
 import { RequisitionIndentForm } from '../components/RequisitionIndentForm';
+import { UnifiedTabSearch } from '../components/UnifiedTabSearch';
 import { useRequestWorkflow } from '../hooks/useRequestWorkflow';
 import { HistoryView } from '../components/HistoryView';
 import {
@@ -150,6 +152,9 @@ export const MaterialOrderBookTab = () => {
   const [isLoadingResubmitForm, setIsLoadingResubmitForm] = useState(false);
   const [loadingResubmitId, setLoadingResubmitId] = useState<string | null>(null);
   const [isSubmittingResubmit, setIsSubmittingResubmit] = useState(false);
+
+  // State for marking return items as fully received
+  const [isMarkingReceived, setIsMarkingReceived] = useState<string | null>(null);
 
   // Debug effect to monitor state changes
   useEffect(() => {
@@ -244,7 +249,7 @@ export const MaterialOrderBookTab = () => {
             errorMessage = data.message;
           }
         } else if (error.request) {
-          errorMessage = 'Network error. Please check your internet connection.';
+          errorMessage = 'Please Try Again';
         } else {
           errorMessage = error.message || 'An unexpected error occurred.';
         }
@@ -300,9 +305,14 @@ export const MaterialOrderBookTab = () => {
           params.status = filterStatus;
         }
 
-        // Add branch filter if not 'all'
-        if (filterUnit !== 'all') {
+        // Add branch filter for company owner
+        if (currentUser?.role === 'company_owner' && filterUnit !== 'all') {
           params.branchId = filterUnit;
+        }
+
+        // For supervisor/inventory_manager (branch-level users): automatically filter by their branch
+        if ((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id) {
+          params.branchId = currentUser.branch.id.toString();
         }
 
         // Add sorting parameters for server-side sorting (newest Purchase ID on top)
@@ -368,7 +378,7 @@ export const MaterialOrderBookTab = () => {
         } else if (error.request) {
           // Request was made but no response received
           console.error('Network Error:', error.request);
-          errorMessage = 'Network error. Please check your internet connection.';
+          errorMessage = 'Please Try Again';
         } else {
           // Something else happened
           console.error('Unexpected Error:', error.message);
@@ -381,7 +391,7 @@ export const MaterialOrderBookTab = () => {
         setIsLoading(false);
       }
     },
-    [filterStatus, filterUnit, sortBy, sortOrder, currentUser?.role] // Added sortBy and sortOrder for server-side sorting
+    [filterStatus, filterUnit, sortBy, sortOrder, currentUser?.role, currentUser?.branch?.id] // Added branch ID for supervisor filtering
   );
 
   // Handle column sorting - Triggers server-side sorting and data refetch
@@ -448,15 +458,14 @@ export const MaterialOrderBookTab = () => {
     [key: string]: unknown; // For other properties
   }
 
-  // Fetch material indents when filters or sorting changes
+  // Fetch material indents when filters or sorting changes (not search - search is frontend only)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchMaterialIndents(pagination.page, pagination.limit);
-    }, 300); // Debounce search
+    }, 300); // Debounce
 
     return () => clearTimeout(timeoutId);
   }, [
-    searchTerm,
     filterStatus,
     filterUnit,
     sortBy,
@@ -471,7 +480,7 @@ export const MaterialOrderBookTab = () => {
     if (pagination.page !== 1) {
       setPagination((prev) => ({ ...prev, page: 1 }));
     }
-  }, [filterStatus, filterUnit, searchTerm, sortBy, sortOrder]);
+  }, [filterStatus, filterUnit, sortBy, sortOrder]);
 
   // Legacy state for backward compatibility
   interface LegacyRequest {
@@ -704,12 +713,13 @@ export const MaterialOrderBookTab = () => {
             phone: quotation.phone || '',
             price: quotation.price || '0',
             quotedPrice: quotation.quotationAmount || '0',
+            quotationAmount: quotation.quotationAmount?.toString() || '0', // Keep raw amount for API
             notes: quotation.notes || '',
             quotationFile: null,
             isSelected: quotation.isSelected || false,
             filePaths: quotation.filePaths || [],
           })),
-        purposeType: 'machine', // Default to machine, can be enhanced later
+        purposeType: (item as any).purposeType || 'machine', // Use actual purposeType from API data
       })),
       requestedBy: indent.requestedBy?.name || '',
       location: indent.branch?.location || '',
@@ -971,7 +981,7 @@ export const MaterialOrderBookTab = () => {
         }
 
         const itemData: any = {
-          id: item.id, // Include the original item ID
+          // Don't pass item id - let backend create new item records
           materialId: material.id,
           specifications: item.specifications || '',
           requestedQuantity: Number(item.reqQuantity) || 0,
@@ -1003,16 +1013,21 @@ export const MaterialOrderBookTab = () => {
           itemData.machineName = item.machineName || item.purposeType;
         }
 
-        // Handle vendor quotations - include all required fields
+        // Handle vendor quotations - include all required fields (exclude ID for new quotations)
         if (item.vendorQuotations && item.vendorQuotations.length > 0) {
           itemData.quotations = item.vendorQuotations.map(
             (quotation: any) => ({
-              id: quotation.id,
+              // Don't pass id - let backend create new quotation records
               vendorName: quotation.vendorName,
               contactPerson: quotation.contactPerson || '',
               phone: quotation.phone || '',
               price: Number(quotation.price) || 0,
-              quotationAmount: Number(quotation.quotationAmount) || 0,
+              // Prefer quotationAmount (raw value), fallback to quotedPrice (strip currency)
+              quotationAmount: Number(
+                (quotation.quotationAmount || quotation.quotedPrice || '0')
+                  .toString()
+                  .replace(/[₹,]/g, '')
+              ) || 0,
               notes: quotation.notes || '',
               isSelected: quotation.isSelected || false,
               filePaths: quotation.filePaths || [],
@@ -1056,7 +1071,12 @@ export const MaterialOrderBookTab = () => {
           page: currentPage,
           limit: limit,
           ...(filterStatus !== 'all' && { status: filterStatus }),
-          ...(filterUnit !== 'all' && { branchId: filterUnit }),
+          // For company owner: apply selected unit filter
+          ...(currentUser?.role === 'company_owner' && filterUnit !== 'all' && { branchId: filterUnit }),
+          // For supervisor/inventory_manager (branch-level users): automatically filter by their branch
+          ...((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id && { 
+            branchId: currentUser.branch.id.toString() 
+          }),
         });
 
         allIndents = [...allIndents, ...response.data];
@@ -1126,8 +1146,30 @@ export const MaterialOrderBookTab = () => {
       filteredIndents.forEach((indent) => {
         indent.items.forEach((item) => {
           const transformedIndent = transformedIndents.find(t => t.originalId === indent.id);
-          // Use only the selected (approved) quotation for CSV export
-          const approvedQuotation = item.selectedQuotation;
+          
+          // Use the same quotation logic as the UI transformation
+          // Priority: selectedQuotation -> first quotation (for received items) -> null
+          const approvedQuotation = item.selectedQuotation || 
+            (item.quotations && item.quotations.length > 0 ? item.quotations[0] : null);
+          
+          // Get machine name using the same logic as UI transformation
+          const getMachineName = () => {
+            // Check if purposeType is spare, other, or return
+            const purposeType = (item as any).purposeType?.toLowerCase();
+            if (purposeType === 'spare' || purposeType === 'other' || purposeType === 'return') {
+              // For spare/other/return, use the machineName field which stores the purpose type text
+              return (item as any).machineName || purposeType.charAt(0).toUpperCase() + purposeType.slice(1);
+            }
+            
+            // For machine purpose type, use the actual machine name
+            return item.machine?.name || 'N/A';
+          };
+          
+          // Show price and value only for received statuses (same logic as UI)
+          const shouldShowPrice = approvedQuotation && (
+            indent.status === IndentStatus.FULLY_RECEIVED ||
+            indent.status === IndentStatus.PARTIALLY_RECEIVED
+          );
           
           csvData.push([
             `"${transformedIndent?.id || indent.uniqueId}"`,
@@ -1136,13 +1178,13 @@ export const MaterialOrderBookTab = () => {
             `"${item.specifications || item.material?.specifications || ''}"`,
             `"${item.material?.makerBrand || 'N/A'}"`,
             `"${item.requestedQuantity} ${item.material?.measureUnit?.name || 'units'}"`,
-            approvedQuotation ? `"₹${approvedQuotation.price}"` : '""',
-            approvedQuotation ? `"₹${approvedQuotation.quotationAmount}"` : '""',
+            shouldShowPrice && approvedQuotation ? `"₹${approvedQuotation.price}"` : '""',
+            shouldShowPrice && approvedQuotation ? `"₹${approvedQuotation.quotationAmount}"` : '""',
             `"${getStatusLabel(indent.status)}"`,
             `"${indent.requestedBy?.name || 'Unknown'}"`,
             `"${indent.branch?.name || 'Unknown'}"`,
             `"${indent.branch?.location || ''}"`,
-            `"${item.machine?.name || 'N/A'}"`,
+            `"${getMachineName()}"`,
             `"${item.notes || indent.additionalNotes || ''}"`,
             `"${transformedIndent?.receivedDate || ''}"`,
             `"${indent.approvedBy?.name || ''}"`,
@@ -1472,27 +1514,29 @@ export const MaterialOrderBookTab = () => {
       indent.status === IndentStatus.PARTIALLY_RECEIVED
     );
 
-    // Get received date from purchase items if available
+    // Get received date - use updatedAt for partially_received and fully_received
     const getReceivedDate = () => {
       if (indent.status === IndentStatus.FULLY_RECEIVED || 
           indent.status === IndentStatus.PARTIALLY_RECEIVED) {
-        // Look for received dates in purchase items
-        for (const purchase of indent.purchases || []) {
-          for (const item of purchase.items || []) {
-            if (item.receivedDate) {
-              return formatDateToDDMMYYYY(item.receivedDate);
-            }
-          }
-        }
-        // Fallback to partialReceiptHistory if available
-        if (indent.partialReceiptHistory && indent.partialReceiptHistory.length > 0) {
-          const latestReceipt = indent.partialReceiptHistory[indent.partialReceiptHistory.length - 1];
-          if (latestReceipt.receivedDate) {
-            return formatDateToDDMMYYYY(latestReceipt.receivedDate);
-          }
-        }
+        // Use updatedAt field for received statuses
+        return indent.updatedAt ? formatDateToDDMMYYYY(indent.updatedAt) : '';
       }
       return '';
+    };
+
+    // Get machine name based on purpose type
+    const getMachineName = () => {
+      if (!firstItem) return 'N/A';
+      
+      // Check if purposeType is spare, other, or return
+      const purposeType = (firstItem as any).purposeType?.toLowerCase();
+      if (purposeType === 'spare' || purposeType === 'other' || purposeType === 'return') {
+        // For spare/other/return, use the machineName field which stores the purpose type text
+        return (firstItem as any).machineName || purposeType.charAt(0).toUpperCase() + purposeType.slice(1);
+      }
+      
+      // For machine purpose type, use the actual machine name
+      return firstItem.machine?.name || 'N/A';
     };
 
     return {
@@ -1520,7 +1564,7 @@ export const MaterialOrderBookTab = () => {
       priority: 'medium', // Not available in API, using default
       materialPurpose: firstItem?.notes || indent.additionalNotes || '',
       machineId: firstItem?.machine?.id.toString() || 'N/A',
-      machineName: firstItem?.machine?.name || 'N/A',
+      machineName: getMachineName(),
       date: formatDateToDDMMYYYY(indent.requestDate),
       status: indent.status,
       statusDescription: `${getStatusLabel(indent.status)} - ${
@@ -1533,6 +1577,7 @@ export const MaterialOrderBookTab = () => {
       unit: indent.branch?.code || '',
       unitName: indent.branch?.name || '',
       branch: indent.branch?.name || '',
+      branchLocation: indent.branch?.location || '',
       receivedDate: getReceivedDate(),
       approvedBy: indent.approvedBy?.name,
       approvedDate: indent.approvalDate
@@ -1549,21 +1594,68 @@ export const MaterialOrderBookTab = () => {
   const filterIndents = (indents: MaterialIndent[]) => {
     if (!searchTerm) return indents;
 
+    const searchLower = searchTerm.toLowerCase();
+
     return indents.filter((indent) => {
-      // Search in indent uniqueId
-      if (indent.uniqueId.toLowerCase().includes(searchTerm.toLowerCase())) {
+      // Search in indent-level fields
+      if (
+        indent.uniqueId?.toLowerCase().includes(searchLower) ||
+        indent.requestDate?.toLowerCase().includes(searchLower) ||
+        formatDateToDDMMYYYY(indent.requestDate)?.toLowerCase().includes(searchLower) ||
+        indent.status?.toLowerCase().includes(searchLower) ||
+        getStatusLabel(indent.status)?.toLowerCase().includes(searchLower) ||
+        indent.requestedBy?.name?.toLowerCase().includes(searchLower) ||
+        indent.requestedBy?.email?.toLowerCase().includes(searchLower) ||
+        indent.branch?.name?.toLowerCase().includes(searchLower) ||
+        indent.branch?.code?.toLowerCase().includes(searchLower) ||
+        indent.branch?.location?.toLowerCase().includes(searchLower) ||
+        indent.additionalNotes?.toLowerCase().includes(searchLower) ||
+        indent.rejectionReason?.toLowerCase().includes(searchLower) ||
+        indent.approvedBy?.name?.toLowerCase().includes(searchLower) ||
+        indent.approvalDate?.toLowerCase().includes(searchLower) ||
+        (indent.approvalDate && formatDateToDDMMYYYY(indent.approvalDate)?.toLowerCase().includes(searchLower)) ||
+        indent.updatedAt?.toLowerCase().includes(searchLower) ||
+        (indent.updatedAt && formatDateToDDMMYYYY(indent.updatedAt)?.toLowerCase().includes(searchLower))
+      ) {
         return true;
       }
 
-      // Search in items
+      // Search in items (materials, machines, quotations, etc.)
       return indent.items.some((item) => {
-        return (
-          item.material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.material.makerBrand
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          item.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+        // Material fields
+        const materialMatch = 
+          item.material?.name?.toLowerCase().includes(searchLower) ||
+          item.material?.makerBrand?.toLowerCase().includes(searchLower) ||
+          item.material?.specifications?.toLowerCase().includes(searchLower) ||
+          item.material?.measureUnit?.name?.toLowerCase().includes(searchLower) ||
+          item.specifications?.toLowerCase().includes(searchLower);
+
+        // Machine fields
+        const machineMatch =
+          item.machine?.name?.toLowerCase().includes(searchLower) ||
+          (item as any).machineName?.toLowerCase().includes(searchLower) ||
+          (item as any).purposeType?.toLowerCase().includes(searchLower);
+
+        // Quantity and stock fields
+        const quantityMatch =
+          item.requestedQuantity?.toString().includes(searchLower) ||
+          item.currentStock?.toString().includes(searchLower);
+
+        // Notes and purpose
+        const notesMatch =
+          item.notes?.toLowerCase().includes(searchLower);
+
+        // Quotation fields
+        const quotationMatch = item.quotations?.some((quotation) =>
+          quotation.vendorName?.toLowerCase().includes(searchLower) ||
+          quotation.contactPerson?.toLowerCase().includes(searchLower) ||
+          quotation.phone?.toLowerCase().includes(searchLower) ||
+          quotation.price?.toString().includes(searchLower) ||
+          quotation.quotationAmount?.toString().includes(searchLower) ||
+          quotation.notes?.toLowerCase().includes(searchLower)
         );
+
+        return materialMatch || machineMatch || quantityMatch || notesMatch || quotationMatch;
       });
     });
   };
@@ -1882,7 +1974,7 @@ export const MaterialOrderBookTab = () => {
                   onClick={() => handleSort('branch')}
                 >
                   <div className='flex items-center gap-2'>
-                    Branch
+                    Unit/Location
                     {getSortIcon('branch')}
                   </div>
                 </TableHead>
@@ -1979,7 +2071,19 @@ export const MaterialOrderBookTab = () => {
                       {request.machineName}
                     </TableCell>
                     <TableCell className='text-sm'>
-                      {request.branch}
+                      <div className='space-y-1'>
+                        <Badge
+                          variant='outline'
+                          className='text-xs bg-primary/10 text-primary border-primary/30'
+                        >
+                          {request.unitName}
+                        </Badge>
+                        {request.branchLocation && (
+                          <div className='text-xs text-muted-foreground'>
+                            {request.branchLocation}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -2085,7 +2189,7 @@ export const MaterialOrderBookTab = () => {
                   onClick={() => handleSort('branch')}
                 >
                   <div className='flex items-center gap-2'>
-                    Branch
+                  Unit/Location
                     {getSortIcon('branch')}
                   </div>
                 </TableHead>
@@ -2164,7 +2268,19 @@ export const MaterialOrderBookTab = () => {
                       {request.machineName}
                     </TableCell>
                     <TableCell className='text-sm'>
-                      {request.branch}
+                      <div className='space-y-1'>
+                        <Badge
+                          variant='outline'
+                          className='text-xs bg-primary/10 text-primary border-primary/30'
+                        >
+                          {request.unitName}
+                        </Badge>
+                        {request.branchLocation && (
+                          <div className='text-xs text-muted-foreground'>
+                            {request.branchLocation}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -2187,6 +2303,55 @@ export const MaterialOrderBookTab = () => {
     fetchMaterialIndents(1, newLimit);
   };
 
+  // Function to mark return items as fully received
+  const handleMarkAsFullyReceived = async (request: any) => {
+    try {
+      setIsMarkingReceived((request.originalId || request.id).toString());
+
+      // Use the update API to change status to fully_received
+      await materialIndentsApi.update(request.originalId || request.id, {
+        status: IndentStatus.FULLY_RECEIVED,
+      } as any);
+
+      toast({
+        title: 'Success',
+        description: 'Return item marked as fully received successfully.',
+      });
+
+      // Refresh the data
+      await fetchMaterialIndents(pagination.page, pagination.limit);
+    } catch (error) {
+      console.error('Error marking item as fully received:', error);
+
+      // Extract error message
+      let errorMessage = 'Failed to mark item as fully received. Please try again.';
+
+      const axiosError = error as {
+        response?: {
+          data?: {
+            message?: string;
+            error?: string;
+          };
+          status?: number;
+        };
+      };
+
+      if (axiosError.response?.data?.message) {
+        errorMessage = axiosError.response.data.message;
+      } else if (axiosError.response?.data?.error) {
+        errorMessage = axiosError.response.data.error;
+      }
+
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsMarkingReceived(null);
+    }
+  };
+
   // Enhanced action buttons in the expanded detail row
   const renderActionButtons = (request: any) => {
     const canApprove =
@@ -2198,6 +2363,15 @@ export const MaterialOrderBookTab = () => {
     const canReceive =
       hasPermission('inventory:material-purchases:receive') &&
       (request.status === 'ordered' || request.status === 'partially_received');
+    
+    // Check if this is a return item that's approved and can be marked as received
+    const isReturnItem = request.originalIndent?.items?.some(
+      (item: any) => item.purposeType?.toLowerCase() === 'return'
+    );
+    const canMarkAsReceived =
+      hasPermission('inventory:material-indents:update') &&
+      request.status === 'approved' &&
+      isReturnItem;
 
     return (
       <div className='flex flex-wrap gap-2 pt-4 border-t mt-6'>
@@ -2260,7 +2434,7 @@ export const MaterialOrderBookTab = () => {
         )}
 
 
-        {canOrder && (
+        {canOrder && !isReturnItem && (
           <Button
             variant='outline'
             className='gap-2 rounded-lg text-blue-600 border-blue-600 hover:bg-blue-50'
@@ -2271,6 +2445,24 @@ export const MaterialOrderBookTab = () => {
           >
             <ShoppingCart className='w-4 h-4' />
             Create Order
+          </Button>
+        )}
+
+        {canMarkAsReceived && (
+          <Button
+            variant='outline'
+            className='gap-2 rounded-lg text-emerald-600 border-emerald-600 hover:bg-emerald-50'
+            onClick={() => handleMarkAsFullyReceived(request)}
+            disabled={isMarkingReceived === (request.originalId || request.id).toString()}
+          >
+            {isMarkingReceived === (request.originalId || request.id).toString() ? (
+              <Loader2 className='w-4 h-4 animate-spin' />
+            ) : (
+              <CheckCircle2 className='w-4 h-4' />
+            )}
+            {isMarkingReceived === (request.originalId || request.id).toString()
+              ? 'Marking...'
+              : 'Mark as Fully Received'}
           </Button>
         )}
 
@@ -2422,148 +2614,97 @@ export const MaterialOrderBookTab = () => {
       {/* Main Heading */}
 
       {/* Search, Views, Status and Actions Row */}
-      <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6'>
-        <div className='flex items-center gap-4'>
-          {/* List/Table Toggle */}
-          <div className='flex rounded-lg border border-secondary overflow-hidden bg-secondary/10 w-fit shadow-sm'>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size='sm'
-              onClick={() => setViewMode('list')}
-              className={`rounded-none px-3 sm:px-4 ${
-                viewMode === 'list'
-                  ? 'bg-primary text-white hover:bg-primary-hover'
-                  : 'text-foreground hover:text-foreground hover:bg-secondary/20'
-              }`}
-            >
-              <List className='w-4 h-4' />
-              <span className='ml-1 sm:ml-2 text-xs sm:text-sm'>List</span>
-            </Button>
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'ghost'}
-              size='sm'
-              onClick={() => setViewMode('table')}
-              className={`rounded-none px-3 sm:px-4 ${
-                viewMode === 'table'
-                  ? 'bg-primary text-white hover:bg-primary-hover'
-                  : 'text-foreground hover:text-foreground hover:bg-secondary/20'
-              }`}
-            >
-              <TableIcon className='w-4 h-4' />
-              <span className='ml-1 sm:ml-2 text-xs sm:text-sm'>Table</span>
-            </Button>
-          </div>
+      <div className='flex flex-col gap-4 mb-6'>
+        {/* Desktop: Show UnifiedTabSearch with export and indent form button */}
+        <div className='hidden sm:block'>
+          <UnifiedTabSearch
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder='Search by materials, purchase ID.....'
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            showViewToggle={true}
+            filterUnit={filterUnit}
+            onFilterUnitChange={setFilterUnit}
+            availableBranches={availableBranches}
+            isLoadingBranches={isLoadingBranches}
+            statusFilter={filterStatus}
+            onStatusFilterChange={(value) => {
+                setFilterStatus(value);
+                // Update URL params
+                const newSearchParams = new URLSearchParams(searchParams);
+                if (value === 'all') {
+                  newSearchParams.delete('filter');
+                } else {
+                  newSearchParams.set('filter', value);
+                }
+                setSearchParams(newSearchParams, { replace: true });
+              }}
+            showStatusFilter={true}
+            statusOptions={[
+              { value: 'all', label: 'All Status' },
+              { value: IndentStatus.PENDING_APPROVAL, label: 'Pending Approval' },
+              { value: IndentStatus.APPROVED, label: 'Approved' },
+              { value: IndentStatus.REVERTED, label: 'Reverted' },
+              { value: IndentStatus.ORDERED, label: 'Ordered' },
+              { value: IndentStatus.PARTIALLY_RECEIVED, label: 'Partially Received' },
+              { value: IndentStatus.FULLY_RECEIVED, label: 'Fully Received' },
+            ]}
+            onExport={() => setIsExportDialogOpen(true)}
+            isExporting={isExporting}
+            showExport={true}
+            onAdd={() => navigate('/materials-inventory/material-request')}
+            addLabel='INDENT FORM'
+            addIcon={<Plus className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />}
+            showAddButton={true}
+            isOnline={isOnline}
+          />
         </div>
 
-        <div className='flex flex-col sm:flex-row gap-3 lg:flex-1 lg:max-w-4xl lg:justify-end'>
-          {/* Search Bar */}
-          <div className='flex-1 lg:max-w-md'>
-            <div className='relative'>
-              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-primary/80 w-4 h-4' />
-              <Input
-                placeholder='Search by materials, purchase ID.....'
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className='w-full pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none'
-              />
-            </div>
-          </div>
-
-          {/* Unit Filter - Only for company owners */}
-          {currentUser?.role === 'company_owner' && (
-            <Select
-              value={filterUnit}
-              onValueChange={setFilterUnit}
-              disabled={isLoadingBranches}
-            >
-              <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-                <SelectValue
-                  placeholder={isLoadingBranches ? 'Loading...' : 'Select Unit'}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All Units</SelectItem>
-                {availableBranches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id.toString()}>
-                    <div className='flex items-center gap-2'>
-                      <Building2 className='w-4 h-4' />
-                      <div>
-                        <div className='font-medium'>{branch.name}</div>
-                        <div className='text-xs text-muted-foreground'>
-                          {branch.location}
-                        </div>
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          {/* Status Filter - Show all statuses for all roles */}
-          <Select
-            value={filterStatus}
-            onValueChange={(value) => {
-              setFilterStatus(value);
-              // Update URL params
-              const newSearchParams = new URLSearchParams(searchParams);
-              if (value === 'all') {
-                newSearchParams.delete('filter');
-              } else {
-                newSearchParams.set('filter', value);
-              }
-              setSearchParams(newSearchParams, { replace: true });
-            }}
-          >
-            <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-              <SelectValue placeholder='All Status' />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>All Status</SelectItem>
-              <SelectItem value={IndentStatus.PENDING_APPROVAL}>
-                Pending Approval
-              </SelectItem>
-              <SelectItem value={IndentStatus.APPROVED}>Approved</SelectItem>
-              <SelectItem value={IndentStatus.REVERTED}>Reverted</SelectItem>
-              <SelectItem value={IndentStatus.ORDERED}>Ordered</SelectItem>
-              <SelectItem value={IndentStatus.PARTIALLY_RECEIVED}>
-                Partially Received
-              </SelectItem>
-              <SelectItem value={IndentStatus.FULLY_RECEIVED}>
-                Fully Received
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Action Buttons */}
-          <div className='flex gap-2'>
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={() => setIsExportDialogOpen(true)}
-              disabled={isExporting}
-              className='w-full sm:w-auto'
-            >
-              {isExporting ? (
-                <Loader2 className='w-4 h-4 animate-spin' />
-              ) : (
-                <Upload className='w-4 h-4' />
-              )}
-              <span className='ml-2'>Export</span>
-            </Button>
-            
-            <Button
-              asChild
-              className='w-full sm:w-auto text-sm sm:text-base'
-              size='sm'
-            >
-              <Link to='/materials-inventory/material-request'>
-                <Plus className='w-4 h-4' />
-                <span className='hidden sm:inline'>INDENT FORM</span>
-                <span className='sm:hidden'>INDENT FORM</span>
-              </Link>
-            </Button>
-          </div>
+        {/* Mobile: Show UnifiedTabSearch with export and indent form */}
+        <div className='sm:hidden'>
+          <UnifiedTabSearch
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder='Search by materials, purchase ID.....'
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            showViewToggle={true}
+            filterUnit={filterUnit}
+            onFilterUnitChange={setFilterUnit}
+            availableBranches={availableBranches}
+            isLoadingBranches={isLoadingBranches}
+            statusFilter={filterStatus}
+            onStatusFilterChange={(value) => {
+                setFilterStatus(value);
+                // Update URL params
+                const newSearchParams = new URLSearchParams(searchParams);
+                if (value === 'all') {
+                  newSearchParams.delete('filter');
+                } else {
+                  newSearchParams.set('filter', value);
+                }
+                setSearchParams(newSearchParams, { replace: true });
+              }}
+            showStatusFilter={true}
+            statusOptions={[
+              { value: 'all', label: 'All Status' },
+              { value: IndentStatus.PENDING_APPROVAL, label: 'Pending Approval' },
+              { value: IndentStatus.APPROVED, label: 'Approved' },
+              { value: IndentStatus.REVERTED, label: 'Reverted' },
+              { value: IndentStatus.ORDERED, label: 'Ordered' },
+              { value: IndentStatus.PARTIALLY_RECEIVED, label: 'Partially Received' },
+              { value: IndentStatus.FULLY_RECEIVED, label: 'Fully Received' },
+            ]}
+            onExport={() => setIsExportDialogOpen(true)}
+            isExporting={isExporting}
+            showExport={true}
+            onAdd={() => navigate('/materials-inventory/material-request')}
+            addLabel='INDENT FORM'
+            addIcon={<Plus className='w-4 h-4 mr-1' />}
+            showAddButton={true}
+            isOnline={isOnline}
+          />
         </div>
       </div>
 
@@ -2593,14 +2734,14 @@ export const MaterialOrderBookTab = () => {
             </Card>
           ) : error ? (
             <Card className='rounded-lg shadow-sm p-8 text-center'>
-              <AlertTriangle className='w-12 h-12 text-red-500 mx-auto mb-4' />
+              <RefreshCcw className='w-12 h-12 text-red-500 mx-auto mb-4' />
               <h3 className='text-lg font-semibold text-foreground mb-2'>
-                Error Loading Data
+                 No Data Found,Reload Data
               </h3>
               <p className='text-muted-foreground mb-4'>{error}</p>
               <Button variant='outline' onClick={() => fetchMaterialIndents()}>
-                <AlertTriangle className='w-4 h-4 mr-2' />
-                Try Again
+                <RefreshCcw className='w-4 h-4 mr-2' />
+                Reload
               </Button>
             </Card>
           ) : (
@@ -2620,13 +2761,22 @@ export const MaterialOrderBookTab = () => {
                     No Material Indents Found
                   </h3>
                   <p className='text-muted-foreground mb-4'>
-                    No material indents match your current filters.
+                    {searchTerm.trim() 
+                      ? `No indents found matching "${searchTerm}"`
+                      : 'No material indents match your current filters.'}
                   </p>
                 </Card>
               )}
 
-              {/* Pagination Controls - always show when data exists */}
-              {pagination && (
+              {/* Search Results Info - Show when searching */}
+              {searchTerm.trim() && !isLoading && filteredRequests.length > 0 && (
+                <div className='text-sm text-muted-foreground text-center py-2'>
+                  Showing {filteredRequests.length} indent{filteredRequests.length !== 1 ? 's' : ''} matching "{searchTerm}"
+                </div>
+              )}
+
+              {/* Pagination Controls - hide when searching */}
+              {pagination && !searchTerm.trim() && (
                 <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
                   {/* Page Info */}
                   <div className='text-sm text-muted-foreground'>
@@ -2793,8 +2943,17 @@ export const MaterialOrderBookTab = () => {
           <DialogContent className='max-w-[95vw] max-h-[80vh] w-full overflow-y-auto p-6'>
             <DialogHeader className='pb-4'>
               <DialogTitle className='flex items-center gap-2 text-xl'>
-                <Edit className='w-6 h-6 text-foreground' />
-                Resubmit Request - {selectedRequestForResubmit.id}
+                {currentUser?.role === 'company_owner' ? (
+                  <>
+                    <Eye className='w-6 h-6 text-foreground' />
+                    View Request - {selectedRequestForResubmit.id}
+                  </>
+                ) : (
+                  <>
+                    <Edit className='w-6 h-6 text-foreground' />
+                    Resubmit Request - {selectedRequestForResubmit.id}
+                  </>
+                )}
               </DialogTitle>
             </DialogHeader>
 
@@ -2821,7 +2980,7 @@ export const MaterialOrderBookTab = () => {
                 <div className='min-h-[40vh]'>
                   <RequisitionIndentForm
                   requestData={resubmitFormData}
-                  isReadOnly={false}
+                  isReadOnly={currentUser?.role === 'company_owner'}
                   onItemChange={handleItemChange}
                   onVendorQuotationChange={handleVendorQuotationChange}
                   availableMaterials={availableMaterials.map((material) => ({
@@ -2857,25 +3016,28 @@ export const MaterialOrderBookTab = () => {
                     className='px-6 py-2'
                     disabled={isSubmittingResubmit}
                   >
-                    Cancel
+                    {currentUser?.role === 'company_owner' ? 'Close' : 'Cancel'}
                   </Button>
-                  <Button
-                    onClick={() => handleResubmitRequest(resubmitFormData)}
-                    className='bg-primary hover:bg-primary/90 text-white px-6 py-2'
-                    disabled={isSubmittingResubmit}
-                  >
-                    {isSubmittingResubmit ? (
-                      <>
-                        <Loader2 className='w-4 h-4 mr-2 animate-spin' />
-                        Resubmitting...
-                      </>
-                    ) : (
-                      <>
-                        <Send className='w-4 h-4 mr-2' />
-                        Resubmit Request
-                      </>
-                    )}
-                  </Button>
+                  {/* Hide Resubmit button for company owners */}
+                  {currentUser?.role !== 'company_owner' && (
+                    <Button
+                      onClick={() => handleResubmitRequest(resubmitFormData)}
+                      className='bg-primary hover:bg-primary/90 text-white px-6 py-2'
+                      disabled={isSubmittingResubmit}
+                    >
+                      {isSubmittingResubmit ? (
+                        <>
+                          <Loader2 className='w-4 h-4 mr-2 animate-spin' />
+                          Resubmitting...
+                        </>
+                      ) : (
+                        <>
+                          <Send className='w-4 h-4 mr-2' />
+                          Resubmit Request
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (

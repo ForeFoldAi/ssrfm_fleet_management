@@ -38,6 +38,8 @@ interface StatusDropdownProps {
     status: string;
   }>;
   requiredQuantity?: number;
+  purposeType?: string; // Add purposeType to check if it's a return item
+  onResetPending?: (resetFn: () => void) => void;
 }
 
 interface StatusOption {
@@ -57,9 +59,14 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
   hasNoVendorQuotations = false,
   partialReceiptHistory = [],
   requiredQuantity = 0,
+  purposeType,
+  onResetPending,
 }) => {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [selectedStatus, setSelectedStatus] = React.useState('');
+  const [displayedStatus, setDisplayedStatus] = React.useState(currentStatus);
+  const [isPendingSelection, setIsPendingSelection] = React.useState(false);
+  const [quantityValidationError, setQuantityValidationError] = React.useState('');
   const [additionalData, setAdditionalData] = React.useState({
     receivedQuantity: '',
     receivedDate: new Date().toISOString().split('T')[0],
@@ -69,6 +76,26 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
 
   // Add state for order confirmation dialog
   const [isOrderConfirmOpen, setIsOrderConfirmOpen] = React.useState(false);
+
+  // Update displayed status when currentStatus changes (from props)
+  React.useEffect(() => {
+    setDisplayedStatus(currentStatus);
+    setIsPendingSelection(false); // Reset pending state when status changes from outside
+  }, [currentStatus]);
+
+  // Reset pending selection function
+  const resetPendingSelection = React.useCallback(() => {
+    setIsPendingSelection(false);
+    setSelectedStatus('');
+    setDisplayedStatus(currentStatus);
+  }, [currentStatus]);
+
+  // Expose reset function to parent
+  React.useEffect(() => {
+    if (onResetPending) {
+      onResetPending(resetPendingSelection);
+    }
+  }, [onResetPending, resetPendingSelection]);
 
   const getOwnerStatusOptions = (): StatusOption[] => {
     const options: StatusOption[] = [];
@@ -96,6 +123,18 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
   const getSupervisorStatusOptions = (): StatusOption[] => {
     switch (currentStatus) {
       case 'approved':
+        // For return items, show "Fully Received" directly
+        if (purposeType?.toLowerCase() === 'return') {
+          return [
+            {
+              value: 'fully_received',
+              label: 'Fully Received',
+              icon: <CheckCircle className='w-4 h-4' />,
+              requiresAdditionalData: false, // No additional data needed for returns
+            },
+          ];
+        }
+        // For non-return items, show "Ordered"
         return [
           {
             value: 'ordered',
@@ -146,15 +185,28 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
   const handleStatusSelect = (status: string) => {
     const option = statusOptions.find((opt) => opt.value === status);
     
+    // If user selects the same status that's currently displayed, don't do anything
+    if (status === displayedStatus) return;
+    
     if (status === 'ordered') {
       // Show order confirmation dialog
       setSelectedStatus(status);
+      setIsPendingSelection(true);
       setIsOrderConfirmOpen(true);
+    } else if (status === 'approved') {
+      // For approval, set pending state and let external dialog handle it
+      setSelectedStatus(status);
+      setIsPendingSelection(true);
+      onStatusChange(status);
     } else if (option?.requiresAdditionalData) {
       setSelectedStatus(status);
+      setIsPendingSelection(true);
+      setQuantityValidationError(''); // Reset validation error when opening dialog
       setIsDialogOpen(true);
     } else {
+      // For status changes without additional data, update immediately
       onStatusChange(status);
+      setDisplayedStatus(status);
     }
   };
 
@@ -172,14 +224,18 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
       if (totalAfterReceipt >= requiredQuantity) {
         // Auto-update to fully received
         onStatusChange('fully_received', additionalData);
+        setDisplayedStatus('fully_received');
       } else {
         onStatusChange(selectedStatus, additionalData);
+        setDisplayedStatus(selectedStatus);
       }
     } else {
       onStatusChange(selectedStatus, additionalData);
+      setDisplayedStatus(selectedStatus);
     }
     
     setIsDialogOpen(false);
+    setIsPendingSelection(false);
     setAdditionalData({
       receivedQuantity: '',
       receivedDate: new Date().toISOString().split('T')[0],
@@ -190,14 +246,75 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
 
   const handleOrderConfirm = () => {
     onStatusChange(selectedStatus);
+    setDisplayedStatus(selectedStatus);
+    setIsPendingSelection(false);
     setIsOrderConfirmOpen(false);
+  };
+
+  const handleDialogClose = () => {
+    // Reset to current status when canceling
+    setIsDialogOpen(false);
+    setSelectedStatus('');
+    setDisplayedStatus(currentStatus); // Reset displayed status to current status
+    setIsPendingSelection(false); // Reset pending selection state
+    setQuantityValidationError(''); // Reset validation error
+    setAdditionalData({
+      receivedQuantity: '',
+      receivedDate: new Date().toISOString().split('T')[0],
+      notes: '',
+      revertReason: '',
+    });
+  };
+
+  const handleOrderDialogClose = () => {
+    // Reset to current status when canceling
+    setIsOrderConfirmOpen(false);
+    setSelectedStatus('');
+    setDisplayedStatus(currentStatus); // Reset displayed status to current status
+    setIsPendingSelection(false); // Reset pending selection state
+  };
+
+  const validateQuantity = (receivedQty: string) => {
+    const received = parseFloat(receivedQty) || 0;
+    const required = requiredQuantity || 0;
+    
+    if (selectedStatus === 'fully_received') {
+      if (received < required) {
+        setQuantityValidationError(`Received quantity (${received}) is less than required quantity (${required}). Please select "Add Partial Receipt" instead.`);
+        return false;
+      } else if (received > required) {
+        setQuantityValidationError(`Received quantity (${received}) exceeds required quantity (${required}). Please verify the quantity.`);
+        return false;
+      } else {
+        setQuantityValidationError('');
+        return true;
+      }
+    } else if (selectedStatus === 'partially_received') {
+      if (received >= required) {
+      
+          setQuantityValidationError(
+            `You’ve received all required items (${received}/${required}). Please select "Fully Received".`
+          );
+           
+        return false;
+      } else if (received <= 0) {
+        setQuantityValidationError(`Received quantity must be greater than 0.`);
+        return false;
+      } else {
+        setQuantityValidationError('');
+        return true;
+      }
+    } else {
+      setQuantityValidationError('');
+      return true;
+    }
   };
 
   const canChangeStatus = () => {
     if (userRole === 'company_owner') {
       return currentStatus === 'pending_approval';
     }
-    return ['approved', 'ordered', 'fully_received'].includes(
+    return ['approved', 'ordered', 'partially_received'].includes(
       currentStatus
     );
   };
@@ -212,9 +329,11 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
 
   return (
     <>
-      <Select onValueChange={handleStatusSelect}>
+      <Select value={isPendingSelection ? currentStatus : displayedStatus} onValueChange={handleStatusSelect}>
         <SelectTrigger className='w-[200px]'>
-          <SelectValue placeholder={currentStatus.replace('_', ' ').toUpperCase()} />
+          <SelectValue placeholder="Select Status">
+          {(isPendingSelection ? currentStatus : displayedStatus).replace('_', ' ').toUpperCase()}
+        </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {statusOptions.map((option) => (
@@ -229,7 +348,9 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
       </Select>
 
       {/* Order Confirmation Dialog */}
-      <Dialog open={isOrderConfirmOpen} onOpenChange={setIsOrderConfirmOpen}>
+      <Dialog open={isOrderConfirmOpen} onOpenChange={(open) => {
+        if (!open) handleOrderDialogClose();
+      }}>
         <DialogContent className='max-w-md'>
           <DialogHeader>
             <DialogTitle>Confirm Purchase Order</DialogTitle>
@@ -237,7 +358,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
           
 
           <div className='flex justify-end gap-2 pt-4'>
-            <Button variant='outline' onClick={() => setIsOrderConfirmOpen(false)}>
+            <Button variant='outline' onClick={handleOrderDialogClose}>
               Cancel
             </Button>
             <Button
@@ -252,7 +373,9 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
       </Dialog>
 
       {/* Additional Data Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        if (!open) handleDialogClose();
+      }}>
         <DialogContent className='max-w-md'>
           <DialogHeader>
             <DialogTitle>
@@ -330,19 +453,30 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
                     <Label htmlFor='receivedQuantity'>
                       {selectedStatus === 'partially_received' ? 'Received Quantity *' : 'Total Received Quantity *'}
                     </Label>
+                    {(selectedStatus === 'fully_received' || selectedStatus === 'partially_received') && (
+                      <div className='text-sm text-muted-foreground mb-2'>
+                        Required Quantity: {requiredQuantity} units
+                      </div>
+                    )}
                     <Input
                       id='receivedQuantity'
                       type='number'
                       value={additionalData.receivedQuantity}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const value = e.target.value;
                         setAdditionalData((prev) => ({
                           ...prev,
-                          receivedQuantity: e.target.value,
-                        }))
-                      }
+                          receivedQuantity: value,
+                        }));
+                        validateQuantity(value);
+                      }}
                       placeholder='Enter quantity received'
                       min='1'
+                      className={quantityValidationError ? 'border-red-500' : ''}
                     />
+                    {quantityValidationError && (
+                      <p className='text-red-500 text-sm mt-1'>{quantityValidationError}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -389,7 +523,7 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
           </div>
 
           <div className='flex justify-end gap-2 pt-4'>
-            <Button variant='outline' onClick={() => setIsDialogOpen(false)}>
+            <Button variant='outline' onClick={handleDialogClose}>
               Cancel
             </Button>
             <Button
@@ -400,7 +534,9 @@ export const StatusDropdown: React.FC<StatusDropdownProps> = ({
                 (selectedStatus === 'rejected' &&
                   !additionalData.notes.trim()) ||
                 ((selectedStatus === 'fully_received' || selectedStatus === 'partially_received') &&
-                  (!additionalData.receivedQuantity.trim() || !additionalData.receivedDate.trim()))
+                  (!additionalData.receivedQuantity.trim() || !additionalData.receivedDate.trim())) ||
+                (selectedStatus === 'fully_received' && !!quantityValidationError) ||
+                (selectedStatus === 'partially_received' && !!quantityValidationError)
               }
             >
               {selectedStatus === 'reverted' && 'Revert Request'}

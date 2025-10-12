@@ -21,6 +21,7 @@ import {
   WifiOff,
   Download,
   Upload,
+  RefreshCcw,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -54,6 +55,7 @@ import {
   PaginationPrevious,
 } from './ui/pagination';
 import { AddMaterialForm } from './AddMaterialForm';
+import { UnifiedTabSearch } from './UnifiedTabSearch';
 import { useRole } from '../contexts/RoleContext';
 import { materialsApi } from '../lib/api/materials';
 import { Material, MaterialCategory, Unit } from '../lib/api/types';
@@ -69,6 +71,7 @@ type SortField =
   | 'makerBrand'
   | 'createdAt'
   | 'averagePrice'
+  | 'totalValue'
   | 'stockStatus';
 type SortOrder = 'ASC' | 'DESC';
 
@@ -130,13 +133,17 @@ export const MaterialsTab = () => {
       const shouldIncludeSort = apiSupportedFields.includes(activeSortField);
 
       const params: any = {
-        page,
-        limit,
-        ...(searchQuery && { search: searchQuery }),
+        page: page,
+        limit: limit,
+        // Filter by branch for company owner (when unit filter is selected)
         ...(filterUnit !== 'all' &&
           currentUser?.role === 'company_owner' && {
             branchId: filterUnit,
           }),
+        // Filter by supervisor's/inventory_manager's own branch
+        ...((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id && {
+          branchId: currentUser.branch.id,
+        }),
       };
 
       // Only add sort params if the field is API-supported
@@ -150,7 +157,7 @@ export const MaterialsTab = () => {
       setMaterials(response.data);
       
       // If sorting by frontend-only fields, apply sorting immediately
-      if (!shouldIncludeSort && (activeSortField === 'averagePrice' || activeSortField === 'stockStatus')) {
+      if (!shouldIncludeSort && (activeSortField === 'averagePrice' || activeSortField === 'totalValue' || activeSortField === 'stockStatus')) {
         const sorted = sortMaterials(response.data, activeSortField, activeSortOrder);
         setSortedMaterials(sorted);
       } else {
@@ -190,7 +197,7 @@ export const MaterialsTab = () => {
       } else if (err.request) {
         // Request was made but no response received
         console.error('Network Error:', err.request);
-        errorMessage = 'Network error. Please check your internet connection.';
+        errorMessage = 'Please Try Again';
       } else {
         // Something else happened
         console.error('Unexpected Error:', err.message);
@@ -233,7 +240,7 @@ export const MaterialsTab = () => {
           errorMessage = data.message;
         }
       } else if (err.request) {
-        errorMessage = 'Network error. Please check your internet connection.';
+        errorMessage = 'Please Try Again';
       } else {
         errorMessage = err.message || 'An unexpected error occurred.';
       }
@@ -310,6 +317,10 @@ export const MaterialsTab = () => {
           aValue = parseFloat(getAveragePrice(a)) || 0;
           bValue = parseFloat(getAveragePrice(b)) || 0;
           break;
+        case 'totalValue':
+          aValue = Number(a.totalValue) || 0;
+          bValue = Number(b.totalValue) || 0;
+          break;
         case 'stockStatus':
           const aStatus = getStockStatus(a.currentStock, a.minStockLevel);
           const bStatus = getStockStatus(b.currentStock, b.minStockLevel);
@@ -365,7 +376,7 @@ export const MaterialsTab = () => {
     setSortOrder(newSortOrder);
 
     // For frontend-only sorting fields, sort immediately without API call
-    if (field === 'averagePrice' || field === 'stockStatus') {
+    if (field === 'averagePrice' || field === 'totalValue' || field === 'stockStatus') {
       const sorted = sortMaterials(materials, newSortField, newSortOrder);
       setSortedMaterials(sorted);
     } else {
@@ -434,32 +445,32 @@ export const MaterialsTab = () => {
     };
   }, []);
 
-  // Refetch when search or filter changes (but not for frontend-only sorting)
+  // Refetch when filter changes (but not for search - search is frontend only)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchMaterials(1, itemsPerPage);
-    }, 300); // Debounce search
+    }, 300); // Debounce
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, filterUnit, itemsPerPage]);
+  }, [filterUnit, itemsPerPage]);
 
   // Reset to first page when filters change
   useEffect(() => {
     if (currentPage !== 1) {
       setCurrentPage(1);
     }
-  }, [filterUnit, searchQuery]);
+  }, [filterUnit]);
 
   // Load materials when pagination changes
   useEffect(() => {
     fetchMaterials(currentPage, itemsPerPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage]);
 
   // Apply frontend sorting when materials change and we're using frontend sort fields
   useEffect(() => {
-    if (sortField === 'averagePrice' || sortField === 'stockStatus') {
+    if (sortField === 'averagePrice' || sortField === 'totalValue' || sortField === 'stockStatus') {
       // Apply frontend sorting
       const sorted = sortMaterials(materials, sortField, sortOrder);
       setSortedMaterials(sorted);
@@ -504,6 +515,32 @@ export const MaterialsTab = () => {
     setSelectedMaterial(null);
   };
 
+  // Apply frontend search filtering to sorted materials
+  const displayMaterials = sortedMaterials.filter((material) => {
+    // Search filtering - search across all columns including calculated ones
+    if (searchQuery.trim()) {
+      const searchLower = searchQuery.toLowerCase();
+      const stockStatus = getStockStatus(material.currentStock, material.minStockLevel);
+      const avgPrice = getAveragePrice(material);
+      
+      return (
+        material.name?.toLowerCase().includes(searchLower) ||
+        material.specifications?.toLowerCase().includes(searchLower) ||
+        material.makerBrand?.toLowerCase().includes(searchLower) ||
+        material.measureUnit?.name?.toLowerCase().includes(searchLower) ||
+        material.currentStock?.toString().includes(searchLower) ||
+        material.minStockLevel?.toString().includes(searchLower) ||
+        avgPrice.includes(searchLower) ||
+        material.totalValue?.toString().includes(searchLower) ||
+        stockStatus.toLowerCase().includes(searchLower) ||
+        material.additionalNotes?.toLowerCase().includes(searchLower) ||
+        getCategoryName(material.categoryId)?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return true;
+  });
+
   // Export functionality
   const exportToCSV = async () => {
     try {
@@ -521,11 +558,14 @@ export const MaterialsTab = () => {
           limit: limit,
           sortBy: sortField,
           sortOrder: sortOrder,
-          ...(searchQuery && { search: searchQuery }),
           ...(filterUnit !== 'all' &&
             currentUser?.role === 'company_owner' && {
               branchId: filterUnit,
             }),
+          // Filter by supervisor's/inventory_manager's own branch
+          ...((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id && {
+            branchId: currentUser.branch.id,
+          }),
         });
 
         allMaterials = [...allMaterials, ...response.data];
@@ -556,7 +596,7 @@ export const MaterialsTab = () => {
         'Additional Notes'
       ];
 
-      // Prepare CSV data
+      // Prepare CSV data - export all data from API (no frontend search filter applied)
       const csvData = allMaterials.map((material) => {
         const stockStatus = getStockStatus(material.currentStock, material.minStockLevel);
         return [
@@ -629,14 +669,15 @@ export const MaterialsTab = () => {
     return (
       <Card className='rounded-lg shadow-sm p-8 text-center'>
         <div className='w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4'>
-          <Package className='w-6 h-6 text-red-600' />
+          <RefreshCcw className='w-6 h-6 text-red-600' />
         </div>
         <h3 className='text-lg font-semibold text-foreground mb-2'>
-          Error Loading Materials
+          No Data Found, Reload Data
         </h3>
         <p className='text-muted-foreground mb-4'>{error}</p>
         <Button onClick={() => fetchMaterials()} className='btn-primary'>
-          Try Again
+        <RefreshCcw className='w-4 h-4 mr-2' />
+        Reload
         </Button>
       </Card>
     );
@@ -655,97 +696,28 @@ export const MaterialsTab = () => {
       )}
       
       {/* Header with Actions */}
-      <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4'>
-        {/* Left side: Title and View Toggle Buttons */}
-        <div className='flex flex-col sm:flex-row items-start sm:items-center gap-3'>
-          {/* View Toggle Buttons - Moved to left side */}
-          <div className='flex rounded-lg border border-secondary overflow-hidden bg-secondary/10 w-fit shadow-sm'>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size='sm'
-              onClick={() => setViewMode('list')}
-              className='rounded-none px-3 sm:px-4'
-            >
-              <List className='w-4 h-4' />
-              <span className='ml-1 sm:ml-2 text-xs sm:text-sm'>List</span>
-            </Button>
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'ghost'}
-              size='sm'
-              onClick={() => setViewMode('table')}
-              className='rounded-none px-3 sm:px-4'
-            >
-              <Table className='w-4 h-4' />
-              <span className='ml-1 sm:ml-2 text-xs sm:text-sm'>Table</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Right side: Search, Unit Filter and Add Material Button */}
-        <div className='flex flex-col sm:flex-row gap-3 items-start sm:items-center'>
-          <div className='relative'>
-            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4' />
-            <Input
-              placeholder='Search materials, specifications, model/version...'
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className='pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64'
-            />
-          </div>
-
-          {/* Unit Filter - Only for Company Owner */}
-          {currentUser?.role === 'company_owner' && (
-            <Select value={filterUnit} onValueChange={setFilterUnit}>
-              <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0 h-10'>
-                <SelectValue placeholder={isLoadingBranches ? 'Loading...' : 'Select Unit'} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All Units</SelectItem>
-                {availableBranches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id.toString()}>
-                    <div className='flex items-center gap-2'>
-                      <Building2 className='w-4 h-4' />
-                      <div>
-                        <div className='font-medium'>{branch.name}</div>
-                        {branch.location && (
-                          <div className='text-xs text-muted-foreground'>
-                            {branch.location}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          <Button
-            variant='outline'
-            className='w-full sm:w-auto text-sm sm:text-base'
-            onClick={exportToCSV}
-            disabled={isExporting || !isOnline}
-          >
-            {isExporting ? (
-              <Loader2 className='w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin' />
-            ) : (
-              <Upload className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
-            )}
-            {isExporting ? 'Exporting...' : 'Export'}
-          </Button>
-
-          <Button
-            className='btn-primary w-full sm:w-auto text-sm sm:text-base'
-            onClick={() => setIsAddMaterialOpen(true)}
-          >
-            <Plus className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
-            Add New Material
-          </Button>
-        </div>
-      </div>
+      <UnifiedTabSearch
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder='Search materials, specifications, model/version...'
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        showViewToggle={true}
+        filterUnit={filterUnit}
+        onFilterUnitChange={setFilterUnit}
+        availableBranches={availableBranches}
+        isLoadingBranches={isLoadingBranches}
+        onExport={exportToCSV}
+        isExporting={isExporting}
+        showExport={true}
+        onAdd={() => setIsAddMaterialOpen(true)}
+        addLabel='Add New Material'
+        showAddButton={true}
+        isOnline={isOnline}
+      />
 
       {/* Loading indicator for subsequent loads */}
-      {loading && sortedMaterials.length > 0 && (
+      {loading && displayMaterials.length > 0 && (
         <div className='flex items-center justify-center p-4'>
           <Loader2 className='w-5 h-5 animate-spin text-primary' />
         </div>
@@ -814,6 +786,16 @@ export const MaterialsTab = () => {
                     <TableHead className='w-32 text-foreground font-semibold'>
                       <Button
                         variant='ghost'
+                        onClick={() => handleSort('totalValue')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Total Value (₹)
+                        {getSortIcon('totalValue')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-32 text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
                         onClick={() => handleSort('stockStatus')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
@@ -824,7 +806,7 @@ export const MaterialsTab = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedMaterials.map((material) => {
+                  {displayMaterials.map((material) => {
                     const stockStatus = getStockStatus(
                       material.currentStock,
                       material.minStockLevel
@@ -875,6 +857,11 @@ export const MaterialsTab = () => {
                         <TableCell className='text-sm'>
                           <div className='font-semibold text-foreground'>
                             ₹{getAveragePrice(material)}
+                          </div>
+                        </TableCell>
+                        <TableCell className='text-sm'>
+                          <div className='font-semibold text-foreground'>
+                            ₹{Number(material.totalValue || 0).toFixed(2)}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -950,6 +937,16 @@ export const MaterialsTab = () => {
                     <TableHead className='w-32 text-foreground font-semibold'>
                       <Button
                         variant='ghost'
+                        onClick={() => handleSort('totalValue')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Total Value (₹)
+                        {getSortIcon('totalValue')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-32 text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
                         onClick={() => handleSort('stockStatus')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
@@ -960,7 +957,7 @@ export const MaterialsTab = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedMaterials.map((material) => {
+                  {displayMaterials.map((material) => {
                     const stockStatus = getStockStatus(
                       material.currentStock,
                       material.minStockLevel
@@ -988,6 +985,9 @@ export const MaterialsTab = () => {
                         <TableCell className='font-semibold text-foreground'>
                           ₹{getAveragePrice(material)}
                         </TableCell>
+                        <TableCell className='font-semibold text-foreground'>
+                          ₹{Number(material.totalValue || 0).toFixed(2)}
+                        </TableCell>
                         <TableCell>
                           <Badge className={getStatusBadge(stockStatus)}>
                             {stockStatus}
@@ -1004,7 +1004,7 @@ export const MaterialsTab = () => {
       )}
 
       {/* Empty State */}
-      {sortedMaterials.length === 0 && !loading && (
+      {displayMaterials.length === 0 && !loading && (
         <Card className='rounded-lg shadow-sm p-8 text-center'>
           <div className='w-12 h-12 sm:w-16 sm:h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4'>
             <Package className='w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground' />
@@ -1017,12 +1017,26 @@ export const MaterialsTab = () => {
               ? 'Try adjusting your search terms'
               : 'Start by adding your first material'}
           </p>
-         
+          <Button variant='outline' onClick={() => fetchMaterials()}>
+            <RefreshCcw className='w-4 h-4 mr-2' />
+            Reload
+          </Button>
         </Card>
       )}
 
-      {/* Pagination - Updated to match MachinesTab */}
-      {materialsData && materialsData.meta && (
+      {/* Search Results Info - Show when searching */}
+      {searchQuery.trim() && !loading && (
+        <div className='text-sm text-muted-foreground text-center py-2'>
+          {displayMaterials.length > 0 ? (
+            <>Showing {displayMaterials.length} material{displayMaterials.length !== 1 ? 's' : ''} matching "{searchQuery}"</>
+          ) : (
+            <>No materials found matching "{searchQuery}"</>
+          )}
+        </div>
+      )}
+
+      {/* Pagination - Updated to match MachinesTab - Hide when searching */}
+      {materialsData && materialsData.meta && !searchQuery.trim() && (
         <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
           {/* Page Info */}
           <div className='text-sm text-muted-foreground'>
@@ -1228,38 +1242,20 @@ export const MaterialsTab = () => {
 
                 </div>
 
-                {/* Third Row - Stock and Value Information */}
+                {/* Third Row - Stock Status and Created Date */}
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-4'>
                   <div className='space-y-1'>
                     <Label className='text-sm font-medium'>
-                      Current Stock
+                      Stock Status
                     </Label>
-                    <div className='h-9 px-3 py-2 bg-muted/50 border border-input rounded-[5px] text-sm font-medium'>
-                      {selectedMaterial.currentStock} {selectedMaterial.measureUnit?.name || 'units'}
+                    <div className='h-9 px-3 py-2 bg-muted/50 border border-input rounded-[5px] flex items-center'>
+                      <Badge className={getStatusBadge(getStockStatus(selectedMaterial.currentStock, selectedMaterial.minStockLevel))}>
+                        {getStockStatus(selectedMaterial.currentStock, selectedMaterial.minStockLevel)}
+                      </Badge>
                     </div>
-                    <div className='space-y-1'>
-                  <Label className='text-sm font-medium'>
-                    Stock Status
-                  </Label>
-                  <div className='h-9 px-3 py-2 bg-muted/50 border border-input rounded-[5px] flex items-center'>
-                    <Badge className={getStatusBadge(getStockStatus(selectedMaterial.currentStock, selectedMaterial.minStockLevel))}>
-                      {getStockStatus(selectedMaterial.currentStock, selectedMaterial.minStockLevel)}
-                    </Badge>
-                  </div>
-                  
-                </div>
-
                   </div>
 
                   <div className='space-y-1'>
-                    <Label className='text-sm font-medium'>
-                      Total Value (₹)
-                    </Label>
-                    <div className='h-9 px-3 py-2 bg-muted/50 border border-input rounded-[5px] text-sm font-medium'>
-                      ₹{selectedMaterial.totalValue?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                    </div>
-                    
-                    <div className='space-y-1'>
                     <Label className='text-sm font-medium'>
                       Created Date
                     </Label>
@@ -1267,11 +1263,7 @@ export const MaterialsTab = () => {
                       {formatDate(selectedMaterial.createdAt)}
                     </div>
                   </div>
-                  </div>
                 </div>
-
-                {/* Stock Status */}
-               
 
                
 

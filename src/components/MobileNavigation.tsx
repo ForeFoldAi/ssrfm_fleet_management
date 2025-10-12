@@ -53,12 +53,7 @@ export const MobileNavigation = () => {
         icon: Package,
         permission: 'inventory:materials:read',
       },
-      {
-        to: '/requests-list',
-        label: 'Requests',
-        icon: List,
-        permission: 'inventory:material-indents:read',
-      },
+      
       // Example: include a purchases entry when needed
       // {
       //   to: '/purchases',

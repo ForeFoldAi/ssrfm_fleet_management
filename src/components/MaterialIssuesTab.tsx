@@ -27,6 +27,7 @@ import {
   WifiOff,
   Download,
   Upload,
+  RefreshCcw,
 } from 'lucide-react';
 import { formatDateToDDMMYYYY } from '../lib/utils';
 import { Button } from './ui/button';
@@ -58,6 +59,7 @@ import {
   PaginationPrevious,
 } from './ui/pagination';
 import { MaterialIssueForm } from './MaterialIssueForm';
+import { UnifiedTabSearch } from './UnifiedTabSearch';
 import { toast } from '../hooks/use-toast';
 import { useRole } from '../contexts/RoleContext';
 import { Label } from './ui/label';
@@ -200,8 +202,7 @@ export const MaterialIssuesTab = () => {
             errorMessage = data.message;
           }
         } else if (error.request) {
-          errorMessage =
-            'Network error. Please check your internet connection.';
+          errorMessage = 'Please Try Again';
         } else {
           errorMessage = error.message || 'An unexpected error occurred.';
         }
@@ -408,30 +409,29 @@ export const MaterialIssuesTab = () => {
 
     try {
       const params: any = {
-        page,
-        limit,
-        // Remove API sorting - we'll sort on frontend
+        page: page,
+        limit: limit,
         include: 'items.material.measureUnit,items.issuedFor,branch,issuedBy', // Include related data
       };
-
-      // Add search if provided
-      if (searchQuery.trim()) {
-        params.search = searchQuery.trim();
-      }
 
       // Add unit filter for company owner
       if (currentUser?.role === 'company_owner' && filterUnit !== 'all') {
         params.branchId = filterUnit;
       }
 
+      // For supervisor/inventory_manager (branch-level users): automatically filter by their branch
+      if (
+        (currentUser?.role === 'supervisor' ||
+          currentUser?.role === 'inventory_manager' ||
+          currentUser?.userType?.isBranchLevel) &&
+        currentUser?.branch?.id
+      ) {
+        params.branchId = currentUser.branch.id.toString();
+      }
+
       // Debug logging
       console.log('MaterialIssues API call params:', params);
-      console.log(
-        'Current filters - Unit:',
-        filterUnit,
-        'Search:',
-        searchQuery
-      );
+      console.log('Current filters - Unit:', filterUnit);
 
       const response = await materialIssuesApi.getAll(params);
 
@@ -490,7 +490,7 @@ export const MaterialIssuesTab = () => {
       } else if (err.request) {
         // Request was made but no response received
         console.error('Network Error:', err.request);
-        errorMessage = 'Network error. Please check your internet connection.';
+        errorMessage = 'Please Try Again';
       } else {
         // Something else happened
         console.error('Unexpected Error:', err.message);
@@ -512,28 +512,28 @@ export const MaterialIssuesTab = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Refetch when search or filter changes (not sorting - that's frontend only)
+  // Refetch when filter changes (not search - search is frontend only)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchMaterialIssues(1, itemsPerPage);
-    }, 300); // Debounce search
+    }, 300); // Debounce
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, filterUnit, itemsPerPage]);
+  }, [filterUnit, itemsPerPage]);
 
   // Reset to first page when filters change
   useEffect(() => {
     if (currentPage !== 1) {
       setCurrentPage(1);
     }
-  }, [filterUnit, searchQuery]);
+  }, [filterUnit]);
 
   // Load material issues when pagination changes
   useEffect(() => {
     fetchMaterialIssues(currentPage, itemsPerPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage]);
 
   const handleViewIssue = (issue: TransformedIssue) => {
     // Transform the TransformedIssue to the format expected by MaterialIssueForm for view-only
@@ -677,10 +677,17 @@ export const MaterialIssuesTab = () => {
           sortBy: sortField,
           sortOrder: 'DESC',
           include: 'items.material.measureUnit,items.issuedFor,branch,issuedBy', // Include related data
-          ...(searchQuery.trim() && { search: searchQuery.trim() }),
+          // For company owner: apply selected unit filter
           ...(currentUser?.role === 'company_owner' &&
             filterUnit !== 'all' && {
               branchId: filterUnit,
+            }),
+          // For supervisor/inventory_manager (branch-level users): automatically filter by their branch
+          ...((currentUser?.role === 'supervisor' ||
+            currentUser?.role === 'inventory_manager' ||
+            currentUser?.userType?.isBranchLevel) &&
+            currentUser?.branch?.id && {
+              branchId: currentUser.branch.id.toString(),
             }),
         });
 
@@ -719,7 +726,7 @@ export const MaterialIssuesTab = () => {
         });
       }
 
-      // Transform issues to UI format for export
+      // Transform issues to UI format for export - no frontend search filter applied
       const transformedIssues = filteredIssues.map(transformApiIssueToUiFormat);
 
       // Prepare CSV headers
@@ -833,8 +840,47 @@ export const MaterialIssuesTab = () => {
     });
   };
 
-  // Use sortedIssues for display (search and unit filtering are handled by API)
-  const displayIssues = sortedIssues;
+  // Apply comprehensive frontend search filtering for ALL columns
+  const displayIssues = sortedIssues.filter((issue) => {
+    // If no search query, show all
+    if (!searchQuery.trim()) {
+      return true;
+    }
+
+    const searchLower = searchQuery.toLowerCase();
+
+    // Search in issue-level fields
+    if (
+      issue.id?.toLowerCase().includes(searchLower) ||
+      issue.materialIssueFormSrNo?.toLowerCase().includes(searchLower) ||
+      issue.issuingPersonName?.toLowerCase().includes(searchLower) ||
+      issue.issuingPersonDesignation?.toLowerCase().includes(searchLower) ||
+      issue.issuedDate?.toLowerCase().includes(searchLower) ||
+      issue.unitName?.toLowerCase().includes(searchLower) ||
+      issue.branchLocation?.toLowerCase().includes(searchLower) ||
+      issue.additionalNotes?.toLowerCase().includes(searchLower)
+    ) {
+      return true;
+    }
+
+    // Search in item-level fields (check if ANY item matches)
+    const itemMatches = issue.items.some((item) => {
+      return (
+        item.materialName?.toLowerCase().includes(searchLower) ||
+        item.specifications?.toLowerCase().includes(searchLower) ||
+        item.makerBrand?.toLowerCase().includes(searchLower) ||
+        item.recipientName?.toLowerCase().includes(searchLower) ||
+        item.purpose?.toLowerCase().includes(searchLower) ||
+        item.machineName?.toLowerCase().includes(searchLower) ||
+        item.unitName?.toLowerCase().includes(searchLower) ||
+        item.existingStock?.toString().includes(searchLower) ||
+        item.issuedQuantity?.toString().includes(searchLower) ||
+        item.stockAfterIssue?.toString().includes(searchLower)
+      );
+    });
+
+    return itemMatches;
+  });
 
   return (
     <div className='space-y-4 sm:space-y-6'>
@@ -850,96 +896,25 @@ export const MaterialIssuesTab = () => {
       )}
 
       {/* Header with Actions */}
-      <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 sm:gap-4'>
-        {/* Left side: Title and View Toggle Buttons */}
-        <div className='flex flex-col sm:flex-row items-start sm:items-center gap-3'>
-          {/* View Toggle Buttons - Moved to left side */}
-          <div className='flex rounded-lg border border-secondary overflow-hidden bg-secondary/10 w-fit shadow-sm'>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size='sm'
-              onClick={() => setViewMode('list')}
-              className='rounded-none px-3 sm:px-4'
-            >
-              <List className='w-4 h-4' />
-              <span className='ml-1 sm:ml-2 text-xs sm:text-sm'>List</span>
-            </Button>
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'ghost'}
-              size='sm'
-              onClick={() => setViewMode('table')}
-              className='rounded-none px-3 sm:px-4'
-            >
-              <Table className='w-4 h-4' />
-              <span className='ml-1 sm:ml-2 text-xs sm:text-sm'>Table</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Right side: Search, Unit Filter and Issue Material Button */}
-        <div className='flex flex-col sm:flex-row gap-3 items-start sm:items-center'>
-          <div className='relative'>
-            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4' />
-            <Input
-              placeholder='Search issues, materials, recipients...'
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className='pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10 w-64'
-            />
-          </div>
-
-          {/* Unit Filter - Only for Company Owner */}
-          {currentUser?.role === 'company_owner' && (
-            <Select value={filterUnit} onValueChange={setFilterUnit}>
-              <SelectTrigger className='w-full sm:w-48 rounded-lg border-secondary focus:border-secondary focus:ring-0'>
-                <SelectValue
-                  placeholder={isLoadingBranches ? 'Loading...' : 'Select Unit'}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All Units</SelectItem>
-                {availableBranches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id.toString()}>
-                    <div className='flex items-center gap-2'>
-                      <Building2 className='w-4 h-4' />
-                      <div>
-                        <div className='font-medium'>{branch.name}</div>
-                        {branch.location && (
-                          <div className='text-xs text-muted-foreground'>
-                            {branch.location}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          <Button
-            variant='outline'
-            className='w-full sm:w-auto text-sm sm:text-base'
-            onClick={() => setIsExportDialogOpen(true)}
-            disabled={isExporting || !isOnline}
-          >
-            {isExporting ? (
-              <Loader2 className='w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin' />
-            ) : (
-              <Upload className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
-            )}
-            {isExporting ? 'Exporting...' : 'Export'}
-          </Button>
-
-          <Button
-            className='btn-primary w-full sm:w-auto text-sm sm:text-base'
-            onClick={() => setIsIssueFormOpen(true)}
-          >
-            <Plus className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
-            Issue Materials
-          </Button>
-        </div>
-      </div>
+      <UnifiedTabSearch
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder='Search issues, materials, recipients...'
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        showViewToggle={true}
+        filterUnit={filterUnit}
+        onFilterUnitChange={setFilterUnit}
+        availableBranches={availableBranches}
+        isLoadingBranches={isLoadingBranches}
+        onExport={() => setIsExportDialogOpen(true)}
+        isExporting={isExporting}
+        showExport={true}
+        onAdd={() => setIsIssueFormOpen(true)}
+        addLabel='Issue Materials'
+        showAddButton={true}
+        isOnline={isOnline}
+      />
 
       {/* Content - Rest of the component remains exactly the same */}
       {isLoading ? (
@@ -953,10 +928,15 @@ export const MaterialIssuesTab = () => {
         </div>
       ) : error ? (
         <Card className='rounded-lg shadow-sm p-8 text-center'>
-          <AlertCircle className='w-12 h-12 text-destructive mx-auto mb-4' />
-          <h3 className='text-lg font-semibold text-foreground mb-2'>Error</h3>
+          <RefreshCcw className='w-12 h-12 text-red-500 mx-auto mb-4' />
+          <h3 className='text-lg font-semibold text-foreground mb-2'>
+            No Data Found, Reload Data
+          </h3>
           <p className='text-muted-foreground mb-4'>{error}</p>
-          <Button onClick={() => fetchMaterialIssues()}>Try Again</Button>
+          <Button variant='outline' onClick={() => fetchMaterialIssues()}>
+            <RefreshCcw className='w-4 h-4 mr-2' />
+            Reload
+          </Button>
         </Card>
       ) : viewMode === 'table' ? (
         // Table View for Material Issues - Individual Items
@@ -986,7 +966,7 @@ export const MaterialIssuesTab = () => {
                         {getSortIcon('materialName')}
                       </Button>
                     </TableHead>
-                    <TableHead className='w-[120px] text-foreground font-semibold text-sm'>
+                    <TableHead className='min-w-[160px] text-foreground font-semibold text-sm'>
                       <Button
                         variant='ghost'
                         onClick={() => handleSort('specifications')}
@@ -1052,7 +1032,7 @@ export const MaterialIssuesTab = () => {
                         onClick={() => handleSort('branch')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        Unit
+                        Unit/Location
                         {getSortIcon('branch')}
                       </Button>
                     </TableHead>
@@ -1105,10 +1085,7 @@ export const MaterialIssuesTab = () => {
                               </div>
                             </TableCell>
                             <TableCell className='text-sm py-3'>
-                              <div
-                                className='text-muted-foreground max-w-[120px] truncate'
-                                title={item.specifications}
-                              >
+                              <div className='text-muted-foreground max-w-[160px] break-words whitespace-normal'>
                                 {item.specifications}
                               </div>
                             </TableCell>
@@ -1244,7 +1221,7 @@ export const MaterialIssuesTab = () => {
                         {getSortIcon('materialName')}
                       </Button>
                     </TableHead>
-                    <TableHead className='w-[80px] text-foreground font-semibold'>
+                    <TableHead className='min-w-[160px] text-foreground font-semibold'>
                       <Button
                         variant='ghost'
                         onClick={() => handleSort('specifications')}
@@ -1290,7 +1267,7 @@ export const MaterialIssuesTab = () => {
                         onClick={() => handleSort('branch')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        Unit
+                        Unit/Location
                         {getSortIcon('branch')}
                       </Button>
                     </TableHead>
@@ -1380,7 +1357,7 @@ export const MaterialIssuesTab = () => {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className='text-xs text-muted-foreground truncate'>
+                              <TableCell className='text-xs text-muted-foreground break-words whitespace-normal'>
                                 {item.specifications}
                               </TableCell>
                               <TableCell className='text-xs'>
@@ -1464,22 +1441,42 @@ export const MaterialIssuesTab = () => {
       )}
 
       {/* Empty State */}
-      {displayIssues.length === 0 && !isLoading && (
+      {!isLoading && !error && displayIssues.length === 0 && (
         <Card className='rounded-lg shadow-sm p-8 text-center'>
-          <Package className='w-12 h-12 text-muted-foreground mx-auto mb-4' />
-          <h3 className='text-lg font-semibold text-foreground mb-2'>
-            No Material Issues Found
+          <div className='w-12 h-12 sm:w-16 sm:h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4'>
+            <Package className='w-6 h-6 sm:w-8 sm:h-8 text-muted-foreground' />
+          </div>
+          <h3 className='text-base sm:text-lg font-semibold text-foreground mb-2'>
+            No material issues found
           </h3>
-          <p className='text-muted-foreground mb-4'>
+          <p className='text-sm sm:text-base text-muted-foreground mb-4'>
             {searchQuery
               ? 'Try adjusting your search terms'
-              : 'No materials have been issued yet.'}
+              : 'Start by issuing your first material'}
           </p>
+          <Button variant='outline' onClick={() => fetchMaterialIssues()}>
+            <RefreshCcw className='w-4 h-4 mr-2' />
+            Reload
+          </Button>
         </Card>
       )}
 
-      {/* Pagination - Updated to match MaterialsTab and MachinesTab */}
-      {materialIssuesData && materialIssuesData.meta && (
+      {/* Search Results Info - Show when searching */}
+      {searchQuery.trim() && !isLoading && (
+        <div className='text-sm text-muted-foreground text-center py-2'>
+          {displayIssues.length > 0 ? (
+            <>
+              Showing {displayIssues.length} issue
+              {displayIssues.length !== 1 ? 's' : ''} matching "{searchQuery}"
+            </>
+          ) : (
+            <>No issues found matching "{searchQuery}"</>
+          )}
+        </div>
+      )}
+
+      {/* Pagination - Updated to match MaterialsTab and MachinesTab - Hide when searching */}
+      {materialIssuesData && materialIssuesData.meta && !searchQuery.trim() && (
         <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
           {/* Page Info */}
           <div className='text-sm text-muted-foreground'>

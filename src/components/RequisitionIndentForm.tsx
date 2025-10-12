@@ -45,6 +45,7 @@ export enum PurposeType {
   MACHINE = 'machine',
   OTHER = 'other',
   SPARE = 'spare',
+  RETURN = 'return',
 }
 
 interface RequestItem {
@@ -70,6 +71,7 @@ interface VendorQuotation {
   phone: string;
   price: string;
   quotedPrice: string;
+  quotationAmount?: string; // Raw quotation amount from API (without currency symbol)
   notes: string;
   quotationFile?: File | null;
   isSelected?: boolean;
@@ -919,7 +921,30 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                     </TableCell>
                     <TableCell className='border border-gray-300'>
                       {isReadOnly ? (
-                        <div className='truncate'>{item.machineName}</div>
+                        <div className='truncate'>
+                          {(() => {
+                            // First check if machine object exists and has a name
+                            if ((item as any).machine?.name) {
+                              return (item as any).machine.name;
+                            }
+                            
+                            // Then check purposeType to determine what to display
+                            const purposeType = item.purposeType?.toLowerCase();
+                            if (purposeType === 'spare') {
+                              return 'Spare';
+                            } else if (purposeType === 'other') {
+                              return 'Other';
+                            } else if (purposeType === 'return') {
+                              return 'Return';
+                            } else if (purposeType === 'machine') {
+                              // Machine type but no machine object - check machineName field
+                              return item.machineName || 'N/A';
+                            }
+                            
+                            // Final fallback
+                            return item.machineName || 'N/A';
+                          })()}
+                        </div>
                       ) : (
                         <>
                           {item.purposeType === PurposeType.MACHINE ? (
@@ -942,7 +967,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                             </Select>
                           ) : (
                             <div className='text-sm text-gray-600 p-2'>
-                              {item.purposeType === PurposeType.SPARE ? 'Spare' : 'Other'}
+                              {item.purposeType === PurposeType.SPARE ? 'Spare' : item.purposeType === PurposeType.RETURN ? 'Return' : 'Other'}
                             </div>
                           )}
                         </>
@@ -957,7 +982,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                           onChange={(e) =>
                             handleItemChange(item.id, 'notes', e.target.value)
                           }
-                          placeholder={item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER ? 'Required for Spare/Other purpose...' : 'Add notes...'}
+                          placeholder={item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER || item.purposeType === PurposeType.RETURN ? 'Required for Spare/Other/Return purpose...' : 'Add notes...'}
                           className='border-0 p-0 h-auto min-h-[60px] resize-none focus:ring-0 focus:outline-none rounded-none w-full'
                           rows={2}
                         />
@@ -1460,7 +1485,9 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                       </div>
                       <div>
                         <span className='font-medium'>Total Quotation Amount:</span>
-                        <span className='ml-2 font-bold text-green-600'>₹{selectedQuotation.quotedPrice}</span>
+                        <span className='ml-2 font-bold text-green-600'>
+                          ₹{selectedQuotation.quotationAmount || selectedQuotation.quotedPrice.replace(/[₹,]/g, '')}
+                        </span>
                       </div>
                       {selectedQuotation.notes && (
                         <div>
