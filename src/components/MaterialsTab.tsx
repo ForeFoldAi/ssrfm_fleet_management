@@ -773,16 +773,6 @@ export const MaterialsTab = () => {
                         {getSortIcon('currentStock')}
                       </Button>
                     </TableHead>
-                    <TableHead className='w-32 text-foreground font-semibold'>
-                      <Button
-                        variant='ghost'
-                        onClick={() => handleSort('totalValue')}
-                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                      >
-                        Total Value (₹)
-                        {getSortIcon('totalValue')}
-                      </Button>
-                    </TableHead>
                     <TableHead className='w-40 text-foreground font-semibold'>
                       <Button
                         variant='ghost'
@@ -791,6 +781,16 @@ export const MaterialsTab = () => {
                       >
                         Avg.Purchased Price (₹)
                         {getSortIcon('averagePrice')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-32 text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('totalValue')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Total Value (₹)
+                        {getSortIcon('totalValue')}
                       </Button>
                     </TableHead>
                     <TableHead className='w-32 text-foreground font-semibold'>
@@ -856,12 +856,12 @@ export const MaterialsTab = () => {
                         </TableCell>
                         <TableCell className='text-sm'>
                           <div className='font-semibold text-foreground'>
-                            ₹{Number(material.totalValue || 0).toFixed(2)}
+                            ₹{getAveragePrice(material)}
                           </div>
                         </TableCell>
                         <TableCell className='text-sm'>
                           <div className='font-semibold text-foreground'>
-                            ₹{getAveragePrice(material)}
+                            ₹{Number(material.totalValue || 0).toFixed(2)}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -924,16 +924,6 @@ export const MaterialsTab = () => {
                         {getSortIcon('currentStock')}
                       </Button>
                     </TableHead>
-                    <TableHead className='w-32 text-foreground font-semibold'>
-                      <Button
-                        variant='ghost'
-                        onClick={() => handleSort('totalValue')}
-                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                      >
-                        Total Value (₹)
-                        {getSortIcon('totalValue')}
-                      </Button>
-                    </TableHead>
                     <TableHead className='w-40 text-foreground font-semibold'>
                       <Button
                         variant='ghost'
@@ -942,6 +932,16 @@ export const MaterialsTab = () => {
                       >
                         Avg.Purchased Price (₹)
                         {getSortIcon('averagePrice')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='w-32 text-foreground font-semibold'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('totalValue')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Total Value (₹)
+                        {getSortIcon('totalValue')}
                       </Button>
                     </TableHead>
                     <TableHead className='w-32 text-foreground font-semibold'>
@@ -983,10 +983,10 @@ export const MaterialsTab = () => {
                           {material.currentStock} {material.measureUnit?.name || 'units'}
                         </TableCell>
                         <TableCell className='font-semibold text-foreground'>
-                          ₹{Number(material.totalValue || 0).toFixed(2)}
+                          ₹{getAveragePrice(material)}
                         </TableCell>
                         <TableCell className='font-semibold text-foreground'>
-                          ₹{getAveragePrice(material)}
+                          ₹{Number(material.totalValue || 0).toFixed(2)}
                         </TableCell>
                         <TableCell>
                           <Badge className={getStatusBadge(stockStatus)}>

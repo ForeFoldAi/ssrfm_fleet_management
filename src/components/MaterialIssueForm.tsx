@@ -747,7 +747,6 @@ export const MaterialIssueForm = ({
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-48'>
                         ISSUING MATERIAL *
-                        <div className='text-xs text-muted-foreground font-normal mt-1'>💡 Select from available stock</div>
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-48'>
                          SPECIFICATIONS
@@ -757,25 +756,21 @@ export const MaterialIssueForm = ({
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-28'>
                         ISSUING QTY *
-                        <div className='text-xs text-muted-foreground font-normal mt-1'>💡 Cannot exceed stock</div>
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-24'>
                         STOCK AFTER ISSUE
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 min-w-40'>
                         ISSUING TO *
-                        <div className='text-xs text-muted-foreground font-normal mt-1'>💡 Receiver name</div>
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-40'>
                         ISSUING FOR *
-                        <div className='text-xs text-muted-foreground font-normal mt-1'>💡 Machine or 'Other'</div>
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-32'>
                         UPLOAD IMAGE
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-48'>
                         PURPOSE OF ISSUE *
-                        <div className='text-xs text-muted-foreground font-normal mt-1'>💡 Why issuing</div>
                       </TableHead>
                       <TableHead className='border border-gray-300 font-semibold text-xs px-2 py-1 w-20'>
                         ACTIONS
