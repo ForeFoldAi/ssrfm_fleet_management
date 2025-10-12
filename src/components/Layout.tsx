@@ -99,7 +99,7 @@ export const Layout = () => {
       </div>
       
       {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 w-full px-2 pt-1">
+      <div className="md:hidden fixed top-px left-px right-px z-50 w-auto">
         <div className="bg-gradient-to-r from-foreground to-foreground backdrop-blur-xl rounded-2xl shadow-2xl border border-warning/20 mx-auto transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)]">
           <div className="flex items-center justify-between px-4 py-2 w-full">
           {/* Logo */}
@@ -203,7 +203,7 @@ export const Layout = () => {
       </div>
 
       {/* Main Content */}
-      <main className={`pt-[60px] md:pt-24 px-[5px] sm:px-6 pb-8 md:pb-8 transition-all duration-300 overflow-x-hidden w-full ${
+      <main className={`pt-[60px] md:pt-24 px-px sm:px-6 pb-8 md:pb-8 transition-all duration-300 overflow-x-hidden w-full ${
         isExpanded ? 'md:pl-72' : 'md:pl-24'
       }`}>
         <div className="w-full max-w-full overflow-x-hidden">

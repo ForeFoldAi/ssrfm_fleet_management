@@ -172,6 +172,7 @@ export const MaterialIssuesTab = () => {
     from: '',
     to: '',
   });
+  const [selectedExportPreset, setSelectedExportPreset] = useState<string>('all');
 
   useEffect(() => {
     const fetchBranches = async () => {
@@ -814,6 +815,7 @@ export const MaterialIssuesTab = () => {
 
       // Close dialog
       setIsExportDialogOpen(false);
+      resetExportDateRange(); // Reset date range and preset after successful export
 
       toast({
         title: 'Export Successful',
@@ -838,6 +840,7 @@ export const MaterialIssuesTab = () => {
       from: '',
       to: '',
     });
+    setSelectedExportPreset('all');
   };
 
   // Apply comprehensive frontend search filtering for ALL columns
@@ -912,7 +915,7 @@ export const MaterialIssuesTab = () => {
         showExport={true}
         onAdd={() => setIsIssueFormOpen(true)}
         addLabel='Issue Materials'
-        showAddButton={true}
+        showAddButton={currentUser?.role !== 'company_owner'}
         isOnline={isOnline}
       />
 
@@ -1667,12 +1670,13 @@ export const MaterialIssuesTab = () => {
                   id='exportFromDate'
                   type='date'
                   value={exportDateRange.from}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setExportDateRange((prev) => ({
                       ...prev,
                       from: e.target.value,
-                    }))
-                  }
+                    }));
+                    setSelectedExportPreset('');
+                  }}
                   className='w-full'
                 />
               </div>
@@ -1685,12 +1689,13 @@ export const MaterialIssuesTab = () => {
                   id='exportToDate'
                   type='date'
                   value={exportDateRange.to}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setExportDateRange((prev) => ({
                       ...prev,
                       to: e.target.value,
-                    }))
-                  }
+                    }));
+                    setSelectedExportPreset('');
+                  }}
                   className='w-full'
                 />
               </div>
@@ -1715,8 +1720,13 @@ export const MaterialIssuesTab = () => {
                         from: '',
                         to: '',
                       });
+                      setSelectedExportPreset('all');
                     }}
-                    className='text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                    className={`text-xs ${
+                      selectedExportPreset === 'all'
+                        ? 'bg-green-500 border-green-600 text-white hover:bg-green-600'
+                        : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                    }`}
                   >
                     All
                   </Button>
@@ -1741,8 +1751,13 @@ export const MaterialIssuesTab = () => {
                         from: firstDay.toISOString().split('T')[0],
                         to: lastDay.toISOString().split('T')[0],
                       });
+                      setSelectedExportPreset('this_month');
                     }}
-                    className='text-xs'
+                    className={`text-xs ${
+                      selectedExportPreset === 'this_month'
+                        ? 'bg-primary border-primary text-white hover:bg-primary/90'
+                        : 'hover:bg-muted'
+                    }`}
                   >
                     This Month
                   </Button>
@@ -1767,8 +1782,13 @@ export const MaterialIssuesTab = () => {
                         from: firstDayLastMonth.toISOString().split('T')[0],
                         to: lastDayLastMonth.toISOString().split('T')[0],
                       });
+                      setSelectedExportPreset('last_month');
                     }}
-                    className='text-xs'
+                    className={`text-xs ${
+                      selectedExportPreset === 'last_month'
+                        ? 'bg-primary border-primary text-white hover:bg-primary/90'
+                        : 'hover:bg-muted'
+                    }`}
                   >
                     Last Month
                   </Button>
@@ -1793,8 +1813,13 @@ export const MaterialIssuesTab = () => {
                         from: threeMonthsAgo.toISOString().split('T')[0],
                         to: lastDay.toISOString().split('T')[0],
                       });
+                      setSelectedExportPreset('last_3_months');
                     }}
-                    className='text-xs'
+                    className={`text-xs ${
+                      selectedExportPreset === 'last_3_months'
+                        ? 'bg-primary border-primary text-white hover:bg-primary/90'
+                        : 'hover:bg-muted'
+                    }`}
                   >
                     Last 3 Months
                   </Button>
@@ -1811,8 +1836,13 @@ export const MaterialIssuesTab = () => {
                         from: firstDay.toISOString().split('T')[0],
                         to: lastDay.toISOString().split('T')[0],
                       });
+                      setSelectedExportPreset('this_year');
                     }}
-                    className='text-xs'
+                    className={`text-xs ${
+                      selectedExportPreset === 'this_year'
+                        ? 'bg-primary border-primary text-white hover:bg-primary/90'
+                        : 'hover:bg-muted'
+                    }`}
                   >
                     This Year
                   </Button>

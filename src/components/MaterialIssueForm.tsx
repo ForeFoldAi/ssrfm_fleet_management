@@ -498,26 +498,6 @@ export const MaterialIssueForm = ({
       0
     );
 
-    const confirmed = window.confirm(
-      `📦 Issue Materials Confirmation\n\n` +
-        `You are about to issue ${totalItems} item${
-          totalItems > 1 ? 's' : ''
-        } (Total: ${totalQuantity} units).\n\n` +
-        `✅ This will reduce the stock levels immediately.\n` +
-        `📝 A record will be created for tracking purposes.\n` +
-        `⚠️ This action cannot be undone.\n\n` +
-        `Do you want to proceed with issuing these materials?`
-    );
-
-    if (!confirmed) {
-      toast({
-        title: '⏸️ Issue Cancelled',
-        description:
-          'Material issue has been cancelled. No stock changes were made.',
-        variant: 'default',
-      });
-      return;
-    }
 
     console.log('Form validation passed');
     setIsSubmitting(true);

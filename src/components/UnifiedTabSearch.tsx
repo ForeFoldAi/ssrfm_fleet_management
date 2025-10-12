@@ -153,18 +153,18 @@ export const UnifiedTabSearch: React.FC<UnifiedTabSearchProps> = ({
                 variant={viewMode === 'list' ? 'default' : 'ghost'}
                 size='sm'
                 onClick={() => onViewModeChange('list')}
-                className='rounded-none px-3 flex-1'
+                className='rounded-none px-2 flex-1 h-8'
               >
-                <List className='w-4 h-4' />
+                <List className='w-3 h-3' />
                 <span className='ml-1 text-xs'>List</span>
               </Button>
               <Button
                 variant={viewMode === 'table' ? 'default' : 'ghost'}
                 size='sm'
                 onClick={() => onViewModeChange('table')}
-                className='rounded-none px-3 flex-1'
+                className='rounded-none px-2 flex-1 h-8'
               >
-                <Table className='w-4 h-4' />
+                <Table className='w-3 h-3' />
                 <span className='ml-1 text-xs'>Table</span>
               </Button>
             </div>
@@ -172,13 +172,13 @@ export const UnifiedTabSearch: React.FC<UnifiedTabSearchProps> = ({
             {/* Status Filter */}
             {showStatusFilter && onStatusFilterChange && statusOptions.length > 0 && (
               <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-                <SelectTrigger className='w-32 rounded-lg border-secondary focus:border-secondary focus:ring-0 h-9'>
+                <SelectTrigger className='w-28 rounded-lg border-secondary focus:border-secondary focus:ring-0 h-8'>
                   <SelectValue placeholder='Status' />
                 </SelectTrigger>
                 <SelectContent>
                   {statusOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
-                      <div className='flex items-center gap-2'>
+                      <div className='flex items-center gap-1'>
                         {option.icon}
                         <span className='text-xs'>{option.label}</span>
                       </div>
@@ -192,74 +192,78 @@ export const UnifiedTabSearch: React.FC<UnifiedTabSearchProps> = ({
 
         {/* Row 2: Search Input */}
         <div className='relative w-full'>
-          <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4' />
+          <Search className='absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3 h-3' />
           <Input
             placeholder={searchPlaceholder}
             value={searchValue}
             onChange={(e) => onSearchChange(e.target.value)}
-            className='pl-10 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-10'
+            className='pl-8 rounded-lg border-secondary focus:border-secondary focus:ring-0 outline-none h-8 text-sm'
           />
         </div>
 
-        {/* Row 3: Unit Filter (if applicable) */}
+        {/* Row 3: Unit Filter + Export Button (Side by Side) */}
         {shouldShowUnitFilter && (
-          <Select value={filterUnit} onValueChange={onFilterUnitChange}>
-            <SelectTrigger className='w-full rounded-lg border-secondary focus:border-secondary focus:ring-0 h-10'>
-              <SelectValue
-                placeholder={isLoadingBranches ? 'Loading...' : 'Select Unit'}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>All Units</SelectItem>
-              {availableBranches.map((branch) => (
-                <SelectItem key={branch.id} value={branch.id.toString()}>
-                  <div className='flex items-center gap-2'>
-                    <Building2 className='w-4 h-4' />
-                    <div>
-                      <div className='font-medium'>{branch.name}</div>
-                      {branch.location && (
-                        <div className='text-xs text-muted-foreground'>
-                          {branch.location}
-                        </div>
-                      )}
+          <div className='flex items-center gap-2'>
+            <Select value={filterUnit} onValueChange={onFilterUnitChange}>
+              <SelectTrigger className='flex-1 rounded-lg border-secondary focus:border-secondary focus:ring-0 h-8 text-sm'>
+                <SelectValue
+                  placeholder={isLoadingBranches ? 'Loading...' : 'Select Unit'}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Units</SelectItem>
+                {availableBranches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id.toString()}>
+                    <div className='flex items-center gap-1'>
+                      <Building2 className='w-3 h-3' />
+                      <div>
+                        <div className='font-medium text-sm'>{branch.name}</div>
+                        {branch.location && (
+                          <div className='text-xs text-muted-foreground'>
+                            {branch.location}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Export Button beside Unit Filter */}
+            {showExport && onExport && (
+              <Button
+                variant='outline'
+                className='text-xs h-8 px-2 whitespace-nowrap'
+                onClick={onExport}
+                disabled={isExporting || !isOnline}
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className='w-3 h-3 mr-1 animate-spin' />
+                    Export
+                  </>
+                ) : (
+                  <>
+                    <Upload className='w-3 h-3 mr-1' />
+                    Export
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         )}
 
-        {/* Row 4: Export + Add Buttons (Side by Side) */}
-        <div className='flex items-center gap-2'>
-          {/* Export Button */}
-          {showExport && onExport && (
-            <Button
-              variant='outline'
-              className='flex-1 text-xs h-10'
-              onClick={onExport}
-              disabled={isExporting || !isOnline}
-            >
-              {isExporting ? (
-                <Loader2 className='w-4 h-4 mr-1 animate-spin' />
-              ) : (
-                <Upload className='w-4 h-4 mr-1' />
-              )}
-              {isExporting ? 'Exporting...' : exportLabel}
-            </Button>
-          )}
-
-          {/* Add Button */}
-          {showAddButton && onAdd && (
-            <Button
-              className='btn-primary flex-1 text-xs h-10'
-              onClick={onAdd}
-            >
-              <Plus className='w-4 h-4 mr-1' />
-              {addLabel}
-            </Button>
-          )}
-        </div>
+        {/* Row 4: Add Button (Full Width) */}
+        {showAddButton && onAdd && (
+          <Button
+            className='btn-primary w-full text-xs h-8'
+            onClick={onAdd}
+          >
+            <Plus className='w-3 h-3 mr-1' />
+            {addLabel}
+          </Button>
+        )}
       </div>
 
       {/* Desktop Layout */}

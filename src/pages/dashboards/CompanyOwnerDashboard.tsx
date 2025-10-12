@@ -37,7 +37,6 @@ const CompanyOwnerDashboard = () => {
   // Time period options
   const timePeriods = [
     { value: "this_month", label: "This Month", months: 1, dateRangeType: "this_month" },
-    { value: "1m", label: "1 Month", months: 1, dateRangeType: "last_month" },
     { value: "3m", label: "3 Months", months: 3, dateRangeType: "last_3_months" },
     { value: "6m", label: "6 Months", months: 6, dateRangeType: "last_6_months" },
     { value: "1y", label: "1 Year", months: 12, dateRangeType: "custom" },
@@ -259,12 +258,18 @@ const CompanyOwnerDashboard = () => {
 
   // Generate machine expenses data based on API data or fallback to calculated data
   const generateMachineExpensesData = () => {
-    // If we have API data, use it
+    // If we have API data, use it with actual branch names
     if (expensesData?.machineExpensesByUnit && expensesData.machineExpensesByUnit.length > 0) {
       return expensesData.machineExpensesByUnit.map((machine: any) => {
         const chartData: any = { machine: machine.machineType || machine.machineName || 'Unknown Machine' };
-        chartData['Unit One'] = machine.unitOneAmount || 0;
-        chartData['Unit Two'] = machine.unitTwoAmount || 0;
+        
+        // Use actual branch names from the branches array
+        branches.forEach((branch, index) => {
+          const branchKey = index === 0 ? 'unitOneAmount' : 'unitTwoAmount';
+          const branchLabel = `${branch.name}${branch.location ? ` (${branch.location})` : ''}`;
+          chartData[branchLabel] = machine[branchKey] || 0;
+        });
+        
         return chartData;
       });
     }
@@ -301,7 +306,8 @@ const CompanyOwnerDashboard = () => {
           const machinesInBranch = machineList.filter(m => m.branch && m.branch.id === branch.id);
           const baseExpense = 15000; // Base expense per machine
           const expense = machinesInBranch.length * baseExpense * multiplier;
-          chartData[branch.name] = Math.round(expense);
+          const branchLabel = `${branch.name}${branch.location ? ` (${branch.location})` : ''}`;
+          chartData[branchLabel] = Math.round(expense);
         }
       });
       
@@ -313,12 +319,18 @@ const CompanyOwnerDashboard = () => {
 
   // Generate material expenses data based on API data or fallback to calculated data
   const generateMaterialExpensesData = () => {
-    // If we have API data, use it
+    // If we have API data, use it with actual branch names
     if (expensesData?.materialExpensesByUnit && expensesData.materialExpensesByUnit.length > 0) {
       return expensesData.materialExpensesByUnit.map((material: any) => {
         const chartData: any = { material: material.materialType };
-        chartData['Unit One'] = material.unitOneAmount || 0;
-        chartData['Unit Two'] = material.unitTwoAmount || 0;
+        
+        // Use actual branch names from the branches array
+        branches.forEach((branch, index) => {
+          const branchKey = index === 0 ? 'unitOneAmount' : 'unitTwoAmount';
+          const branchLabel = `${branch.name}${branch.location ? ` (${branch.location})` : ''}`;
+          chartData[branchLabel] = material[branchKey] || 0;
+        });
+        
         return chartData;
       });
     }
@@ -367,7 +379,8 @@ const CompanyOwnerDashboard = () => {
           
           // Apply time period multiplier and distribute across branches
           const expense = (totalValue / branches.length) * multiplier;
-          chartData[branch.name] = Math.round(expense);
+          const branchLabel = `${branch.name}${branch.location ? ` (${branch.location})` : ''}`;
+          chartData[branchLabel] = Math.round(expense);
         }
       });
       
@@ -427,7 +440,7 @@ const CompanyOwnerDashboard = () => {
   };
 
   const getPeriodLabel = () => {
-    return timePeriods.find(p => p.value === selectedPeriod)?.label || "1 Month";
+    return timePeriods.find(p => p.value === selectedPeriod)?.label || "This Month";
   };
 
   // Persist selected period to localStorage
@@ -549,33 +562,38 @@ const CompanyOwnerDashboard = () => {
               <div className="flex-1 min-w-0">
                 <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Total Expenses - All Units</p>
                 <p className="text-xl sm:text-2xl font-bold truncate">₹{allUnitsTotal.toLocaleString()}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
+                  {branches.length > 0 ? branches.map(b => b.name).join(', ') : 'All Branches'}
+                </p>
               </div>
               <IndianRupee className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
             </div>
           </Card>
 
-          {/* Unit Cards */}
-          <Card className="p-4 sm:p-6 border-l-4 border-l-blue-500">
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Total Expenses - Unit One</p>
-                <p className="text-xl sm:text-2xl font-bold truncate">₹{unitOneTotal.toLocaleString()}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{expensesData?.unitOneExpenses?.period || 'N/A'}</p>
-              </div>
-              <Building2 className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
-            </div>
-          </Card>
-
-          <Card className="p-4 sm:p-6 border-l-4 border-l-orange-500">
-            <div className="flex items-center justify-between">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Total Expenses - Unit Two</p>
-                <p className="text-xl sm:text-2xl font-bold truncate">₹{unitTwoTotal.toLocaleString()}</p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{expensesData?.unitTwoExpenses?.period || 'N/A'}</p>
-              </div>
-              <Building2 className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500 flex-shrink-0" />
-            </div>
-          </Card>
+          {/* Dynamic Branch Cards */}
+          {branches.map((branch, index) => {
+            const branchTotal = index === 0 ? unitOneTotal : unitTwoTotal;
+            const borderColor = index === 0 ? 'border-l-blue-500' : 'border-l-orange-500';
+            const iconColor = index === 0 ? 'text-blue-500' : 'text-orange-500';
+            const periodData = index === 0 ? expensesData?.unitOneExpenses : expensesData?.unitTwoExpenses;
+            
+            return (
+              <Card key={branch.id} className={`p-4 sm:p-6 border-l-4 ${borderColor}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
+                      Total Expenses - {branch.name}
+                    </p>
+                    <p className="text-xl sm:text-2xl font-bold truncate">₹{branchTotal.toLocaleString()}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
+                      {branch.location || periodData?.period || 'N/A'}
+                    </p>
+                  </div>
+                  <Building2 className={`h-6 w-6 sm:h-8 sm:w-8 ${iconColor} flex-shrink-0`} />
+                </div>
+              </Card>
+            );
+          })}
 
           {/* Pending Approvals */}
           <Card 
@@ -638,22 +656,21 @@ const CompanyOwnerDashboard = () => {
                       />} 
                     />
                     <ChartLegend />
-                    <Bar 
-                      key="Unit One"
-                      dataKey="Unit One" 
-                      fill="#3B82F6" 
-                      barSize={20} 
-                      radius={[6, 6, 0, 0]}
-                      name="Unit One"
-                    />
-                    <Bar 
-                      key="Unit Two"
-                      dataKey="Unit Two" 
-                      fill="#F59E0B" 
-                      barSize={20} 
-                      radius={[6, 6, 0, 0]}
-                      name="Unit Two"
-                    />
+                    {branches.map((branch, index) => {
+                      const branchLabel = `${branch.name}${branch.location ? ` (${branch.location})` : ''}`;
+                      const fillColor = index === 0 ? '#3B82F6' : '#F59E0B';
+                      
+                      return (
+                        <Bar 
+                          key={branch.id}
+                          dataKey={branchLabel} 
+                          fill={fillColor} 
+                          barSize={20} 
+                          radius={[6, 6, 0, 0]}
+                          name={branchLabel}
+                        />
+                      );
+                    })}
                   </ReBarChart>
                 </ChartContainer>
               ) : (
@@ -685,7 +702,7 @@ const CompanyOwnerDashboard = () => {
             </CardHeader>
             <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
               {materialExpensesByUnit.length > 0 ? (
-                <ChartContainer config={{}} className="w-full h-64 sm:h-80">
+                <ChartContainer config={{}} className="w-full h-80 sm:h-96 lg:h-[28rem]">
                   <ReBarChart data={materialExpensesByUnit} layout="vertical" margin={{ left: 10, right: 10, bottom: 10, top: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis 
@@ -707,26 +724,25 @@ const CompanyOwnerDashboard = () => {
                       />} 
                     />
                     <ChartLegend />
-                    <Bar 
-                      key="Unit One"
-                      dataKey="Unit One" 
-                      fill="#3B82F6" 
-                      barSize={20} 
-                      radius={[0, 6, 6, 0]}
-                      name="Unit One"
-                    />
-                    <Bar 
-                      key="Unit Two"
-                      dataKey="Unit Two" 
-                      fill="#F59E0B" 
-                      barSize={20} 
-                      radius={[0, 6, 6, 0]}
-                      name="Unit Two"
-                    />
+                    {branches.map((branch, index) => {
+                      const branchLabel = `${branch.name}${branch.location ? ` (${branch.location})` : ''}`;
+                      const fillColor = index === 0 ? '#3B82F6' : '#F59E0B';
+                      
+                      return (
+                        <Bar 
+                          key={branch.id}
+                          dataKey={branchLabel} 
+                          fill={fillColor} 
+                          barSize={20} 
+                          radius={[0, 6, 6, 0]}
+                          name={branchLabel}
+                        />
+                      );
+                    })}
                   </ReBarChart>
                 </ChartContainer>
               ) : (
-                <div className="flex items-center justify-center h-64 sm:h-80 text-muted-foreground">
+                <div className="flex items-center justify-center h-80 sm:h-96 lg:h-[28rem] text-muted-foreground">
                   <div className="text-center">
                     <Building2 className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 opacity-50" />
                     <p className="text-xs sm:text-sm">No material data available</p>

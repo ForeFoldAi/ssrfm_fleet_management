@@ -137,6 +137,7 @@ export const MaterialOrderBookTab = () => {
     from: '',
     to: '',
   });
+  const [selectedExportPreset, setSelectedExportPreset] = useState<string>('all');
   const [isStatusManagerOpen, setIsStatusManagerOpen] = useState(false);
   const [selectedRequestForResubmit, setSelectedRequestForResubmit] =
     useState<MaterialIndent | null>(null);
@@ -1147,10 +1148,13 @@ export const MaterialOrderBookTab = () => {
         indent.items.forEach((item) => {
           const transformedIndent = transformedIndents.find(t => t.originalId === indent.id);
           
-          // Use the same quotation logic as the UI transformation
-          // Priority: selectedQuotation -> first quotation (for received items) -> null
+          // Get the approved quotation:
+          // 1. Try selectedQuotation field first
+          // 2. If not available, find quotation with isSelected: true
+          // 3. Otherwise null
           const approvedQuotation = item.selectedQuotation || 
-            (item.quotations && item.quotations.length > 0 ? item.quotations[0] : null);
+            (item.quotations?.find(q => q.isSelected === true)) || 
+            null;
           
           // Get machine name using the same logic as UI transformation
           const getMachineName = () => {
@@ -1165,7 +1169,7 @@ export const MaterialOrderBookTab = () => {
             return item.machine?.name || 'N/A';
           };
           
-          // Show price and value only for received statuses (same logic as UI)
+          // Show price and value only for received statuses and when we have approved quotation
           const shouldShowPrice = approvedQuotation && (
             indent.status === IndentStatus.FULLY_RECEIVED ||
             indent.status === IndentStatus.PARTIALLY_RECEIVED
@@ -1232,6 +1236,7 @@ export const MaterialOrderBookTab = () => {
 
       // Close dialog
       setIsExportDialogOpen(false);
+      resetExportDateRange(); // Reset date range and preset after successful export
 
       toast({
         title: 'Export Successful',
@@ -1257,6 +1262,7 @@ export const MaterialOrderBookTab = () => {
       from: '',
       to: '',
     });
+    setSelectedExportPreset('all');
   };
 
   // Handle vendor quotation changes
@@ -1478,11 +1484,8 @@ export const MaterialOrderBookTab = () => {
 
   // Helper function to format Purchase ID
   const formatPurchaseId = (uniqueId: string, branchCode?: string) => {
-    // Convert to uppercase and keep numeric unit format (UNIT1, UNIT2, etc.)
+    // Convert to uppercase and keep the format as UNIT-1, UNIT-2, etc.
     let formattedId = uniqueId.toUpperCase();
-
-    // Remove any hyphens between UNIT and number
-    formattedId = formattedId.replace(/UNIT-(\d+)/g, 'UNIT$1');
 
     return formattedId;
   };
@@ -1493,22 +1496,27 @@ export const MaterialOrderBookTab = () => {
     const firstItem =
       indent.items && indent.items.length > 0 ? indent.items[0] : null;
     
-    // Use the selected (approved) quotation, with fallback to first quotation for received items
+    // Get the approved quotation:
+    // 1. Try selectedQuotation field first
+    // 2. If not available, find quotation with isSelected: true
+    // 3. Otherwise null
     const approvedQuotation = firstItem?.selectedQuotation || 
-      (firstItem?.quotations && firstItem.quotations.length > 0 ? firstItem.quotations[0] : null);
+      (firstItem?.quotations?.find(q => q.isSelected === true)) || 
+      null;
 
     // Debug logging for received items without prices
     if ((indent.status === IndentStatus.FULLY_RECEIVED || indent.status === IndentStatus.PARTIALLY_RECEIVED) && !approvedQuotation) {
-      console.log('Received item without quotation data:', {
+      console.log('Received item without approved quotation:', {
         indentId: indent.id,
         status: indent.status,
         firstItem: firstItem,
         selectedQuotation: firstItem?.selectedQuotation,
-        quotations: firstItem?.quotations
+        quotations: firstItem?.quotations,
+        quotationsWithIsSelected: firstItem?.quotations?.filter(q => q.isSelected)
       });
     }
 
-    // Show price and value only for received statuses
+    // Show price and value only for received statuses and when we have approved quotation
     const shouldShowPrice = approvedQuotation && (
       indent.status === IndentStatus.FULLY_RECEIVED ||
       indent.status === IndentStatus.PARTIALLY_RECEIVED
@@ -2656,7 +2664,7 @@ export const MaterialOrderBookTab = () => {
             onAdd={() => navigate('/materials-inventory/material-request')}
             addLabel='INDENT FORM'
             addIcon={<Plus className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />}
-            showAddButton={true}
+            showAddButton={currentUser?.role !== 'company_owner'}
             isOnline={isOnline}
           />
         </div>
@@ -2702,7 +2710,7 @@ export const MaterialOrderBookTab = () => {
             onAdd={() => navigate('/materials-inventory/material-request')}
             addLabel='INDENT FORM'
             addIcon={<Plus className='w-4 h-4 mr-1' />}
-            showAddButton={true}
+            showAddButton={currentUser?.role !== 'company_owner'}
             isOnline={isOnline}
           />
         </div>
@@ -3348,10 +3356,13 @@ export const MaterialOrderBookTab = () => {
                   id='exportFromDate'
                   type='date'
                   value={exportDateRange.from}
-                  onChange={(e) => setExportDateRange(prev => ({
-                    ...prev,
-                    from: e.target.value
-                  }))}
+                  onChange={(e) => {
+                    setExportDateRange(prev => ({
+                      ...prev,
+                      from: e.target.value
+                    }));
+                    setSelectedExportPreset('');
+                  }}
                   className='w-full'
                 />
               </div>
@@ -3364,10 +3375,13 @@ export const MaterialOrderBookTab = () => {
                   id='exportToDate'
                   type='date'
                   value={exportDateRange.to}
-                  onChange={(e) => setExportDateRange(prev => ({
-                    ...prev,
-                    to: e.target.value
-                  }))}
+                  onChange={(e) => {
+                    setExportDateRange(prev => ({
+                      ...prev,
+                      to: e.target.value
+                    }));
+                    setSelectedExportPreset('');
+                  }}
                   className='w-full'
                 />
               </div>
@@ -3389,8 +3403,13 @@ export const MaterialOrderBookTab = () => {
                         from: '',
                         to: ''
                       });
+                      setSelectedExportPreset('all');
                     }}
-                    className='text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                    className={`text-xs ${
+                      selectedExportPreset === 'all'
+                        ? 'bg-green-500 border-green-600 text-white hover:bg-green-600'
+                        : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                    }`}
                   >
                     All 
                   </Button>
@@ -3412,8 +3431,13 @@ export const MaterialOrderBookTab = () => {
                         from: firstDay.toISOString().split('T')[0],
                         to: lastDay.toISOString().split('T')[0]
                       });
+                      setSelectedExportPreset('this_month');
                     }}
-                    className='text-xs'
+                    className={`text-xs ${
+                      selectedExportPreset === 'this_month'
+                        ? 'bg-primary border-primary text-white hover:bg-primary/90'
+                        : 'hover:bg-muted'
+                    }`}
                   >
                     This Month
                   </Button>
@@ -3435,8 +3459,13 @@ export const MaterialOrderBookTab = () => {
                         from: firstDayLastMonth.toISOString().split('T')[0],
                         to: lastDayLastMonth.toISOString().split('T')[0]
                       });
+                      setSelectedExportPreset('last_month');
                     }}
-                    className='text-xs'
+                    className={`text-xs ${
+                      selectedExportPreset === 'last_month'
+                        ? 'bg-primary border-primary text-white hover:bg-primary/90'
+                        : 'hover:bg-muted'
+                    }`}
                   >
                     Last Month
                   </Button>
@@ -3458,8 +3487,13 @@ export const MaterialOrderBookTab = () => {
                         from: threeMonthsAgo.toISOString().split('T')[0],
                         to: lastDay.toISOString().split('T')[0]
                       });
+                      setSelectedExportPreset('last_3_months');
                     }}
-                    className='text-xs'
+                    className={`text-xs ${
+                      selectedExportPreset === 'last_3_months'
+                        ? 'bg-primary border-primary text-white hover:bg-primary/90'
+                        : 'hover:bg-muted'
+                    }`}
                   >
                     Last 3 Months
                   </Button>
@@ -3481,8 +3515,13 @@ export const MaterialOrderBookTab = () => {
                         from: firstDay.toISOString().split('T')[0],
                         to: lastDay.toISOString().split('T')[0]
                       });
+                      setSelectedExportPreset('this_year');
                     }}
-                    className='text-xs'
+                    className={`text-xs ${
+                      selectedExportPreset === 'this_year'
+                        ? 'bg-primary border-primary text-white hover:bg-primary/90'
+                        : 'hover:bg-muted'
+                    }`}
                   >
                     This Year
                   </Button>

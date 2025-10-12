@@ -182,62 +182,16 @@ const MaterialRequest = () => {
     return unit?.name || '';
   };
 
-  // Filter materials based on user type and branch
-  // This ensures branch-level users (supervisor/inventory_manager) only see materials from their branch
+  // Return materials as they come from API (branch filtering is handled at API level)
   const getFilteredMaterials = () => {
-    // If user is company owner or doesn't have branch restrictions, return all materials
-    if (!currentUser?.userType?.isBranchLevel || !currentUser?.branch?.id) {
-      console.log('MaterialRequest: Returning all materials (company-level user or no branch)');
-      return availableMaterials;
-    }
-
-    // For branch-level users, filter materials by their branch
-    const filtered = availableMaterials.filter((material) => {
-      // If material doesn't have branch info, include it (for backward compatibility)
-      if (!material.branch) {
-        return true;
-      }
-      return material.branch.id === currentUser.branch!.id;
-    });
-
-    console.log('MaterialRequest: Filtered materials for branch-level user:', {
-      userBranchId: currentUser.branch.id,
-      userBranchName: currentUser.branch.name,
-      totalMaterials: availableMaterials.length,
-      filteredMaterials: filtered.length,
-      filteredMaterialNames: filtered.map(m => m.name)
-    });
-
-    return filtered;
+    console.log('MaterialRequest: Returning materials from API (branch filtering handled server-side)');
+    return availableMaterials;
   };
 
-  // Filter machines based on user type and branch
-  // This ensures branch-level users (supervisor/inventory_manager) only see machines from their branch
+  // Return machines as they come from API (branch filtering is handled at API level)
   const getFilteredMachines = () => {
-    // If user is company owner or doesn't have branch restrictions, return all machines
-    if (!currentUser?.userType?.isBranchLevel || !currentUser?.branch?.id) {
-      console.log('MaterialRequest: Returning all machines (company-level user or no branch)');
-      return availableMachines;
-    }
-
-    // For branch-level users, filter machines by their branch
-    const filtered = availableMachines.filter((machine) => {
-      // If machine doesn't have branch info, include it (for backward compatibility)
-      if (!machine.branch) {
-        return true;
-      }
-      return machine.branch.id === currentUser.branch!.id;
-    });
-
-    console.log('MaterialRequest: Filtered machines for branch-level user:', {
-      userBranchId: currentUser.branch.id,
-      userBranchName: currentUser.branch.name,
-      totalMachines: availableMachines.length,
-      filteredMachines: filtered.length,
-      filteredMachineNames: filtered.map(m => m.name)
-    });
-
-    return filtered;
+    console.log('MaterialRequest: Returning machines from API (branch filtering handled server-side)');
+    return availableMachines;
   };
 
   useEffect(() => {
@@ -247,8 +201,8 @@ const MaterialRequest = () => {
       try {
         const params = {
           limit: 100,
-          sortBy: 'id',
-          sortOrder: 'ASC',
+          sortBy: 'id' as const,
+          sortOrder: 'ASC' as const,
           // Filter by branch for branch-level users (supervisor/inventory_manager)
           ...((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id && {
             branchId: currentUser.branch.id,
@@ -288,8 +242,8 @@ const MaterialRequest = () => {
       try {
         const params = {
           limit: 100,
-          sortBy: 'id',
-          sortOrder: 'ASC',
+          sortBy: 'id' as const,
+          sortOrder: 'ASC' as const,
           // Filter by branch for branch-level users (supervisor/inventory_manager)
           ...((currentUser?.role === 'supervisor' || currentUser?.role === 'inventory_manager' || currentUser?.userType?.isBranchLevel) && currentUser?.branch?.id && {
             unitId: currentUser.branch.id.toString(),
@@ -656,23 +610,6 @@ const MaterialRequest = () => {
       return;
     }
     
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      `📋 Submit Material Request\n\n` +
-      `You are about to submit ${requestItems.length} item${requestItems.length > 1 ? 's' : ''} for approval.\n\n` +
-      `✅ This will notify the Company Owner for review and approval.\n` +
-      `📝 You can track the status in the Requests section.\n\n` +
-      `Do you want to proceed?`
-    );
-    
-    if (!confirmed) {
-      toast({
-        title: '⏸️ Submission Cancelled',
-        description: 'Your material request has not been submitted.',
-        variant: 'default',
-      });
-      return;
-    }
     
     setIsSubmitting(true);
     try {

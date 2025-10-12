@@ -712,7 +712,7 @@ export const MaterialsTab = () => {
         showExport={true}
         onAdd={() => setIsAddMaterialOpen(true)}
         addLabel='Add New Material'
-        showAddButton={true}
+        showAddButton={currentUser?.role !== 'company_owner'}
         isOnline={isOnline}
       />
 
