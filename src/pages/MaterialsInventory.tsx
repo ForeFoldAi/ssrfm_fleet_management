@@ -13,7 +13,6 @@ const MaterialsInventory = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [refreshKey, setRefreshKey] = useState(0);
   
   // Initialize activeTab from URL params, localStorage, or default to "materials"
   const [activeTab, setActiveTab] = useState(() => {
@@ -40,39 +39,6 @@ const MaterialsInventory = () => {
   useEffect(() => {
     localStorage.setItem('materials-inventory-active-tab', activeTab);
   }, [activeTab]);
-
-  // Auto-refresh when tab becomes visible (to sync data from other users)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('Tab became visible - refreshing data...');
-        // Increment refresh key to trigger child components to refetch
-        setRefreshKey(prev => prev + 1);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
-  // Optional: Auto-refresh every 30 seconds when tab is active
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (document.visibilityState === 'visible') {
-      interval = setInterval(() => {
-        console.log('Auto-refresh interval triggered');
-        setRefreshKey(prev => prev + 1);
-      }, 30000); // 30 seconds
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, []);
 
   // Handle tab changes and update URL
   const handleTabChange = (newTab: string) => {
@@ -183,22 +149,22 @@ const MaterialsInventory = () => {
         <div className="mt-4">
           {/* Material Issues Tab */}
           <div className={activeTab === "material-issues" ? "block" : "hidden"}>
-          <MaterialIssuesTab key={`material-issues-${refreshKey}`} />
+          <MaterialIssuesTab />
           </div>
 
           {/* Materials Tab */}
           <div className={activeTab === "materials" ? "block" : "hidden"}>
-          <MaterialsTab key={`materials-${refreshKey}`} />
+          <MaterialsTab />
           </div>
 
           {/* Material Order Book Tab */}
           <div className={activeTab === "material-order-book" ? "block" : "hidden"}>
-          <MaterialOrderBookTab key={`material-order-book-${refreshKey}`} />
+          <MaterialOrderBookTab />
           </div>
 
           {/* Machines Tab */}
           <div className={activeTab === "machines" ? "block" : "hidden"}>
-          <MachinesTab key={`machines-${refreshKey}`} />
+          <MachinesTab />
           </div>
         </div>
       </Tabs>

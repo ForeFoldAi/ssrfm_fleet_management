@@ -245,7 +245,7 @@ export const MaterialIssueForm = ({
 
   // Filter materials based on user type and branch
   // Note: Materials are filtered at API level using branchId parameter
-  // This function just returns all available materials since API filtering is already applied
+  // This function returns materials sorted alphabetically by name
   const getFilteredMaterials = () => {
     console.log(
       'MaterialIssueForm: Returning materials (API filtering already applied):',
@@ -257,7 +257,10 @@ export const MaterialIssueForm = ({
       }
     );
 
-    return availableMaterials;
+    // Sort materials alphabetically by name
+    return [...availableMaterials].sort((a, b) => 
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    );
   };
 
   // Filter machines based on user type and branch
@@ -848,23 +851,21 @@ export const MaterialIssueForm = ({
                                     {materialsError}
                                   </div>
                                 ) : (
-                                  getFilteredMaterials()
-                                    .sort((a, b) => a.name.localeCompare(b.name))
-                                    .map((material) => (
-                                      <SelectItem
-                                        key={material.id}
-                                        value={material.id.toString()}
-                                      >
-                                        <div className='flex flex-col'>
-                                          <span>{material.name}</span>
-                                          {material.makerBrand && (
-                                            <span className='text-xs text-muted-foreground'>
-                                              {material.makerBrand}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </SelectItem>
-                                    ))
+                                  getFilteredMaterials().map((material) => (
+                                    <SelectItem
+                                      key={material.id}
+                                      value={material.id.toString()}
+                                    >
+                                      <div className='flex flex-col'>
+                                        <span>{material.name}</span>
+                                        {material.makerBrand && (
+                                          <span className='text-xs text-muted-foreground'>
+                                            {material.makerBrand}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  ))
                                 )}
                               </SelectContent>
                             </Select>
@@ -1029,16 +1030,14 @@ export const MaterialIssueForm = ({
                                     <SelectItem value='Other'>
                                       others
                                     </SelectItem>
-                                    {getFilteredMachines()
-                                      .sort((a, b) => a.name.localeCompare(b.name))
-                                      .map((machine) => (
-                                        <SelectItem
-                                          key={machine.id}
-                                          value={machine.name}
-                                        >
-                                          {machine.name}
-                                        </SelectItem>
-                                      ))}
+                                    {getFilteredMachines().map((machine) => (
+                                      <SelectItem
+                                        key={machine.id}
+                                        value={machine.name}
+                                      >
+                                        {machine.name}
+                                      </SelectItem>
+                                    ))}
                                   </>
                                 )}
                               </SelectContent>

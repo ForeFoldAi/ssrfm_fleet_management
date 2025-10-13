@@ -91,6 +91,7 @@ export enum PurposeType {
 interface RequestItem {
   id: string;
   srNo: number;
+  materialId?: number; // Store material ID to handle duplicate names
   productName: string;
   machineName: string;
   specifications: string;
@@ -135,6 +136,7 @@ const MaterialRequest = () => {
     {
       id: '1',
       srNo: 1,
+      materialId: undefined,
       productName: '',
       machineName: '',
       specifications: '',
@@ -182,10 +184,13 @@ const MaterialRequest = () => {
     return unit?.name || '';
   };
 
-  // Return materials as they come from API (branch filtering is handled at API level)
+  // Return materials sorted alphabetically (branch filtering is handled at API level)
   const getFilteredMaterials = () => {
     console.log('MaterialRequest: Returning materials from API (branch filtering handled server-side)');
-    return availableMaterials;
+    // Sort materials alphabetically by name
+    return [...availableMaterials].sort((a, b) => 
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    );
   };
 
   // Return machines as they come from API (branch filtering is handled at API level)
@@ -394,6 +399,7 @@ const MaterialRequest = () => {
           item.id === itemId
             ? {
               ...item,
+              materialId: material.id, // Store material ID
               productName: material.name,
               specifications: material.specifications || '',
               measureUnit: unitName, // Use the unit name directly
@@ -409,6 +415,7 @@ const MaterialRequest = () => {
     const newItem: RequestItem = {
       id: String(Date.now()),
       srNo: requestItems.length + 1,
+      materialId: undefined,
       productName: '',
       machineName: '',
       specifications: '',
@@ -616,16 +623,13 @@ const MaterialRequest = () => {
       // Build JSON structure for items as API expects
       const itemsPayload: CreateMaterialIndentItemInput[] = requestItems.map(
         (item) => {
-          // Find selected material and machine ids
-          const material = getFilteredMaterials().find(
-            (m) => m.name === item.productName
-          );
+          // Find machine by name
           const machine = getFilteredMachines().find(
             (m) => m.name === item.machineName
           );
 
           return {
-            materialId: material?.id || 0,
+            materialId: item.materialId || 0, // Use materialId directly from item
             specifications: item.specifications || '',
             requestedQuantity: Number(item.reqQuantity),
             purposeType: item.purposeType,
@@ -739,6 +743,7 @@ const MaterialRequest = () => {
           {
             id: '1',
             srNo: 1,
+            materialId: undefined,
             productName: '',
             machineName: '',
             specifications: '',
@@ -815,40 +820,41 @@ const MaterialRequest = () => {
                   </TableCell>
                   <TableCell className='border border-gray-300'>
                     <Select
-                      value={item.productName ? getFilteredMaterials().find(m => m.name === item.productName)?.id.toString() : ''}
+                      value={item.materialId ? item.materialId.toString() : ''}
                       onValueChange={(value) =>
                         handleMaterialSelect(item.id, value)
                       }
                     >
                       <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none'>
                         <SelectValue placeholder='Select Material'>
-                          {item.productName && (
+                          {item.productName && item.materialId && (
                             <div className='flex flex-col'>
                               <div className='font-semibold'>{item.productName}</div>
-                              {getFilteredMaterials().find(m => m.name === item.productName)?.makerBrand && (
-                                <div className='text-xs text-muted-foreground'>
-                                  {getFilteredMaterials().find(m => m.name === item.productName)?.makerBrand}
-                                </div>
-                              )}
+                              {(() => {
+                                const material = getFilteredMaterials().find(m => m.id === item.materialId);
+                                return material?.makerBrand && (
+                                  <div className='text-xs text-muted-foreground'>
+                                    {material.makerBrand}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {getFilteredMaterials()
-                          .sort((a, b) => a.name.localeCompare(b.name))
-                          .map((material) => (
-                            <SelectItem key={material.id} value={material.id.toString()}>
-                              <div className='flex flex-col'>
-                                <div className='font-semibold'>{material.name}</div>
-                                {material.makerBrand && (
-                                  <div className='text-xs text-muted-foreground'>
-                                    {material.makerBrand}
-                                  </div>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))}
+                        {getFilteredMaterials().map((material) => (
+                          <SelectItem key={material.id} value={material.id.toString()}>
+                            <div className='flex flex-col'>
+                              <div className='font-semibold'>{material.name}</div>
+                              {material.makerBrand && (
+                                <div className='text-xs text-muted-foreground'>
+                                  {material.makerBrand}
+                                </div>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     {errors[`productName_${item.id}`] && (
@@ -1053,13 +1059,11 @@ const MaterialRequest = () => {
                         <SelectValue placeholder='Select Machine *' />
                       </SelectTrigger>
                       <SelectContent>
-                        {getFilteredMachines()
-                          .sort((a, b) => a.name.localeCompare(b.name))
-                          .map((machine) => (
-                            <SelectItem key={machine.id} value={machine.name}>
-                              {machine.name}
-                            </SelectItem>
-                          ))}
+                        {getFilteredMachines().map((machine) => (
+                          <SelectItem key={machine.id} value={machine.name}>
+                            {machine.name}
+                          </SelectItem>
+                        ))}
                         <SelectItem value='Other'>Other</SelectItem>
                         <SelectItem value='Spare'>Spare</SelectItem>
                         <SelectItem value='Return'>Return</SelectItem>
@@ -1155,42 +1159,42 @@ const MaterialRequest = () => {
                   {/* Materials */}
                 <div className='space-y-2'>
                   <Label className='text-sm font-medium'>Materials *</Label>
-                  <p className='text-xs text-muted-foreground'>💡 Select the material you want to request. The system will show current stock and specifications automatically.</p>
                   <Select
-                    value={item.productName ? getFilteredMaterials().find(m => m.name === item.productName)?.id.toString() : ''}
+                    value={item.materialId ? item.materialId.toString() : ''}
                     onValueChange={(value) =>
                       handleMaterialSelect(item.id, value)
                     }
                   >
                     <SelectTrigger className='h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
                       <SelectValue placeholder='Select Material'>
-                        {item.productName && (
+                        {item.productName && item.materialId && (
                           <div className='flex flex-col'>
                             <div className='font-semibold'>{item.productName}</div>
-                            {getFilteredMaterials().find(m => m.name === item.productName)?.makerBrand && (
-                              <div className='text-xs text-muted-foreground'>
-                                {getFilteredMaterials().find(m => m.name === item.productName)?.makerBrand}
-                              </div>
-                            )}
+                            {(() => {
+                              const material = getFilteredMaterials().find(m => m.id === item.materialId);
+                              return material?.makerBrand && (
+                                <div className='text-xs text-muted-foreground'>
+                                  {material.makerBrand}
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {getFilteredMaterials()
-                        .sort((a, b) => a.name.localeCompare(b.name))
-                        .map((material) => (
-                          <SelectItem key={material.id} value={material.id.toString()}>
-                            <div className='flex flex-col'>
-                              <div className='font-semibold'>{material.name}</div>
-                              {material.makerBrand && (
-                                <div className='text-xs text-muted-foreground'>
-                                  {material.makerBrand}
-                                </div>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
+                      {getFilteredMaterials().map((material) => (
+                        <SelectItem key={material.id} value={material.id.toString()}>
+                          <div className='flex flex-col'>
+                            <div className='font-semibold'>{material.name}</div>
+                            {material.makerBrand && (
+                              <div className='text-xs text-muted-foreground'>
+                                {material.makerBrand}
+                              </div>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   {errors[`productName_${item.id}`] && (
@@ -1247,7 +1251,6 @@ const MaterialRequest = () => {
                     <Label className='text-sm font-medium'>
                       Required Quantity *
                     </Label>
-                    <p className='text-xs text-muted-foreground'>💡 Enter the quantity you need. This will be sent for approval to the Company Owner.</p>
                     <div className='flex items-center gap-2'>
                       <Input
                         id={`reqQuantity-${item.id}`}
@@ -1286,7 +1289,6 @@ const MaterialRequest = () => {
                     <Label className='text-sm font-medium'>
                       Machine Name *
                     </Label>
-                    <p className='text-xs text-muted-foreground'>💡 Select the machine this material is for, or choose 'Spare', 'Other', or 'Return' as needed.</p>
                     <Select
                       value={item.machineName}
                       onValueChange={(value) => {
@@ -1307,13 +1309,11 @@ const MaterialRequest = () => {
                         <SelectValue placeholder='Select Machine *' />
                       </SelectTrigger>
                       <SelectContent>
-                        {getFilteredMachines()
-                          .sort((a, b) => a.name.localeCompare(b.name))
-                          .map((machine) => (
-                            <SelectItem key={machine.id} value={machine.name}>
-                              {machine.name}
-                            </SelectItem>
-                          ))}
+                        {getFilteredMachines().map((machine) => (
+                          <SelectItem key={machine.id} value={machine.name}>
+                            {machine.name}
+                          </SelectItem>
+                        ))}
                         <SelectItem value='Other'>Other</SelectItem>
                         <SelectItem value='Spare'>Spare</SelectItem>
                         <SelectItem value='Return'>Return</SelectItem>
@@ -1435,7 +1435,7 @@ const MaterialRequest = () => {
                     <Label className='text-sm font-medium'>
                       Notes {item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER || item.purposeType === PurposeType.RETURN ? '*' : ''}
                     </Label>
-                    <p className='text-xs text-muted-foreground'>💡 {item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER || item.purposeType === PurposeType.RETURN ? 'Notes are required for Spare/Other/Return purposes. Please provide detailed information.' : 'Optional: Add any additional notes or special requirements.'}</p>
+                    <p className='text-xs text-muted-foreground'> {item.purposeType === PurposeType.SPARE || item.purposeType === PurposeType.OTHER || item.purposeType === PurposeType.RETURN ? 'Notes are required for Spare/Other/Return purposes. Please provide detailed information.' : 'Optional: Add any additional notes or special requirements.'}</p>
                     <Textarea
                       id={`notes-${item.id}`}
                       value={item.notes || ''}

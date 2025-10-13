@@ -303,7 +303,7 @@ export const MaterialIssuesTab = () => {
     });
   };
 
-  // Handle column sorting - all fields use frontend sorting now
+  // Handle column sorting - Issue ID uses API sorting, others use frontend sorting
   const handleSort = (field: SortField) => {
     let newSortOrder = sortOrder;
 
@@ -318,10 +318,17 @@ export const MaterialIssuesTab = () => {
     setSortField(field);
     setSortOrder(newSortOrder);
 
-    // Apply frontend sorting immediately
-    console.log('Frontend sorting by:', field, 'Order:', newSortOrder);
-    const sorted = sortIssues(issuedMaterials, field, newSortOrder);
-    setSortedIssues(sorted);
+    // Use API sorting for Issue ID, frontend sorting for other fields
+    if (field === 'id' || field === 'uniqueId') {
+      console.log('API sorting by Issue ID:', newSortOrder);
+      // Fetch from API with sorting parameters
+      fetchMaterialIssues(currentPage, itemsPerPage, 'id', newSortOrder);
+    } else {
+      // Apply frontend sorting for other fields
+      console.log('Frontend sorting by:', field, 'Order:', newSortOrder);
+      const sorted = sortIssues(issuedMaterials, field, newSortOrder);
+      setSortedIssues(sorted);
+    }
   };
 
   // Get sort icon for column header
@@ -404,7 +411,12 @@ export const MaterialIssuesTab = () => {
   };
 
   // Add the missing fetchMaterialIssues function
-  const fetchMaterialIssues = async (page = 1, limit = itemsPerPage) => {
+  const fetchMaterialIssues = async (
+    page = 1, 
+    limit = itemsPerPage, 
+    sortBy = 'id', 
+    sortOrderParam: SortOrder = 'DESC'
+  ) => {
     setIsLoading(true);
     setError(null);
 
@@ -412,6 +424,8 @@ export const MaterialIssuesTab = () => {
       const params: any = {
         page: page,
         limit: limit,
+        sortBy: sortBy, // Add sorting parameter
+        sortOrder: sortOrderParam, // Add sort order parameter
         include: 'items.material.measureUnit,items.issuedFor,branch,issuedBy', // Include related data
       };
 
@@ -433,6 +447,7 @@ export const MaterialIssuesTab = () => {
       // Debug logging
       console.log('MaterialIssues API call params:', params);
       console.log('Current filters - Unit:', filterUnit);
+      console.log('Sorting by:', sortBy, 'Order:', sortOrderParam);
 
       const response = await materialIssuesApi.getAll(params);
 
@@ -516,7 +531,9 @@ export const MaterialIssuesTab = () => {
   // Refetch when filter changes (not search - search is frontend only)
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      fetchMaterialIssues(1, itemsPerPage);
+      // Maintain current sort when filters change
+      const apiSortBy = sortField === 'uniqueId' ? 'id' : sortField;
+      fetchMaterialIssues(1, itemsPerPage, apiSortBy, sortOrder);
     }, 300); // Debounce
 
     return () => clearTimeout(timeoutId);
@@ -532,7 +549,9 @@ export const MaterialIssuesTab = () => {
 
   // Load material issues when pagination changes
   useEffect(() => {
-    fetchMaterialIssues(currentPage, itemsPerPage);
+    // Maintain current sort when changing pages
+    const apiSortBy = sortField === 'uniqueId' ? 'id' : sortField;
+    fetchMaterialIssues(currentPage, itemsPerPage, apiSortBy, sortOrder);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
@@ -936,7 +955,10 @@ export const MaterialIssuesTab = () => {
             No Data Found, Reload Data
           </h3>
           <p className='text-muted-foreground mb-4'>{error}</p>
-          <Button variant='outline' onClick={() => fetchMaterialIssues()}>
+          <Button variant='outline' onClick={() => {
+            const apiSortBy = sortField === 'uniqueId' ? 'id' : sortField;
+            fetchMaterialIssues(currentPage, itemsPerPage, apiSortBy, sortOrder);
+          }}>
             <RefreshCcw className='w-4 h-4 mr-2' />
             Reload
           </Button>
@@ -1457,7 +1479,10 @@ export const MaterialIssuesTab = () => {
               ? 'Try adjusting your search terms'
               : 'Start by issuing your first material'}
           </p>
-          <Button variant='outline' onClick={() => fetchMaterialIssues()}>
+          <Button variant='outline' onClick={() => {
+            const apiSortBy = sortField === 'uniqueId' ? 'id' : sortField;
+            fetchMaterialIssues(currentPage, itemsPerPage, apiSortBy, sortOrder);
+          }}>
             <RefreshCcw className='w-4 h-4 mr-2' />
             Reload
           </Button>
@@ -1506,7 +1531,8 @@ export const MaterialIssuesTab = () => {
                   const newLimit = parseInt(value);
                   setItemsPerPage(newLimit);
                   setCurrentPage(1);
-                  fetchMaterialIssues(1, newLimit);
+                  const apiSortBy = sortField === 'uniqueId' ? 'id' : sortField;
+                  fetchMaterialIssues(1, newLimit, apiSortBy, sortOrder);
                 }}
               >
                 <SelectTrigger className='w-20 h-8'>
@@ -1529,7 +1555,8 @@ export const MaterialIssuesTab = () => {
                 size='sm'
                 onClick={() => {
                   setCurrentPage(1);
-                  fetchMaterialIssues(1, itemsPerPage);
+                  const apiSortBy = sortField === 'uniqueId' ? 'id' : sortField;
+                  fetchMaterialIssues(1, itemsPerPage, apiSortBy, sortOrder);
                 }}
                 disabled={
                   !materialIssuesData.meta.hasPreviousPage ||
@@ -1545,7 +1572,8 @@ export const MaterialIssuesTab = () => {
                 size='sm'
                 onClick={() => {
                   setCurrentPage((prev) => prev - 1);
-                  fetchMaterialIssues(currentPage - 1, itemsPerPage);
+                  const apiSortBy = sortField === 'uniqueId' ? 'id' : sortField;
+                  fetchMaterialIssues(currentPage - 1, itemsPerPage, apiSortBy, sortOrder);
                 }}
                 disabled={!materialIssuesData.meta.hasPreviousPage}
                 className='h-8 w-8 p-0'
@@ -1583,7 +1611,8 @@ export const MaterialIssuesTab = () => {
                         size='sm'
                         onClick={() => {
                           setCurrentPage(pageNum);
-                          fetchMaterialIssues(pageNum, itemsPerPage);
+                          const apiSortBy = sortField === 'uniqueId' ? 'id' : sortField;
+                          fetchMaterialIssues(pageNum, itemsPerPage, apiSortBy, sortOrder);
                         }}
                         className='h-8 w-8 p-0'
                       >
@@ -1599,7 +1628,8 @@ export const MaterialIssuesTab = () => {
                 size='sm'
                 onClick={() => {
                   setCurrentPage((prev) => prev + 1);
-                  fetchMaterialIssues(currentPage + 1, itemsPerPage);
+                  const apiSortBy = sortField === 'uniqueId' ? 'id' : sortField;
+                  fetchMaterialIssues(currentPage + 1, itemsPerPage, apiSortBy, sortOrder);
                 }}
                 disabled={!materialIssuesData.meta.hasNextPage}
                 className='h-8 w-8 p-0'
@@ -1612,9 +1642,12 @@ export const MaterialIssuesTab = () => {
                 size='sm'
                 onClick={() => {
                   setCurrentPage(materialIssuesData.meta.pageCount);
+                  const apiSortBy = sortField === 'uniqueId' ? 'id' : sortField;
                   fetchMaterialIssues(
                     materialIssuesData.meta.pageCount,
-                    itemsPerPage
+                    itemsPerPage,
+                    apiSortBy,
+                    sortOrder
                   );
                 }}
                 disabled={
@@ -1638,7 +1671,8 @@ export const MaterialIssuesTab = () => {
           setIsIssueFormOpen(false);
           setEditingIssue(null);
           // Refresh the table when form is closed (in case of successful submission)
-          fetchMaterialIssues(currentPage, itemsPerPage);
+          const apiSortBy = sortField === 'uniqueId' ? 'id' : sortField;
+          fetchMaterialIssues(currentPage, itemsPerPage, apiSortBy, sortOrder);
         }}
         onSubmit={handleIssueMaterial}
         editingIssue={
