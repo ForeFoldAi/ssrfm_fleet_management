@@ -66,48 +66,44 @@ const MaterialsInventory = () => {
       */}
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        {/* Desktop Tabs - Top positioned */}
-        <TabsList className="hidden sm:grid w-4/5 grid-cols-4 h-auto p-1 bg-secondary/10 rounded-lg shadow-sm">
+        {/* Desktop Tabs - Top positioned with responsive sizing */}
+        <TabsList className="hidden sm:grid w-full md:w-11/12 lg:w-5/6 xl:w-4/5 2xl:w-3/4 grid-cols-4 h-auto p-1.5 bg-secondary/10 rounded-lg shadow-sm gap-1">
            <TabsTrigger 
             value="materials" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
+            className="flex flex-row items-center justify-center gap-1.5 md:gap-2 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-xs lg:text-sm font-medium rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
           >
-            <Hourglass className="w-4 h-4" />
-            <span className="hidden xs:inline sm:inline">Stock In Hand</span>
-            <span className="xs:hidden sm:hidden"> Stock In Hand</span>
+            <Hourglass className="w-3.5 h-3.5 md:w-4 md:h-4 lg:w-4.5 lg:h-4.5" />
+            <span className="whitespace-nowrap">Stock In Hand</span>
         </TabsTrigger>
           
           
           
           <TabsTrigger 
             value="material-issues" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
+            className="flex flex-row items-center justify-center gap-1.5 md:gap-2 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-xs lg:text-sm font-medium rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
           >
-            <span className="relative w-4 h-4">
-              <Package className="w-4 h-4" />
-              <ArrowUpRight className="w-2 h-2 absolute -top-1 -right-1" />
+            <span className="relative w-3.5 h-3.5 md:w-4 md:h-4 lg:w-4.5 lg:h-4.5">
+              <Package className="w-full h-full" />
+              <ArrowUpRight className="w-1.5 h-1.5 md:w-2 md:h-2 absolute -top-1 -right-1" />
             </span>
-            <span className="hidden xs:inline sm:inline">Issued Materials</span>
-            <span className="xs:hidden sm:hidden">Issue</span>
+            <span className="whitespace-nowrap">Issued Materials</span>
           </TabsTrigger>
           
 <TabsTrigger 
             value="material-order-book" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
+            className="flex flex-row items-center justify-center gap-1.5 md:gap-2 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-xs lg:text-sm font-medium rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
           >
-            <ShoppingBasket className="w-4 h-4" />
-            <span className="hidden xs:inline sm:inline">Purchased Materials</span>
-            <span className="xs:hidden sm:hidden">Purchased</span>
+            <ShoppingBasket className="w-3.5 h-3.5 md:w-4 md:h-4 lg:w-4.5 lg:h-4.5" />
+            <span className="whitespace-nowrap">Purchased Materials</span>
           </TabsTrigger>
 
           
           <TabsTrigger 
             value="machines" 
-            className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm"
+            className="flex flex-row items-center justify-center gap-1.5 md:gap-2 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-xs lg:text-sm font-medium rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
           >
-            <Factory className="w-4 h-4" />
-            <span className="hidden xs:inline sm:inline">Machines</span>
-            <span className="xs:hidden sm:hidden">Machines</span>
+            <Factory className="w-3.5 h-3.5 md:w-4 md:h-4 lg:w-4.5 lg:h-4.5" />
+            <span className="whitespace-nowrap">Machines</span>
           </TabsTrigger>
         </TabsList>
 

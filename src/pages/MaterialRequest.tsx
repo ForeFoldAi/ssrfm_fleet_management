@@ -381,9 +381,9 @@ const MaterialRequest = () => {
     );
   };
 
-  const handleMaterialSelect = (itemId: string, materialName: string) => {
-    console.log('Material selected:', materialName);
-    const material = getFilteredMaterials().find((m) => m.name === materialName);
+  const handleMaterialSelect = (itemId: string, materialId: string) => {
+    console.log('Material selected:', materialId);
+    const material = getFilteredMaterials().find((m) => m.id.toString() === materialId);
     console.log('Found material:', material);
     if (material) {
       // Use measureUnit.name directly instead of looking up by ID
@@ -815,17 +815,28 @@ const MaterialRequest = () => {
                   </TableCell>
                   <TableCell className='border border-gray-300'>
                     <Select
-                      value={item.productName}
+                      value={item.productName ? getFilteredMaterials().find(m => m.name === item.productName)?.id.toString() : ''}
                       onValueChange={(value) =>
                         handleMaterialSelect(item.id, value)
                       }
                     >
                       <SelectTrigger className='border-0 p-0 h-auto focus:ring-0 focus:outline-none rounded-none'>
-                        <SelectValue placeholder='Select Material' />
+                        <SelectValue placeholder='Select Material'>
+                          {item.productName && (
+                            <div className='flex flex-col'>
+                              <div className='font-semibold'>{item.productName}</div>
+                              {getFilteredMaterials().find(m => m.name === item.productName)?.makerBrand && (
+                                <div className='text-xs text-muted-foreground'>
+                                  {getFilteredMaterials().find(m => m.name === item.productName)?.makerBrand}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {getFilteredMaterials().map((material) => (
-                          <SelectItem key={material.name} value={material.name}>
+                          <SelectItem key={material.id} value={material.id.toString()}>
                             <div className='flex flex-col'>
                               <div className='font-semibold'>{material.name}</div>
                               {material.makerBrand && (
@@ -1142,17 +1153,28 @@ const MaterialRequest = () => {
                   <Label className='text-sm font-medium'>Materials *</Label>
                   <p className='text-xs text-muted-foreground'>💡 Select the material you want to request. The system will show current stock and specifications automatically.</p>
                   <Select
-                    value={item.productName}
+                    value={item.productName ? getFilteredMaterials().find(m => m.name === item.productName)?.id.toString() : ''}
                     onValueChange={(value) =>
                       handleMaterialSelect(item.id, value)
                     }
                   >
                     <SelectTrigger className='h-11 px-4 py-2 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-sm transition-all duration-200'>
-                      <SelectValue placeholder='Select Material' />
+                      <SelectValue placeholder='Select Material'>
+                        {item.productName && (
+                          <div className='flex flex-col'>
+                            <div className='font-semibold'>{item.productName}</div>
+                            {getFilteredMaterials().find(m => m.name === item.productName)?.makerBrand && (
+                              <div className='text-xs text-muted-foreground'>
+                                {getFilteredMaterials().find(m => m.name === item.productName)?.makerBrand}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {getFilteredMaterials().map((material) => (
-                        <SelectItem key={material.name} value={material.name}>
+                        <SelectItem key={material.id} value={material.id.toString()}>
                           <div className='flex flex-col'>
                             <div className='font-semibold'>{material.name}</div>
                             {material.makerBrand && (

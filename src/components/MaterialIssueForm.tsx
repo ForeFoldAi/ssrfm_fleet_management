@@ -792,10 +792,10 @@ export const MaterialIssueForm = ({
                             </div>
                           ) : (
                             <Select
-                              value={item.nameOfMaterial}
+                              value={item.materialId ? item.materialId.toString() : ''}
                               onValueChange={(value) => {
                                 const material = getFilteredMaterials().find(
-                                  (m) => m.name === value
+                                  (m) => m.id.toString() === value
                                 );
                                 if (material) {
                                   const newItems = [...formData.items];
@@ -828,7 +828,18 @@ export const MaterialIssueForm = ({
                                     <span>Loading...</span>
                                   </div>
                                 ) : (
-                                  <SelectValue placeholder='Select Material' />
+                                  <SelectValue placeholder='Select Material'>
+                                    {item.nameOfMaterial && (
+                                      <div className='flex flex-col'>
+                                        <span>{item.nameOfMaterial}</span>
+                                        {item.makerBrand && (
+                                          <span className='text-xs text-muted-foreground'>
+                                            {item.makerBrand}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </SelectValue>
                                 )}
                               </SelectTrigger>
                               <SelectContent>
@@ -840,7 +851,7 @@ export const MaterialIssueForm = ({
                                   getFilteredMaterials().map((material) => (
                                     <SelectItem
                                       key={material.id}
-                                      value={material.name}
+                                      value={material.id.toString()}
                                     >
                                       <div className='flex flex-col'>
                                         <span>{material.name}</span>
