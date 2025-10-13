@@ -848,21 +848,23 @@ export const MaterialIssueForm = ({
                                     {materialsError}
                                   </div>
                                 ) : (
-                                  getFilteredMaterials().map((material) => (
-                                    <SelectItem
-                                      key={material.id}
-                                      value={material.id.toString()}
-                                    >
-                                      <div className='flex flex-col'>
-                                        <span>{material.name}</span>
-                                        {material.makerBrand && (
-                                          <span className='text-xs text-muted-foreground'>
-                                            {material.makerBrand}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </SelectItem>
-                                  ))
+                                  getFilteredMaterials()
+                                    .sort((a, b) => a.name.localeCompare(b.name))
+                                    .map((material) => (
+                                      <SelectItem
+                                        key={material.id}
+                                        value={material.id.toString()}
+                                      >
+                                        <div className='flex flex-col'>
+                                          <span>{material.name}</span>
+                                          {material.makerBrand && (
+                                            <span className='text-xs text-muted-foreground'>
+                                              {material.makerBrand}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </SelectItem>
+                                    ))
                                 )}
                               </SelectContent>
                             </Select>
@@ -1027,14 +1029,16 @@ export const MaterialIssueForm = ({
                                     <SelectItem value='Other'>
                                       others
                                     </SelectItem>
-                                    {getFilteredMachines().map((machine) => (
-                                      <SelectItem
-                                        key={machine.id}
-                                        value={machine.name}
-                                      >
-                                        {machine.name}
-                                      </SelectItem>
-                                    ))}
+                                    {getFilteredMachines()
+                                      .sort((a, b) => a.name.localeCompare(b.name))
+                                      .map((machine) => (
+                                        <SelectItem
+                                          key={machine.id}
+                                          value={machine.name}
+                                        >
+                                          {machine.name}
+                                        </SelectItem>
+                                      ))}
                                   </>
                                 )}
                               </SelectContent>

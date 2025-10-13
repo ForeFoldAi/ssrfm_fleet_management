@@ -835,18 +835,20 @@ const MaterialRequest = () => {
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {getFilteredMaterials().map((material) => (
-                          <SelectItem key={material.id} value={material.id.toString()}>
-                            <div className='flex flex-col'>
-                              <div className='font-semibold'>{material.name}</div>
-                              {material.makerBrand && (
-                                <div className='text-xs text-muted-foreground'>
-                                  {material.makerBrand}
-                                </div>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
+                        {getFilteredMaterials()
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .map((material) => (
+                            <SelectItem key={material.id} value={material.id.toString()}>
+                              <div className='flex flex-col'>
+                                <div className='font-semibold'>{material.name}</div>
+                                {material.makerBrand && (
+                                  <div className='text-xs text-muted-foreground'>
+                                    {material.makerBrand}
+                                  </div>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                     {errors[`productName_${item.id}`] && (
@@ -1051,11 +1053,13 @@ const MaterialRequest = () => {
                         <SelectValue placeholder='Select Machine *' />
                       </SelectTrigger>
                       <SelectContent>
-                        {getFilteredMachines().map((machine) => (
-                          <SelectItem key={machine.id} value={machine.name}>
-                            {machine.name}
-                          </SelectItem>
-                        ))}
+                        {getFilteredMachines()
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .map((machine) => (
+                            <SelectItem key={machine.id} value={machine.name}>
+                              {machine.name}
+                            </SelectItem>
+                          ))}
                         <SelectItem value='Other'>Other</SelectItem>
                         <SelectItem value='Spare'>Spare</SelectItem>
                         <SelectItem value='Return'>Return</SelectItem>
@@ -1173,18 +1177,20 @@ const MaterialRequest = () => {
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {getFilteredMaterials().map((material) => (
-                        <SelectItem key={material.id} value={material.id.toString()}>
-                          <div className='flex flex-col'>
-                            <div className='font-semibold'>{material.name}</div>
-                            {material.makerBrand && (
-                              <div className='text-xs text-muted-foreground'>
-                                {material.makerBrand}
-                              </div>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
+                      {getFilteredMaterials()
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((material) => (
+                          <SelectItem key={material.id} value={material.id.toString()}>
+                            <div className='flex flex-col'>
+                              <div className='font-semibold'>{material.name}</div>
+                              {material.makerBrand && (
+                                <div className='text-xs text-muted-foreground'>
+                                  {material.makerBrand}
+                                </div>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   {errors[`productName_${item.id}`] && (
@@ -1301,11 +1307,13 @@ const MaterialRequest = () => {
                         <SelectValue placeholder='Select Machine *' />
                       </SelectTrigger>
                       <SelectContent>
-                        {getFilteredMachines().map((machine) => (
-                          <SelectItem key={machine.id} value={machine.name}>
-                            {machine.name}
-                          </SelectItem>
-                        ))}
+                        {getFilteredMachines()
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .map((machine) => (
+                            <SelectItem key={machine.id} value={machine.name}>
+                              {machine.name}
+                            </SelectItem>
+                          ))}
                         <SelectItem value='Other'>Other</SelectItem>
                         <SelectItem value='Spare'>Spare</SelectItem>
                         <SelectItem value='Return'>Return</SelectItem>
