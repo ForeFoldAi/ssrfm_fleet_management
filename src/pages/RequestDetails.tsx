@@ -187,6 +187,19 @@ const RequestDetails: React.FC = () => {
     return formattedId;
   };
 
+  // Helper function to get machine name based on purpose type
+  const getMachineName = (item: any) => {
+    // Check if purposeType is spare, other, or return
+    const purposeType = item.purposeType?.toLowerCase();
+    if (purposeType === 'spare' || purposeType === 'other' || purposeType === 'return') {
+      // For spare/other/return, use the machineName field or capitalize the purposeType
+      return item.machineName || purposeType.charAt(0).toUpperCase() + purposeType.slice(1);
+    }
+    
+    // For machine purpose type, use the actual machine name
+    return item.machine?.name || 'N/A';
+  };
+
   useEffect(() => {
     const loadRequestData = async () => {
       if (!decodedRequestId) {
@@ -309,7 +322,7 @@ const RequestDetails: React.FC = () => {
             id: item.id.toString(),
             srNo: formatPurchaseId(indentData.uniqueId, indentData.branch?.code), // Use the same formatted ID as the Purchase ID
             productName: item.material.name,
-            machineName: item.machine?.name || 'N/A',
+            machineName: getMachineName(item), // Use helper function to get correct machine name based on purpose type
             specifications:
               item.specifications || item.material.specifications || '',
             oldStock: item.currentStock,
@@ -823,14 +836,14 @@ const RequestDetails: React.FC = () => {
             id: item.id.toString(),
             srNo: formatPurchaseId(refreshedIndent.uniqueId, refreshedIndent.branch?.code),
             productName: item.material.name,
-            machineName: item.machine?.name || 'N/A',
+            machineName: getMachineName(item), // Use helper function to get correct machine name based on purpose type
             specifications: item.specifications || item.material.specifications || '',
             oldStock: item.currentStock,
             reqQuantity: item.requestedQuantity.toString(),
             measureUnit: item.material.measureUnitId?.toString() || 'units',
             notes: item.notes || '',
             imagePreviews: item.imagePaths || [],
-            purposeType: PurposeType.MACHINE,
+            purposeType: (item as any).purposeType || PurposeType.MACHINE, // Use actual purposeType from API data
             vendorQuotations: item.quotations
               // Show ALL quotations if pending_approval, only selected ones otherwise
               .filter((quotation) => 
