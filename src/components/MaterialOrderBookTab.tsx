@@ -958,7 +958,7 @@ export const MaterialOrderBookTab = () => {
   const transformFormDataToApiFormat = (formData: any) => {
     console.log('Transforming form data to API format:', formData);
 
-    const apiData = {
+    const newData = {
       additionalNotes: `Resubmitted after addressing revert reason: ${
         selectedRequestForResubmit?.rejectionReason || 'N/A'
       }. Changes made: ${formData.resubmissionNotes || 'N/A'}`,
@@ -1014,9 +1014,9 @@ export const MaterialOrderBookTab = () => {
           itemData.machineName = item.machineName || item.purposeType;
         }
 
-        // Handle vendor quotations - include all required fields (exclude ID for new quotations)
+        // Handle vendor quotations - use vendorQuotations field and remove IDs
         if (item.vendorQuotations && item.vendorQuotations.length > 0) {
-          itemData.quotations = item.vendorQuotations.map(
+          itemData.vendorQuotations = item.vendorQuotations.map(
             (quotation: any) => ({
               // Don't pass id - let backend create new quotation records
               vendorName: quotation.vendorName,
@@ -1040,8 +1040,19 @@ export const MaterialOrderBookTab = () => {
       }),
     };
 
-    console.log('Transformed API data:', apiData);
-    return apiData;
+    // Remove IDs from vendorQuotations as requested
+    const newDataWithOutIds = {
+      ...newData,
+      items: newData.items?.map((eachItem) => ({
+        ...eachItem,
+        vendorQuotations: eachItem.vendorQuotations?.map(
+          ({ id, ...rest }) => rest
+        ),
+      })),
+    };
+
+    console.log('Transformed API data:', newDataWithOutIds);
+    return newDataWithOutIds;
   };
 
   // Handle item changes in the form

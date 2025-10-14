@@ -1106,7 +1106,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
               <div className='w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center'>
                 <UserRoundPlus className='w-6 h-6 text-primary' />
               </div>
-              Manage Vendor Quotations (Optional)
+              Manage Vendor Quotations 
             </DialogTitle>
           </DialogHeader>
 
@@ -1114,7 +1114,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
             {/* Current Quotations Table */}
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
-                <h3 className='text-lg font-semibold'>Current Quotations (Optional)</h3>
+                <h3 className='text-lg font-semibold'>Current Quotations</h3>
                 <Badge variant='secondary'>
                   {requestData.items.find((item) => item.id === currentItemId)
                     ?.vendorQuotations.length || 0}
@@ -1228,7 +1228,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
 
             {/* Add New Quotation Form */}
             <div className='space-y-4 border-t pt-6'>
-              <h3 className='text-lg font-semibold'>Add New Quotation (Optional)</h3>
+              <h3 className='text-lg font-semibold'>Add New Quotation </h3>
 
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
                 <div className='space-y-2'>
