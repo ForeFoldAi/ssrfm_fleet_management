@@ -90,13 +90,24 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   };
 
   // Filter data to show only received materials and relevant statuses
-  const filteredHistoryData = historyData.filter((item) => 
-    item.status === 'fully_received' || 
-    item.status === 'partially_received' ||
-    item.status === 'ordered' ||
-    item.status === 'approved' ||
-    item.status === 'completed'
-  );
+  // Then sort by date descending (newest first), then by ID descending
+  // NOTE: The purchasedFrom field should contain the vendor selected by the company owner during approval
+  const filteredHistoryData = historyData
+    .filter((item) => 
+      item.status === 'fully_received' || 
+      item.status === 'partially_received' ||
+      item.status === 'ordered' ||
+      item.status === 'approved' ||
+      item.status === 'completed'
+    )
+    .sort((a, b) => {
+      // First, sort by date (newest first)
+      const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (dateComparison !== 0) return dateComparison;
+      
+      // If dates are equal, sort by ID (descending)
+      return b.id.localeCompare(a.id);
+    });
 
   const renderOwnerHistory = () => (
     <Card className='rounded-lg shadow-sm'>

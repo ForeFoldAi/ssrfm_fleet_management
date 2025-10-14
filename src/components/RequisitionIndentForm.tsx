@@ -709,7 +709,7 @@ export const RequisitionIndentForm: React.FC<RequisitionIndentFormProps> = ({
                               <div key={receipt.id} className='text-xs bg-blue-50 border border-blue-200 p-2 rounded'>
                                 <div className='flex justify-between items-start mb-1'>
                                   <span className='font-medium text-blue-800'>
-                                    Receipt #{index + 1}
+                                    Receipt
                                   </span>
                                   <span className='text-blue-600 font-medium'>
                                     {receipt.receivedQuantity} {item.measureUnit}

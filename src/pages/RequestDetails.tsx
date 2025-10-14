@@ -111,6 +111,7 @@ interface RequestData {
     notes?: string;
     status: string;
     items?: MaterialPurchaseItem[];
+    purchasedFrom?: string;
   }>;
   apiData?: MaterialIndent; // Store the original API data
   partialReceiptHistory?: Array<{
@@ -180,11 +181,8 @@ const RequestDetails: React.FC = () => {
 
   // Helper function to format Purchase ID (same as MaterialOrderBookTab)
   const formatPurchaseId = (uniqueId: string, branchCode?: string) => {
-    // Convert to uppercase and keep numeric unit format (UNIT1, UNIT2, etc.)
+    // Convert to uppercase and keep hyphen format (UNIT-1, UNIT-2, etc.)
     let formattedId = uniqueId.toUpperCase();
-
-    // Remove any hyphens between UNIT and number
-    formattedId = formattedId.replace(/UNIT-(\d+)/g, 'UNIT$1');
 
     return formattedId;
   };
@@ -1234,7 +1232,16 @@ const RequestDetails: React.FC = () => {
         console.log('Fetching last 5 indents for material ID:', materialId);
         
         const indents = await materialIndentsApi.getLastFive(materialId);
-        setLastFiveIndents(indents);
+        // Sort by date descending (newest first), then by uniqueId descending
+        const sortedIndents = indents.sort((a, b) => {
+          // First, sort by date (newest first)
+          const dateComparison = new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime();
+          if (dateComparison !== 0) return dateComparison;
+          
+          // If dates are equal, sort by uniqueId (descending)
+          return b.uniqueId.localeCompare(a.uniqueId);
+        });
+        setLastFiveIndents(sortedIndents);
       } catch (error) {
         console.error('Error fetching last five indents:', error);
         setHistoryError('Failed to load recent Last 5 Material Transactions.');
@@ -1260,41 +1267,71 @@ const RequestDetails: React.FC = () => {
           // Get the first item for display purposes
           const firstItem =
             indent.items && indent.items.length > 0 ? indent.items[0] : null;
-          const firstQuotation =
-            firstItem?.selectedQuotation ||
-            (firstItem?.quotations && firstItem.quotations.length > 0
-              ? firstItem.quotations[0]
-              : null);
+          
+          // Use ONLY the selected quotation (approved by company owner)
+          // Try multiple approaches to find the selected quotation:
+          // 1. Check if selectedQuotation is directly available
+          let selectedQuotation = firstItem?.selectedQuotation || null;
+          
+          // 2. If not found, look for quotation with isSelected === true
+          if (!selectedQuotation && firstItem?.quotations) {
+            selectedQuotation = firstItem.quotations.find(q => q.isSelected === true) || null;
+          }
+
+          // Log for debugging which vendor was selected
+          if (selectedQuotation) {
+            console.log(`History item ${indent.uniqueId}: Selected vendor is ${selectedQuotation.vendorName} with price ₹${selectedQuotation.quotationAmount}`);
+          }
 
           return {
             id: formatPurchaseId(indent.uniqueId, indent.branch?.code), // Apply formatting here too
             date: indent.requestDate,
             materialName: firstItem?.material?.name || 'Unknown',
             quantity: firstItem ? `${firstItem.requestedQuantity}` : '0',
-            purchaseValue: firstQuotation ? firstQuotation.price : '0', // Use price (unit price) instead of quotationAmount
+            purchaseValue: selectedQuotation ? selectedQuotation.quotationAmount : '0', // Use selected vendor's quotation amount
             previousMaterialValue: '0', // Default value
             perMeasureQuantity: '1', // Default value
-            requestedValue: firstQuotation ? firstQuotation.price : '0', // Use price instead of quotationAmount
-            currentValue: firstQuotation ? firstQuotation.price : '0', // Use price instead of quotationAmount
+            requestedValue: selectedQuotation ? selectedQuotation.quotationAmount : '0', // Use selected vendor's quotation amount
+            currentValue: selectedQuotation ? selectedQuotation.quotationAmount : '0', // Use selected vendor's quotation amount
             status: indent.status,
             requestedBy: indent.requestedBy?.name,
             location: indent.branch?.name || 'Unknown',
-            purchasedFrom: firstQuotation?.vendorName || 'No Vendor', // Add vendor name from approved quotation
+            purchasedFrom: selectedQuotation?.vendorName || 'No Vendor', // Show selected vendor name (approved by company owner)
           };
         })
         .slice(0, 5); // Take only the first 5 after filtering
     } else {
       // For supervisor, show receipt history from current indent
+      // Get the selected vendor from the current indent's first item
+      const firstItem = requestData.apiData?.items?.[0];
+      let selectedQuotation = firstItem?.selectedQuotation || null;
+      
+      // Fallback: look for quotation with isSelected === true
+      if (!selectedQuotation && firstItem?.quotations) {
+        selectedQuotation = firstItem.quotations.find(q => q.isSelected === true) || null;
+      }
+      
+      const selectedVendorName = selectedQuotation?.vendorName || 'No Vendor';
+      
       // Return receipt history for supervisor, but ensure it matches the HistoryItem interface
-      return (requestData.receiptHistory || []).map((item) => ({
-        ...item,
-        purchaseValue: item.totalValue || '0',
-        previousMaterialValue: '0', // Default value
-        perMeasureQuantity: '1', // Default value
-        requestedValue: item.totalValue || '0',
-        currentValue: item.totalValue || '0',
-        purchasedFrom: 'No Vendor', // For supervisor view, vendor info not available in receipt history
-      }));
+      return (requestData.receiptHistory || [])
+        .map((item) => ({
+          ...item,
+          purchaseValue: item.totalValue || '0',
+          previousMaterialValue: '0', // Default value
+          perMeasureQuantity: '1', // Default value
+          requestedValue: item.totalValue || '0',
+          currentValue: item.totalValue || '0',
+          purchasedFrom: selectedVendorName, // Use the selected vendor from the indent
+        }))
+        .sort((a, b) => {
+          // First, sort by date (newest first)
+          const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime();
+          if (dateComparison !== 0) return dateComparison;
+          
+          // If dates are equal, sort by ID (descending)
+          return b.id.localeCompare(a.id);
+        });
     }
   };
 
@@ -1831,7 +1868,18 @@ const RequestDetails: React.FC = () => {
                         setHistoryError(null);
                         materialIndentsApi
                           .getLastFive(materialId)
-                          .then((indents) => setLastFiveIndents(indents))
+                          .then((indents) => {
+                            // Sort by date descending (newest first), then by uniqueId descending
+                            const sortedIndents = indents.sort((a, b) => {
+                              // First, sort by date (newest first)
+                              const dateComparison = new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime();
+                              if (dateComparison !== 0) return dateComparison;
+                              
+                              // If dates are equal, sort by uniqueId (descending)
+                              return b.uniqueId.localeCompare(a.uniqueId);
+                            });
+                            setLastFiveIndents(sortedIndents);
+                          })
                           .catch((err) => {
                             console.error('Error fetching history:', err);
                             setHistoryError(
