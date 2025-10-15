@@ -884,15 +884,20 @@ const RequestDetails: React.FC = () => {
 
       // Status-specific success messages
       let successMessage = '';
+      let shouldNavigateBack = false;
+      
       switch (newStatus) {
         case IndentStatus.APPROVED:
           successMessage = 'Material indent has been approved successfully';
+          shouldNavigateBack = true;
           break;
         case IndentStatus.REVERTED:
           successMessage = 'Material indent has been reverted for corrections';
+          shouldNavigateBack = true;
           break;
         case IndentStatus.ORDERED:
           successMessage = 'Purchase order has been created successfully';
+          shouldNavigateBack = true;
           break;
         case IndentStatus.PARTIALLY_RECEIVED: {
           const receiptCount = (requestData.apiData?.partialReceiptHistory?.length || 0) + 1;
@@ -901,6 +906,7 @@ const RequestDetails: React.FC = () => {
         }
         case IndentStatus.FULLY_RECEIVED:
           successMessage = 'Material fully received and status updated';
+          shouldNavigateBack = true;
           break;
         default:
           successMessage = `Request status changed to ${newStatus.replace('_', ' ')}`;
@@ -910,6 +916,15 @@ const RequestDetails: React.FC = () => {
         title: 'Success',
         description: successMessage,
       });
+
+      // Navigate back to MaterialOrderBookTab after successful submission
+      if (shouldNavigateBack) {
+        setTimeout(() => {
+          navigate('/materials-inventory', {
+            state: { activeTab: 'material-order-book' },
+          });
+        }, 1500);
+      }
     } catch (error: unknown) {
       console.error('Error updating status:', error);
       
@@ -1080,6 +1095,13 @@ const RequestDetails: React.FC = () => {
         description:
           'Request has been resubmitted for approval with updated vendor quotations',
       });
+
+      // Navigate back to MaterialOrderBookTab after successful resubmission
+      setTimeout(() => {
+        navigate('/materials-inventory', {
+          state: { activeTab: 'material-order-book' },
+        });
+      }, 1500);
     } catch (error: unknown) {
       console.error('Error resubmitting request:', error);
       

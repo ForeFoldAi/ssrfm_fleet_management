@@ -905,13 +905,13 @@ export const MaterialOrderBookTab = () => {
       setLoadingResubmitId(null);
       setIsSubmittingResubmit(false);
 
-      // Refresh the data from API
-      await fetchMaterialIndents(pagination.page, pagination.limit);
-
       toast({
         title: 'Success',
         description: 'Request resubmitted successfully.',
       });
+
+      // Refresh the data from API
+      await fetchMaterialIndents(pagination.page, pagination.limit);
     } catch (error) {
       console.error('Failed to resubmit request:', error);
 
@@ -1323,16 +1323,18 @@ export const MaterialOrderBookTab = () => {
         approvalData
       );
 
+      setIsApprovalDialogOpen(false);
+      setSelectedIndentForApproval(null);
+      setSelectedItemId(null);
+      setSelectedQuotationId(null);
+
       toast({
         title: 'Success',
         description: 'Material indent approved successfully.',
       });
 
-      setIsApprovalDialogOpen(false);
-      setSelectedIndentForApproval(null);
-      setSelectedItemId(null);
-      setSelectedQuotationId(null);
-      fetchMaterialIndents(pagination.page, pagination.limit);
+      // Refresh the data
+      await fetchMaterialIndents(pagination.page, pagination.limit);
     } catch (error) {
       console.error('Error approving indent:', error);
 
@@ -1418,14 +1420,16 @@ export const MaterialOrderBookTab = () => {
       // Update indent status to ordered
       // Note: You might need to add an update status API call here
 
+      setIsOrderDialogOpen(false);
+      setSelectedIndentForOrder(null);
+
       toast({
         title: 'Success',
         description: 'Purchase order created successfully.',
       });
 
-      setIsOrderDialogOpen(false);
-      setSelectedIndentForOrder(null);
-      fetchMaterialIndents(pagination.page, pagination.limit);
+      // Refresh the data
+      await fetchMaterialIndents(pagination.page, pagination.limit);
     } catch (error) {
       console.error('Error creating purchase order:', error);
       toast({
@@ -2798,7 +2802,7 @@ export const MaterialOrderBookTab = () => {
               {pagination && !searchTerm.trim() && (
                 <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
                   {/* Page Info */}
-                  <div className='text-sm text-muted-foreground'>
+                  <div className='text-xs sm:text-sm text-muted-foreground'>
                     Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
                     {Math.min(
                       pagination.page * pagination.limit,
@@ -2808,17 +2812,17 @@ export const MaterialOrderBookTab = () => {
                   </div>
 
                   {/* Pagination Controls */}
-                  <div className='flex items-center gap-2'>
-                    {/* Items per page selector */}
-                    <div className='flex items-center gap-2'>
-                      <span className='text-sm text-muted-foreground'>Show:</span>
+                  <div className='flex flex-col sm:flex-row items-center gap-3 sm:gap-2 w-full sm:w-auto'>
+                    {/* Items per page selector - Mobile optimized */}
+                    <div className='flex items-center gap-2 w-full sm:w-auto justify-center'>
+                      <span className='text-xs sm:text-sm text-muted-foreground whitespace-nowrap'>Show:</span>
                       <Select
                         value={pagination.limit.toString()}
                         onValueChange={(value) =>
                           handleLimitChange(parseInt(value))
                         }
                       >
-                        <SelectTrigger className='w-20 h-8'>
+                        <SelectTrigger className='w-16 sm:w-20 h-8 text-xs sm:text-sm'>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -2828,13 +2832,14 @@ export const MaterialOrderBookTab = () => {
                           <SelectItem value='100'>100</SelectItem>
                         </SelectContent>
                       </Select>
-                      <span className='text-sm text-muted-foreground'>
+                      <span className='text-xs sm:text-sm text-muted-foreground whitespace-nowrap'>
                         per page
                       </span>
                     </div>
 
-                    {/* Page navigation */}
+                    {/* Page navigation - Mobile optimized */}
                     <div className='flex items-center gap-1'>
+                      {/* First page button */}
                       <Button
                         variant='outline'
                         size='sm'
@@ -2842,28 +2847,30 @@ export const MaterialOrderBookTab = () => {
                         disabled={
                           !pagination.hasPreviousPage || pagination.page === 1
                         }
-                        className='h-8 w-8 p-0'
+                        className='h-7 w-7 sm:h-8 sm:w-8 p-0'
                       >
-                        <ChevronsLeft className='w-4 h-4' />
+                        <ChevronsLeft className='w-3 h-3 sm:w-4 sm:h-4' />
                       </Button>
 
+                      {/* Previous page button */}
                       <Button
                         variant='outline'
                         size='sm'
                         onClick={() => handlePageChange(pagination.page - 1)}
                         disabled={!pagination.hasPreviousPage}
-                        className='h-8 w-8 p-0'
+                        className='h-7 w-7 sm:h-8 sm:w-8 p-0'
                       >
-                        <ChevronLeft className='w-4 h-4' />
+                        <ChevronLeft className='w-3 h-3 sm:w-4 sm:h-4' />
                       </Button>
 
-                      {/* Page numbers */}
-                      <div className='flex items-center gap-1 mx-2'>
+                      {/* Page numbers - Show up to 6 pages */}
+                      <div className='flex items-center gap-1 mx-1 sm:mx-2'>
                         {Array.from(
-                          { length: Math.min(5, pagination.pageCount) },
+                          { length: Math.min(6, pagination.pageCount) },
                           (_, i) => {
                             let pageNum;
-                            if (pagination.pageCount <= 5) {
+                            
+                            if (pagination.pageCount <= 6) {
                               pageNum = i + 1;
                             } else if (pagination.page <= 3) {
                               pageNum = i + 1;
@@ -2871,9 +2878,9 @@ export const MaterialOrderBookTab = () => {
                               pagination.page >=
                               pagination.pageCount - 2
                             ) {
-                              pageNum = pagination.pageCount - 4 + i;
+                              pageNum = pagination.pageCount - 5 + i;
                             } else {
-                              pageNum = pagination.page - 2 + i;
+                              pageNum = pagination.page - 3 + i;
                             }
 
                             return (
@@ -2886,7 +2893,7 @@ export const MaterialOrderBookTab = () => {
                                 }
                                 size='sm'
                                 onClick={() => handlePageChange(pageNum)}
-                                className='h-8 w-8 p-0'
+                                className='h-7 w-7 sm:h-8 sm:w-8 p-0 text-xs sm:text-sm'
                               >
                                 {pageNum}
                               </Button>
@@ -2895,16 +2902,18 @@ export const MaterialOrderBookTab = () => {
                         )}
                       </div>
 
+                      {/* Next page button */}
                       <Button
                         variant='outline'
                         size='sm'
                         onClick={() => handlePageChange(pagination.page + 1)}
                         disabled={!pagination.hasNextPage}
-                        className='h-8 w-8 p-0'
+                        className='h-7 w-7 sm:h-8 sm:w-8 p-0'
                       >
-                        <ChevronRight className='w-4 h-4' />
+                        <ChevronRight className='w-3 h-3 sm:w-4 sm:h-4' />
                       </Button>
 
+                      {/* Last page button */}
                       <Button
                         variant='outline'
                         size='sm'
@@ -2913,9 +2922,9 @@ export const MaterialOrderBookTab = () => {
                           !pagination.hasNextPage ||
                           pagination.page === pagination.pageCount
                         }
-                        className='h-8 w-8 p-0'
+                        className='h-7 w-7 sm:h-8 sm:w-8 p-0'
                       >
-                        <ChevronsRight className='w-4 h-4' />
+                        <ChevronsRight className='w-3 h-3 sm:w-4 sm:h-4' />
                       </Button>
                     </div>
                   </div>

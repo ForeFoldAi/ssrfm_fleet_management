@@ -1128,7 +1128,7 @@ export const MachinesTab = () => {
       {machinesData && machinesData.meta && !searchQuery.trim() && !error && (
         <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
           {/* Page Info */}
-          <div className='text-sm text-muted-foreground'>
+          <div className='text-xs sm:text-sm text-muted-foreground'>
             Showing {(machinesData.meta.page - 1) * machinesData.meta.limit + 1}{' '}
             to{' '}
             {Math.min(
@@ -1139,10 +1139,10 @@ export const MachinesTab = () => {
           </div>
 
           {/* Pagination Controls */}
-          <div className='flex items-center gap-2'>
-            {/* Items per page selector */}
-            <div className='flex items-center gap-2'>
-              <span className='text-sm text-muted-foreground'>Show:</span>
+          <div className='flex flex-col sm:flex-row items-center gap-3 sm:gap-2 w-full sm:w-auto'>
+            {/* Items per page selector - Mobile optimized */}
+            <div className='flex items-center gap-2 w-full sm:w-auto justify-center'>
+              <span className='text-xs sm:text-sm text-muted-foreground whitespace-nowrap'>Show:</span>
               <Select
                 value={itemsPerPage.toString()}
                 onValueChange={(value) => {
@@ -1152,7 +1152,7 @@ export const MachinesTab = () => {
                   fetchMachines();
                 }}
               >
-                <SelectTrigger className='w-20 h-8'>
+                <SelectTrigger className='w-16 sm:w-20 h-8 text-xs sm:text-sm'>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1162,11 +1162,12 @@ export const MachinesTab = () => {
                   <SelectItem value='100'>100</SelectItem>
                 </SelectContent>
               </Select>
-              <span className='text-sm text-muted-foreground'>per page</span>
+              <span className='text-xs sm:text-sm text-muted-foreground whitespace-nowrap'>per page</span>
             </div>
 
-            {/* Page navigation */}
+            {/* Page navigation - Mobile optimized */}
             <div className='flex items-center gap-1'>
+              {/* First page button */}
               <Button
                 variant='outline'
                 size='sm'
@@ -1178,11 +1179,12 @@ export const MachinesTab = () => {
                   !machinesData.meta.hasPreviousPage ||
                   machinesData.meta.page === 1
                 }
-                className='h-8 w-8 p-0'
+                className='h-7 w-7 sm:h-8 sm:w-8 p-0'
               >
-                <ChevronsLeft className='w-4 h-4' />
+                <ChevronsLeft className='w-3 h-3 sm:w-4 sm:h-4' />
               </Button>
 
+              {/* Previous page button */}
               <Button
                 variant='outline'
                 size='sm'
@@ -1191,18 +1193,19 @@ export const MachinesTab = () => {
                   fetchMachines();
                 }}
                 disabled={!machinesData.meta.hasPreviousPage}
-                className='h-8 w-8 p-0'
+                className='h-7 w-7 sm:h-8 sm:w-8 p-0'
               >
-                <ChevronLeft className='w-4 h-4' />
+                <ChevronLeft className='w-3 h-3 sm:w-4 sm:h-4' />
               </Button>
 
-              {/* Page numbers */}
-              <div className='flex items-center gap-1 mx-2'>
+              {/* Page numbers - Show up to 6 pages */}
+              <div className='flex items-center gap-1 mx-1 sm:mx-2'>
                 {Array.from(
-                  { length: Math.min(5, machinesData.meta.pageCount) },
+                  { length: Math.min(6, machinesData.meta.pageCount) },
                   (_, i) => {
                     let pageNum;
-                    if (machinesData.meta.pageCount <= 5) {
+                    
+                    if (machinesData.meta.pageCount <= 6) {
                       pageNum = i + 1;
                     } else if (machinesData.meta.page <= 3) {
                       pageNum = i + 1;
@@ -1210,9 +1213,9 @@ export const MachinesTab = () => {
                       machinesData.meta.page >=
                       machinesData.meta.pageCount - 2
                     ) {
-                      pageNum = machinesData.meta.pageCount - 4 + i;
+                      pageNum = machinesData.meta.pageCount - 5 + i;
                     } else {
-                      pageNum = machinesData.meta.page - 2 + i;
+                      pageNum = machinesData.meta.page - 3 + i;
                     }
 
                     return (
@@ -1228,7 +1231,7 @@ export const MachinesTab = () => {
                           setCurrentPage(pageNum);
                           fetchMachines();
                         }}
-                        className='h-8 w-8 p-0'
+                        className='h-7 w-7 sm:h-8 sm:w-8 p-0 text-xs sm:text-sm'
                       >
                         {pageNum}
                       </Button>
@@ -1237,6 +1240,7 @@ export const MachinesTab = () => {
                 )}
               </div>
 
+              {/* Next page button */}
               <Button
                 variant='outline'
                 size='sm'
@@ -1245,11 +1249,12 @@ export const MachinesTab = () => {
                   fetchMachines();
                 }}
                 disabled={!machinesData.meta.hasNextPage}
-                className='h-8 w-8 p-0'
+                className='h-7 w-7 sm:h-8 sm:w-8 p-0'
               >
-                <ChevronRight className='w-4 h-4' />
+                <ChevronRight className='w-3 h-3 sm:w-4 sm:h-4' />
               </Button>
 
+              {/* Last page button */}
               <Button
                 variant='outline'
                 size='sm'
@@ -1261,9 +1266,9 @@ export const MachinesTab = () => {
                   !machinesData.meta.hasNextPage ||
                   machinesData.meta.page === machinesData.meta.pageCount
                 }
-                className='h-8 w-8 p-0'
+                className='h-7 w-7 sm:h-8 sm:w-8 p-0'
               >
-                <ChevronsRight className='w-4 h-4' />
+                <ChevronsRight className='w-3 h-3 sm:w-4 sm:h-4' />
               </Button>
             </div>
           </div>

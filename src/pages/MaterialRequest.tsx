@@ -737,7 +737,7 @@ const MaterialRequest = () => {
         });
       }
 
-      // Reset form only if all items were submitted successfully
+      // Reset form and navigate back if all items were submitted successfully
       if (failedItems.length === 0) {
         setRequestItems([
           {
@@ -759,7 +759,13 @@ const MaterialRequest = () => {
         ]);
         setAdditionalNotes('');
         setErrors({});
-        navigate('/materials-inventory');
+        
+        // Navigate back to MaterialOrderBookTab after successful submission
+        setTimeout(() => {
+          navigate('/materials-inventory', {
+            state: { activeTab: 'material-order-book' },
+          });
+        }, 1500);
       }
     } catch (err) {
       console.error('Error in submission process:', err);

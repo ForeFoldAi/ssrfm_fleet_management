@@ -1,7 +1,7 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { TopHeaderSimple } from "./TopHeaderSimple";
 import { Sidebar } from "./Sidebar";
-import { LogOut, Menu, Home, Package, List, ChevronDown , LayoutDashboard} from "lucide-react";
+import { LogOut, Menu, Home, Package, List, ChevronDown , LayoutDashboard, Bell} from "lucide-react";
 import { Button } from "./ui/button";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { useRole } from "../contexts/RoleContext";
@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Badge } from "./ui/badge";
 
 export const Layout = () => {
   const { logout, currentUser, hasPermission, isCompanyLevel } = useRole();
@@ -25,6 +26,7 @@ export const Layout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [isNotificationEnabled, setIsNotificationEnabled] = useState(false);
 
   // Track current path for refresh persistence
   useEffect(() => {
@@ -33,6 +35,62 @@ export const Layout = () => {
       localStorage.setItem('last-visited-path', location.pathname);
     }
   }, [location.pathname]);
+
+  // Check notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window) {
+      setIsNotificationEnabled(Notification.permission === 'granted');
+    }
+  }, []);
+
+  // Firebase Notification Toggle Handler
+  const handleToggleNotifications = async () => {
+    try {
+      if ('Notification' in window) {
+        if (Notification.permission === 'granted') {
+          // Disable notifications
+          setIsNotificationEnabled(false);
+          toast({
+            title: "Notifications Disabled",
+            description: "You will no longer receive push notifications.",
+          });
+          // TODO: Remove FCM token from backend
+        } else {
+          // Request permission
+          const permission = await Notification.requestPermission();
+          
+          if (permission === 'granted') {
+            setIsNotificationEnabled(true);
+            toast({
+              title: "Notifications Enabled",
+              description: "You will now receive notifications for important updates.",
+            });
+            // TODO: Initialize Firebase Cloud Messaging and save token to backend
+          } else if (permission === 'denied') {
+            setIsNotificationEnabled(false);
+            toast({
+              title: "Notifications Blocked",
+              description: "Please enable notifications in your browser settings.",
+              variant: "destructive",
+            });
+          }
+        }
+      } else {
+        toast({
+          title: "Not Supported",
+          description: "Your browser doesn't support notifications.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling notifications:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update notification settings. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -175,14 +233,35 @@ export const Layout = () => {
                     <p className="text-sm font-medium">{currentUser?.name || 'User'}</p>
                     <p className="text-xs text-muted-foreground">{currentUser?.email || ''}</p>
                     <p className="text-xs text-primary font-semibold capitalize">
-                      {currentUser?.role?.replace('_', ' ') || ''}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-foreground">
                   <div className="w-full">
-            <RoleSwitcher />
+                    <RoleSwitcher />
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-foreground cursor-pointer"
+                  onClick={handleToggleNotifications}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <Bell className={`w-4 h-4 ${isNotificationEnabled ? 'text-green-600' : 'text-muted-foreground'}`} />
+                      <span className="text-sm">Push Notifications</span>
+                    </div>
+                    <Badge 
+                      className={`text-xs px-2 py-0.5 ${
+                        isNotificationEnabled 
+                          ? 'bg-green-100 text-green-700 border-green-300' 
+                          : 'bg-gray-100 text-gray-600 border-gray-300'
+                      }`}
+                      variant="outline"
+                    >
+                      {isNotificationEnabled ? 'ON' : 'OFF'}
+                    </Badge>
                   </div>
                 </DropdownMenuItem>
               </DropdownMenuContent>
