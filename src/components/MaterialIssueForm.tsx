@@ -1166,21 +1166,6 @@ export const MaterialIssueForm = ({
                             size='sm'
                             onClick={() => {
                               if (formData.items.length > 1) {
-                                const itemToRemove = formData.items[index];
-                                const confirmed = window.confirm(
-                                  `🗑️ Remove Item\n\n` +
-                                    `Are you sure you want to remove this item?\n` +
-                                    `Material: ${
-                                      itemToRemove.nameOfMaterial ||
-                                      'Not selected'
-                                    }\n` +
-                                    `Quantity: ${
-                                      itemToRemove.issuedQty || '0'
-                                    } units\n\n` +
-                                    `This action cannot be undone.`
-                                );
-
-                                if (confirmed) {
                                   const newItems = formData.items.filter(
                                     (_, i) => i !== index
                                   );
@@ -1194,7 +1179,6 @@ export const MaterialIssueForm = ({
                                       'The item has been successfully removed from the issue form.',
                                     variant: 'default',
                                   });
-                                }
                               } else {
                                 toast({
                                   title: '⚠️ Cannot Remove Item',

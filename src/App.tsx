@@ -12,6 +12,7 @@ import { NavigationTracker } from './components/NavigationTracker';
 import Dashboard from './pages/Dashboard';
 import MaterialsInventory from './pages/MaterialsInventory';
 import MaterialRequest from './pages/MaterialRequest';
+import { FleetManagement } from './pages/fleet_page/fleet_management';
 
 import AddStock from './pages/AddStock';
 import OrganizationalManagement from './pages/OrganizationalManagement';
@@ -133,6 +134,8 @@ const AppRoutes = () => {
         {/* Keep the standalone material-request route for backwards compatibility */}
         <Route path='material-request' element={<MaterialRequest />} />
         
+        {/* Fleet Management Route */}
+        <Route path='fleet-management' element={<FleetManagement />} />
       
         <Route path='add-stock' element={<AddStock />} />
       
