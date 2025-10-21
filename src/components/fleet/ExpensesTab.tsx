@@ -1113,19 +1113,10 @@ export const ExpensesTab = () => {
               {/* Additional Information */}
                   <div className='space-y-3'>
                     <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
-                      Additional Information
+                      Additional Notes
                     </h4>
-
                     <div className='space-y-1'>
-                      <Label className='text-xs font-medium'>Description</Label>
-                      <div className='min-h-[40px] px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
-                        {viewingExpense.description || 'N/A'}
-                      </div>
-                    </div>
-
-                    <div className='space-y-1'>
-                      <Label className='text-xs font-medium'>Notes</Label>
-                      <div className='min-h-[40px] px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                     <div className='min-h-[40px] px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                         {viewingExpense.notes || 'N/A'}
                       </div>
                     </div>

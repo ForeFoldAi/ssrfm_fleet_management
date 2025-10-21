@@ -682,34 +682,20 @@ export const ExpensesForm = ({
               {/* Additional Information */}
               <div className='space-y-3'>
                 <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
-                  Additional Information
+                  Additional Notes
                 </h4>
 
                 <div className='space-y-1'>
-                  <Label htmlFor='description' className='text-xs font-medium'>
-                    Description
-                  </Label>
                   <Textarea
                     id='description'
                     value={formData.description}
                     onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder='Detailed description of the expense...'
+                    placeholder='Any additional notes about the expense...'
                     className='min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200 placeholder:text-muted-foreground'
                   />
                 </div>
 
-                <div className='space-y-1'>
-                  <Label htmlFor='notes' className='text-xs font-medium'>
-                    Notes
-                  </Label>
-                <Textarea
-                  id='notes'
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  placeholder='Any additional notes about the expense...'
-                    className='min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200 placeholder:text-muted-foreground'
-                />
-              </div>
+               
 
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
                   <div className='space-y-1'>

@@ -6,6 +6,46 @@ import {
   Loader2,
   Plus,
 } from 'lucide-react';
+
+// Date utility functions for DD-MM-YYYY format
+const formatDateToString = (date: Date): string => {
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
+const stringToDateInputFormat = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  // Handle DD-MM-YYYY format
+  if (dateString.includes('-') && dateString.length === 10) {
+    const parts = dateString.split('-');
+    if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+      const [day, month, year] = parts;
+      return `${year}-${month}-${day}`;
+    }
+  }
+  
+  // If already in YYYY-MM-DD format, return as is
+  if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return dateString;
+  }
+  
+  return '';
+};
+
+const dateInputFormatToString = (inputDate: string): string => {
+  if (!inputDate) return '';
+  
+  // Convert YYYY-MM-DD to DD-MM-YYYY
+  if (inputDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [year, month, day] = inputDate.split('-');
+    return `${day}-${month}-${year}`;
+  }
+  
+  return inputDate;
+};
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -549,8 +589,8 @@ export const VehicleOnboardingForm = ({
                   <Input
                     id='purchaseDate'
                     type='date'
-                    value={formData.purchaseDate}
-                    onChange={(e) => handleInputChange('purchaseDate', e.target.value)}
+                    value={stringToDateInputFormat(formData.purchaseDate)}
+                    onChange={(e) => handleInputChange('purchaseDate', dateInputFormatToString(e.target.value))}
                       className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                   />
                   </div>
@@ -606,8 +646,8 @@ export const VehicleOnboardingForm = ({
                   <Input
                     id='insuranceExpiryDate'
                     type='date'
-                    value={formData.insuranceExpiryDate}
-                    onChange={(e) => handleInputChange('insuranceExpiryDate', e.target.value)}
+                    value={stringToDateInputFormat(formData.insuranceExpiryDate)}
+                    onChange={(e) => handleInputChange('insuranceExpiryDate', dateInputFormatToString(e.target.value))}
                       className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                     />
                   </div>
@@ -616,9 +656,7 @@ export const VehicleOnboardingForm = ({
 
           {/* Additional Information */}
               <div className='space-y-3'>
-                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
-                Additional Information
-                </h4>
+                
 
                 <div className='space-y-1'>
                   <Label
@@ -647,7 +685,7 @@ export const VehicleOnboardingForm = ({
                   <div className='space-y-1'>
                     <Label className='text-xs font-medium'>Date</Label>
                     <div className='h-8 px-2 py-1 bg-secondary text-center font-semibold text-xs border border-input rounded-[5px] flex items-center justify-center'>
-                    {new Date().toLocaleDateString()}
+                    {formatDateToString(new Date())}
                     </div>
                   </div>
                 </div>
