@@ -760,6 +760,24 @@ export const ExpensesTab = () => {
                         {getSortIcon('amount')}
                       </div>
                     </TableHead>
+                    <TableHead 
+                      className='cursor-pointer hover:bg-secondary/30'
+                      onClick={() => handleSort('requestedBy')}
+                    >
+                      <div className='flex items-center gap-2'>
+                      Reported By
+                        {getSortIcon('requestedBy')}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className='cursor-pointer hover:bg-secondary/30'
+                      onClick={() => handleSort('createdAt')}
+                    >
+                      <div className='flex items-center gap-2'>
+                      Submitted By
+                        {getSortIcon('createdAt')}
+                      </div>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -776,7 +794,7 @@ export const ExpensesTab = () => {
                         </TableCell>
                         
                         <TableCell>
-                          <span className='font-medium text-sm'>{expense.vehicleRegistrationNumber}</span>
+                            <span className='font-medium text-sm'>{expense.vehicleRegistrationNumber}</span>
                         </TableCell>
                         
                         <TableCell>
@@ -810,6 +828,21 @@ export const ExpensesTab = () => {
                             </span>
                           </div>
                         </TableCell>
+                        
+                        <TableCell>
+                          <div className='flex flex-col text-sm'>
+                            <span className='font-medium'>{expense.requestedBy || 'N/A'}</span>
+                          </div>
+                        </TableCell>
+                        
+                        <TableCell>
+                          <div className='flex flex-col text-sm'>
+                            <span className='font-medium'>{expense.createdAt ? 'System User' : 'Current User'}</span>
+                            <span className='text-xs text-muted-foreground'>
+                              {formatDateDisplay(expense.createdAt || new Date().toISOString())}
+                            </span>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     </>
                   ))}
@@ -836,7 +869,7 @@ export const ExpensesTab = () => {
                     onValueChange={(value) => {
                       const newLimit = parseInt(value);
                       setItemsPerPage(newLimit);
-                      setCurrentPage(1);
+                    setCurrentPage(1);
                     }}
                   >
                     <SelectTrigger className='w-16 sm:w-20 h-8 text-xs sm:text-sm'>
@@ -851,21 +884,21 @@ export const ExpensesTab = () => {
                     </SelectContent>
                   </Select>
                   <span className='text-xs sm:text-sm text-muted-foreground whitespace-nowrap'>per page</span>
-                </div>
-
+              </div>
+              
                 {/* Page navigation - Mobile optimized */}
                 <div className='flex items-center gap-1'>
                   {/* First page button */}
-                  <Button
-                    variant='outline'
-                    size='sm'
+                <Button
+                  variant='outline'
+                  size='sm'
                     onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
+                  disabled={currentPage === 1}
                     className='h-7 w-7 sm:h-8 sm:w-8 p-0'
-                  >
+                >
                     <ChevronsLeft className='w-3 h-3 sm:w-4 sm:h-4' />
-                  </Button>
-
+                </Button>
+                
                   {/* Previous page button */}
                   <Button
                     variant='outline'
@@ -879,39 +912,39 @@ export const ExpensesTab = () => {
 
                   {/* Page numbers - Show up to 5 pages */}
                   <div className='flex items-center gap-1 mx-1 sm:mx-2'>
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
                       
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-
-                      return (
-                        <Button
-                          key={pageNum}
-                          variant={currentPage === pageNum ? 'default' : 'outline'}
-                          size='sm'
-                          onClick={() => setCurrentPage(pageNum)}
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? 'default' : 'outline'}
+                        size='sm'
+                        onClick={() => setCurrentPage(pageNum)}
                           className='h-7 w-7 sm:h-8 sm:w-8 p-0 text-xs sm:text-sm'
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
-                  </div>
-
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
                   {/* Next page button */}
-                  <Button
-                    variant='outline'
-                    size='sm'
+                <Button
+                  variant='outline'
+                  size='sm'
                     onClick={() => setCurrentPage((prev) => prev + 1)}
-                    disabled={currentPage === totalPages}
+                  disabled={currentPage === totalPages}
                     className='h-7 w-7 sm:h-8 sm:w-8 p-0'
                   >
                     <ChevronRight className='w-3 h-3 sm:w-4 sm:h-4' />
@@ -926,7 +959,7 @@ export const ExpensesTab = () => {
                     className='h-7 w-7 sm:h-8 sm:w-8 p-0'
                   >
                     <ChevronsRight className='w-3 h-3 sm:w-4 sm:h-4' />
-                  </Button>
+                </Button>
                 </div>
               </div>
             </div>
@@ -978,7 +1011,7 @@ export const ExpensesTab = () => {
                         <Label className='text-xs font-medium'>Expense Number</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.expenseNumber}
-                        </div>
+                    </div>
                       </div>
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Vehicle</Label>
@@ -998,12 +1031,12 @@ export const ExpensesTab = () => {
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Expense Category</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
-                          <Badge className={`${getExpenseCategoryColor(viewingExpense.expenseCategory)} border flex items-center gap-1 w-fit`}>
-                            {getExpenseCategoryIcon(viewingExpense.expenseCategory)}
-                            <span className='text-xs'>{viewingExpense.expenseCategory.replace('_', ' ').toUpperCase()}</span>
-                          </Badge>
-                        </div>
-                      </div>
+                      <Badge className={`${getExpenseCategoryColor(viewingExpense.expenseCategory)} border flex items-center gap-1 w-fit`}>
+                        {getExpenseCategoryIcon(viewingExpense.expenseCategory)}
+                        <span className='text-xs'>{viewingExpense.expenseCategory.replace('_', ' ').toUpperCase()}</span>
+                      </Badge>
+                    </div>
+                    </div>
                     </div>
 
                     <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
@@ -1011,14 +1044,14 @@ export const ExpensesTab = () => {
                         <Label className='text-xs font-medium'>Expense Type</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.expenseType}
-                        </div>
-                      </div>
+                    </div>
+                    </div>
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Amount (₹)</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {formatCurrency(viewingExpense.amount)}
-                        </div>
-                      </div>
+                    </div>
+                  </div>
                     </div>
 
                     <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
@@ -1026,21 +1059,21 @@ export const ExpensesTab = () => {
                         <Label className='text-xs font-medium'>Location</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.location}
-                        </div>
-                      </div>
+                    </div>
+                    </div>
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Requested By</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.requestedBy || 'N/A'}
-                        </div>
-                      </div>
+                    </div>
+                  </div>
                     </div>
                   </div>
 
-                  {/* Vendor Information */}
+              {/* Vendor Information */}
                   <div className='space-y-3'>
                     <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
-                      Vendor Information
+                    Vendor Information
                     </h4>
 
                     <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
@@ -1048,36 +1081,36 @@ export const ExpensesTab = () => {
                         <Label className='text-xs font-medium'>Vendor Name</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.vendorName || 'N/A'}
-                        </div>
-                      </div>
+                    </div>
+                    </div>
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Vendor Contact</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.vendorContact || 'N/A'}
-                        </div>
-                      </div>
+                    </div>
+                  </div>
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Payment Method</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.paymentMethod.replace('_', ' ').toUpperCase()}
-                        </div>
-                      </div>
+                    </div>
+                    </div>
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Payment Reference</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.paymentReference || 'N/A'}
-                        </div>
-                      </div>
+                  </div>
+                    </div>
                       <div className='space-y-1 md:col-span-2'>
                         <Label className='text-xs font-medium'>Vendor Address</Label>
                         <div className='min-h-[40px] px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.vendorAddress || 'N/A'}
-                        </div>
-                      </div>
                     </div>
+                    </div>
+                      </div>
                   </div>
 
-                  {/* Additional Information */}
+              {/* Additional Information */}
                   <div className='space-y-3'>
                     <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
                       Additional Information
@@ -1111,9 +1144,9 @@ export const ExpensesTab = () => {
                         </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    </div>
+                  </CardContent>
+                </Card>
             </div>
           )}
         </DialogContent>

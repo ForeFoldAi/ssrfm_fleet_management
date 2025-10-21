@@ -37,7 +37,7 @@ export const FleetManagement = () => {
             className="flex flex-row items-center justify-center gap-1.5 md:gap-2 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-xs lg:text-sm font-medium rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
           >
             <IndianRupee className="w-3.5 h-3.5 md:w-4 md:h-4 lg:w-4.5 lg:h-4.5" />
-            <span className="whitespace-nowrap">Expenses Management</span>
+            <span className="whitespace-nowrap"> Recorded Vehicle Expenses</span>
           </TabsTrigger>
           
           <TabsTrigger 
@@ -45,7 +45,7 @@ export const FleetManagement = () => {
             className="flex flex-row items-center justify-center gap-1.5 md:gap-2 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-xs lg:text-sm font-medium rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
           >
             <Truck className="w-3.5 h-3.5 md:w-4 md:h-4 lg:w-4.5 lg:h-4.5" />
-            <span className="whitespace-nowrap">Vehicles Management</span>
+            <span className="whitespace-nowrap">Vehicles</span>
           </TabsTrigger>
           
           
@@ -60,7 +60,7 @@ export const FleetManagement = () => {
             className="flex flex-col items-center gap-1 px-1 py-2 text-xs font-semibold data-[state=active]:bg-warning data-[state=active]:text-foreground data-[state=active]:shadow-sm text-white/70 data-[state=inactive]:text-white/70"
           >
             <IndianRupee className="w-5 h-5" />
-            <span className="text-[10px] leading-tight">Expenses Management</span>
+            <span className="text-[10px] leading-tight">Recorded Vehicle Expenses</span>
           </TabsTrigger>
           
           <TabsTrigger 
@@ -68,7 +68,7 @@ export const FleetManagement = () => {
             className="flex flex-col items-center gap-1 px-1 py-2 text-xs font-semibold data-[state=active]:bg-warning data-[state=active]:text-foreground data-[state=active]:shadow-sm text-white/70 data-[state=inactive]:text-white/70"
           >
             <Truck className="w-5 h-5" />
-            <span className="text-[10px] leading-tight">Vehicles Management</span>
+            <span className="text-[10px] leading-tight">Vehicles</span>
           </TabsTrigger>
           
           
