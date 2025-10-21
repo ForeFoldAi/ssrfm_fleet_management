@@ -3,18 +3,8 @@ import {
   Truck,
   Save,
   X,
-  User,
-  Calendar,
-  FileText,
-  Upload,
   Loader2,
-  Building2,
-  CreditCard,
-  Shield,
-  MapPin,
-  Phone,
-  Mail,
-  IdCard,
+  Plus,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -27,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { toast } from '../../hooks/use-toast';
 import { useRole } from '../../contexts/RoleContext';
@@ -43,13 +33,10 @@ export interface VehicleOnboardingData {
   chassisNumber: string;
   fuelType: string;
   loadCapacity: string;
-  mileage: string;
-  color: string;
   purchaseDate: string;
   insuranceProvider: string;
   insurancePolicyNumber: string;
   insuranceExpiryDate: string;
-  documents: File[];
   additionalNotes: string;
   status: 'active' | 'inactive' | 'maintenance';
   createdAt?: string;
@@ -73,6 +60,10 @@ export const VehicleOnboardingForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // New state for custom vehicle type input
+  const [showCustomVehicleTypeInput, setShowCustomVehicleTypeInput] = useState(false);
+  const [customVehicleTypeName, setCustomVehicleTypeName] = useState('');
+
   const [formData, setFormData] = useState<VehicleOnboardingData>({
     vehicleRegistrationNumber: '',
     vehicleMake: '',
@@ -83,13 +74,10 @@ export const VehicleOnboardingForm = ({
     chassisNumber: '',
     fuelType: '',
     loadCapacity: '',
-    mileage: '',
-    color: '',
     purchaseDate: '',
     insuranceProvider: '',
     insurancePolicyNumber: '',
     insuranceExpiryDate: '',
-    documents: [],
     additionalNotes: '',
     status: 'active',
   });
@@ -110,23 +98,68 @@ export const VehicleOnboardingForm = ({
         chassisNumber: '',
         fuelType: '',
         loadCapacity: '',
-        mileage: '',
-        color: '',
         purchaseDate: '',
         insuranceProvider: '',
         insurancePolicyNumber: '',
         insuranceExpiryDate: '',
-        documents: [],
         additionalNotes: '',
         status: 'active',
       });
+      setShowCustomVehicleTypeInput(false);
+      setCustomVehicleTypeName('');
     }
   }, [editingVehicle, isOpen]);
 
-  const handleInputChange = (field: keyof VehicleOnboardingData, value: string | File[]) => {
+  const handleInputChange = (field: keyof VehicleOnboardingData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const handleVehicleTypeChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, vehicleType: value }));
+    if (errors.vehicleType) {
+      setErrors((prev) => ({ ...prev, vehicleType: '' }));
+    }
+
+    // Handle "Other" selection for vehicle type
+    if (value === 'other') {
+      setShowCustomVehicleTypeInput(true);
+    } else {
+      setShowCustomVehicleTypeInput(false);
+    }
+  };
+
+  // Function to create new vehicle type
+  const handleCreateVehicleType = async () => {
+    if (!customVehicleTypeName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a vehicle type name.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // For now, we'll just set the custom vehicle type name directly
+      // In a real implementation, you might want to save this to a backend
+      setFormData((prev) => ({ ...prev, vehicleType: customVehicleTypeName.trim() }));
+      setShowCustomVehicleTypeInput(false);
+      setCustomVehicleTypeName('');
+
+      toast({
+        title: 'Success',
+        description: `Vehicle type "${customVehicleTypeName.trim()}" has been added.`,
+      });
+    } catch (error) {
+      console.error('Error creating vehicle type:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add vehicle type. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -134,7 +167,7 @@ export const VehicleOnboardingForm = ({
     const newErrors: Record<string, string> = {};
     let hasErrors = false;
 
-    // Vehicle Information Validation
+    // Only validate mandatory fields
     if (!formData.vehicleRegistrationNumber.trim()) {
       newErrors.vehicleRegistrationNumber = 'Vehicle registration number is required';
       hasErrors = true;
@@ -155,47 +188,10 @@ export const VehicleOnboardingForm = ({
       hasErrors = true;
     }
 
-    if (!formData.vehicleYear.trim()) {
-      newErrors.vehicleYear = 'Vehicle year is required';
-      hasErrors = true;
-    }
-
-    if (!formData.engineNumber.trim()) {
-      newErrors.engineNumber = 'Engine number is required';
-      hasErrors = true;
-    }
-
-    if (!formData.chassisNumber.trim()) {
-      newErrors.chassisNumber = 'Chassis number is required';
-      hasErrors = true;
-    }
-
     if (!formData.fuelType.trim()) {
       newErrors.fuelType = 'Fuel type is required';
       hasErrors = true;
     }
-
-    if (!formData.loadCapacity.trim()) {
-      newErrors.loadCapacity = 'Load capacity is required';
-      hasErrors = true;
-    }
-
-    // Insurance Information Validation
-    if (!formData.insuranceProvider.trim()) {
-      newErrors.insuranceProvider = 'Insurance provider is required';
-      hasErrors = true;
-    }
-
-    if (!formData.insurancePolicyNumber.trim()) {
-      newErrors.insurancePolicyNumber = 'Insurance policy number is required';
-      hasErrors = true;
-    }
-
-    if (!formData.insuranceExpiryDate.trim()) {
-      newErrors.insuranceExpiryDate = 'Insurance expiry date is required';
-      hasErrors = true;
-    }
-
 
     setErrors(newErrors);
 
@@ -242,18 +238,17 @@ export const VehicleOnboardingForm = ({
         chassisNumber: '',
         fuelType: '',
         loadCapacity: '',
-        mileage: '',
-        color: '',
         purchaseDate: '',
         insuranceProvider: '',
         insurancePolicyNumber: '',
         insuranceExpiryDate: '',
-        documents: [],
         additionalNotes: '',
         status: 'active',
       });
 
       setErrors({});
+      setShowCustomVehicleTypeInput(false);
+      setCustomVehicleTypeName('');
       onClose();
     } catch (error) {
       console.error('Error onboarding vehicle:', error);
@@ -267,95 +262,102 @@ export const VehicleOnboardingForm = ({
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    handleInputChange('documents', [...formData.documents, ...files]);
-  };
-
-  const removeDocument = (index: number) => {
-    const newDocuments = formData.documents.filter((_, i) => i !== index);
-    handleInputChange('documents', newDocuments);
-  };
+  const statusOptions = [
+    { value: 'active', label: 'Active', description: 'Vehicle is operational' },
+    { value: 'inactive', label: 'Inactive', description: 'Not in use' },
+    { value: 'maintenance', label: 'Under Maintenance', description: 'Currently being serviced' },
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='max-w-[95vw] max-h-[90vh] overflow-y-auto p-6'>
-        <DialogHeader className='pb-4'>
-          <DialogTitle className='flex items-center gap-2'>
-            <div className='w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center'>
-              <Truck className='w-4 h-4 text-primary' />
+      <DialogContent className='max-w-5xl max-h-[90vh] overflow-y-auto'>
+        <DialogHeader className='pb-2'>
+          <DialogTitle className='flex items-center gap-2 text-lg'>
+            <div className='w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center'>
+              {editingVehicle ? <Truck className='w-4 h-4 text-primary' /> : <Plus className='w-4 h-4 text-primary' />}
             </div>
-            <div>
-              <div className='text-lg font-bold'>
-                {editingVehicle ? 'EDIT VEHICLE DETAILS' : 'VEHICLE ONBOARDING FORM'}
-              </div>
-              <div className='text-sm text-muted-foreground'>
-                {editingVehicle ? 'Update vehicle information' : 'Add new vehicle to fleet'}
-              </div>
-            </div>
+            {editingVehicle ? 'Edit Vehicle Details' : 'Add New Vehicle'}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className='space-y-6'>
-          {/* Vehicle Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2 text-lg'>
-                <Truck className='w-5 h-5' />
-                Vehicle Information
-              </CardTitle>
-            </CardHeader>
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          {/* Single Card for all form content */}
+          <Card className='border-0 shadow-sm'>
             <CardContent className='space-y-4'>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='vehicleRegistrationNumber'>Registration Number *</Label>
+              {/* Vehicle Information */}
+              <div className='space-y-3'>
+                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
+                  Vehicle Information
+                </h4>
+
+                {/* First Row */}
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                  <div className='space-y-1'>
+                    <Label htmlFor='vehicleRegistrationNumber' className='text-xs font-medium'>
+                      Registration Number *
+                    </Label>
                   <Input
                     id='vehicleRegistrationNumber'
+                      placeholder='e.g., MH-12-AB-1234'
                     value={formData.vehicleRegistrationNumber}
                     onChange={(e) => handleInputChange('vehicleRegistrationNumber', e.target.value.toUpperCase())}
-                    placeholder='e.g., MH-12-AB-1234'
-                    className={errors.vehicleRegistrationNumber ? 'border-red-500' : ''}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                   />
                   {errors.vehicleRegistrationNumber && (
-                    <p className='text-sm text-red-500'>{errors.vehicleRegistrationNumber}</p>
+                      <p className='text-destructive text-xs mt-1'>
+                        {errors.vehicleRegistrationNumber}
+                      </p>
                   )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='vehicleMake'>Make *</Label>
+                  <div className='space-y-1'>
+                    <Label htmlFor='vehicleMake' className='text-xs font-medium'>
+                      Make *
+                    </Label>
                   <Input
                     id='vehicleMake'
+                      placeholder='e.g., Tata, Ashok Leyland'
                     value={formData.vehicleMake}
                     onChange={(e) => handleInputChange('vehicleMake', e.target.value)}
-                    placeholder='e.g., Tata, Ashok Leyland'
-                    className={errors.vehicleMake ? 'border-red-500' : ''}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                   />
                   {errors.vehicleMake && (
-                    <p className='text-sm text-red-500'>{errors.vehicleMake}</p>
+                      <p className='text-destructive text-xs mt-1'>
+                        {errors.vehicleMake}
+                      </p>
                   )}
+                  </div>
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='vehicleModel'>Model *</Label>
+                {/* Second Row */}
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                  <div className='space-y-1'>
+                    <Label htmlFor='vehicleModel' className='text-xs font-medium'>
+                      Model *
+                    </Label>
                   <Input
                     id='vehicleModel'
+                      placeholder='e.g., Ace, 407'
                     value={formData.vehicleModel}
                     onChange={(e) => handleInputChange('vehicleModel', e.target.value)}
-                    placeholder='e.g., Ace, 407'
-                    className={errors.vehicleModel ? 'border-red-500' : ''}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                   />
                   {errors.vehicleModel && (
-                    <p className='text-sm text-red-500'>{errors.vehicleModel}</p>
+                      <p className='text-destructive text-xs mt-1'>
+                        {errors.vehicleModel}
+                      </p>
                   )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='vehicleType'>Vehicle Type *</Label>
+                  <div className='space-y-1'>
+                    <Label htmlFor='vehicleType' className='text-xs font-medium'>
+                      Vehicle Type *
+                    </Label>
                   <Select
                     value={formData.vehicleType}
-                    onValueChange={(value) => handleInputChange('vehicleType', value)}
+                    onValueChange={handleVehicleTypeChange}
                   >
-                    <SelectTrigger className={errors.vehicleType ? 'border-red-500' : ''}>
+                      <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
                       <SelectValue placeholder='Select vehicle type' />
                     </SelectTrigger>
                     <SelectContent>
@@ -364,37 +366,67 @@ export const VehicleOnboardingForm = ({
                       <SelectItem value='container'>Container</SelectItem>
                       <SelectItem value='trailer'>Trailer</SelectItem>
                       <SelectItem value='tanker'>Tanker</SelectItem>
+                      <SelectItem value='other'>Other</SelectItem>
                     </SelectContent>
                   </Select>
                   {errors.vehicleType && (
-                    <p className='text-sm text-red-500'>{errors.vehicleType}</p>
+                      <p className='text-destructive text-xs mt-1'>
+                        {errors.vehicleType}
+                      </p>
                   )}
                 </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='vehicleYear'>Year *</Label>
-                  <Input
-                    id='vehicleYear'
-                    type='number'
-                    value={formData.vehicleYear}
-                    onChange={(e) => handleInputChange('vehicleYear', e.target.value)}
-                    placeholder='e.g., 2023'
-                    min='1900'
-                    max='2030'
-                    className={errors.vehicleYear ? 'border-red-500' : ''}
-                  />
-                  {errors.vehicleYear && (
-                    <p className='text-sm text-red-500'>{errors.vehicleYear}</p>
-                  )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='fuelType'>Fuel Type *</Label>
+                {/* Custom Vehicle Type Input */}
+                {showCustomVehicleTypeInput && (
+                  <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2'>
+                    <Label className='text-xs font-medium text-blue-800'>
+                      Add New Vehicle Type
+                    </Label>
+                    <div className='flex gap-2'>
+                      <Input
+                        placeholder='Enter vehicle type name'
+                        value={customVehicleTypeName}
+                        onChange={(e) => setCustomVehicleTypeName(e.target.value)}
+                        className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                      />
+                      <Button
+                        type='button'
+                        onClick={handleCreateVehicleType}
+                        size='sm'
+                        className='h-8 px-3 bg-blue-600 hover:bg-blue-700'
+                      >
+                        <Plus className='w-3 h-3 mr-1' />
+                        Add
+                      </Button>
+                      <Button
+                        type='button'
+                        onClick={() => {
+                          setShowCustomVehicleTypeInput(false);
+                          setCustomVehicleTypeName('');
+                          setFormData(prev => ({ ...prev, vehicleType: '' }));
+                        }}
+                        variant='outline'
+                        size='sm'
+                        className='h-8 px-3'
+                      >
+                        <X className='w-3 h-3' />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Third Row */}
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                  <div className='space-y-1'>
+                    <Label htmlFor='fuelType' className='text-xs font-medium'>
+                      Fuel Type *
+                    </Label>
                   <Select
                     value={formData.fuelType}
                     onValueChange={(value) => handleInputChange('fuelType', value)}
                   >
-                    <SelectTrigger className={errors.fuelType ? 'border-red-500' : ''}>
+                      <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
                       <SelectValue placeholder='Select fuel type' />
                     </SelectTrigger>
                     <SelectContent>
@@ -405,282 +437,250 @@ export const VehicleOnboardingForm = ({
                     </SelectContent>
                   </Select>
                   {errors.fuelType && (
-                    <p className='text-sm text-red-500'>{errors.fuelType}</p>
+                      <p className='text-destructive text-xs mt-1'>
+                        {errors.fuelType}
+                      </p>
                   )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='loadCapacity'>Load Capacity (kg) *</Label>
-                  <Input
-                    id='loadCapacity'
-                    type='number'
-                    value={formData.loadCapacity}
-                    onChange={(e) => handleInputChange('loadCapacity', e.target.value)}
-                    placeholder='e.g., 10000'
-                    min='0'
-                    className={errors.loadCapacity ? 'border-red-500' : ''}
-                  />
-                  {errors.loadCapacity && (
-                    <p className='text-sm text-red-500'>{errors.loadCapacity}</p>
-                  )}
+                  <div className='space-y-1'>
+                    <Label className='text-xs font-medium'>Status</Label>
+                    <div className='flex gap-1'>
+                      {statusOptions.map((status) => (
+                        <button
+                          key={status.value}
+                          type='button'
+                          onClick={() =>
+                            handleInputChange('status', status.value)
+                          }
+                          className={`h-7 px-2 py-1 rounded-[5px] border text-left transition-all duration-200 text-xs font-medium ${
+                            formData.status === status.value
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-input bg-background hover:border-primary/50 hover:bg-muted/30'
+                          }`}
+                        >
+                          {status.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='mileage'>Mileage (km/l)</Label>
+              {/* Vehicle Specifications */}
+              <div className='space-y-3'>
+                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
+                  Vehicle Specifications
+                </h4>
+
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3'>
+                  <div className='space-y-1'>
+                    <Label
+                      htmlFor='vehicleYear'
+                      className='text-xs font-medium'
+                    >
+                      Year
+                    </Label>
                   <Input
-                    id='mileage'
-                    type='number'
-                    value={formData.mileage}
-                    onChange={(e) => handleInputChange('mileage', e.target.value)}
-                    placeholder='e.g., 8.5'
-                    min='0'
-                    step='0.1'
+                      id='vehicleYear'
+                      type='number'
+                      placeholder='e.g., 2023'
+                      value={formData.vehicleYear}
+                      onChange={(e) => handleInputChange('vehicleYear', e.target.value)}
+                      min='1900'
+                      max='2030'
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                   />
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='color'>Color</Label>
-                  <Input
-                    id='color'
-                    value={formData.color}
-                    onChange={(e) => handleInputChange('color', e.target.value)}
-                    placeholder='e.g., White, Blue'
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='engineNumber'>Engine Number *</Label>
+                  <div className='space-y-1'>
+                    <Label htmlFor='engineNumber' className='text-xs font-medium'>
+                      Engine Number
+                    </Label>
                   <Input
                     id='engineNumber'
+                      placeholder='Engine number'
                     value={formData.engineNumber}
                     onChange={(e) => handleInputChange('engineNumber', e.target.value)}
-                    placeholder='Engine number'
-                    className={errors.engineNumber ? 'border-red-500' : ''}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                   />
-                  {errors.engineNumber && (
-                    <p className='text-sm text-red-500'>{errors.engineNumber}</p>
-                  )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='chassisNumber'>Chassis Number *</Label>
+                  <div className='space-y-1'>
+                    <Label
+                      htmlFor='chassisNumber'
+                      className='text-xs font-medium'
+                    >
+                      Chassis Number
+                    </Label>
                   <Input
                     id='chassisNumber'
+                      placeholder='Chassis number'
                     value={formData.chassisNumber}
                     onChange={(e) => handleInputChange('chassisNumber', e.target.value)}
-                    placeholder='Chassis number'
-                    className={errors.chassisNumber ? 'border-red-500' : ''}
-                  />
-                  {errors.chassisNumber && (
-                    <p className='text-sm text-red-500'>{errors.chassisNumber}</p>
-                  )}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                    />
+                  </div>
+
+                  <div className='space-y-1'>
+                    <Label htmlFor='loadCapacity' className='text-xs font-medium'>
+                      Load Capacity (kg)
+                    </Label>
+                    <Input
+                      id='loadCapacity'
+                      type='number'
+                      placeholder='e.g., 10000'
+                      value={formData.loadCapacity}
+                      onChange={(e) => handleInputChange('loadCapacity', e.target.value)}
+                      min='0'
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                    />
+                  </div>
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='purchaseDate'>Purchase Date</Label>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                  <div className='space-y-1'>
+                    <Label
+                      htmlFor='purchaseDate'
+                      className='text-xs font-medium'
+                    >
+                      Purchase Date
+                    </Label>
                   <Input
                     id='purchaseDate'
                     type='date'
                     value={formData.purchaseDate}
                     onChange={(e) => handleInputChange('purchaseDate', e.target.value)}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                   />
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
           {/* Insurance Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2 text-lg'>
-                <Shield className='w-5 h-5' />
+              <div className='space-y-3'>
+                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
                 Insurance Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='insuranceProvider'>Insurance Provider *</Label>
+                </h4>
+
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
+                  <div className='space-y-1'>
+                    <Label
+                      htmlFor='insuranceProvider'
+                      className='text-xs font-medium'
+                    >
+                      Insurance Provider
+                    </Label>
                   <Input
                     id='insuranceProvider'
+                      placeholder='e.g., ICICI Lombard, Bajaj Allianz'
                     value={formData.insuranceProvider}
                     onChange={(e) => handleInputChange('insuranceProvider', e.target.value)}
-                    placeholder='e.g., ICICI Lombard, Bajaj Allianz'
-                    className={errors.insuranceProvider ? 'border-red-500' : ''}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                   />
-                  {errors.insuranceProvider && (
-                    <p className='text-sm text-red-500'>{errors.insuranceProvider}</p>
-                  )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='insurancePolicyNumber'>Policy Number *</Label>
+                  <div className='space-y-1'>
+                    <Label
+                      htmlFor='insurancePolicyNumber'
+                      className='text-xs font-medium'
+                    >
+                      Policy Number
+                    </Label>
                   <Input
                     id='insurancePolicyNumber'
+                      placeholder='Policy number'
                     value={formData.insurancePolicyNumber}
                     onChange={(e) => handleInputChange('insurancePolicyNumber', e.target.value)}
-                    placeholder='Policy number'
-                    className={errors.insurancePolicyNumber ? 'border-red-500' : ''}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                   />
-                  {errors.insurancePolicyNumber && (
-                    <p className='text-sm text-red-500'>{errors.insurancePolicyNumber}</p>
-                  )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='insuranceExpiryDate'>Expiry Date *</Label>
+                  <div className='space-y-1'>
+                    <Label
+                      htmlFor='insuranceExpiryDate'
+                      className='text-xs font-medium'
+                    >
+                      Expiry Date
+                    </Label>
                   <Input
                     id='insuranceExpiryDate'
                     type='date'
                     value={formData.insuranceExpiryDate}
                     onChange={(e) => handleInputChange('insuranceExpiryDate', e.target.value)}
-                    className={errors.insuranceExpiryDate ? 'border-red-500' : ''}
-                  />
-                  {errors.insuranceExpiryDate && (
-                    <p className='text-sm text-red-500'>{errors.insuranceExpiryDate}</p>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-
-          {/* Documents Upload */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2 text-lg'>
-                <FileText className='w-5 h-5' />
-                Documents Upload
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='documents'>Upload Documents</Label>
-                <Input
-                  id='documents'
-                  type='file'
-                  multiple
-                  accept='.pdf,.jpg,.jpeg,.png,.doc,.docx'
-                  onChange={handleFileUpload}
-                  className='cursor-pointer'
-                />
-                <p className='text-sm text-muted-foreground'>
-                  Upload vehicle documents like RC, Insurance, PUC, etc.
-                </p>
-              </div>
-
-              {formData.documents.length > 0 && (
-                <div className='space-y-2'>
-                  <Label>Uploaded Documents</Label>
-                  <div className='space-y-2'>
-                    {formData.documents.map((file, index) => (
-                      <div key={index} className='flex items-center justify-between p-2 border rounded'>
-                        <div className='flex items-center gap-2'>
-                          <FileText className='w-4 h-4' />
-                          <span className='text-sm'>{file.name}</span>
-                          <span className='text-xs text-muted-foreground'>
-                            ({(file.size / 1024).toFixed(1)} KB)
-                          </span>
-                        </div>
-                        <Button
-                          type='button'
-                          variant='outline'
-                          size='sm'
-                          onClick={() => removeDocument(index)}
-                          className='h-6 w-6 p-0'
-                        >
-                          <X className='w-3 h-3' />
-                        </Button>
-                      </div>
-                    ))}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                    />
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
 
           {/* Additional Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2 text-lg'>
-                <FileText className='w-5 h-5' />
+              <div className='space-y-3'>
+                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
                 Additional Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='additionalNotes'>Additional Notes</Label>
+                </h4>
+
+                <div className='space-y-1'>
+                  <Label
+                    htmlFor='additionalNotes'
+                    className='text-xs font-medium'
+                  >
+                    Additional Notes
+                  </Label>
                 <Textarea
                   id='additionalNotes'
+                    placeholder='Any additional information about the vehicle...'
                   value={formData.additionalNotes}
                   onChange={(e) => handleInputChange('additionalNotes', e.target.value)}
-                  placeholder='Any additional information about the vehicle or driver...'
-                  rows={4}
+                    className='min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200'
                 />
               </div>
 
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                <div className='space-y-2'>
-                  <Label>Onboarded By</Label>
-                  <div className='input-friendly bg-secondary text-center py-2 font-semibold text-sm'>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                  <div className='space-y-1'>
+                    <Label className='text-xs font-medium'>Onboarded By</Label>
+                    <div className='h-8 px-2 py-1 bg-secondary text-center font-semibold text-xs border border-input rounded-[5px] flex items-center justify-center'>
                     {currentUser?.name || 'Current User'}
                   </div>
                 </div>
 
-                <div className='space-y-2'>
-                  <Label>Date</Label>
-                  <div className='input-friendly bg-secondary text-center py-2 font-semibold text-sm'>
+                  <div className='space-y-1'>
+                    <Label className='text-xs font-medium'>Date</Label>
+                    <div className='h-8 px-2 py-1 bg-secondary text-center font-semibold text-xs border border-input rounded-[5px] flex items-center justify-center'>
                     {new Date().toLocaleDateString()}
+                    </div>
                   </div>
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='status'>Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value: 'active' | 'inactive' | 'maintenance') => 
-                      handleInputChange('status', value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='active'>Active</SelectItem>
-                      <SelectItem value='inactive'>Inactive</SelectItem>
-                      <SelectItem value='maintenance'>Under Maintenance</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Form Actions */}
-          <div className='flex justify-end gap-3 pt-4'>
+          <div className='flex justify-end gap-3 pt-4 border-t'>
             <Button
               type='button'
               variant='outline'
               onClick={onClose}
+              className='h-8 px-4'
               disabled={isSubmitting}
             >
-              <X className='w-4 h-4 mr-2' />
+              <X className='w-3 h-3 mr-1' />
               Cancel
             </Button>
             <Button
               type='submit'
+              className='h-8 px-4 bg-primary hover:bg-primary/90'
               disabled={isSubmitting}
-              className='gap-2'
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className='h-4 w-4 animate-spin' />
-                  {editingVehicle ? 'Updating...' : 'Onboarding...'}
+                  <Loader2 className='w-3 h-3 mr-1 animate-spin' />
+                  Submitting...
                 </>
               ) : (
                 <>
-                  <Save className='w-4 h-4' />
-                  {editingVehicle ? 'Update Vehicle' : 'Onboard Vehicle'}
+                  <Save className='w-3 h-3 mr-1' />
+                  Submit
                 </>
               )}
             </Button>

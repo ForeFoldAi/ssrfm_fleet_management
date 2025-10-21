@@ -14,7 +14,7 @@ import { TripEntryTab } from '../../components/fleet/tripEntryTab';
 import { ExpensesTab } from '../../components/fleet/ExpensesTab';
 
 export const FleetManagement = () => {
-  const [activeTab, setActiveTab] = useState('vehicles');
+  const [activeTab, setActiveTab] = useState('expenses');
 
   return (
     <div className="space-y-4 sm:space-y-6 p-4 sm:p-0 pb-24 sm:pb-0">

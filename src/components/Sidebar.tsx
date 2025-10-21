@@ -35,12 +35,12 @@ export const Sidebar = () => {
     // FIXED: Dashboard item - show only for company-level users
     const baseItems = isCompanyLevel()
       ? [
-          {
+          /*{
             to: '/',
             label: 'Dashboard',
             icon: Activity,
             permission: null,
-          },
+          },*/
         ]
       : [];
 

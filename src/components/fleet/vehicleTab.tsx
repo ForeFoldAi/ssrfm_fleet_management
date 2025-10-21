@@ -3,25 +3,18 @@ import {
   Truck,
   Search,
   Plus,
-  Eye,
-  Edit,
-  Trash2,
-  MoreVertical,
   AlertTriangle,
   CheckCircle,
   Clock,
   Wrench,
-  Building2,
-  Phone,
-  Mail,
-  MapPin,
-  Calendar,
-  Filter,
   RefreshCcw,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ArrowUpDown,
-  User,
   Shield,
   FileText,
 } from 'lucide-react';
@@ -45,12 +38,6 @@ import {
   TableRow,
 } from '../ui/table';
 import { Badge } from '../ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -83,7 +70,6 @@ export const VehicleTab = () => {
   const [filterVehicleType, setFilterVehicleType] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -91,7 +77,6 @@ export const VehicleTab = () => {
   
   // Form states
   const [isOnboardFormOpen, setIsOnboardFormOpen] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState<VehicleData | null>(null);
   const [viewingVehicle, setViewingVehicle] = useState<VehicleData | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
@@ -365,15 +350,6 @@ export const VehicleTab = () => {
     }
   };
 
-  const toggleRowExpansion = (vehicleId: string) => {
-    const newExpandedRows = new Set(expandedRows);
-    if (newExpandedRows.has(vehicleId)) {
-      newExpandedRows.delete(vehicleId);
-    } else {
-      newExpandedRows.add(vehicleId);
-    }
-    setExpandedRows(newExpandedRows);
-  };
 
   const handleOnboardVehicle = (vehicleData: VehicleOnboardingData) => {
     const newVehicle: VehicleData = {
@@ -396,35 +372,12 @@ export const VehicleTab = () => {
     });
   };
 
-  const handleEditVehicle = (vehicle: VehicleData) => {
-    setEditingVehicle(vehicle);
-    setIsOnboardFormOpen(true);
-  };
 
   const handleViewVehicle = (vehicle: VehicleData) => {
     setViewingVehicle(vehicle);
     setIsViewDialogOpen(true);
   };
 
-  const handleDeleteVehicle = async (vehicleId: string) => {
-    const confirmed = window.confirm('Are you sure you want to delete this vehicle? This action cannot be undone.');
-    if (confirmed) {
-      try {
-        setVehicles(prev => prev.filter(v => v.id !== vehicleId));
-        toast({
-          title: '✅ Vehicle Deleted',
-          description: 'Vehicle has been successfully removed from the fleet.',
-          variant: 'default',
-        });
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to delete vehicle. Please try again.',
-          variant: 'destructive',
-        });
-      }
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB');
@@ -465,7 +418,6 @@ export const VehicleTab = () => {
               </Button>
               <Button
                 onClick={() => {
-                  setEditingVehicle(null);
                   setIsOnboardFormOpen(true);
                 }}
                 size='sm'
@@ -572,7 +524,6 @@ export const VehicleTab = () => {
               
               <Button
                 onClick={() => {
-                  setEditingVehicle(null);
                   setIsOnboardFormOpen(true);
                 }}
                 size='sm'
@@ -621,7 +572,6 @@ export const VehicleTab = () => {
               <Table>
                 <TableHeader>
                   <TableRow className='bg-secondary/20'>
-                    <TableHead className='w-12'></TableHead>
                     <TableHead 
                       className='cursor-pointer hover:bg-secondary/30'
                       onClick={() => handleSort('vehicleRegistrationNumber')}
@@ -650,36 +600,25 @@ export const VehicleTab = () => {
                       </div>
                     </TableHead>
                     <TableHead>Insurance</TableHead>
-                    <TableHead>Performance</TableHead>
-                    <TableHead className='w-12'></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedVehicles.map((vehicle) => (
-                    <>
                       <TableRow key={vehicle.id} className='hover:bg-muted/30'>
-                        <TableCell>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            className='h-6 w-6 p-0'
-                            onClick={() => toggleRowExpansion(vehicle.id)}
-                          >
-                            {expandedRows.has(vehicle.id) ? (
-                              <ChevronUp className='w-4 h-4' />
-                            ) : (
-                              <ChevronDown className='w-4 h-4' />
-                            )}
-                          </Button>
-                        </TableCell>
-                        
                         <TableCell className='font-medium'>
+                        <button
+                          onClick={() => handleViewVehicle(vehicle)}
+                          className='text-left hover:text-primary transition-colors'
+                        >
                           <div className='flex flex-col'>
-                            <span className='font-semibold'>{vehicle.vehicleRegistrationNumber}</span>
+                            <span className='font-semibold text-primary hover:text-primary/80 underline'>
+                              {vehicle.vehicleRegistrationNumber}
+                            </span>
                             <span className='text-xs text-muted-foreground'>
                               {vehicle.vehicleType.toUpperCase()} • {vehicle.vehicleYear}
                             </span>
                           </div>
+                        </button>
                         </TableCell>
                         
                         <TableCell>
@@ -690,7 +629,6 @@ export const VehicleTab = () => {
                             </span>
                           </div>
                         </TableCell>
-                        
                         
                         <TableCell>
                           <Badge className={`${getStatusColor(vehicle.status)} border flex items-center gap-1 w-fit`}>
@@ -707,86 +645,7 @@ export const VehicleTab = () => {
                             </span>
                           </div>
                         </TableCell>
-                        
-                        <TableCell>
-                          <div className='flex flex-col text-sm'>
-                            <span>{vehicle.totalTrips || 0} trips</span>
-                            <span className='text-xs text-muted-foreground'>
-                              {vehicle.averageFuelEfficiency || 0} km/l avg
-                            </span>
-                          </div>
-                        </TableCell>
-                        
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant='ghost' size='sm' className='h-8 w-8 p-0'>
-                                <MoreVertical className='w-4 h-4' />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align='end'>
-                              <DropdownMenuItem onClick={() => handleViewVehicle(vehicle)}>
-                                <Eye className='w-4 h-4 mr-2' />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleEditVehicle(vehicle)}>
-                                <Edit className='w-4 h-4 mr-2' />
-                                Edit Vehicle
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleDeleteVehicle(vehicle.id)}
-                                className='text-destructive'
-                              >
-                                <Trash2 className='w-4 h-4 mr-2' />
-                                Delete Vehicle
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
                       </TableRow>
-                      
-                      {/* Expanded Row Details */}
-                      {expandedRows.has(vehicle.id) && (
-                        <TableRow>
-                          <TableCell colSpan={7} className='p-0'>
-                            <div className='bg-muted/20 p-4'>
-                              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                                <div>
-                                  <h4 className='font-semibold mb-2'>Vehicle Details</h4>
-                                  <div className='space-y-1 text-sm'>
-                                    <p><span className='font-medium'>Engine:</span> {vehicle.engineNumber}</p>
-                                    <p><span className='font-medium'>Chassis:</span> {vehicle.chassisNumber}</p>
-                                    <p><span className='font-medium'>Color:</span> {vehicle.color}</p>
-                                    <p><span className='font-medium'>Mileage:</span> {vehicle.mileage} km/l</p>
-                                  </div>
-                                </div>
-                                
-                                
-                                <div>
-                                  <h4 className='font-semibold mb-2'>Performance</h4>
-                                  <div className='space-y-1 text-sm'>
-                                    <p><span className='font-medium'>Total Distance:</span> {vehicle.totalDistance?.toLocaleString()} km</p>
-                                    <p><span className='font-medium'>Last Maintenance:</span> {vehicle.lastMaintenanceDate ? formatDate(vehicle.lastMaintenanceDate) : 'N/A'}</p>
-                                    <p><span className='font-medium'>Next Maintenance:</span> {vehicle.nextMaintenanceDate ? formatDate(vehicle.nextMaintenanceDate) : 'N/A'}</p>
-                                  </div>
-                                </div>
-                                
-                                <div>
-                                  <h4 className='font-semibold mb-2'>Additional Info</h4>
-                                  <div className='space-y-1 text-sm'>
-                                    <p><span className='font-medium'>Purchase Date:</span> {formatDate(vehicle.purchaseDate)}</p>
-                                    <p><span className='font-medium'>Added:</span> {formatDate(vehicle.createdAt)}</p>
-                                    {vehicle.additionalNotes && (
-                                      <p><span className='font-medium'>Notes:</span> {vehicle.additionalNotes}</p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </>
                   ))}
                 </TableBody>
               </Table>
@@ -795,79 +654,113 @@ export const VehicleTab = () => {
           
           {/* Pagination Controls */}
           {filteredVehicles.length > 0 && (
-            <div className='flex flex-col sm:flex-row items-center justify-between gap-3 px-3 py-3 sm:px-4 sm:py-4 border-t'>
-              <div className='flex flex-col sm:flex-row items-center gap-2'>
-                <span className='text-xs sm:text-sm text-muted-foreground'>
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredVehicles.length)} of {filteredVehicles.length} vehicles
-                </span>
-                <div className='flex items-center gap-2'>
-                  <Select value={itemsPerPage.toString()} onValueChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}>
-                    <SelectTrigger className='w-16 sm:w-20 text-xs'>
+            <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
+              {/* Page Info */}
+              <div className='text-xs sm:text-sm text-muted-foreground'>
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredVehicles.length)} of {filteredVehicles.length} entries
+              </div>
+
+              {/* Pagination Controls */}
+              <div className='flex flex-col sm:flex-row items-center gap-3 sm:gap-2 w-full sm:w-auto'>
+                {/* Items per page selector - Mobile optimized */}
+                <div className='flex items-center gap-2 w-full sm:w-auto justify-center'>
+                  <span className='text-xs sm:text-sm text-muted-foreground whitespace-nowrap'>Show:</span>
+                  <Select
+                    value={itemsPerPage.toString()}
+                    onValueChange={(value) => {
+                      const newLimit = parseInt(value);
+                      setItemsPerPage(newLimit);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className='w-16 sm:w-20 h-8 text-xs sm:text-sm'>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='5'>5</SelectItem>
                       <SelectItem value='10'>10</SelectItem>
-                      <SelectItem value='25'>25</SelectItem>
+                      <SelectItem value='20'>20</SelectItem>
                       <SelectItem value='50'>50</SelectItem>
+                      <SelectItem value='100'>100</SelectItem>
                     </SelectContent>
                   </Select>
-                  <span className='text-xs text-muted-foreground'>per page</span>
+                  <span className='text-xs sm:text-sm text-muted-foreground whitespace-nowrap'>per page</span>
                 </div>
-              </div>
-              
-              <div className='flex items-center gap-1 sm:gap-2'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className='text-xs px-2 sm:px-3'
-                >
-                  <span className='hidden sm:inline'>Previous</span>
-                  <span className='sm:hidden'>Prev</span>
-                </Button>
-                
+
+                {/* Page navigation - Mobile optimized */}
                 <div className='flex items-center gap-1'>
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-                    
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? 'default' : 'outline'}
-                        size='sm'
-                        onClick={() => setCurrentPage(pageNum)}
-                        className='w-6 h-6 sm:w-8 sm:h-8 p-0 text-xs'
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
+                  {/* First page button */}
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className='h-7 w-7 sm:h-8 sm:w-8 p-0'
+                  >
+                    <ChevronsLeft className='w-3 h-3 sm:w-4 sm:h-4' />
+                  </Button>
+
+                  {/* Previous page button */}
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setCurrentPage((prev) => prev - 1)}
+                    disabled={currentPage === 1}
+                    className='h-7 w-7 sm:h-8 sm:w-8 p-0'
+                  >
+                    <ChevronLeft className='w-3 h-3 sm:w-4 sm:h-4' />
+                  </Button>
+
+                  {/* Page numbers - Show up to 5 pages */}
+                  <div className='flex items-center gap-1 mx-1 sm:mx-2'>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? 'default' : 'outline'}
+                          size='sm'
+                          onClick={() => setCurrentPage(pageNum)}
+                          className='h-7 w-7 sm:h-8 sm:w-8 p-0 text-xs sm:text-sm'
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Next page button */}
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                    disabled={currentPage === totalPages}
+                    className='h-7 w-7 sm:h-8 sm:w-8 p-0'
+                  >
+                    <ChevronRight className='w-3 h-3 sm:w-4 sm:h-4' />
+                  </Button>
+
+                  {/* Last page button */}
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className='h-7 w-7 sm:h-8 sm:w-8 p-0'
+                  >
+                    <ChevronsRight className='w-3 h-3 sm:w-4 sm:h-4' />
+                  </Button>
                 </div>
-                
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className='text-xs px-2 sm:px-3'
-                >
-                  <span className='hidden sm:inline'>Next</span>
-                  <span className='sm:hidden'>Next</span>
-                </Button>
               </div>
             </div>
           )}
@@ -879,113 +772,220 @@ export const VehicleTab = () => {
         isOpen={isOnboardFormOpen}
         onClose={() => {
           setIsOnboardFormOpen(false);
-          setEditingVehicle(null);
         }}
         onSubmit={handleOnboardVehicle}
-        editingVehicle={editingVehicle}
+        editingVehicle={null}
       />
 
       {/* View Vehicle Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
-          <DialogHeader>
-            <DialogTitle className='flex items-center gap-2'>
-              <Truck className='w-5 h-5' />
+      <Dialog open={isViewDialogOpen} onOpenChange={(open) => {
+        setIsViewDialogOpen(open);
+        if (!open) {
+          setViewingVehicle(null);
+        }
+      }}>
+        <DialogContent className='max-w-5xl max-h-[90vh] overflow-y-auto'>
+          <DialogHeader className='pb-2'>
+            <DialogTitle className='flex items-center gap-2 text-lg'>
+              <div className='w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center'>
+                <Truck className='w-4 h-4 text-primary' />
+              </div>
               Vehicle Details - {viewingVehicle?.vehicleRegistrationNumber}
             </DialogTitle>
-            <DialogDescription>
-              Complete information about the vehicle and driver
-            </DialogDescription>
           </DialogHeader>
           
           {viewingVehicle && (
-            <div className='space-y-6'>
+            <div className='space-y-4'>
+              {/* Single Card for all content */}
+              <Card className='border-0 shadow-sm'>
+                <CardContent className='space-y-4'>
               {/* Vehicle Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center gap-2'>
-                    <Truck className='w-4 h-4' />
+                  <div className='space-y-3'>
+                    <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
                     Vehicle Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Registration Number</Label>
-                      <p className='text-sm'>{viewingVehicle.vehicleRegistrationNumber}</p>
+                    </h4>
+
+                    {/* First Row */}
+                    <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>
+                          Registration Number
+                        </Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingVehicle.vehicleRegistrationNumber}
                     </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Make & Model</Label>
-                      <p className='text-sm'>{viewingVehicle.vehicleMake} {viewingVehicle.vehicleModel}</p>
                     </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Vehicle Type</Label>
-                      <p className='text-sm capitalize'>{viewingVehicle.vehicleType.replace('_', ' ')}</p>
+
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>
+                          Make & Model
+                        </Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingVehicle.vehicleMake} {viewingVehicle.vehicleModel}
                     </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Year</Label>
-                      <p className='text-sm'>{viewingVehicle.vehicleYear}</p>
                     </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Load Capacity</Label>
-                      <p className='text-sm'>{viewingVehicle.loadCapacity} kg</p>
                     </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Fuel Type</Label>
-                      <p className='text-sm capitalize'>{viewingVehicle.fuelType}</p>
+
+                    {/* Second Row */}
+                    <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>
+                          Vehicle Type
+                        </Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center capitalize'>
+                          {viewingVehicle.vehicleType.replace('_', ' ')}
                     </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Engine Number</Label>
-                      <p className='text-sm font-mono'>{viewingVehicle.engineNumber}</p>
                     </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Chassis Number</Label>
-                      <p className='text-sm font-mono'>{viewingVehicle.chassisNumber}</p>
+
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>
+                          Fuel Type
+                        </Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center capitalize'>
+                          {viewingVehicle.fuelType}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                    </div>
 
+                    {/* Third Row - Status */}
+                    <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Status</Label>
+                        <Badge className={`${getStatusColor(viewingVehicle.status)} border flex items-center gap-1 w-fit`}>
+                          {getStatusIcon(viewingVehicle.status)}
+                          <span className='capitalize'>{viewingVehicle.status.replace('_', ' ')}</span>
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Vehicle Specifications */}
+                  <div className='space-y-3'>
+                    <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
+                      Vehicle Specifications
+                    </h4>
+
+                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>
+                          Year
+                        </Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingVehicle.vehicleYear}
+                        </div>
+                      </div>
+
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>
+                          Load Capacity (kg)
+                        </Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingVehicle.loadCapacity}
+                        </div>
+                      </div>
+
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>
+                          Engine Number
+                        </Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center font-mono'>
+                          {viewingVehicle.engineNumber}
+                        </div>
+                      </div>
+
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>
+                          Chassis Number
+                        </Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center font-mono'>
+                          {viewingVehicle.chassisNumber}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>
+                          Purchase Date
+                        </Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {formatDate(viewingVehicle.purchaseDate)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
               {/* Insurance Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center gap-2'>
-                    <Shield className='w-4 h-4' />
+                  <div className='space-y-3'>
+                    <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
                     Insurance Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Provider</Label>
-                      <p className='text-sm'>{viewingVehicle.insuranceProvider}</p>
+                    </h4>
+
+                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>
+                          Insurance Provider
+                        </Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingVehicle.insuranceProvider}
                     </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Policy Number</Label>
-                      <p className='text-sm font-mono'>{viewingVehicle.insurancePolicyNumber}</p>
                     </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Expiry Date</Label>
-                      <p className='text-sm'>{formatDate(viewingVehicle.insuranceExpiryDate)}</p>
+
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>
+                          Policy Number
+                        </Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center font-mono'>
+                          {viewingVehicle.insurancePolicyNumber}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>
+                          Expiry Date
+                        </Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {formatDate(viewingVehicle.insuranceExpiryDate)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Information */}
+                  <div className='space-y-3'>
+                    <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
+                      Additional Information
+                    </h4>
 
               {viewingVehicle.additionalNotes && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className='flex items-center gap-2'>
-                      <FileText className='w-4 h-4' />
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>
                       Additional Notes
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className='text-sm'>{viewingVehicle.additionalNotes}</p>
+                        </Label>
+                        <div className='min-h-[40px] px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-start'>
+                          {viewingVehicle.additionalNotes}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Created Date</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-center font-semibold text-xs border border-input rounded-[5px] flex items-center justify-center'>
+                          {formatDate(viewingVehicle.createdAt)}
+                        </div>
+                      </div>
+
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Last Updated</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-center font-semibold text-xs border border-input rounded-[5px] flex items-center justify-center'>
+                          {formatDate(viewingVehicle.updatedAt)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   </CardContent>
                 </Card>
-              )}
             </div>
           )}
         </DialogContent>

@@ -3,20 +3,49 @@ import {
   IndianRupee,
   Save,
   X,
-  Truck,
-  Calendar,
-  FileText,
-  Upload,
   Loader2,
-  Fuel,
-  Wrench,
-  CreditCard,
-  MapPin,
-  Receipt,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
+  Plus,
 } from 'lucide-react';
+
+// Date utility functions
+const formatDateToString = (date: Date): string => {
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
+const stringToDateInputFormat = (dateString: string): string => {
+  // Convert DD-MM-YYYY to YYYY-MM-DD for HTML date input
+  if (dateString && dateString.includes('-')) {
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      // Check if first part is day (2 digits) vs year (4 digits)
+      if (parts[0].length === 2 && parts[2].length === 4) {
+        // DD-MM-YYYY format
+        const [day, month, year] = parts;
+        return `${year}-${month}-${day}`;
+      } else if (parts[0].length === 4 && parts[2].length === 2) {
+        // Already YYYY-MM-DD format
+        return dateString;
+      }
+    }
+  }
+  return dateString;
+};
+
+const dateInputFormatToString = (dateInputValue: string): string => {
+  // Convert YYYY-MM-DD from HTML date input to DD-MM-YYYY
+  if (dateInputValue && dateInputValue.includes('-')) {
+    const parts = dateInputValue.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      // YYYY-MM-DD format
+      const [year, month, day] = parts;
+      return `${day}-${month}-${year}`;
+    }
+  }
+  return dateInputValue;
+};
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -28,9 +57,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Badge } from '../ui/badge';
 import { toast } from '../../hooks/use-toast';
 import { useRole } from '../../contexts/RoleContext';
 
@@ -59,6 +87,7 @@ export interface VehicleExpenseData {
   approvedDate: string;
   rejectionReason: string;
   notes: string;
+  requestedBy: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -81,6 +110,10 @@ export const ExpensesForm = ({
   const { currentUser } = useRole();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // State for custom expense category input
+  const [showCustomExpenseCategoryInput, setShowCustomExpenseCategoryInput] = useState(false);
+  const [customExpenseCategoryName, setCustomExpenseCategoryName] = useState('');
 
   const [formData, setFormData] = useState<VehicleExpenseData>({
     expenseNumber: '',
@@ -106,12 +139,22 @@ export const ExpensesForm = ({
     approvedDate: '',
     rejectionReason: '',
     notes: '',
+    requestedBy: '',
   });
 
   // Effect to populate form when editing
   useEffect(() => {
     if (editingExpense && isOpen) {
-      setFormData(editingExpense);
+      // Ensure date format is DD-MM-YYYY when editing
+      const expenseData = { ...editingExpense };
+      if (expenseData.expenseDate && !expenseData.expenseDate.includes('-')) {
+        // If date is in a different format, convert it
+        const date = new Date(expenseData.expenseDate);
+        if (!isNaN(date.getTime())) {
+          expenseData.expenseDate = formatDateToString(date);
+        }
+      }
+      setFormData(expenseData);
     } else if (!editingExpense && isOpen) {
       // Reset form for new expense
       setFormData({
@@ -120,7 +163,7 @@ export const ExpensesForm = ({
         vehicleRegistrationNumber: '',
         driverId: '',
         driverName: '',
-        expenseDate: new Date().toISOString().split('T')[0],
+        expenseDate: formatDateToString(new Date()),
         expenseCategory: 'fuel',
         expenseType: '',
         description: '',
@@ -138,7 +181,10 @@ export const ExpensesForm = ({
         approvedDate: '',
         rejectionReason: '',
         notes: '',
+        requestedBy: '',
       });
+      setShowCustomExpenseCategoryInput(false);
+      setCustomExpenseCategoryName('');
     }
   }, [editingExpense, isOpen]);
 
@@ -164,11 +210,57 @@ export const ExpensesForm = ({
     }
   };
 
+  const handleExpenseCategoryChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, expenseCategory: value as any }));
+    if (errors.expenseCategory) {
+      setErrors((prev) => ({ ...prev, expenseCategory: '' }));
+    }
+
+    // Handle "Other" selection for expense category
+    if (value === 'other') {
+      setShowCustomExpenseCategoryInput(true);
+    } else {
+      setShowCustomExpenseCategoryInput(false);
+    }
+  };
+
+  // Function to create new expense category
+  const handleCreateExpenseCategory = async () => {
+    if (!customExpenseCategoryName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter an expense category name.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // For now, we'll just set the custom expense category name directly
+      // In a real implementation, you might want to save this to a backend
+      setFormData((prev) => ({ ...prev, expenseCategory: customExpenseCategoryName.trim() as any }));
+      setShowCustomExpenseCategoryInput(false);
+      setCustomExpenseCategoryName('');
+
+      toast({
+        title: 'Success',
+        description: `Expense category "${customExpenseCategoryName.trim()}" has been added.`,
+      });
+    } catch (error) {
+      console.error('Error creating expense category:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add expense category. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     let hasErrors = false;
 
-    // Basic Information Validation
+    // Only validate mandatory fields
     if (!formData.vehicleId.trim()) {
       newErrors.vehicleId = 'Please select a vehicle';
       hasErrors = true;
@@ -189,11 +281,6 @@ export const ExpensesForm = ({
       hasErrors = true;
     }
 
-    if (!formData.description.trim()) {
-      newErrors.description = 'Description is required';
-      hasErrors = true;
-    }
-
     if (!formData.amount.trim()) {
       newErrors.amount = 'Amount is required';
       hasErrors = true;
@@ -203,16 +290,6 @@ export const ExpensesForm = ({
         newErrors.amount = 'Please enter a valid amount';
         hasErrors = true;
       }
-    }
-
-    if (!formData.vendorName.trim()) {
-      newErrors.vendorName = 'Vendor name is required';
-      hasErrors = true;
-    }
-
-    if (!formData.paymentMethod.trim()) {
-      newErrors.paymentMethod = 'Payment method is required';
-      hasErrors = true;
     }
 
     if (!formData.location.trim()) {
@@ -261,7 +338,7 @@ export const ExpensesForm = ({
         vehicleRegistrationNumber: '',
         driverId: '',
         driverName: '',
-        expenseDate: new Date().toISOString().split('T')[0],
+        expenseDate: formatDateToString(new Date()),
         expenseCategory: 'fuel',
         expenseType: '',
         description: '',
@@ -279,9 +356,12 @@ export const ExpensesForm = ({
         approvedDate: '',
         rejectionReason: '',
         notes: '',
+        requestedBy: '',
       });
 
       setErrors({});
+      setShowCustomExpenseCategoryInput(false);
+      setCustomExpenseCategoryName('');
       onClose();
     } catch (error) {
       console.error('Error recording expense:', error);
@@ -295,174 +375,98 @@ export const ExpensesForm = ({
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    handleInputChange('receipts', [...formData.receipts, ...files]);
-  };
-
-  const removeReceipt = (index: number) => {
-    const newReceipts = formData.receipts.filter((_, i) => i !== index);
-    handleInputChange('receipts', newReceipts);
-  };
-
-  const getExpenseCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'fuel':
-        return <Fuel className='w-4 h-4' />;
-      case 'maintenance':
-      case 'repair':
-        return <Wrench className='w-4 h-4' />;
-      case 'insurance':
-        return <CreditCard className='w-4 h-4' />;
-      case 'toll':
-      case 'parking':
-        return <MapPin className='w-4 h-4' />;
-      case 'driver_salary':
-        return <IndianRupee className='w-4 h-4' />;
-      case 'permit':
-        return <FileText className='w-4 h-4' />;
-      default:
-        return <Receipt className='w-4 h-4' />;
-    }
-  };
-
-  const getExpenseCategoryColor = (category: string) => {
-    switch (category) {
-      case 'fuel':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'maintenance':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'repair':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'insurance':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'toll':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'parking':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'driver_salary':
-        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
-      case 'permit':
-        return 'bg-pink-100 text-pink-800 border-pink-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getApprovalStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'approved':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'rejected':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getApprovalStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <AlertTriangle className='w-4 h-4' />;
-      case 'approved':
-        return <CheckCircle className='w-4 h-4' />;
-      case 'rejected':
-        return <XCircle className='w-4 h-4' />;
-      default:
-        return <AlertTriangle className='w-4 h-4' />;
-    }
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className='max-w-[95vw] max-h-[90vh] overflow-y-auto p-6'>
-        <DialogHeader className='pb-4'>
-          <DialogTitle className='flex items-center gap-2'>
-            <div className='w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center'>
+      <DialogContent className='max-w-5xl max-h-[90vh] overflow-y-auto'>
+        <DialogHeader className='pb-2'>
+          <DialogTitle className='flex items-center gap-2 text-lg'>
+            <div className='w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center'>
               <IndianRupee className='w-4 h-4 text-primary' />
             </div>
-            <div>
-              <div className='text-lg font-bold'>
-                {editingExpense ? 'EDIT VEHICLE EXPENSE' : 'VEHICLE EXPENSE FORM'}
-              </div>
-              <div className='text-sm text-muted-foreground'>
-                {editingExpense ? 'Update expense information' : 'Record new vehicle expense'}
-              </div>
-            </div>
+            {editingExpense ? 'Edit Vehicle Expense' : 'Add New Vehicle Expense'}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className='space-y-6'>
-          {/* Basic Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2 text-lg'>
-                <Truck className='w-5 h-5' />
-                Basic Information
-              </CardTitle>
-            </CardHeader>
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          {/* Single Card for all form content */}
+          <Card className='border-0 shadow-sm'>
             <CardContent className='space-y-4'>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='expenseNumber'>Expense Number</Label>
+              {/* Basic Information */}
+              <div className='space-y-3'>
+                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
+                  Basic Information
+                </h4>
+
+                {/* First Row */}
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                  <div className='space-y-1'>
+                    <Label htmlFor='expenseNumber' className='text-xs font-medium'>
+                      Expense Number
+                    </Label>
                   <Input
                     id='expenseNumber'
                     value={formData.expenseNumber}
                     onChange={(e) => handleInputChange('expenseNumber', e.target.value)}
                     placeholder='Auto-generated'
                     readOnly
-                    className='bg-gray-50'
+                      className='h-8 px-2 py-1 border border-input bg-secondary hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground'
                   />
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='vehicleId'>Vehicle *</Label>
+                  <div className='space-y-1'>
+                    <Label htmlFor='vehicleId' className='text-xs font-medium'>
+                      Vehicle *
+                    </Label>
                   <Select
                     value={formData.vehicleId}
                     onValueChange={(value) => handleInputChange('vehicleId', value)}
                   >
-                    <SelectTrigger className={errors.vehicleId ? 'border-red-500' : ''}>
+                      <SelectTrigger className={`h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 [&>span]:text-muted-foreground ${errors.vehicleId ? 'border-red-500' : ''}`}>
                       <SelectValue placeholder='Select vehicle' />
                     </SelectTrigger>
                     <SelectContent>
                       {availableVehicles.map((vehicle) => (
                         <SelectItem key={vehicle.id} value={vehicle.id}>
-                          {vehicle.registrationNumber} - {vehicle.driverName}
+                            {vehicle.registrationNumber}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   {errors.vehicleId && (
-                    <p className='text-sm text-red-500'>{errors.vehicleId}</p>
+                      <p className='text-destructive text-xs mt-1'>{errors.vehicleId}</p>
                   )}
+                  </div>
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='expenseDate'>Expense Date *</Label>
+                {/* Second Row */}
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                  <div className='space-y-1'>
+                    <Label htmlFor='expenseDate' className='text-xs font-medium'>
+                      Expense Date *
+                    </Label>
                   <Input
                     id='expenseDate'
                     type='date'
-                    value={formData.expenseDate}
-                    onChange={(e) => handleInputChange('expenseDate', e.target.value)}
-                    className={errors.expenseDate ? 'border-red-500' : ''}
+                    value={stringToDateInputFormat(formData.expenseDate)}
+                    onChange={(e) => handleInputChange('expenseDate', dateInputFormatToString(e.target.value))}
+                      className={`h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 ${errors.expenseDate ? 'border-red-500' : ''}`}
                   />
                   {errors.expenseDate && (
-                    <p className='text-sm text-red-500'>{errors.expenseDate}</p>
+                      <p className='text-destructive text-xs mt-1'>{errors.expenseDate}</p>
                   )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='expenseCategory'>Expense Category *</Label>
+                  <div className='space-y-1'>
+                    <Label htmlFor='expenseCategory' className='text-xs font-medium'>
+                      Expense Category *
+                    </Label>
                   <Select
                     value={formData.expenseCategory}
-                    onValueChange={(value: 'fuel' | 'maintenance' | 'repair' | 'insurance' | 'toll' | 'parking' | 'driver_salary' | 'permit' | 'other') => 
-                      handleInputChange('expenseCategory', value)
-                    }
+                    onValueChange={handleExpenseCategoryChange}
                   >
-                    <SelectTrigger className={errors.expenseCategory ? 'border-red-500' : ''}>
-                      <SelectValue />
+                      <SelectTrigger className={`h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 [&>span]:text-muted-foreground ${errors.expenseCategory ? 'border-red-500' : ''}`}>
+                      <SelectValue placeholder='Select expense category' />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value='fuel'>Fuel</SelectItem>
@@ -477,26 +481,72 @@ export const ExpensesForm = ({
                     </SelectContent>
                   </Select>
                   {errors.expenseCategory && (
-                    <p className='text-sm text-red-500'>{errors.expenseCategory}</p>
+                      <p className='text-destructive text-xs mt-1'>{errors.expenseCategory}</p>
                   )}
+                  </div>
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='expenseType'>Expense Type *</Label>
+                {/* Custom Expense Category Input */}
+                {showCustomExpenseCategoryInput && (
+                  <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2'>
+                    <Label className='text-xs font-medium text-blue-800'>
+                      Add New Expense Category
+                    </Label>
+                    <div className='flex gap-2'>
+                      <Input
+                        placeholder='Enter expense category name'
+                        value={customExpenseCategoryName}
+                        onChange={(e) => setCustomExpenseCategoryName(e.target.value)}
+                        className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground'
+                      />
+                      <Button
+                        type='button'
+                        onClick={handleCreateExpenseCategory}
+                        size='sm'
+                        className='h-8 px-3 bg-blue-600 hover:bg-blue-700'
+                      >
+                        <Plus className='w-3 h-3 mr-1' />
+                        Add
+                      </Button>
+                      <Button
+                        type='button'
+                        onClick={() => {
+                          setShowCustomExpenseCategoryInput(false);
+                          setCustomExpenseCategoryName('');
+                          setFormData(prev => ({ ...prev, expenseCategory: 'fuel' }));
+                        }}
+                        variant='outline'
+                        size='sm'
+                        className='h-8 px-3'
+                      >
+                        <X className='w-3 h-3' />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Third Row */}
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                  <div className='space-y-1'>
+                    <Label htmlFor='expenseType' className='text-xs font-medium'>
+                      Expense Type *
+                    </Label>
                   <Input
                     id='expenseType'
                     value={formData.expenseType}
                     onChange={(e) => handleInputChange('expenseType', e.target.value)}
                     placeholder='e.g., Diesel, Engine Oil, Brake Repair'
-                    className={errors.expenseType ? 'border-red-500' : ''}
+                      className={`h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground ${errors.expenseType ? 'border-red-500' : ''}`}
                   />
                   {errors.expenseType && (
-                    <p className='text-sm text-red-500'>{errors.expenseType}</p>
+                      <p className='text-destructive text-xs mt-1'>{errors.expenseType}</p>
                   )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='amount'>Amount (₹) *</Label>
+                  <div className='space-y-1'>
+                    <Label htmlFor='amount' className='text-xs font-medium'>
+                      Amount (₹) *
+                    </Label>
                   <Input
                     id='amount'
                     type='number'
@@ -505,102 +555,91 @@ export const ExpensesForm = ({
                     placeholder='e.g., 2500.00'
                     min='0'
                     step='0.01'
-                    className={errors.amount ? 'border-red-500' : ''}
+                      className={`h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground ${errors.amount ? 'border-red-500' : ''}`}
                   />
                   {errors.amount && (
-                    <p className='text-sm text-red-500'>{errors.amount}</p>
+                      <p className='text-destructive text-xs mt-1'>{errors.amount}</p>
                   )}
+                  </div>
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='location'>Location *</Label>
+                {/* Fourth Row */}
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                  <div className='space-y-1'>
+                    <Label htmlFor='location' className='text-xs font-medium'>
+                      Location *
+                    </Label>
                   <Input
                     id='location'
                     value={formData.location}
                     onChange={(e) => handleInputChange('location', e.target.value)}
                     placeholder='Where was the expense incurred?'
-                    className={errors.location ? 'border-red-500' : ''}
+                      className={`h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground ${errors.location ? 'border-red-500' : ''}`}
                   />
                   {errors.location && (
-                    <p className='text-sm text-red-500'>{errors.location}</p>
+                      <p className='text-destructive text-xs mt-1'>{errors.location}</p>
                   )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='odometerReading'>Odometer Reading (km)</Label>
+                  <div className='space-y-1'>
+                    <Label htmlFor='requestedBy' className='text-xs font-medium'>Requested By</Label>
                   <Input
-                    id='odometerReading'
-                    type='number'
-                    value={formData.odometerReading}
-                    onChange={(e) => handleInputChange('odometerReading', e.target.value)}
-                    placeholder='e.g., 125000'
-                    min='0'
-                  />
+                      id='requestedBy'
+                      value={formData.requestedBy}
+                      onChange={(e) => handleInputChange('requestedBy', e.target.value)}
+                      placeholder='Enter the requested by'
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground'
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className='space-y-2'>
-                <Label htmlFor='description'>Description *</Label>
-                <Textarea
-                  id='description'
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  placeholder='Detailed description of the expense...'
-                  rows={3}
-                  className={errors.description ? 'border-red-500' : ''}
-                />
-                {errors.description && (
-                  <p className='text-sm text-red-500'>{errors.description}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Vendor Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2 text-lg'>
-                <Receipt className='w-5 h-5' />
+              <div className='space-y-3'>
+                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
                 Vendor Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='vendorName'>Vendor Name *</Label>
+                </h4>
+
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
+                  <div className='space-y-1'>
+                    <Label htmlFor='vendorName' className='text-xs font-medium'>
+                      Vendor Name
+                    </Label>
                   <Input
                     id='vendorName'
                     value={formData.vendorName}
                     onChange={(e) => handleInputChange('vendorName', e.target.value)}
                     placeholder='e.g., Bharat Petroleum, Local Mechanic'
-                    className={errors.vendorName ? 'border-red-500' : ''}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground'
                   />
-                  {errors.vendorName && (
-                    <p className='text-sm text-red-500'>{errors.vendorName}</p>
-                  )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='vendorContact'>Vendor Contact</Label>
+                  <div className='space-y-1'>
+                    <Label htmlFor='vendorContact' className='text-xs font-medium'>
+                      Vendor Contact
+                    </Label>
                   <Input
                     id='vendorContact'
                     type='tel'
                     value={formData.vendorContact}
                     onChange={(e) => handleInputChange('vendorContact', e.target.value)}
                     placeholder='+91 9876543210'
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground'
                   />
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='paymentMethod'>Payment Method *</Label>
+                  <div className='space-y-1'>
+                    <Label htmlFor='paymentMethod' className='text-xs font-medium'>
+                      Payment Method
+                    </Label>
                   <Select
                     value={formData.paymentMethod}
                     onValueChange={(value: 'cash' | 'card' | 'upi' | 'cheque' | 'bank_transfer') => 
                       handleInputChange('paymentMethod', value)
                     }
                   >
-                    <SelectTrigger className={errors.paymentMethod ? 'border-red-500' : ''}>
-                      <SelectValue />
+                      <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 [&>span]:text-muted-foreground'>
+                      <SelectValue placeholder='Select payment method' />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value='cash'>Cash</SelectItem>
@@ -610,196 +649,81 @@ export const ExpensesForm = ({
                       <SelectItem value='bank_transfer'>Bank Transfer</SelectItem>
                     </SelectContent>
                   </Select>
-                  {errors.paymentMethod && (
-                    <p className='text-sm text-red-500'>{errors.paymentMethod}</p>
-                  )}
                 </div>
 
-                <div className='space-y-2'>
-                  <Label htmlFor='paymentReference'>Payment Reference</Label>
+                  <div className='space-y-1'>
+                    <Label htmlFor='paymentReference' className='text-xs font-medium'>
+                      Payment Reference
+                    </Label>
                   <Input
                     id='paymentReference'
                     value={formData.paymentReference}
                     onChange={(e) => handleInputChange('paymentReference', e.target.value)}
                     placeholder='Transaction ID, Cheque No., etc.'
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground'
                   />
                 </div>
 
-                <div className='space-y-2 md:col-span-2 lg:col-span-3'>
-                  <Label htmlFor='vendorAddress'>Vendor Address</Label>
+                  <div className='space-y-1'>
+                    <Label htmlFor='vendorAddress' className='text-xs font-medium'>
+                      Vendor Address
+                    </Label>
                   <Textarea
                     id='vendorAddress'
                     value={formData.vendorAddress}
                     onChange={(e) => handleInputChange('vendorAddress', e.target.value)}
                     placeholder='Complete vendor address'
-                    rows={2}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Receipts Upload */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2 text-lg'>
-                <Upload className='w-5 h-5' />
-                Receipts & Documents
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='receipts'>Upload Receipts</Label>
-                <Input
-                  id='receipts'
-                  type='file'
-                  multiple
-                  accept='.pdf,.jpg,.jpeg,.png,.doc,.docx'
-                  onChange={handleFileUpload}
-                  className='cursor-pointer'
-                />
-                <p className='text-sm text-muted-foreground'>
-                  Upload expense receipts, invoices, and related documents
-                </p>
-              </div>
-
-              {formData.receipts.length > 0 && (
-                <div className='space-y-2'>
-                  <Label>Uploaded Documents</Label>
-                  <div className='space-y-2'>
-                    {formData.receipts.map((file, index) => (
-                      <div key={index} className='flex items-center justify-between p-2 border rounded'>
-                        <div className='flex items-center gap-2'>
-                          <FileText className='w-4 h-4' />
-                          <span className='text-sm'>{file.name}</span>
-                          <span className='text-xs text-muted-foreground'>
-                            ({(file.size / 1024).toFixed(1)} KB)
-                          </span>
-                        </div>
-                        <Button
-                          type='button'
-                          variant='outline'
-                          size='sm'
-                          onClick={() => removeReceipt(index)}
-                          className='h-6 w-6 p-0'
-                        >
-                          <X className='w-3 h-3' />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Approval Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2 text-lg'>
-                <CheckCircle className='w-5 h-5' />
-                Approval Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='approvalStatus'>Approval Status</Label>
-                  <Select
-                    value={formData.approvalStatus}
-                    onValueChange={(value: 'pending' | 'approved' | 'rejected') => 
-                      handleInputChange('approvalStatus', value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='pending'>Pending</SelectItem>
-                      <SelectItem value='approved'>Approved</SelectItem>
-                      <SelectItem value='rejected'>Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='approvedBy'>Approved By</Label>
-                  <Input
-                    id='approvedBy'
-                    value={formData.approvedBy}
-                    onChange={(e) => handleInputChange('approvedBy', e.target.value)}
-                    placeholder='Approver name'
-                  />
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='approvedDate'>Approval Date</Label>
-                  <Input
-                    id='approvedDate'
-                    type='date'
-                    value={formData.approvedDate}
-                    onChange={(e) => handleInputChange('approvedDate', e.target.value)}
-                  />
-                </div>
-
-                {formData.approvalStatus === 'rejected' && (
-                  <div className='space-y-2 md:col-span-2 lg:col-span-3'>
-                    <Label htmlFor='rejectionReason'>Rejection Reason</Label>
-                    <Textarea
-                      id='rejectionReason'
-                      value={formData.rejectionReason}
-                      onChange={(e) => handleInputChange('rejectionReason', e.target.value)}
-                      placeholder='Reason for rejection...'
-                      rows={2}
+                      className='min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200 placeholder:text-muted-foreground'
                     />
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+                </div>
 
-          {/* Additional Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className='flex items-center gap-2 text-lg'>
-                <FileText className='w-5 h-5' />
-                Additional Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='notes'>Notes</Label>
+              {/* Additional Information */}
+              <div className='space-y-3'>
+                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
+                  Additional Information
+                </h4>
+
+                <div className='space-y-1'>
+                  <Label htmlFor='description' className='text-xs font-medium'>
+                    Description
+                  </Label>
+                  <Textarea
+                    id='description'
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    placeholder='Detailed description of the expense...'
+                    className='min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200 placeholder:text-muted-foreground'
+                  />
+                </div>
+
+                <div className='space-y-1'>
+                  <Label htmlFor='notes' className='text-xs font-medium'>
+                    Notes
+                  </Label>
                 <Textarea
                   id='notes'
                   value={formData.notes}
                   onChange={(e) => handleInputChange('notes', e.target.value)}
                   placeholder='Any additional notes about the expense...'
-                  rows={3}
+                    className='min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200 placeholder:text-muted-foreground'
                 />
               </div>
 
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                <div className='space-y-2'>
-                  <Label>Recorded By</Label>
-                  <div className='input-friendly bg-secondary text-center py-2 font-semibold text-sm'>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                  <div className='space-y-1'>
+                    <Label className='text-xs font-medium'>Recorded By</Label>
+                    <div className='h-8 px-2 py-1 bg-secondary text-center font-semibold text-xs border border-input rounded-[5px] flex items-center justify-center'>
                     {currentUser?.name || 'Current User'}
                   </div>
                 </div>
 
-                <div className='space-y-2'>
-                  <Label>Date</Label>
-                  <div className='input-friendly bg-secondary text-center py-2 font-semibold text-sm'>
-                    {new Date().toLocaleDateString()}
+                  <div className='space-y-1'>
+                    <Label className='text-xs font-medium'>Date</Label>
+                    <div className='h-8 px-2 py-1 bg-secondary text-center font-semibold text-xs border border-input rounded-[5px] flex items-center justify-center'>
+                    {formatDateToString(new Date())}
                   </div>
-                </div>
-
-                <div className='space-y-2'>
-                  <Label>Current Status</Label>
-                  <div className='flex justify-center'>
-                    <Badge className={`${getApprovalStatusColor(formData.approvalStatus)} border flex items-center gap-1`}>
-                      {getApprovalStatusIcon(formData.approvalStatus)}
-                      <span className='text-xs'>{formData.approvalStatus.toUpperCase()}</span>
-                    </Badge>
                   </div>
                 </div>
               </div>
@@ -807,30 +731,31 @@ export const ExpensesForm = ({
           </Card>
 
           {/* Form Actions */}
-          <div className='flex justify-end gap-3 pt-4'>
+          <div className='flex justify-end gap-3 pt-4 border-t'>
             <Button
               type='button'
               variant='outline'
               onClick={onClose}
+              className='h-8 px-4'
               disabled={isSubmitting}
             >
-              <X className='w-4 h-4 mr-2' />
+              <X className='w-3 h-3 mr-1' />
               Cancel
             </Button>
             <Button
               type='submit'
+              className='h-8 px-4 bg-primary hover:bg-primary/90'
               disabled={isSubmitting}
-              className='gap-2'
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className='h-4 w-4 animate-spin' />
-                  {editingExpense ? 'Updating...' : 'Recording...'}
+                  <Loader2 className='w-3 h-3 mr-1 animate-spin' />
+                  Submitting...
                 </>
               ) : (
                 <>
-                  <Save className='w-4 h-4' />
-                  {editingExpense ? 'Update Expense' : 'Record Expense'}
+                  <Save className='w-3 h-3 mr-1' />
+                  Submit
                 </>
               )}
             </Button>

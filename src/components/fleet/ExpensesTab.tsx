@@ -4,13 +4,6 @@ import {
   Search,
   Plus,
   Eye,
-  Edit,
-  Trash2,
-  MoreVertical,
-  Calendar,
-  CheckCircle,
-  AlertTriangle,
-  XCircle,
   Truck,
   User,
   Fuel,
@@ -20,12 +13,13 @@ import {
   Receipt,
   FileText,
   RefreshCcw,
+  ArrowUpDown,
   ChevronDown,
   ChevronUp,
-  ArrowUpDown,
-  Filter,
-  Download,
-  Upload,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -47,12 +41,46 @@ import {
   TableRow,
 } from '../ui/table';
 import { Badge } from '../ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
+
+// Date utility functions
+const formatDateToString = (date: Date): string => {
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
+const formatDateDisplay = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  // Handle different date formats
+  if (dateString.includes('-')) {
+    const parts = dateString.split('-');
+    if (parts.length === 3) {
+      // Check if first part is day (2 digits) vs year (4 digits)
+      if (parts[0].length === 2 && parts[2].length === 4) {
+        // Already DD-MM-YYYY format
+        return dateString;
+      } else if (parts[0].length === 4 && parts[2].length === 2) {
+        // YYYY-MM-DD format, convert to DD-MM-YYYY
+        const [year, month, day] = parts;
+        return `${day}-${month}-${year}`;
+      }
+    }
+  }
+  
+  // Try to parse as Date and format
+  try {
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+      return formatDateToString(date);
+    }
+  } catch (error) {
+    // If parsing fails, return original string
+  }
+  
+  return dateString;
+};
 import {
   Dialog,
   DialogContent,
@@ -73,13 +101,11 @@ export const ExpensesTab = () => {
   
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterVehicle, setFilterVehicle] = useState<string>('all');
   const [filterDateRange, setFilterDateRange] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('expenseDate');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -87,7 +113,6 @@ export const ExpensesTab = () => {
   
   // Form states
   const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
-  const [editingExpense, setEditingExpense] = useState<VehicleExpenseData | null>(null);
   const [viewingExpense, setViewingExpense] = useState<VehicleExpenseData | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
@@ -118,6 +143,7 @@ export const ExpensesTab = () => {
       approvedDate: '2023-12-21',
       rejectionReason: '',
       notes: 'Regular fuel refill',
+      requestedBy: 'Rajesh Kumar',
       createdAt: '2023-12-21T10:30:00Z',
       updatedAt: '2023-12-21T10:30:00Z',
     },
@@ -146,6 +172,7 @@ export const ExpensesTab = () => {
       approvedDate: '',
       rejectionReason: '',
       notes: 'Scheduled maintenance',
+      requestedBy: 'Rajesh Kumar',
       createdAt: '2023-12-20T14:00:00Z',
       updatedAt: '2023-12-20T14:00:00Z',
     },
@@ -174,6 +201,7 @@ export const ExpensesTab = () => {
       approvedDate: '2023-12-19',
       rejectionReason: '',
       notes: 'Regular toll charges',
+      requestedBy: 'Suresh Patel',
       createdAt: '2023-12-19T16:45:00Z',
       updatedAt: '2023-12-19T16:45:00Z',
     },
@@ -202,6 +230,7 @@ export const ExpensesTab = () => {
       approvedDate: '2023-12-18',
       rejectionReason: '',
       notes: 'Urgent brake repair',
+      requestedBy: 'Rajesh Kumar',
       createdAt: '2023-12-18T11:20:00Z',
       updatedAt: '2023-12-18T11:20:00Z',
     },
@@ -230,6 +259,7 @@ export const ExpensesTab = () => {
       approvedDate: '2023-12-17',
       rejectionReason: '',
       notes: 'Monthly salary payment',
+      requestedBy: 'HR Manager',
       createdAt: '2023-12-17T09:00:00Z',
       updatedAt: '2023-12-17T09:00:00Z',
     },
@@ -281,10 +311,6 @@ export const ExpensesTab = () => {
       );
     }
 
-    // Apply status filter
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(expense => expense.approvalStatus === filterStatus);
-    }
 
     // Apply category filter
     if (filterCategory !== 'all') {
@@ -356,7 +382,7 @@ export const ExpensesTab = () => {
     
     // Reset to first page when filters change
     setCurrentPage(1);
-  }, [expenses, searchTerm, filterStatus, filterCategory, filterVehicle, filterDateRange, sortBy, sortOrder]);
+  }, [expenses, searchTerm, filterCategory, filterVehicle, filterDateRange, sortBy, sortOrder]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
@@ -428,41 +454,6 @@ export const ExpensesTab = () => {
     }
   };
 
-  const getApprovalStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'approved':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'rejected':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getApprovalStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <AlertTriangle className='w-4 h-4' />;
-      case 'approved':
-        return <CheckCircle className='w-4 h-4' />;
-      case 'rejected':
-        return <XCircle className='w-4 h-4' />;
-      default:
-        return <AlertTriangle className='w-4 h-4' />;
-    }
-  };
-
-  const toggleRowExpansion = (expenseId: string) => {
-    const newExpandedRows = new Set(expandedRows);
-    if (newExpandedRows.has(expenseId)) {
-      newExpandedRows.delete(expenseId);
-    } else {
-      newExpandedRows.add(expenseId);
-    }
-    setExpandedRows(newExpandedRows);
-  };
 
   const handleCreateExpense = (expenseData: VehicleExpenseData) => {
     const newExpense: VehicleExpenseData = {
@@ -482,38 +473,9 @@ export const ExpensesTab = () => {
     });
   };
 
-  const handleEditExpense = (expense: VehicleExpenseData) => {
-    setEditingExpense(expense);
-    setIsExpenseFormOpen(true);
-  };
-
   const handleViewExpense = (expense: VehicleExpenseData) => {
     setViewingExpense(expense);
     setIsViewDialogOpen(true);
-  };
-
-  const handleDeleteExpense = async (expenseId: string) => {
-    const confirmed = window.confirm('Are you sure you want to delete this expense? This action cannot be undone.');
-    if (confirmed) {
-      try {
-        setExpenses(prev => prev.filter(e => e.id !== expenseId));
-        toast({
-          title: '✅ Expense Deleted',
-          description: 'Expense has been successfully removed from the system.',
-          variant: 'default',
-        });
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to delete expense. Please try again.',
-          variant: 'destructive',
-        });
-      }
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB');
   };
 
   const formatDateTime = (dateString: string) => {
@@ -555,10 +517,7 @@ export const ExpensesTab = () => {
                 Ref
               </Button>
               <Button
-                onClick={() => {
-                  setEditingExpense(null);
-                  setIsExpenseFormOpen(true);
-                }}
+                onClick={() => setIsExpenseFormOpen(true)}
                 size='sm'
                 className='gap-1 text-xs'
                 disabled={!hasPermission('inventory:material-indents:create')}
@@ -570,19 +529,6 @@ export const ExpensesTab = () => {
             
             {/* Filters Row */}
             <div className='flex gap-2'>
-              <div className='flex-1'>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className='text-sm'>
-                    <SelectValue placeholder='Status' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='all'>All Status</SelectItem>
-                    <SelectItem value='pending'>Pending</SelectItem>
-                    <SelectItem value='approved'>Approved</SelectItem>
-                    <SelectItem value='rejected'>Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <div className='flex-1'>
                 <Select value={filterCategory} onValueChange={setFilterCategory}>
                   <SelectTrigger className='text-sm'>
@@ -602,9 +548,6 @@ export const ExpensesTab = () => {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            
-            <div className='flex gap-2'>
               <div className='flex-1'>
                 <Select value={filterVehicle} onValueChange={setFilterVehicle}>
                   <SelectTrigger className='text-sm'>
@@ -620,6 +563,9 @@ export const ExpensesTab = () => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            
+            <div className='flex gap-2'>
               <div className='flex-1'>
                 <Select value={filterDateRange} onValueChange={setFilterDateRange}>
                   <SelectTrigger className='text-sm'>
@@ -652,20 +598,6 @@ export const ExpensesTab = () => {
               </div>
             </div>
 
-            {/* Status Filter */}
-            <div className='w-full xl:w-32'>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger className='text-sm'>
-                  <SelectValue placeholder='Status' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='all'>All Status</SelectItem>
-                  <SelectItem value='pending'>Pending</SelectItem>
-                  <SelectItem value='approved'>Approved</SelectItem>
-                  <SelectItem value='rejected'>Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
             {/* Category Filter */}
             <div className='w-full xl:w-36'>
@@ -735,10 +667,7 @@ export const ExpensesTab = () => {
               </Button>
               
               <Button
-                onClick={() => {
-                  setEditingExpense(null);
-                  setIsExpenseFormOpen(true);
-                }}
+                onClick={() => setIsExpenseFormOpen(true)}
                 size='sm'
                 className='gap-2 text-sm'
                 disabled={!hasPermission('inventory:material-indents:create')}
@@ -766,11 +695,11 @@ export const ExpensesTab = () => {
               <IndianRupee className='w-12 h-12 text-muted-foreground mx-auto mb-4' />
               <h3 className='text-lg font-semibold mb-2'>No Expenses Found</h3>
               <p className='text-muted-foreground mb-4'>
-                {searchTerm || filterStatus !== 'all' || filterCategory !== 'all' || filterVehicle !== 'all' || filterDateRange !== 'all'
+                {searchTerm || filterCategory !== 'all' || filterVehicle !== 'all' || filterDateRange !== 'all'
                   ? 'No expenses match your current filters.'
                   : 'Get started by recording your first expense.'}
               </p>
-              {(!searchTerm && filterStatus === 'all' && filterCategory === 'all' && filterVehicle === 'all' && filterDateRange === 'all') && (
+              {(!searchTerm && filterCategory === 'all' && filterVehicle === 'all' && filterDateRange === 'all') && (
                 <Button
                   onClick={() => setIsExpenseFormOpen(true)}
                   className='gap-2'
@@ -785,7 +714,6 @@ export const ExpensesTab = () => {
               <Table>
                 <TableHeader>
                   <TableRow className='bg-secondary/20'>
-                    <TableHead className='w-12'></TableHead>
                     <TableHead 
                       className='cursor-pointer hover:bg-secondary/30'
                       onClick={() => handleSort('expenseNumber')}
@@ -800,7 +728,7 @@ export const ExpensesTab = () => {
                       onClick={() => handleSort('vehicleRegistrationNumber')}
                     >
                       <div className='flex items-center gap-2'>
-                        Vehicle & Driver
+                        Vehicle
                         {getSortIcon('vehicleRegistrationNumber')}
                       </div>
                     </TableHead>
@@ -832,53 +760,23 @@ export const ExpensesTab = () => {
                         {getSortIcon('amount')}
                       </div>
                     </TableHead>
-                    <TableHead 
-                      className='cursor-pointer hover:bg-secondary/30'
-                      onClick={() => handleSort('approvalStatus')}
-                    >
-                      <div className='flex items-center gap-2'>
-                        Status
-                        {getSortIcon('approvalStatus')}
-                      </div>
-                    </TableHead>
-                    <TableHead className='w-12'></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedExpenses.map((expense) => (
                     <>
                       <TableRow key={expense.id} className='hover:bg-muted/30'>
-                        <TableCell>
-                          <Button
-                            variant='ghost'
-                            size='sm'
-                            className='h-6 w-6 p-0'
-                            onClick={() => toggleRowExpansion(expense.id!)}
-                          >
-                            {expandedRows.has(expense.id!) ? (
-                              <ChevronUp className='w-4 h-4' />
-                            ) : (
-                              <ChevronDown className='w-4 h-4' />
-                            )}
-                          </Button>
-                        </TableCell>
-                        
                         <TableCell className='font-medium'>
-                          <div className='flex flex-col'>
-                            <span className='font-semibold text-sm'>{expense.expenseNumber}</span>
-                            <span className='text-xs text-muted-foreground'>
-                              {formatDate(expense.createdAt!)}
-                            </span>
-                          </div>
+                          <button
+                            onClick={() => handleViewExpense(expense)}
+                            className='text-primary hover:text-primary/80 hover:underline font-semibold text-sm cursor-pointer transition-colors duration-200'
+                          >
+                            {expense.expenseNumber}
+                          </button>
                         </TableCell>
                         
                         <TableCell>
-                          <div className='flex flex-col'>
-                            <span className='font-medium text-sm'>{expense.vehicleRegistrationNumber}</span>
-                            <span className='text-xs text-muted-foreground'>
-                              {expense.driverName}
-                            </span>
-                          </div>
+                          <span className='font-medium text-sm'>{expense.vehicleRegistrationNumber}</span>
                         </TableCell>
                         
                         <TableCell>
@@ -897,7 +795,7 @@ export const ExpensesTab = () => {
                         
                         <TableCell>
                           <div className='flex flex-col text-sm'>
-                            <span className='font-medium'>{formatDate(expense.expenseDate)}</span>
+                            <span className='font-medium'>{formatDateDisplay(expense.expenseDate)}</span>
                             <span className='text-xs text-muted-foreground'>
                               {expense.location}
                             </span>
@@ -912,92 +810,7 @@ export const ExpensesTab = () => {
                             </span>
                           </div>
                         </TableCell>
-                        
-                        <TableCell>
-                          <Badge className={`${getApprovalStatusColor(expense.approvalStatus)} border flex items-center gap-1 w-fit`}>
-                            {getApprovalStatusIcon(expense.approvalStatus)}
-                            <span className='text-xs'>{expense.approvalStatus.toUpperCase()}</span>
-                          </Badge>
-                        </TableCell>
-                        
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant='ghost' size='sm' className='h-8 w-8 p-0'>
-                                <MoreVertical className='w-4 h-4' />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align='end'>
-                              <DropdownMenuItem onClick={() => handleViewExpense(expense)}>
-                                <Eye className='w-4 h-4 mr-2' />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleEditExpense(expense)}>
-                                <Edit className='w-4 h-4 mr-2' />
-                                Edit Expense
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleDeleteExpense(expense.id!)}
-                                className='text-destructive'
-                              >
-                                <Trash2 className='w-4 h-4 mr-2' />
-                                Delete Expense
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
                       </TableRow>
-                      
-                      {/* Expanded Row Details */}
-                      {expandedRows.has(expense.id!) && (
-                        <TableRow>
-                          <TableCell colSpan={9} className='p-0'>
-                            <div className='bg-muted/20 p-4'>
-                              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
-                                <div>
-                                  <h4 className='font-semibold mb-2'>Vendor Details</h4>
-                                  <div className='space-y-1 text-sm'>
-                                    <p><span className='font-medium'>Name:</span> {expense.vendorName}</p>
-                                    <p><span className='font-medium'>Contact:</span> {expense.vendorContact || 'N/A'}</p>
-                                    <p><span className='font-medium'>Address:</span> {expense.vendorAddress || 'N/A'}</p>
-                                  </div>
-                                </div>
-                                
-                                <div>
-                                  <h4 className='font-semibold mb-2'>Payment Details</h4>
-                                  <div className='space-y-1 text-sm'>
-                                    <p><span className='font-medium'>Method:</span> {expense.paymentMethod.replace('_', ' ').toUpperCase()}</p>
-                                    <p><span className='font-medium'>Reference:</span> {expense.paymentReference || 'N/A'}</p>
-                                    <p><span className='font-medium'>Odometer:</span> {expense.odometerReading ? `${expense.odometerReading} km` : 'N/A'}</p>
-                                  </div>
-                                </div>
-                                
-                                <div>
-                                  <h4 className='font-semibold mb-2'>Approval Details</h4>
-                                  <div className='space-y-1 text-sm'>
-                                    <p><span className='font-medium'>Status:</span> {expense.approvalStatus.toUpperCase()}</p>
-                                    <p><span className='font-medium'>Approved By:</span> {expense.approvedBy || 'N/A'}</p>
-                                    <p><span className='font-medium'>Date:</span> {expense.approvedDate ? formatDate(expense.approvedDate) : 'N/A'}</p>
-                                  </div>
-                                </div>
-                                
-                                <div>
-                                  <h4 className='font-semibold mb-2'>Additional Info</h4>
-                                  <div className='space-y-1 text-sm'>
-                                    <p><span className='font-medium'>Created:</span> {formatDateTime(expense.createdAt!)}</p>
-                                    {expense.notes && (
-                                      <p><span className='font-medium'>Notes:</span> {expense.notes}</p>
-                                    )}
-                                    {expense.rejectionReason && (
-                                      <p><span className='font-medium'>Rejection Reason:</span> <span className='text-red-600'>{expense.rejectionReason}</span></p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
                     </>
                   ))}
                 </TableBody>
@@ -1007,79 +820,114 @@ export const ExpensesTab = () => {
           
           {/* Pagination Controls */}
           {filteredExpenses.length > 0 && (
-            <div className='flex flex-col sm:flex-row items-center justify-between gap-3 px-3 py-3 sm:px-4 sm:py-4 border-t'>
-              <div className='flex flex-col sm:flex-row items-center gap-2'>
-                <span className='text-xs sm:text-sm text-muted-foreground'>
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredExpenses.length)} of {filteredExpenses.length} expenses
-                </span>
-                <div className='flex items-center gap-2'>
-                  <Select value={itemsPerPage.toString()} onValueChange={(value) => {
-                    setItemsPerPage(Number(value));
-                    setCurrentPage(1);
-                  }}>
-                    <SelectTrigger className='w-16 sm:w-20 text-xs'>
+            <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
+              {/* Page Info */}
+              <div className='text-xs sm:text-sm text-muted-foreground'>
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredExpenses.length)} of {filteredExpenses.length} entries
+              </div>
+
+              {/* Pagination Controls */}
+              <div className='flex flex-col sm:flex-row items-center gap-3 sm:gap-2 w-full sm:w-auto'>
+                {/* Items per page selector - Mobile optimized */}
+                <div className='flex items-center gap-2 w-full sm:w-auto justify-center'>
+                  <span className='text-xs sm:text-sm text-muted-foreground whitespace-nowrap'>Show:</span>
+                  <Select
+                    value={itemsPerPage.toString()}
+                    onValueChange={(value) => {
+                      const newLimit = parseInt(value);
+                      setItemsPerPage(newLimit);
+                      setCurrentPage(1);
+                    }}
+                  >
+                    <SelectTrigger className='w-16 sm:w-20 h-8 text-xs sm:text-sm'>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value='5'>5</SelectItem>
                       <SelectItem value='10'>10</SelectItem>
-                      <SelectItem value='25'>25</SelectItem>
+                      <SelectItem value='20'>20</SelectItem>
+                      <SelectItem value='30'>30</SelectItem>
                       <SelectItem value='50'>50</SelectItem>
+                      <SelectItem value='100'>100</SelectItem>
                     </SelectContent>
                   </Select>
-                  <span className='text-xs text-muted-foreground'>per page</span>
+                  <span className='text-xs sm:text-sm text-muted-foreground whitespace-nowrap'>per page</span>
                 </div>
-              </div>
-              
-              <div className='flex items-center gap-1 sm:gap-2'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className='text-xs px-2 sm:px-3'
-                >
-                  <span className='hidden sm:inline'>Previous</span>
-                  <span className='sm:hidden'>Prev</span>
-                </Button>
-                
+
+                {/* Page navigation - Mobile optimized */}
                 <div className='flex items-center gap-1'>
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 3) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = currentPage - 2 + i;
-                    }
-                    
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={currentPage === pageNum ? 'default' : 'outline'}
-                        size='sm'
-                        onClick={() => setCurrentPage(pageNum)}
-                        className='w-6 h-6 sm:w-8 sm:h-8 p-0 text-xs'
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
+                  {/* First page button */}
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className='h-7 w-7 sm:h-8 sm:w-8 p-0'
+                  >
+                    <ChevronsLeft className='w-3 h-3 sm:w-4 sm:h-4' />
+                  </Button>
+
+                  {/* Previous page button */}
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setCurrentPage((prev) => prev - 1)}
+                    disabled={currentPage === 1}
+                    className='h-7 w-7 sm:h-8 sm:w-8 p-0'
+                  >
+                    <ChevronLeft className='w-3 h-3 sm:w-4 sm:h-4' />
+                  </Button>
+
+                  {/* Page numbers - Show up to 5 pages */}
+                  <div className='flex items-center gap-1 mx-1 sm:mx-2'>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? 'default' : 'outline'}
+                          size='sm'
+                          onClick={() => setCurrentPage(pageNum)}
+                          className='h-7 w-7 sm:h-8 sm:w-8 p-0 text-xs sm:text-sm'
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Next page button */}
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                    disabled={currentPage === totalPages}
+                    className='h-7 w-7 sm:h-8 sm:w-8 p-0'
+                  >
+                    <ChevronRight className='w-3 h-3 sm:w-4 sm:h-4' />
+                  </Button>
+
+                  {/* Last page button */}
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className='h-7 w-7 sm:h-8 sm:w-8 p-0'
+                  >
+                    <ChevronsRight className='w-3 h-3 sm:w-4 sm:h-4' />
+                  </Button>
                 </div>
-                
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className='text-xs px-2 sm:px-3'
-                >
-                  <span className='hidden sm:inline'>Next</span>
-                  <span className='sm:hidden'>Next</span>
-                </Button>
               </div>
             </div>
           )}
@@ -1091,199 +939,181 @@ export const ExpensesTab = () => {
         isOpen={isExpenseFormOpen}
         onClose={() => {
           setIsExpenseFormOpen(false);
-          setEditingExpense(null);
         }}
         onSubmit={handleCreateExpense}
-        editingExpense={editingExpense}
+        editingExpense={null}
         availableVehicles={availableVehicles}
       />
 
       {/* View Expense Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
-          <DialogHeader>
-            <DialogTitle className='flex items-center gap-2'>
-              <IndianRupee className='w-5 h-5' />
+      <Dialog open={isViewDialogOpen} onOpenChange={(open) => {
+        setIsViewDialogOpen(open);
+        if (!open) {
+          setViewingExpense(null);
+        }
+      }}>
+        <DialogContent className='max-w-5xl max-h-[90vh] overflow-y-auto'>
+          <DialogHeader className='pb-2'>
+            <DialogTitle className='flex items-center gap-2 text-lg'>
+              <div className='w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center'>
+                <IndianRupee className='w-4 h-4 text-primary' />
+              </div>
               Expense Details - {viewingExpense?.expenseNumber}
             </DialogTitle>
-            <DialogDescription>
-              Complete information about the expense and its approval status
-            </DialogDescription>
           </DialogHeader>
           
           {viewingExpense && (
-            <div className='space-y-6'>
-              {/* Expense Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center gap-2'>
-                    <Receipt className='w-4 h-4' />
-                    Expense Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Expense Number</Label>
-                      <p className='text-sm font-mono'>{viewingExpense.expenseNumber}</p>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Category</Label>
-                      <Badge className={`${getExpenseCategoryColor(viewingExpense.expenseCategory)} border flex items-center gap-1 w-fit`}>
-                        {getExpenseCategoryIcon(viewingExpense.expenseCategory)}
-                        <span className='text-xs'>{viewingExpense.expenseCategory.replace('_', ' ').toUpperCase()}</span>
-                      </Badge>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Expense Type</Label>
-                      <p className='text-sm'>{viewingExpense.expenseType}</p>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Amount</Label>
-                      <p className='text-lg font-semibold'>{formatCurrency(viewingExpense.amount)}</p>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Date</Label>
-                      <p className='text-sm'>{formatDate(viewingExpense.expenseDate)}</p>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Location</Label>
-                      <p className='text-sm'>{viewingExpense.location}</p>
-                    </div>
-                    <div className='space-y-2 md:col-span-2'>
-                      <Label className='text-sm font-medium'>Description</Label>
-                      <p className='text-sm'>{viewingExpense.description}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className='space-y-4'>
+              {/* Single Card for all content */}
+              <Card className='border-0 shadow-sm'>
+                <CardContent className='space-y-4'>
+                  {/* Basic Information */}
+                  <div className='space-y-3'>
+                    <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
+                      Basic Information
+                    </h4>
 
-              {/* Vehicle & Driver Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center gap-2'>
-                    <Truck className='w-4 h-4' />
-                    Vehicle & Driver Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Vehicle Registration</Label>
-                      <p className='text-sm'>{viewingExpense.vehicleRegistrationNumber}</p>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Driver Name</Label>
-                      <p className='text-sm'>{viewingExpense.driverName}</p>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Odometer Reading</Label>
-                      <p className='text-sm'>{viewingExpense.odometerReading ? `${viewingExpense.odometerReading} km` : 'N/A'}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Vendor Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center gap-2'>
-                    <User className='w-4 h-4' />
-                    Vendor Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Vendor Name</Label>
-                      <p className='text-sm'>{viewingExpense.vendorName}</p>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Contact</Label>
-                      <p className='text-sm'>{viewingExpense.vendorContact || 'N/A'}</p>
-                    </div>
-                    <div className='space-y-2 md:col-span-2'>
-                      <Label className='text-sm font-medium'>Address</Label>
-                      <p className='text-sm'>{viewingExpense.vendorAddress || 'N/A'}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Payment Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center gap-2'>
-                    <CreditCard className='w-4 h-4' />
-                    Payment Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Payment Method</Label>
-                      <p className='text-sm'>{viewingExpense.paymentMethod.replace('_', ' ').toUpperCase()}</p>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Payment Reference</Label>
-                      <p className='text-sm'>{viewingExpense.paymentReference || 'N/A'}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Approval Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center gap-2'>
-                    <CheckCircle className='w-4 h-4' />
-                    Approval Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Status</Label>
-                      <Badge className={`${getApprovalStatusColor(viewingExpense.approvalStatus)} border flex items-center gap-1 w-fit`}>
-                        {getApprovalStatusIcon(viewingExpense.approvalStatus)}
-                        <span className='text-xs'>{viewingExpense.approvalStatus.toUpperCase()}</span>
-                      </Badge>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Approved By</Label>
-                      <p className='text-sm'>{viewingExpense.approvedBy || 'N/A'}</p>
-                    </div>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Approval Date</Label>
-                      <p className='text-sm'>{viewingExpense.approvedDate ? formatDate(viewingExpense.approvedDate) : 'N/A'}</p>
-                    </div>
-                    {viewingExpense.rejectionReason && (
-                      <div className='space-y-2'>
-                        <Label className='text-sm font-medium'>Rejection Reason</Label>
-                        <p className='text-sm text-red-600'>{viewingExpense.rejectionReason}</p>
+                    <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Expense Number</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingExpense.expenseNumber}
+                        </div>
                       </div>
-                    )}
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Vehicle</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingExpense.vehicleRegistrationNumber}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Expense Date</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {formatDateDisplay(viewingExpense.expenseDate)}
+                        </div>
+                      </div>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Expense Category</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          <Badge className={`${getExpenseCategoryColor(viewingExpense.expenseCategory)} border flex items-center gap-1 w-fit`}>
+                            {getExpenseCategoryIcon(viewingExpense.expenseCategory)}
+                            <span className='text-xs'>{viewingExpense.expenseCategory.replace('_', ' ').toUpperCase()}</span>
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Expense Type</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingExpense.expenseType}
+                        </div>
+                      </div>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Amount (₹)</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {formatCurrency(viewingExpense.amount)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Location</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingExpense.location}
+                        </div>
+                      </div>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Requested By</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingExpense.requestedBy || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Vendor Information */}
+                  <div className='space-y-3'>
+                    <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
+                      Vendor Information
+                    </h4>
+
+                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Vendor Name</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingExpense.vendorName || 'N/A'}
+                        </div>
+                      </div>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Vendor Contact</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingExpense.vendorContact || 'N/A'}
+                        </div>
+                      </div>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Payment Method</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingExpense.paymentMethod.replace('_', ' ').toUpperCase()}
+                        </div>
+                      </div>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Payment Reference</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingExpense.paymentReference || 'N/A'}
+                        </div>
+                      </div>
+                      <div className='space-y-1 md:col-span-2'>
+                        <Label className='text-xs font-medium'>Vendor Address</Label>
+                        <div className='min-h-[40px] px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                          {viewingExpense.vendorAddress || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Information */}
+                  <div className='space-y-3'>
+                    <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
+                      Additional Information
+                    </h4>
+
+                    <div className='space-y-1'>
+                      <Label className='text-xs font-medium'>Description</Label>
+                      <div className='min-h-[40px] px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                        {viewingExpense.description || 'N/A'}
+                      </div>
+                    </div>
+
+                    <div className='space-y-1'>
+                      <Label className='text-xs font-medium'>Notes</Label>
+                      <div className='min-h-[40px] px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                        {viewingExpense.notes || 'N/A'}
+                      </div>
+                    </div>
+
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Recorded By</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-center font-semibold text-xs border border-input rounded-[5px] flex items-center justify-center'>
+                          {viewingExpense.createdAt ? 'System User' : 'Current User'}
+                        </div>
+                      </div>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Date</Label>
+                        <div className='h-8 px-2 py-1 bg-secondary text-center font-semibold text-xs border border-input rounded-[5px] flex items-center justify-center'>
+                          {viewingExpense.createdAt ? formatDateDisplay(viewingExpense.createdAt) : formatDateToString(new Date())}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Additional Information */}
-              {viewingExpense.notes && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className='flex items-center gap-2'>
-                      <FileText className='w-4 h-4' />
-                      Additional Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className='space-y-2'>
-                      <Label className='text-sm font-medium'>Notes</Label>
-                      <p className='text-sm'>{viewingExpense.notes}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           )}
         </DialogContent>
