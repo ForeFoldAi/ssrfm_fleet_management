@@ -12,6 +12,7 @@ import {
   MapPin,
   Receipt,
   FileText,
+  Upload,
   RefreshCcw,
   ArrowUpDown,
   ChevronDown,
@@ -20,6 +21,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -115,6 +117,15 @@ export const ExpensesTab = () => {
   const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
   const [viewingExpense, setViewingExpense] = useState<VehicleExpenseData | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  
+  // Export states
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [exportDateRange, setExportDateRange] = useState({
+    from: '',
+    to: '',
+  });
+  const [selectedExportPreset, setSelectedExportPreset] = useState<string>('all');
 
   // Mock data - Replace with actual API calls
   const mockExpenses: VehicleExpenseData[] = [
@@ -486,6 +497,186 @@ export const ExpensesTab = () => {
     return `₹${parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
   };
 
+  // Export functionality
+  const exportToCSV = async () => {
+    try {
+      setIsExporting(true);
+
+      // Filter expenses by date range if specified
+      let filteredExpenses = expenses;
+      if (exportDateRange.from || exportDateRange.to) {
+        filteredExpenses = expenses.filter((expense) => {
+          const expenseDate = new Date(expense.expenseDate);
+
+          if (exportDateRange.from && exportDateRange.to) {
+            const fromDate = new Date(exportDateRange.from);
+            const toDate = new Date(exportDateRange.to);
+            return expenseDate >= fromDate && expenseDate <= toDate;
+          } else if (exportDateRange.from) {
+            const fromDate = new Date(exportDateRange.from);
+            return expenseDate >= fromDate;
+          } else if (exportDateRange.to) {
+            const toDate = new Date(exportDateRange.to);
+            return expenseDate <= toDate;
+          }
+
+          return true;
+        });
+      }
+
+      // Apply current filters to the filtered expenses
+      let exportData = filteredExpenses;
+
+      // Apply category filter
+      if (filterCategory !== 'all') {
+        exportData = exportData.filter(expense => expense.expenseCategory === filterCategory);
+      }
+
+      // Apply vehicle filter
+      if (filterVehicle !== 'all') {
+        exportData = exportData.filter(expense => expense.vehicleId === filterVehicle);
+      }
+
+      // Apply date range filter
+      if (filterDateRange !== 'all') {
+        const now = new Date();
+        const filterDate = new Date();
+        
+        switch (filterDateRange) {
+          case 'today':
+            filterDate.setHours(0, 0, 0, 0);
+            exportData = exportData.filter(expense => 
+              new Date(expense.expenseDate) >= filterDate
+            );
+            break;
+          case 'week':
+            filterDate.setDate(now.getDate() - 7);
+            exportData = exportData.filter(expense => 
+              new Date(expense.expenseDate) >= filterDate
+            );
+            break;
+          case 'month':
+            filterDate.setMonth(now.getMonth() - 1);
+            exportData = exportData.filter(expense => 
+              new Date(expense.expenseDate) >= filterDate
+            );
+            break;
+          case 'quarter':
+            filterDate.setMonth(now.getMonth() - 3);
+            exportData = exportData.filter(expense => 
+              new Date(expense.expenseDate) >= filterDate
+            );
+            break;
+        }
+      }
+
+      // Prepare CSV headers
+      const headers = [
+        'Expense Number',
+        'Vehicle Registration Number',
+        'Expense Date',
+        'Expense Category',
+        'Expense Type',
+        'Description',
+        'Amount (₹)',
+        'Location',
+        'Vendor Name',
+        'Vendor Contact',
+        'Vendor Address',
+        'Payment Method',
+        'Payment Reference',
+        'Requested By',
+        'Notes',
+        'Created Date',
+        'Updated Date'
+      ];
+
+      // Prepare CSV data
+      const csvData = exportData.map((expense) => [
+        `"${expense.expenseNumber}"`,
+        `"${expense.vehicleRegistrationNumber}"`,
+        `"${formatDateDisplay(expense.expenseDate)}"`,
+        `"${expense.expenseCategory.replace('_', ' ').toUpperCase()}"`,
+        `"${expense.expenseType}"`,
+        `"${expense.description}"`,
+        parseFloat(expense.amount).toFixed(2),
+        `"${expense.location}"`,
+        `"${expense.vendorName}"`,
+        `"${expense.vendorContact}"`,
+        `"${expense.vendorAddress}"`,
+        `"${expense.paymentMethod.replace('_', ' ').toUpperCase()}"`,
+        `"${expense.paymentReference}"`,
+        `"${expense.requestedBy}"`,
+        `"${expense.notes}"`,
+        `"${formatDateDisplay(expense.createdAt || new Date().toISOString())}"`,
+        `"${formatDateDisplay(expense.updatedAt || new Date().toISOString())}"`
+      ]);
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map((row) => row.join(',')),
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+
+      // Generate filename with current date and date range
+      const currentDate = new Date().toISOString().split('T')[0];
+      let filename = `ssrfm_expenses_export_${currentDate}`;
+
+      if (exportDateRange.from || exportDateRange.to) {
+        if (exportDateRange.from && exportDateRange.to) {
+          filename += `_${exportDateRange.from}_to_${exportDateRange.to}`;
+        } else if (exportDateRange.from) {
+          filename += `_from_${exportDateRange.from}`;
+        } else if (exportDateRange.to) {
+          filename += `_to_${exportDateRange.to}`;
+        }
+      } else {
+        filename += '_all_data';
+      }
+
+      link.setAttribute('download', `${filename}.csv`);
+
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Close dialog
+      setIsExportDialogOpen(false);
+      resetExportDateRange(); // Reset date range and preset after successful export
+
+        toast({
+        title: 'Export Successful',
+        description: `Expenses data exported successfully. ${csvData.length} records downloaded.`,
+          variant: 'default',
+        });
+      } catch (error) {
+      console.error('Error exporting expenses:', error);
+        toast({
+        title: 'Export Failed',
+        description: 'Failed to export expenses data. Please try again.',
+          variant: 'destructive',
+        });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Reset export date range
+  const resetExportDateRange = () => {
+    setExportDateRange({
+      from: '',
+      to: '',
+    });
+    setSelectedExportPreset('all');
+  };
+
   return (
     <div className='space-y-4 p-2 sm:space-y-6 sm:p-0'>
       {/* Search, Filters and Actions */}
@@ -515,6 +706,16 @@ export const ExpensesTab = () => {
               >
                 <RefreshCcw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
                 Ref
+              </Button>
+              <Button
+                variant='outline'
+                onClick={() => setIsExportDialogOpen(true)}
+                size='sm'
+                className='gap-1 text-xs'
+                disabled={filteredExpenses.length === 0}
+              >
+                <Upload className='w-3 h-3' />
+                Export
               </Button>
               <Button
                 onClick={() => setIsExpenseFormOpen(true)}
@@ -667,6 +868,17 @@ export const ExpensesTab = () => {
               </Button>
               
               <Button
+                variant='outline'
+                onClick={() => setIsExportDialogOpen(true)}
+                size='sm'
+                className='gap-2 text-sm'
+                disabled={filteredExpenses.length === 0}
+              >
+                <Upload className='w-4 h-4' />
+                Export
+              </Button>
+              
+              <Button
                 onClick={() => setIsExpenseFormOpen(true)}
                 size='sm'
                 className='gap-2 text-sm'
@@ -741,7 +953,7 @@ export const ExpensesTab = () => {
                         {getSortIcon('expenseCategory')}
                       </div>
                     </TableHead>
-                    <TableHead>Description</TableHead>
+                    <TableHead>Expense Details</TableHead>
                     <TableHead 
                       className='cursor-pointer hover:bg-secondary/30'
                       onClick={() => handleSort('expenseDate')}
@@ -841,9 +1053,9 @@ export const ExpensesTab = () => {
                             <span className='text-xs text-muted-foreground'>
                               {formatDateDisplay(expense.createdAt || new Date().toISOString())}
                             </span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                            </div>
+                          </TableCell>
+                        </TableRow>
                     </>
                   ))}
                 </TableBody>
@@ -1118,7 +1330,7 @@ export const ExpensesTab = () => {
                     <div className='space-y-1'>
                      <div className='min-h-[40px] px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                         {viewingExpense.notes || 'N/A'}
-                      </div>
+                    </div>
                     </div>
 
                     <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
@@ -1135,11 +1347,247 @@ export const ExpensesTab = () => {
                         </div>
                       </div>
                     </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Dialog */}
+      <Dialog open={isExportDialogOpen} onOpenChange={setIsExportDialogOpen}>
+        <DialogContent className='max-w-md'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              <Upload className='w-5 h-5 text-primary' />
+              Export Expenses to CSV
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className='space-y-4'>
+            <div className='space-y-3'>
+              <Label className='text-sm font-medium'>Export Options</Label>
+
+                    <div className='space-y-2'>
+                <Label htmlFor='exportFromDate' className='text-sm'>
+                  From Date (Optional)
+                </Label>
+                <Input
+                  id='exportFromDate'
+                  type='date'
+                  value={exportDateRange.from}
+                  onChange={(e) => {
+                    setExportDateRange((prev) => ({
+                      ...prev,
+                      from: e.target.value,
+                    }));
+                    setSelectedExportPreset('');
+                  }}
+                  className='w-full'
+                />
+                    </div>
+
+                    <div className='space-y-2'>
+                <Label htmlFor='exportToDate' className='text-sm'>
+                  To Date (Optional)
+                </Label>
+                <Input
+                  id='exportToDate'
+                  type='date'
+                  value={exportDateRange.to}
+                  onChange={(e) => {
+                    setExportDateRange((prev) => ({
+                      ...prev,
+                      to: e.target.value,
+                    }));
+                    setSelectedExportPreset('');
+                  }}
+                  className='w-full'
+                />
+                    </div>
+
+              <div className='text-xs text-muted-foreground'>
+                Select dates for filtered export, or use "All Data" for complete
+                export. Current filters (category, vehicle, date range) will be applied.
+                    </div>
+
+              {/* Quick preset buttons */}
+              <div className='pt-2 border-t space-y-2'>
+                <div className='text-xs font-medium text-muted-foreground'>
+                  Quick Presets:
+                      </div>
+                <div className='grid grid-cols-2 gap-2'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // All Data - clear both dates
+                      setExportDateRange({
+                        from: '',
+                        to: '',
+                      });
+                      setSelectedExportPreset('all');
+                    }}
+                    className={`text-xs ${
+                      selectedExportPreset === 'all'
+                        ? 'bg-green-500 border-green-600 text-white hover:bg-green-600'
+                        : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                    }`}
+                  >
+                    All
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // This Month
+                      const now = new Date();
+                      const firstDay = new Date(
+                        now.getFullYear(),
+                        now.getMonth(),
+                        1
+                      );
+                      const lastDay = new Date(
+                        now.getFullYear(),
+                        now.getMonth() + 1,
+                        0
+                      );
+
+                      setExportDateRange({
+                        from: firstDay.toISOString().split('T')[0],
+                        to: lastDay.toISOString().split('T')[0],
+                      });
+                      setSelectedExportPreset('this_month');
+                    }}
+                    className={`text-xs ${
+                      selectedExportPreset === 'this_month'
+                        ? 'bg-primary border-primary text-white hover:bg-primary/90'
+                        : 'hover:bg-muted'
+                    }`}
+                  >
+                    This Month
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // Last Month
+                      const now = new Date();
+                      const firstDayLastMonth = new Date(
+                        now.getFullYear(),
+                        now.getMonth() - 1,
+                        1
+                      );
+                      const lastDayLastMonth = new Date(
+                        now.getFullYear(),
+                        now.getMonth(),
+                        0
+                      );
+
+                      setExportDateRange({
+                        from: firstDayLastMonth.toISOString().split('T')[0],
+                        to: lastDayLastMonth.toISOString().split('T')[0],
+                      });
+                      setSelectedExportPreset('last_month');
+                    }}
+                    className={`text-xs ${
+                      selectedExportPreset === 'last_month'
+                        ? 'bg-primary border-primary text-white hover:bg-primary/90'
+                        : 'hover:bg-muted'
+                    }`}
+                  >
+                    Last Month
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // Last 3 Months
+                      const now = new Date();
+                      const threeMonthsAgo = new Date(
+                        now.getFullYear(),
+                        now.getMonth() - 3,
+                        1
+                      );
+                      const lastDay = new Date(
+                        now.getFullYear(),
+                        now.getMonth() + 1,
+                        0
+                      );
+
+                      setExportDateRange({
+                        from: threeMonthsAgo.toISOString().split('T')[0],
+                        to: lastDay.toISOString().split('T')[0],
+                      });
+                      setSelectedExportPreset('last_3_months');
+                    }}
+                    className={`text-xs ${
+                      selectedExportPreset === 'last_3_months'
+                        ? 'bg-primary border-primary text-white hover:bg-primary/90'
+                        : 'hover:bg-muted'
+                    }`}
+                  >
+                    Last 3 Months
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={() => {
+                      // This Year
+                      const now = new Date();
+                      const firstDay = new Date(now.getFullYear(), 0, 1);
+                      const lastDay = new Date(now.getFullYear(), 11, 31);
+
+                      setExportDateRange({
+                        from: firstDay.toISOString().split('T')[0],
+                        to: lastDay.toISOString().split('T')[0],
+                      });
+                      setSelectedExportPreset('this_year');
+                    }}
+                    className={`text-xs ${
+                      selectedExportPreset === 'this_year'
+                        ? 'bg-primary border-primary text-white hover:bg-primary/90'
+                        : 'hover:bg-muted'
+                    }`}
+                  >
+                    This Year
+                  </Button>
+                    </div>
+            </div>
+            </div>
+
+            <div className='flex justify-end gap-2 pt-4'>
+              <Button
+                variant='outline'
+                onClick={() => {
+                  setIsExportDialogOpen(false);
+                  resetExportDateRange();
+                }}
+                disabled={isExporting}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                onClick={exportToCSV}
+                disabled={isExporting}
+                className='bg-primary hover:bg-primary/90 text-white'
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className='w-4 h-4 animate-spin mr-2' />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Upload className='w-4 h-4 mr-2' />
+                    Export
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

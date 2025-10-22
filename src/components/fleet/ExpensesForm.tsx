@@ -5,6 +5,10 @@ import {
   X,
   Loader2,
   Plus,
+  Upload,
+  FileText,
+  Image,
+  Trash2,
 } from 'lucide-react';
 
 // Date utility functions
@@ -114,6 +118,10 @@ export const ExpensesForm = ({
   // State for custom expense category input
   const [showCustomExpenseCategoryInput, setShowCustomExpenseCategoryInput] = useState(false);
   const [customExpenseCategoryName, setCustomExpenseCategoryName] = useState('');
+  
+  // State for file uploads
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const [formData, setFormData] = useState<VehicleExpenseData>({
     expenseNumber: '',
@@ -185,6 +193,7 @@ export const ExpensesForm = ({
       });
       setShowCustomExpenseCategoryInput(false);
       setCustomExpenseCategoryName('');
+      setUploadedFiles([]);
     }
   }, [editingExpense, isOpen]);
 
@@ -256,6 +265,92 @@ export const ExpensesForm = ({
     }
   };
 
+  // File upload functions
+  const handleFileUpload = (files: FileList | null) => {
+    if (!files) return;
+
+    const newFiles = Array.from(files);
+    const totalFiles = uploadedFiles.length + newFiles.length;
+
+    if (totalFiles > 4) {
+      toast({
+        title: 'Error',
+        description: 'Maximum 4 files allowed. Please remove some files first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate file types and sizes
+    const validFiles = newFiles.filter(file => {
+      const isValidType = file.type.startsWith('image/') || 
+                         file.type === 'application/pdf' || 
+                         file.type === 'application/msword' ||
+                         file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                         file.type === 'application/vnd.ms-excel' ||
+                         file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+      
+      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB limit
+
+      if (!isValidType) {
+        toast({
+          title: 'Error',
+          description: `File "${file.name}" is not a supported format.`,
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      if (!isValidSize) {
+        toast({
+          title: 'Error',
+          description: `File "${file.name}" is too large. Maximum size is 10MB.`,
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      return true;
+    });
+
+    setUploadedFiles(prev => [...prev, ...validFiles]);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    handleFileUpload(e.dataTransfer.files);
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getFileIcon = (file: File) => {
+    if (file.type.startsWith('image/')) {
+      return <Image className='w-4 h-4' />;
+    }
+    return <FileText className='w-4 h-4' />;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     let hasErrors = false;
@@ -292,10 +387,6 @@ export const ExpensesForm = ({
       }
     }
 
-    if (!formData.location.trim()) {
-      newErrors.location = 'Location is required';
-      hasErrors = true;
-    }
 
     setErrors(newErrors);
 
@@ -362,6 +453,7 @@ export const ExpensesForm = ({
       setErrors({});
       setShowCustomExpenseCategoryInput(false);
       setCustomExpenseCategoryName('');
+      setUploadedFiles([]);
       onClose();
     } catch (error) {
       console.error('Error recording expense:', error);
@@ -392,10 +484,10 @@ export const ExpensesForm = ({
           {/* Single Card for all form content */}
           <Card className='border-0 shadow-sm'>
             <CardContent className='space-y-4'>
-              {/* Basic Information */}
+          {/* Basic Information */}
               <div className='space-y-3'>
                 <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
-                  Basic Information
+                Basic Information
                 </h4>
 
                 {/* First Row */}
@@ -567,18 +659,15 @@ export const ExpensesForm = ({
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
                   <div className='space-y-1'>
                     <Label htmlFor='location' className='text-xs font-medium'>
-                      Location *
+                      Location
                     </Label>
                   <Input
                     id='location'
                     value={formData.location}
                     onChange={(e) => handleInputChange('location', e.target.value)}
                     placeholder='Where was the expense incurred?'
-                      className={`h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground ${errors.location ? 'border-red-500' : ''}`}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground'
                   />
-                  {errors.location && (
-                      <p className='text-destructive text-xs mt-1'>{errors.location}</p>
-                  )}
                 </div>
 
                   <div className='space-y-1'>
@@ -592,6 +681,92 @@ export const ExpensesForm = ({
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Uploads Proofs */}
+              <div className='space-y-2'>
+                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
+                  Uploads Proofs
+                </h4>
+
+                {/* File Upload Area */}
+                <div
+                  className={`border-2 border-dashed rounded-lg p-3 text-center transition-colors ${
+                    isDragOver
+                      ? 'border-primary bg-primary/5'
+                      : 'border-muted-foreground/25 hover:border-primary/50'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <Upload className='w-5 h-5 mx-auto mb-1 text-muted-foreground' />
+                  <p className='text-xs text-muted-foreground mb-1'>
+                    Drag & drop files or click to select
+                  </p>
+                  <p className='text-xs text-muted-foreground mb-2'>
+                    Max 4 files, 10MB each (Images, PDF, Word, Excel)
+                  </p>
+                  
+                  <input
+                    type='file'
+                    multiple
+                    accept='image/*,.pdf,.doc,.docx,.xls,.xlsx'
+                    onChange={(e) => handleFileUpload(e.target.files)}
+                    className='hidden'
+                    id='file-upload'
+                  />
+                  
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    onClick={() => document.getElementById('file-upload')?.click()}
+                    className='h-7 px-3 text-xs'
+                    disabled={uploadedFiles.length >= 4}
+                  >
+                    <Upload className='w-3 h-3 mr-1' />
+                    Choose Files
+                  </Button>
+                </div>
+
+                {/* Uploaded Files List */}
+                {uploadedFiles.length > 0 && (
+                  <div className='space-y-1'>
+                    <p className='text-xs font-medium text-muted-foreground'>
+                      Files ({uploadedFiles.length}/4)
+                    </p>
+                    <div className='space-y-1'>
+                      {uploadedFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className='flex items-center justify-between p-2 bg-secondary rounded border'
+                        >
+                          <div className='flex items-center gap-2'>
+                            {getFileIcon(file)}
+                            <div className='flex flex-col'>
+                              <span className='text-xs font-medium truncate max-w-[180px]'>
+                                {file.name}
+                              </span>
+                              <span className='text-xs text-muted-foreground'>
+                                {formatFileSize(file.size)}
+                              </span>
+                            </div>
+                          </div>
+                          <Button
+                            type='button'
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => removeFile(index)}
+                            className='h-5 w-5 p-0 text-destructive hover:text-destructive hover:bg-destructive/10'
+                          >
+                            <Trash2 className='w-3 h-3' />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
           {/* Vendor Information */}
@@ -674,10 +849,10 @@ export const ExpensesForm = ({
                     onChange={(e) => handleInputChange('vendorAddress', e.target.value)}
                     placeholder='Complete vendor address'
                       className='min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200 placeholder:text-muted-foreground'
-                    />
-                  </div>
+                  />
                 </div>
-                </div>
+              </div>
+              </div>
 
               {/* Additional Information */}
               <div className='space-y-3'>
@@ -686,14 +861,14 @@ export const ExpensesForm = ({
                 </h4>
 
                 <div className='space-y-1'>
-                  <Textarea
+                    <Textarea
                     id='description'
                     value={formData.description}
                     onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder='Any additional notes about the expense...'
+                  placeholder='Any additional notes about the expense...'
                     className='min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200 placeholder:text-muted-foreground'
-                  />
-                </div>
+                />
+              </div>
 
                
 

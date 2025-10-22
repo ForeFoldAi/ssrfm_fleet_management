@@ -7,7 +7,7 @@ import {
   CheckCircle,
   Clock,
   Wrench,
-  RefreshCcw,
+  Upload,
   ChevronDown,
   ChevronUp,
   ChevronLeft,
@@ -533,23 +533,88 @@ export const VehicleTab = () => {
       toast({
         title: '✅ Vehicle Updated Successfully!',
         description: `Vehicle ${viewingVehicle.vehicleRegistrationNumber} has been successfully updated.`,
-        variant: 'default',
-      });
+          variant: 'default',
+        });
 
       setErrors({});
       setShowCustomVehicleTypeInput(false);
       setCustomVehicleTypeName('');
       setIsViewDialogOpen(false);
       setViewingVehicle(null);
-    } catch (error) {
+      } catch (error) {
       console.error('Error updating vehicle:', error);
-      toast({
-        title: 'Error',
+        toast({
+          title: 'Error',
         description: 'Failed to update vehicle. Please try again.',
-        variant: 'destructive',
-      });
+          variant: 'destructive',
+        });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleExportVehicles = () => {
+    try {
+      // Prepare CSV data
+      const csvHeaders = [
+        'Registration Number',
+        'Make',
+        'Model',
+        'Vehicle Type',
+        'Year',
+        'Fuel Type',
+        'Load Capacity (kg)',
+        'Status',
+        'Insurance Provider',
+        'Insurance Expiry Date',
+        'Purchase Date',
+        'Created Date'
+      ];
+
+      const csvData = filteredVehicles.map(vehicle => [
+        vehicle.vehicleRegistrationNumber,
+        vehicle.vehicleMake,
+        vehicle.vehicleModel,
+        vehicle.vehicleType,
+        vehicle.vehicleYear,
+        vehicle.fuelType,
+        vehicle.loadCapacity,
+        vehicle.status,
+        vehicle.insuranceProvider,
+        formatDate(vehicle.insuranceExpiryDate),
+        formatDate(vehicle.purchaseDate),
+        formatDate(vehicle.createdAt)
+      ]);
+
+      // Create CSV content
+      const csvContent = [
+        csvHeaders.join(','),
+        ...csvData.map(row => row.map(field => `"${field}"`).join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `vehicles_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({
+        title: '✅ Export Successful!',
+        description: `Exported ${filteredVehicles.length} vehicles to CSV file.`,
+        variant: 'default',
+      });
+    } catch (error) {
+      console.error('Error exporting vehicles:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to export vehicles. Please try again.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -609,13 +674,13 @@ export const VehicleTab = () => {
               </div>
               <Button
                 variant='outline'
-                onClick={fetchVehicles}
-                disabled={isLoading}
+                onClick={handleExportVehicles}
                 size='sm'
                 className='gap-1 text-xs'
+                disabled={filteredVehicles.length === 0}
               >
-                <RefreshCcw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
-                Ref
+                <Upload className='w-3 h-3' />
+                Export
               </Button>
               <Button
                 onClick={() => {
@@ -714,13 +779,13 @@ export const VehicleTab = () => {
             <div className='flex gap-2'>
               <Button
                 variant='outline'
-                onClick={fetchVehicles}
-                disabled={isLoading}
+                onClick={handleExportVehicles}
                 size='sm'
                 className='gap-2 text-sm'
+                disabled={filteredVehicles.length === 0}
               >
-                <RefreshCcw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh
+                <Upload className='w-4 h-4' />
+                Export
               </Button>
               
               <Button
@@ -745,7 +810,7 @@ export const VehicleTab = () => {
           {isLoading ? (
             <div className='flex items-center justify-center py-12'>
               <div className='text-center'>
-                <RefreshCcw className='w-8 h-8 animate-spin text-primary mx-auto mb-4' />
+                <div className='w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4'></div>
                 <p className='text-muted-foreground'>Loading vehicles...</p>
               </div>
             </div>
