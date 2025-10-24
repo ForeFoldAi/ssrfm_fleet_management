@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import MaterialsInventory from './pages/MaterialsInventory';
 import MaterialRequest from './pages/MaterialRequest';
 import { FleetManagement } from './pages/fleet_page/fleet_management';
+import { EmployeeManagement } from './pages/employee_page/EmployeeManagement';
 
 import AddStock from './pages/AddStock';
 import OrganizationalManagement from './pages/OrganizationalManagement';
@@ -116,6 +117,9 @@ const AppRoutes = () => {
         
         {/* Fleet Management Route */}
         <Route path='fleet-management' element={<FleetManagement />} />
+        
+        {/* Employee Management Route */}
+        <Route path='employee-management' element={<EmployeeManagement />} />
       
         <Route path='add-stock' element={<AddStock />} />
       
