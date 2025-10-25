@@ -564,15 +564,16 @@ export const VehicleOnboardingForm = ({
 
                   <div className='space-y-1'>
                     <Label htmlFor='loadCapacity' className='text-xs font-medium'>
-                      Load Capacity (kg)
+                      Load Capacity (MT)
                     </Label>
                     <Input
                       id='loadCapacity'
                       type='number'
-                      placeholder='e.g., 10000'
+                      placeholder='e.g., 10'
                       value={formData.loadCapacity}
                       onChange={(e) => handleInputChange('loadCapacity', e.target.value)}
                       min='0'
+                      step='0.1'
                       className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                     />
                   </div>

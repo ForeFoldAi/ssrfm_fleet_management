@@ -52,6 +52,16 @@ const formatDateToString = (date: Date): string => {
   return `${day}-${month}-${year}`;
 };
 
+// Generate Expense ID in format: SSRFM/UNIT-1/F-YYMMDD/01
+const generateExpenseId = (date: string, sequence: number = 1): string => {
+  const expenseDate = new Date(date);
+  const year = expenseDate.getFullYear().toString().slice(-2);
+  const month = (expenseDate.getMonth() + 1).toString().padStart(2, '0');
+  const day = expenseDate.getDate().toString().padStart(2, '0');
+  const sequenceStr = sequence.toString().padStart(2, '0');
+  return `SSRFM/UNIT-1/F-${year}${month}${day}/${sequenceStr}`;
+};
+
 const formatDateDisplay = (dateString: string): string => {
   if (!dateString) return '';
   
@@ -131,7 +141,7 @@ export const ExpensesTab = () => {
   const mockExpenses: VehicleExpenseData[] = [
     {
       id: '1',
-      expenseNumber: 'EXP-1703123456789',
+      expenseNumber: generateExpenseId('2023-12-21', 1),
       vehicleId: '1',
       vehicleRegistrationNumber: 'MH-12-AB-1234',
       driverId: '1',
@@ -160,7 +170,7 @@ export const ExpensesTab = () => {
     },
     {
       id: '2',
-      expenseNumber: 'EXP-1703123456790',
+      expenseNumber: generateExpenseId('2023-12-20', 2),
       vehicleId: '1',
       vehicleRegistrationNumber: 'MH-12-AB-1234',
       driverId: '1',
@@ -189,7 +199,7 @@ export const ExpensesTab = () => {
     },
     {
       id: '3',
-      expenseNumber: 'EXP-1703123456791',
+      expenseNumber: generateExpenseId('2023-12-19', 3),
       vehicleId: '2',
       vehicleRegistrationNumber: 'MH-12-CD-5678',
       driverId: '2',
@@ -218,7 +228,7 @@ export const ExpensesTab = () => {
     },
     {
       id: '4',
-      expenseNumber: 'EXP-1703123456792',
+      expenseNumber: generateExpenseId('2023-12-18', 4),
       vehicleId: '1',
       vehicleRegistrationNumber: 'MH-12-AB-1234',
       driverId: '1',
@@ -247,7 +257,7 @@ export const ExpensesTab = () => {
     },
     {
       id: '5',
-      expenseNumber: 'EXP-1703123456793',
+      expenseNumber: generateExpenseId('2023-12-17', 5),
       vehicleId: '2',
       vehicleRegistrationNumber: 'MH-12-CD-5678',
       driverId: '2',
@@ -467,8 +477,12 @@ export const ExpensesTab = () => {
 
 
   const handleCreateExpense = (expenseData: VehicleExpenseData) => {
+    // Generate new expense ID with the new format
+    const newExpenseId = generateExpenseId(expenseData.expenseDate, expenses.length + 1);
+    
     const newExpense: VehicleExpenseData = {
       ...expenseData,
+      expenseNumber: newExpenseId,
       id: Date.now().toString(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -479,7 +493,7 @@ export const ExpensesTab = () => {
     
     toast({
       title: '✅ Expense Recorded Successfully!',
-      description: `Expense ${expenseData.expenseNumber} has been recorded and added to the system.`,
+      description: `Expense ${newExpenseId} has been recorded and added to the system.`,
       variant: 'default',
     });
   };
@@ -572,7 +586,7 @@ export const ExpensesTab = () => {
 
       // Prepare CSV headers
       const headers = [
-        'Expense Number',
+        'Expense ID',
         'Vehicle Registration Number',
         'Expense Date',
         'Expense Category',
@@ -931,7 +945,7 @@ export const ExpensesTab = () => {
                       onClick={() => handleSort('expenseNumber')}
                     >
                       <div className='flex items-center gap-2'>
-                        Expense Number
+                        Expense ID
                         {getSortIcon('expenseNumber')}
                       </div>
                     </TableHead>
@@ -999,7 +1013,7 @@ export const ExpensesTab = () => {
                         <TableCell className='font-medium'>
                           <button
                             onClick={() => handleViewExpense(expense)}
-                            className='text-primary hover:text-primary/80 hover:underline font-semibold text-sm cursor-pointer transition-colors duration-200'
+                            className='text-black hover:text-primary/80 hover:underline font-semibold text-sm cursor-pointer transition-colors duration-200'
                           >
                             {expense.expenseNumber}
                           </button>
@@ -1220,7 +1234,7 @@ export const ExpensesTab = () => {
 
                     <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
                       <div className='space-y-1'>
-                        <Label className='text-xs font-medium'>Expense Number</Label>
+                        <Label className='text-xs font-medium'>Expense ID</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.expenseNumber}
                     </div>

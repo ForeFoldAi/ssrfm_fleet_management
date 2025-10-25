@@ -142,7 +142,7 @@ export const VehicleTab = () => {
       engineNumber: 'ENG123456789',
       chassisNumber: 'CHS987654321',
       fuelType: 'diesel',
-      loadCapacity: '10000',
+      loadCapacity: '10',
       purchaseDate: '15-01-2023',
       insuranceProvider: 'ICICI Lombard',
       insurancePolicyNumber: 'POL123456789',
@@ -167,7 +167,7 @@ export const VehicleTab = () => {
       engineNumber: 'ENG987654321',
       chassisNumber: 'CHS123456789',
       fuelType: 'diesel',
-      loadCapacity: '15000',
+      loadCapacity: '15',
       purchaseDate: '20-08-2022',
       insuranceProvider: 'Bajaj Allianz',
       insurancePolicyNumber: 'POL987654321',
@@ -192,7 +192,7 @@ export const VehicleTab = () => {
       engineNumber: 'ENG456789123',
       chassisNumber: 'CHS456789123',
       fuelType: 'diesel',
-      loadCapacity: '8000',
+      loadCapacity: '8',
       purchaseDate: '10-03-2023',
       insuranceProvider: 'HDFC ERGO',
       insurancePolicyNumber: 'POL456789123',
@@ -217,7 +217,7 @@ export const VehicleTab = () => {
       engineNumber: 'ENG789123456',
       chassisNumber: 'CHS789123456',
       fuelType: 'diesel',
-      loadCapacity: '12000',
+      loadCapacity: '12',
       purchaseDate: '15-05-2022',
       insuranceProvider: 'New India Assurance',
       insurancePolicyNumber: 'POL789123456',
@@ -242,7 +242,7 @@ export const VehicleTab = () => {
       engineNumber: 'ENG321654987',
       chassisNumber: 'CHS321654987',
       fuelType: 'diesel',
-      loadCapacity: '6000',
+      loadCapacity: '6',
       purchaseDate: '01-12-2021',
       insuranceProvider: 'Oriental Insurance',
       insurancePolicyNumber: 'POL321654987',
@@ -563,7 +563,7 @@ export const VehicleTab = () => {
         'Vehicle Type',
         'Year',
         'Fuel Type',
-        'Load Capacity (kg)',
+        'Load Capacity (MT)',
         'Status',
         'Insurance Provider',
         'Insurance Expiry Date',
@@ -865,6 +865,15 @@ export const VehicleTab = () => {
                         {getSortIcon('status')}
                       </div>
                     </TableHead>
+                    <TableHead 
+                      className='cursor-pointer hover:bg-secondary/30'
+                      onClick={() => handleSort('loadCapacity')}
+                    >
+                      <div className='flex items-center gap-2'>
+                        Load Capacity (MT)
+                        {getSortIcon('loadCapacity')}
+                      </div>
+                    </TableHead>
                     <TableHead>Insurance</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -877,7 +886,7 @@ export const VehicleTab = () => {
                           className='text-left hover:text-primary transition-colors'
                         >
                           <div className='flex flex-col'>
-                            <span className='font-semibold text-primary hover:text-primary/80 underline'>
+                            <span className='font-semibold text-black hover:text-primary/80 underline'>
                               {vehicle.vehicleRegistrationNumber}
                             </span>
                             <span className='text-xs text-muted-foreground'>
@@ -891,7 +900,7 @@ export const VehicleTab = () => {
                           <div className='flex flex-col'>
                             <span className='font-medium'>{vehicle.vehicleMake} {vehicle.vehicleModel}</span>
                             <span className='text-xs text-muted-foreground'>
-                              {vehicle.loadCapacity}kg • {vehicle.fuelType}
+                              {vehicle.fuelType}
                             </span>
                           </div>
                         </TableCell>
@@ -901,6 +910,12 @@ export const VehicleTab = () => {
                             {getStatusIcon(vehicle.status)}
                             <span className='capitalize'>{vehicle.status.replace('_', ' ')}</span>
                           </Badge>
+                        </TableCell>
+                        
+                        <TableCell>
+                          <div className='text-sm font-medium'>
+                            {vehicle.loadCapacity} MT
+                          </div>
                         </TableCell>
                         
                         <TableCell>
@@ -1300,15 +1315,16 @@ export const VehicleTab = () => {
 
                       <div className='space-y-1'>
                         <Label htmlFor='loadCapacity' className='text-xs font-medium'>
-                          Load Capacity (kg)
+                          Load Capacity (MT)
                         </Label>
                         <Input
                           id='loadCapacity'
                           type='number'
-                          placeholder='e.g., 10000'
+                          placeholder='e.g., 10'
                           value={viewingVehicle.loadCapacity}
                           onChange={(e) => handleInputChange('loadCapacity', e.target.value)}
                           min='0'
+                          step='0.1'
                           className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                         />
                       </div>

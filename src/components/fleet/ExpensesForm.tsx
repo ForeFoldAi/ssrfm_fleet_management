@@ -19,6 +19,16 @@ const formatDateToString = (date: Date): string => {
   return `${day}-${month}-${year}`;
 };
 
+// Generate Expense ID in format: SSRFM/UNIT-1/F-YYMMDD/01
+const generateExpenseId = (date: string, sequence: number = 1): string => {
+  const expenseDate = new Date(date);
+  const year = expenseDate.getFullYear().toString().slice(-2);
+  const month = (expenseDate.getMonth() + 1).toString().padStart(2, '0');
+  const day = expenseDate.getDate().toString().padStart(2, '0');
+  const sequenceStr = sequence.toString().padStart(2, '0');
+  return `SSRFM/UNIT-1/F-${year}${month}${day}/${sequenceStr}`;
+};
+
 const stringToDateInputFormat = (dateString: string): string => {
   // Convert DD-MM-YYYY to YYYY-MM-DD for HTML date input
   if (dateString && dateString.includes('-')) {
@@ -166,7 +176,7 @@ export const ExpensesForm = ({
     } else if (!editingExpense && isOpen) {
       // Reset form for new expense
       setFormData({
-        expenseNumber: `EXP-${Date.now()}`,
+        expenseNumber: generateExpenseId(formatDateToString(new Date()), 1),
         vehicleId: '',
         vehicleRegistrationNumber: '',
         driverId: '',
@@ -424,7 +434,7 @@ export const ExpensesForm = ({
 
       // Reset form
       setFormData({
-        expenseNumber: `EXP-${Date.now()}`,
+        expenseNumber: generateExpenseId(formatDateToString(new Date()), 1),
         vehicleId: '',
         vehicleRegistrationNumber: '',
         driverId: '',
@@ -494,7 +504,7 @@ export const ExpensesForm = ({
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
                   <div className='space-y-1'>
                     <Label htmlFor='expenseNumber' className='text-xs font-medium'>
-                      Expense Number
+                      Expense ID
                     </Label>
                   <Input
                     id='expenseNumber'
