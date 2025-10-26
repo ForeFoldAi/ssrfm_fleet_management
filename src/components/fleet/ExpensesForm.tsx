@@ -19,13 +19,13 @@ const formatDateToString = (date: Date): string => {
   return `${day}-${month}-${year}`;
 };
 
-// Generate Expense ID in format: SSRFM/UNIT-1/F-YYMMDD/01
+// Generate Expense ID in format: SSRFM/UNIT-1/F-YYMMDD/001
 const generateExpenseId = (date: string, sequence: number = 1): string => {
   const expenseDate = new Date(date);
   const year = expenseDate.getFullYear().toString().slice(-2);
   const month = (expenseDate.getMonth() + 1).toString().padStart(2, '0');
   const day = expenseDate.getDate().toString().padStart(2, '0');
-  const sequenceStr = sequence.toString().padStart(2, '0');
+  const sequenceStr = sequence.toString().padStart(3, '0');
   return `SSRFM/UNIT-1/F-${year}${month}${day}/${sequenceStr}`;
 };
 
@@ -696,7 +696,7 @@ export const ExpensesForm = ({
               {/* Uploads Proofs */}
               <div className='space-y-2'>
                 <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
-                  Uploads Proofs
+                  Upload Proofs
                 </h4>
 
                 {/* File Upload Area */}
@@ -710,7 +710,7 @@ export const ExpensesForm = ({
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                 >
-                  <Upload className='w-5 h-5 mx-auto mb-1 text-muted-foreground' />
+                  <p className='w-5 h-5 mx-auto mb-1 text-muted-foreground' />
                   <p className='text-xs text-muted-foreground mb-1'>
                     Drag & drop files or click to select
                   </p>
@@ -785,83 +785,87 @@ export const ExpensesForm = ({
                 Vendor Information
                 </h4>
 
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
+                {/* First Row - Vendor Name, Contact, Payment Method */}
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
                   <div className='space-y-1'>
                     <Label htmlFor='vendorName' className='text-xs font-medium'>
                       Vendor Name
                     </Label>
-                  <Input
-                    id='vendorName'
-                    value={formData.vendorName}
-                    onChange={(e) => handleInputChange('vendorName', e.target.value)}
-                    placeholder='e.g., Bharat Petroleum, Local Mechanic'
+                    <Input
+                      id='vendorName'
+                      value={formData.vendorName}
+                      onChange={(e) => handleInputChange('vendorName', e.target.value)}
+                      placeholder='e.g., Bharat Petroleum, Local Mechanic'
                       className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground'
-                  />
-                </div>
+                    />
+                  </div>
 
                   <div className='space-y-1'>
                     <Label htmlFor='vendorContact' className='text-xs font-medium'>
                       Vendor Contact
                     </Label>
-                  <Input
-                    id='vendorContact'
-                    type='tel'
-                    value={formData.vendorContact}
-                    onChange={(e) => handleInputChange('vendorContact', e.target.value)}
-                    placeholder='+91 9876543210'
+                    <Input
+                      id='vendorContact'
+                      type='tel'
+                      value={formData.vendorContact}
+                      onChange={(e) => handleInputChange('vendorContact', e.target.value)}
+                      placeholder='+91 9876543210'
                       className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground'
-                  />
-                </div>
+                    />
+                  </div>
 
                   <div className='space-y-1'>
                     <Label htmlFor='paymentMethod' className='text-xs font-medium'>
                       Payment Method
                     </Label>
-                  <Select
-                    value={formData.paymentMethod}
-                    onValueChange={(value: 'cash' | 'card' | 'upi' | 'cheque' | 'bank_transfer') => 
-                      handleInputChange('paymentMethod', value)
-                    }
-                  >
+                    <Select
+                      value={formData.paymentMethod}
+                      onValueChange={(value: 'cash' | 'card' | 'upi' | 'cheque' | 'bank_transfer') => 
+                        handleInputChange('paymentMethod', value)
+                      }
+                    >
                       <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 [&>span]:text-muted-foreground'>
-                      <SelectValue placeholder='Select payment method' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value='cash'>Cash</SelectItem>
-                      <SelectItem value='card'>Credit/Debit Card</SelectItem>
-                      <SelectItem value='upi'>UPI</SelectItem>
-                      <SelectItem value='cheque'>Cheque</SelectItem>
-                      <SelectItem value='bank_transfer'>Bank Transfer</SelectItem>
-                    </SelectContent>
-                  </Select>
+                        <SelectValue placeholder='Select payment method' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='cash'>Cash</SelectItem>
+                        <SelectItem value='card'>Credit/Debit Card</SelectItem>
+                        <SelectItem value='upi'>UPI</SelectItem>
+                        <SelectItem value='cheque'>Cheque</SelectItem>
+                        <SelectItem value='bank_transfer'>Bank Transfer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
+                {/* Second Row - Payment Reference and Vendor Address */}
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
                   <div className='space-y-1'>
                     <Label htmlFor='paymentReference' className='text-xs font-medium'>
                       Payment Reference
                     </Label>
-                  <Input
-                    id='paymentReference'
-                    value={formData.paymentReference}
-                    onChange={(e) => handleInputChange('paymentReference', e.target.value)}
-                    placeholder='Transaction ID, Cheque No., etc.'
+                    <Input
+                      id='paymentReference'
+                      value={formData.paymentReference}
+                      onChange={(e) => handleInputChange('paymentReference', e.target.value)}
+                      placeholder='Transaction ID, Cheque No., etc.'
                       className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground'
-                  />
-                </div>
+                    />
+                  </div>
 
-                  <div className='space-y-1'>
+                  <div className='space-y-1 md:col-span-2'>
                     <Label htmlFor='vendorAddress' className='text-xs font-medium'>
                       Vendor Address
                     </Label>
-                  <Textarea
-                    id='vendorAddress'
-                    value={formData.vendorAddress}
-                    onChange={(e) => handleInputChange('vendorAddress', e.target.value)}
-                    placeholder='Complete vendor address'
-                      className='min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200 placeholder:text-muted-foreground'
-                  />
+                    <Input
+                      id='vendorAddress'
+                      value={formData.vendorAddress}
+                      onChange={(e) => handleInputChange('vendorAddress', e.target.value)}
+                      placeholder='Complete vendor address'
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200 placeholder:text-muted-foreground'
+                    />
+                  </div>
                 </div>
-              </div>
               </div>
 
               {/* Additional Information */}

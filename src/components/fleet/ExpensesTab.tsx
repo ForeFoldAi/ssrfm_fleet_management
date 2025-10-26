@@ -22,6 +22,8 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Loader2,
+  Image,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -52,13 +54,13 @@ const formatDateToString = (date: Date): string => {
   return `${day}-${month}-${year}`;
 };
 
-// Generate Expense ID in format: SSRFM/UNIT-1/F-YYMMDD/01
+// Generate Expense ID in format: SSRFM/UNIT-1/F-YYMMDD/001
 const generateExpenseId = (date: string, sequence: number = 1): string => {
   const expenseDate = new Date(date);
   const year = expenseDate.getFullYear().toString().slice(-2);
   const month = (expenseDate.getMonth() + 1).toString().padStart(2, '0');
   const day = expenseDate.getDate().toString().padStart(2, '0');
-  const sequenceStr = sequence.toString().padStart(2, '0');
+  const sequenceStr = sequence.toString().padStart(3, '0');
   return `SSRFM/UNIT-1/F-${year}${month}${day}/${sequenceStr}`;
 };
 
@@ -509,6 +511,22 @@ export const ExpensesTab = () => {
 
   const formatCurrency = (amount: string) => {
     return `₹${parseFloat(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+  };
+
+  // File handling functions
+  const getFileIcon = (file: File) => {
+    if (file.type.startsWith('image/')) {
+      return <Image className='w-4 h-4' />;
+    }
+    return <FileText className='w-4 h-4' />;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   // Export functionality
@@ -1232,13 +1250,15 @@ export const ExpensesTab = () => {
                       Basic Information
                     </h4>
 
+                    {/* First Row */}
                     <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Expense ID</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.expenseNumber}
-                    </div>
+                        </div>
                       </div>
+
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Vehicle</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
@@ -1247,6 +1267,7 @@ export const ExpensesTab = () => {
                       </div>
                     </div>
 
+                    {/* Second Row */}
                     <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Expense Date</Label>
@@ -1254,97 +1275,152 @@ export const ExpensesTab = () => {
                           {formatDateDisplay(viewingExpense.expenseDate)}
                         </div>
                       </div>
+
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Expense Category</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
-                      <Badge className={`${getExpenseCategoryColor(viewingExpense.expenseCategory)} border flex items-center gap-1 w-fit`}>
-                        {getExpenseCategoryIcon(viewingExpense.expenseCategory)}
-                        <span className='text-xs'>{viewingExpense.expenseCategory.replace('_', ' ').toUpperCase()}</span>
-                      </Badge>
-                    </div>
-                    </div>
+                          <Badge className={`${getExpenseCategoryColor(viewingExpense.expenseCategory)} border flex items-center gap-1 w-fit`}>
+                            {getExpenseCategoryIcon(viewingExpense.expenseCategory)}
+                            <span className='text-xs'>{viewingExpense.expenseCategory.replace('_', ' ').toUpperCase()}</span>
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
 
+                    {/* Third Row */}
                     <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Expense Type</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.expenseType}
-                    </div>
-                    </div>
+                        </div>
+                      </div>
+
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Amount (₹)</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {formatCurrency(viewingExpense.amount)}
-                    </div>
-                  </div>
+                        </div>
+                      </div>
                     </div>
 
+                    {/* Fourth Row */}
                     <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Location</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.location}
-                    </div>
-                    </div>
+                        </div>
+                      </div>
+
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Requested By</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.requestedBy || 'N/A'}
-                    </div>
-                  </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-              {/* Vendor Information */}
-                  <div className='space-y-3'>
+                  {/* Uploads Proofs */}
+                  <div className='space-y-2'>
                     <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
-                    Vendor Information
+                      Uploaded Proofs
                     </h4>
 
-                    <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
+                    {/* Receipts/Attachments Display */}
+                    {viewingExpense.receipts && viewingExpense.receipts.length > 0 ? (
+                      <div className='space-y-1'>
+                        <p className='text-xs font-medium text-muted-foreground'>
+                          Files ({viewingExpense.receipts.length})
+                        </p>
+                        <div className='space-y-1'>
+                          {viewingExpense.receipts.map((file, index) => (
+                            <div
+                              key={index}
+                              className='flex items-center justify-between p-2 bg-secondary rounded border'
+                            >
+                              <div className='flex items-center gap-2'>
+                                {getFileIcon(file)}
+                                <div className='flex flex-col'>
+                                  <span className='text-xs font-medium truncate max-w-[180px]'>
+                                    {file.name}
+                                  </span>
+                                  <span className='text-xs text-muted-foreground'>
+                                    {formatFileSize(file.size)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className='text-center py-4 text-muted-foreground'>
+                        <FileText className='w-8 h-8 mx-auto mb-2 opacity-50' />
+                        <p className='text-xs'>No attachments uploaded</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Vendor Information */}
+                  <div className='space-y-3'>
+                    <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
+                      Vendor Information
+                    </h4>
+
+                    {/* First Row - Vendor Name, Contact, Payment Method */}
+                    <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Vendor Name</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.vendorName || 'N/A'}
-                    </div>
-                    </div>
+                        </div>
+                      </div>
+
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Vendor Contact</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.vendorContact || 'N/A'}
-                    </div>
-                  </div>
+                        </div>
+                      </div>
+
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Payment Method</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.paymentMethod.replace('_', ' ').toUpperCase()}
+                        </div>
+                      </div>
                     </div>
-                    </div>
+
+                    {/* Second Row - Payment Reference and Vendor Address */}
+                    <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Payment Reference</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.paymentReference || 'N/A'}
-                  </div>
-                    </div>
+                        </div>
+                      </div>
+
                       <div className='space-y-1 md:col-span-2'>
                         <Label className='text-xs font-medium'>Vendor Address</Label>
-                        <div className='min-h-[40px] px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                        <div className='h-8 px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                           {viewingExpense.vendorAddress || 'N/A'}
-                    </div>
-                    </div>
+                        </div>
                       </div>
+                    </div>
                   </div>
 
-              {/* Additional Information */}
+                  {/* Additional Information */}
                   <div className='space-y-3'>
                     <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
                       Additional Notes
                     </h4>
+
                     <div className='space-y-1'>
-                     <div className='min-h-[40px] px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
+                      <div className='min-h-[40px] px-2 py-1 bg-secondary text-xs border border-input rounded-[5px] flex items-center'>
                         {viewingExpense.notes || 'N/A'}
-                    </div>
+                      </div>
                     </div>
 
                     <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
@@ -1354,6 +1430,7 @@ export const ExpensesTab = () => {
                           {viewingExpense.createdAt ? 'System User' : 'Current User'}
                         </div>
                       </div>
+
                       <div className='space-y-1'>
                         <Label className='text-xs font-medium'>Date</Label>
                         <div className='h-8 px-2 py-1 bg-secondary text-center font-semibold text-xs border border-input rounded-[5px] flex items-center justify-center'>
