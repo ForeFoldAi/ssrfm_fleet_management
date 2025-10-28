@@ -134,7 +134,7 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterDepartment, setFilterDepartment] = useState('all');
+  const [filterUnit, setFilterUnit] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterLeaveType, setFilterLeaveType] = useState('all');
   const [filterDateRange, setFilterDateRange] = useState('all');
@@ -320,7 +320,7 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
     }
   ];
 
-  const departments = ['all', 'Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'Customer Service'];
+  const units = ['all', 'Main Office', 'Branch Office', 'Remote Office', 'Head Office', 'Field Office', 'Regional Office', 'Satellite Office'];
   const leaveTypes = ['all', 'annual', 'sick', 'personal', 'maternity', 'emergency', 'study', 'bereavement', 'compensatory'];
   const statusOptions = ['all', 'pending', 'approved', 'rejected', 'cancelled'];
   const dateRanges = ['all', 'today', 'this_week', 'this_month', 'next_month'];
@@ -364,9 +364,9 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
       );
     }
 
-    // Apply department filter
-    if (filterDepartment !== 'all') {
-      filtered = filtered.filter(leave => leave.department === filterDepartment);
+    // Apply unit filter
+    if (filterUnit !== 'all') {
+      filtered = filtered.filter(leave => leave.unit === filterUnit);
     }
 
     // Apply status filter
@@ -424,7 +424,7 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
 
     setFilteredLeaves(filtered);
     setCurrentPage(1);
-  }, [leaveRequests, searchQuery, filterDepartment, filterStatus, filterLeaveType, filterDateRange, sortField, sortOrder]);
+  }, [leaveRequests, searchQuery, filterUnit, filterStatus, filterLeaveType, filterDateRange, sortField, sortOrder]);
 
   const loadLeaveRequests = async () => {
     setIsLoading(true);
@@ -542,14 +542,14 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
                 />
               </div>
               
-              <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+              <Select value={filterUnit} onValueChange={setFilterUnit}>
                 <SelectTrigger className='w-40'>
-                  <SelectValue placeholder='Department' />
+                  <SelectValue placeholder='Unit' />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept === 'all' ? 'All Departments' : dept}
+                  {units.map((unit) => (
+                    <SelectItem key={unit} value={unit}>
+                      {unit === 'all' ? 'All Units' : unit}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -584,16 +584,16 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
               {/* Action Buttons */}
               <div className='flex items-center gap-2 ml-2'>
                 <Button variant='outline' size='sm'>
-                  <Download className='w-4 h-4 mr-2' />
+                  <Upload className='w-4 h-4 mr-2' />
                   Export
                 </Button>
                 <Button variant='outline' size='sm'>
-                  <Upload className='w-4 h-4 mr-2' />
+                  <Download className='w-4 h-4 mr-2' />
                   Import
                 </Button>
                 <Button size='sm' onClick={handleNewLeaveRequest}>
                   <Plus className='w-4 h-4 mr-2' />
-                  New Leave Request
+                  Raise Leave Request
                 </Button>
               </div>
             </div>
@@ -626,7 +626,7 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
                         onClick={() => handleSort('employeeName')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        Employee
+                        Employee Name
                         {getSortIcon('employeeName')}
                       </Button>
                     </TableHead>
@@ -668,16 +668,6 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
                       >
                         Days
                         {getSortIcon('totalDays')}
-                      </Button>
-                    </TableHead>
-                    <TableHead className='min-w-[120px]'>
-                      <Button
-                        variant='ghost'
-                        onClick={() => handleSort('department')}
-                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                      >
-                        Department
-                        {getSortIcon('department')}
                       </Button>
                     </TableHead>
                     <TableHead className='min-w-[120px]'>Unit/Location</TableHead>
@@ -728,9 +718,6 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
                         </TableCell>
                         <TableCell className='font-medium'>
                           {leave.totalDays} day{leave.totalDays !== 1 ? 's' : ''}
-                        </TableCell>
-                        <TableCell>
-                          {leave.department}
                         </TableCell>
                         <TableCell>
                           <div className='flex items-center gap-2'>
@@ -873,191 +860,152 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
       {/* Leave Detail Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={handleCloseViewDialog}>
         <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
-          <DialogHeader>
-            <DialogTitle className='flex items-center gap-2'>
-              <FileText className='w-5 h-5' />
-              Leave Request Details - {selectedLeave?.leaveNumber}
+          <DialogHeader className='pb-2'>
+            <DialogTitle className='flex items-center gap-2 text-lg'>
+              <div className='w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center'>
+                <Eye className='w-4 h-4 text-primary' />
+              </div>
+              Leave Request Details
             </DialogTitle>
           </DialogHeader>
           
           {selectedLeave && (
             <div className='space-y-4'>
-              {/* Status Badge */}
-              <div className='flex justify-between items-center p-3 bg-muted/30 rounded-lg'>
-                <div className='flex items-center gap-2'>
-                  <span className='text-sm font-medium'>Status:</span>
-                  <Badge className={statusConfig[selectedLeave.status].color}>
-                    {React.createElement(statusConfig[selectedLeave.status].icon, { className: 'w-3 h-3 mr-1' })}
-                    {statusConfig[selectedLeave.status].label}
-                  </Badge>
-                </div>
-                {selectedLeave.submittedDate && (
-                  <span className='text-xs text-muted-foreground'>
-                    Submitted: {format(new Date(selectedLeave.submittedDate), 'dd-MM-yyyy')}
-                  </span>
-                )}
-              </div>
-
-              {/* Employee Information */}
-              <div className='space-y-2'>
-                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1 flex items-center gap-2'>
-                  <User className='w-3 h-3' />
-                  Employee Information
-                </h4>
-
-                <div className='grid grid-cols-1 lg:grid-cols-2 gap-2'>
-                  <div className='space-y-1'>
-                    <Label className='text-xs font-medium'>Employee Name</Label>
-                    <div className='h-7 px-2 py-1 bg-muted/30 border border-input rounded-[5px] text-xs flex items-center'>
-                      {selectedLeave.employeeName}
-                    </div>
-                  </div>
-                  <div className='space-y-1'>
-                    <Label className='text-xs font-medium'>Employee ID</Label>
-                    <div className='h-7 px-2 py-1 bg-muted/30 border border-input rounded-[5px] text-xs flex items-center'>
-                      {selectedLeave.employeeId}
-                    </div>
-                  </div>
-                  <div className='space-y-1'>
-                    <Label className='text-xs font-medium'>Email</Label>
-                    <div className='h-7 px-2 py-1 bg-muted/30 border border-input rounded-[5px] text-xs flex items-center'>
-                      {selectedLeave.employeeEmail}
-                    </div>
-                  </div>
-                  <div className='space-y-1'>
-                    <Label className='text-xs font-medium'>Department</Label>
-                    <div className='h-7 px-2 py-1 bg-muted/30 border border-input rounded-[5px] text-xs flex items-center'>
-                      {selectedLeave.department}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Leave Details */}
-              <div className='space-y-2'>
-                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1 flex items-center gap-2'>
-                  <Calendar className='w-3 h-3' />
-                  Leave Details
-                </h4>
-
-                <div className='grid grid-cols-1 lg:grid-cols-2 gap-2'>
-                  <div className='space-y-1'>
-                    <Label className='text-xs font-medium'>Leave Type</Label>
-                    <div className='h-7 px-2 py-1 bg-muted/30 border border-input rounded-[5px] text-xs flex items-center'>
-                      <Badge className={leaveTypeConfig[selectedLeave.leaveType].color}>
-                        {React.createElement(leaveTypeConfig[selectedLeave.leaveType].icon, { className: 'w-3 h-3 mr-1' })}
-                        {leaveTypeConfig[selectedLeave.leaveType].label}
+              <Card className='border-0 shadow-sm'>
+                <CardContent className='space-y-4'>
+                  {/* Status Badge */}
+                  <div className='flex justify-between items-center p-3 bg-muted/30 rounded-lg'>
+                    <div className='flex items-center gap-2'>
+                      <span className='text-sm font-medium'>Status:</span>
+                      <Badge className={statusConfig[selectedLeave.status].color}>
+                        {React.createElement(statusConfig[selectedLeave.status].icon, { className: 'w-3 h-3 mr-1' })}
+                        {statusConfig[selectedLeave.status].label}
                       </Badge>
                     </div>
+                    {selectedLeave.submittedDate && (
+                      <span className='text-xs text-muted-foreground'>
+                        Submitted: {format(new Date(selectedLeave.submittedDate), 'dd-MM-yyyy')}
+                      </span>
+                    )}
                   </div>
 
-                  <div className='space-y-1'>
-                    <Label className='text-xs font-medium'>Total Days</Label>
-                    <div className='h-7 px-2 py-1 bg-muted/30 border border-input rounded-[5px] text-xs flex items-center'>
-                      {selectedLeave.totalDays} day{selectedLeave.totalDays !== 1 ? 's' : ''}
-                    </div>
-                  </div>
-                </div>
-
-                <div className='grid grid-cols-1 lg:grid-cols-2 gap-2'>
-                  <div className='space-y-1'>
-                    <Label className='text-xs font-medium'>Start Date</Label>
-                    <div className='h-7 px-2 py-1 bg-muted/30 border border-input rounded-[5px] text-xs flex items-center'>
-                      {format(new Date(selectedLeave.startDate), 'dd-MM-yyyy')}
-                    </div>
-                  </div>
-
-                  <div className='space-y-1'>
-                    <Label className='text-xs font-medium'>End Date</Label>
-                    <div className='h-7 px-2 py-1 bg-muted/30 border border-input rounded-[5px] text-xs flex items-center'>
-                      {format(new Date(selectedLeave.endDate), 'dd-MM-yyyy')}
-                    </div>
-                  </div>
-                </div>
-
-                <div className='space-y-1'>
-                  <Label className='text-xs font-medium'>Reason for Leave</Label>
-                  <div className='min-h-[50px] px-2 py-1 bg-muted/30 border border-input rounded-[5px] text-xs flex items-start pt-2'>
-                    {selectedLeave.reason}
-                  </div>
-                </div>
-              </div>
-
-              {/* Approval History */}
-              <div className='space-y-2'>
-                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
-                  Approval History
-                </h4>
-
-                <div className='space-y-1'>
-                  <div className='flex justify-between items-center p-2 bg-muted/30 border border-input rounded-lg'>
-                    <span className='text-xs font-medium'>Submitted by:</span>
-                    <span className='text-xs'>{selectedLeave.submittedBy}</span>
-                  </div>
-                  {selectedLeave.submittedDate && (
-                    <div className='flex justify-between items-center p-2 bg-muted/30 border border-input rounded-lg'>
-                      <span className='text-xs font-medium'>Submitted on:</span>
-                      <span className='text-xs'>{format(new Date(selectedLeave.submittedDate), 'dd-MM-yyyy HH:mm')}</span>
-                    </div>
-                  )}
-                  {selectedLeave.approvedBy && (
-                    <div className='flex justify-between items-center p-2 bg-muted/30 border border-input rounded-lg'>
-                      <span className='text-xs font-medium'>Approved by:</span>
-                      <span className='text-xs'>{selectedLeave.approvedBy}</span>
-                    </div>
-                  )}
-                  {selectedLeave.approvedDate && (
-                    <div className='flex justify-between items-center p-2 bg-muted/30 border border-input rounded-lg'>
-                      <span className='text-xs font-medium'>Approved on:</span>
-                      <span className='text-xs'>{format(new Date(selectedLeave.approvedDate), 'dd-MM-yyyy HH:mm')}</span>
-                    </div>
-                  )}
-                  {selectedLeave.approvalNotes && (
-                    <div className='p-2 bg-muted/30 border border-input rounded-lg'>
-                      <span className='text-xs font-medium'>Approval Notes:</span>
-                      <p className='text-xs mt-1'>{selectedLeave.approvalNotes}</p>
-                    </div>
-                  )}
-                  {selectedLeave.rejectionReason && (
-                    <div className='p-2 bg-red-50 border border-red-200 rounded-lg'>
-                      <span className='text-xs font-medium text-red-800'>Rejection Reason:</span>
-                      <p className='text-xs mt-1 text-red-600'>{selectedLeave.rejectionReason}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Additional Information */}
-              {(selectedLeave.notes || selectedLeave.attachments.length > 0) && (
-                <div className='space-y-2'>
-                  <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
-                    Additional Information
-                  </h4>
-
-                  {selectedLeave.notes && (
-                    <div className='space-y-1'>
-                      <Label className='text-xs font-medium'>Additional Notes</Label>
-                      <div className='min-h-[35px] px-2 py-1 bg-muted/30 border border-input rounded-[5px] text-xs flex items-start pt-2'>
-                        {selectedLeave.notes}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedLeave.attachments.length > 0 && (
-                    <div className='space-y-1'>
-                      <Label className='text-xs font-medium'>Attachments</Label>
+                  {/* Employee and Leave Type Selection */}
+                  <div className='space-y-3'>
+                    <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                      {/* Employee Information */}
                       <div className='space-y-1'>
-                        {selectedLeave.attachments.map((attachment, index) => (
-                          <div key={index} className='flex items-center gap-2 p-2 bg-muted/30 border border-input rounded-lg'>
-                            <FileText className='w-4 h-4 text-muted-foreground' />
-                            <span className='text-xs'>{attachment}</span>
-                          </div>
-                        ))}
+                        <Label className='text-xs font-medium'>Employee</Label>
+                        <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center'>
+                          {selectedLeave.employeeName} ({selectedLeave.employeeId})
+                        </div>
+                      </div>
+
+                      {/* Leave Type */}
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Leave Type</Label>
+                        <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center'>
+                          <Badge className={leaveTypeConfig[selectedLeave.leaveType].color}>
+                            {React.createElement(leaveTypeConfig[selectedLeave.leaveType].icon, { className: 'w-3 h-3 mr-1' })}
+                            {leaveTypeConfig[selectedLeave.leaveType].label}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Date Selection */}
+                  <div className='space-y-3'>
+                    <div className='grid grid-cols-1 lg:grid-cols-3 gap-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Start Date</Label>
+                        <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center'>
+                          {format(new Date(selectedLeave.startDate), 'dd-MM-yyyy')}
+                        </div>
+                      </div>
+
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>End Date</Label>
+                        <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center'>
+                          {format(new Date(selectedLeave.endDate), 'dd-MM-yyyy')}
+                        </div>
+                      </div>
+
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Total Days</Label>
+                        <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center font-medium'>
+                          {selectedLeave.totalDays} day{selectedLeave.totalDays !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Reason for Leave */}
+                  <div className='space-y-3'>
+                    <div className='space-y-1'>
+                      <Label className='text-xs font-medium'>Reason for Leave</Label>
+                      <div className='min-h-[60px] px-2 py-1 bg-muted/30 border border-input rounded-[5px] text-xs flex items-start pt-2'>
+                        {selectedLeave.reason}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Notes */}
+                  {selectedLeave.notes && (
+                    <div className='space-y-3'>
+                      <div className='space-y-1'>
+                        <Label className='text-xs font-medium'>Additional Notes</Label>
+                        <div className='min-h-[40px] px-2 py-1 bg-muted/30 border border-input rounded-[5px] text-xs flex items-start pt-2'>
+                          {selectedLeave.notes}
+                        </div>
                       </div>
                     </div>
                   )}
-                </div>
-              )}
+
+                  {/* Approval History */}
+                  <div className='space-y-3'>
+                    <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
+                      Approval History
+                    </h4>
+
+                    <div className='space-y-2'>
+                      <div className='flex justify-between items-center p-2 bg-muted/30 rounded-lg'>
+                        <span className='text-xs font-medium'>Submitted by:</span>
+                        <span className='text-xs'>{selectedLeave.submittedBy}</span>
+                      </div>
+                      {selectedLeave.submittedDate && (
+                        <div className='flex justify-between items-center p-2 bg-muted/30 rounded-lg'>
+                          <span className='text-xs font-medium'>Submitted on:</span>
+                          <span className='text-xs'>{format(new Date(selectedLeave.submittedDate), 'dd-MM-yyyy HH:mm')}</span>
+                        </div>
+                      )}
+                      {selectedLeave.approvedBy && (
+                        <div className='flex justify-between items-center p-2 bg-muted/30 rounded-lg'>
+                          <span className='text-xs font-medium'>Approved by:</span>
+                          <span className='text-xs'>{selectedLeave.approvedBy}</span>
+                        </div>
+                      )}
+                      {selectedLeave.approvedDate && (
+                        <div className='flex justify-between items-center p-2 bg-muted/30 rounded-lg'>
+                          <span className='text-xs font-medium'>Approved on:</span>
+                          <span className='text-xs'>{format(new Date(selectedLeave.approvedDate), 'dd-MM-yyyy HH:mm')}</span>
+                        </div>
+                      )}
+                      {selectedLeave.approvalNotes && (
+                        <div className='p-2 bg-muted/30 rounded-lg'>
+                          <span className='text-xs font-medium'>Approval Notes:</span>
+                          <p className='text-xs mt-1'>{selectedLeave.approvalNotes}</p>
+                        </div>
+                      )}
+                      {selectedLeave.rejectionReason && (
+                        <div className='p-2 bg-red-50 border border-red-200 rounded-lg'>
+                          <span className='text-xs font-medium text-red-800'>Rejection Reason:</span>
+                          <p className='text-xs mt-1 text-red-600'>{selectedLeave.rejectionReason}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </DialogContent>

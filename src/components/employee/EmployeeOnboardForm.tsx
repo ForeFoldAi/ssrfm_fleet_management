@@ -55,6 +55,7 @@ interface EmployeeFormData {
   employeeId: string;
   department: string;
   position: string;
+  unit: string;
   joiningDate: string;
   contractType: string;
   
@@ -101,6 +102,7 @@ export const EmployeeOnboardForm = ({
     employeeId: '',
     department: '',
     position: '',
+    unit: '',
     joiningDate: '',
     contractType: '',
     probationPeriod: '',
@@ -134,6 +136,7 @@ export const EmployeeOnboardForm = ({
         employeeId: editingEmployee.employeeId || '',
         department: editingEmployee.department || '',
         position: editingEmployee.position || '',
+        unit: editingEmployee.unit || '',
         joiningDate: editingEmployee.joiningDate || '',
         contractType: editingEmployee.contractType || '',
         probationPeriod: editingEmployee.probationPeriod || '',
@@ -165,6 +168,7 @@ export const EmployeeOnboardForm = ({
         employeeId: generateEmployeeId(),
         department: '',
         position: '',
+        unit: '',
         joiningDate: '',
         contractType: '',
         probationPeriod: '',
@@ -200,6 +204,22 @@ export const EmployeeOnboardForm = ({
     'Procurement',
     'Quality Assurance',
     'Administration',
+    'Other',
+  ];
+
+  const units = [
+    'Head Office',
+    'Regional Office - North',
+    'Regional Office - South',
+    'Regional Office - East',
+    'Regional Office - West',
+    'Branch Office - Mumbai',
+    'Branch Office - Delhi',
+    'Branch Office - Bangalore',
+    'Branch Office - Chennai',
+    'Branch Office - Kolkata',
+    'Field Office',
+    'Remote Location',
     'Other',
   ];
 
@@ -240,12 +260,11 @@ export const EmployeeOnboardForm = ({
     // Required field validations
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
-    if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
     if (!formData.department) newErrors.department = 'Department is required';
     if (formData.department === 'Other' && !customDepartment.trim()) newErrors.customDepartment = 'Department name is required';
     if (!formData.position.trim()) newErrors.position = 'Position is required';
+    if (!formData.unit) newErrors.unit = 'Unit is required';
     if (!formData.joiningDate) newErrors.joiningDate = 'Joining date is required';
     if (!formData.contractType) newErrors.contractType = 'Contract type is required';
 
@@ -332,6 +351,7 @@ export const EmployeeOnboardForm = ({
         employeeId: generateEmployeeId(),
         department: '',
         position: '',
+        unit: '',
         joiningDate: '',
         contractType: '',
         probationPeriod: '',
@@ -378,6 +398,7 @@ export const EmployeeOnboardForm = ({
       employeeId: generateEmployeeId(),
       department: '',
       position: '',
+      unit: '',
       joiningDate: '',
       contractType: '',
       probationPeriod: '',
@@ -453,23 +474,6 @@ export const EmployeeOnboardForm = ({
 
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                   <div className='space-y-1'>
-                    <Label htmlFor='email' className='text-xs font-medium'>
-                      Email Address *
-                    </Label>
-                    <Input
-                      id='email'
-                      type='email'
-                      placeholder='Enter email address'
-                      value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
-                    />
-                    {errors.email && (
-                      <p className='text-destructive text-xs mt-1'>{errors.email}</p>
-                    )}
-                  </div>
-
-                  <div className='space-y-1'>
                     <Label htmlFor='phone' className='text-xs font-medium'>
                       Phone Number *
                     </Label>
@@ -485,12 +489,29 @@ export const EmployeeOnboardForm = ({
                       <p className='text-destructive text-xs mt-1'>{errors.phone}</p>
                     )}
                   </div>
+
+                  <div className='space-y-1'>
+                    <Label htmlFor='email' className='text-xs font-medium'>
+                      Email Address
+                    </Label>
+                    <Input
+                      id='email'
+                      type='email'
+                      placeholder='Enter email address'
+                      value={formData.email}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                    />
+                    {errors.email && (
+                      <p className='text-destructive text-xs mt-1'>{errors.email}</p>
+                    )}
+                  </div>
                 </div>
 
                 <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                   <div className='space-y-1'>
                     <Label htmlFor='dateOfBirth' className='text-xs font-medium'>
-                      Date of Birth *
+                      Date of Birth
                     </Label>
                     <Input
                       id='dateOfBirth'
@@ -726,6 +747,29 @@ export const EmployeeOnboardForm = ({
                     )}
                   </div>
 
+                  <div className='space-y-1'>
+                    <Label htmlFor='unit' className='text-xs font-medium'>
+                      Unit/Location *
+                    </Label>
+                    <Select
+                      value={formData.unit}
+                      onValueChange={(value) => handleSelectChange('unit', value)}
+                    >
+                      <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
+                        <SelectValue placeholder='Select unit' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map((unit) => (
+                          <SelectItem key={unit} value={unit}>
+                            {unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.unit && (
+                      <p className='text-destructive text-xs mt-1'>{errors.unit}</p>
+                    )}
+                  </div>
                 </div>
 
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
@@ -967,7 +1011,6 @@ export const EmployeeOnboardForm = ({
                 </>
               ) : (
                 <>
-                  <Plus className='w-3 h-3 mr-1' />
                   Submit
                 </>
               )}

@@ -981,7 +981,7 @@ export const ExpensesTab = () => {
                       onClick={() => handleSort('expenseCategory')}
                     >
                       <div className='flex items-center gap-2'>
-                        Category
+                        Expense Category
                         {getSortIcon('expenseCategory')}
                       </div>
                     </TableHead>
@@ -991,8 +991,17 @@ export const ExpensesTab = () => {
                       onClick={() => handleSort('expenseDate')}
                     >
                       <div className='flex items-center gap-2'>
-                        Date
+                        Expense Date
                         {getSortIcon('expenseDate')}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className='cursor-pointer hover:bg-secondary/30'
+                      onClick={() => handleSort('createdAt')}
+                    >
+                      <div className='flex items-center gap-2'>
+                        Recorded Date
+                        {getSortIcon('createdAt')}
                       </div>
                     </TableHead>
                     <TableHead 
@@ -1018,7 +1027,7 @@ export const ExpensesTab = () => {
                       onClick={() => handleSort('createdAt')}
                     >
                       <div className='flex items-center gap-2'>
-                      Submitted By
+                        Submitted By
                         {getSortIcon('createdAt')}
                       </div>
                     </TableHead>
@@ -1066,6 +1075,15 @@ export const ExpensesTab = () => {
                         
                         <TableCell>
                           <div className='flex flex-col text-sm'>
+                            <span className='font-medium'>{formatDateDisplay(expense.createdAt || new Date().toISOString())}</span>
+                            <span className='text-xs text-muted-foreground'>
+                              {expense.createdAt ? 'System User' : 'Current User'}
+                            </span>
+                          </div>
+                        </TableCell>
+                        
+                        <TableCell>
+                          <div className='flex flex-col text-sm'>
                             <span className='font-medium'>{formatCurrency(expense.amount)}</span>
                             <span className='text-xs text-muted-foreground'>
                               {expense.paymentMethod.replace('_', ' ').toUpperCase()}
@@ -1085,8 +1103,8 @@ export const ExpensesTab = () => {
                             <span className='text-xs text-muted-foreground'>
                               {formatDateDisplay(expense.createdAt || new Date().toISOString())}
                             </span>
-                            </div>
-                          </TableCell>
+                          </div>
+                        </TableCell>
                         </TableRow>
                     </>
                   ))}

@@ -97,6 +97,9 @@ export const LeaveForm = ({
   // New state for custom leave type
   const [showCustomLeaveTypeInput, setShowCustomLeaveTypeInput] = useState(false);
   const [customLeaveTypeName, setCustomLeaveTypeName] = useState('');
+  
+  // Search functionality for employee dropdown
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
 
   const [formData, setFormData] = useState<LeaveFormData>({
     employeeId: '',
@@ -135,6 +138,14 @@ export const LeaveForm = ({
     { value: 'compensatory', label: 'Compensatory Leave', description: 'Compensation for overtime' },
     { value: 'other', label: 'Other', description: 'Custom leave type' },
   ];
+
+  // Filter employees based on search query
+  const filteredEmployees = employees.filter(employee =>
+    employee.name.toLowerCase().includes(employeeSearchQuery.toLowerCase()) ||
+    employee.employeeId.toLowerCase().includes(employeeSearchQuery.toLowerCase()) ||
+    employee.department.toLowerCase().includes(employeeSearchQuery.toLowerCase()) ||
+    employee.email.toLowerCase().includes(employeeSearchQuery.toLowerCase())
+  );
 
   const statusConfig = {
     pending: { label: 'Pending Approval', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
@@ -469,7 +480,7 @@ export const LeaveForm = ({
   const getTitle = () => {
     switch (mode) {
       case 'create':
-        return 'Submit Leave Request';
+        return ' Leave Request Form';
       case 'approve':
         return 'Review Leave Request';
       case 'view':
@@ -505,7 +516,7 @@ export const LeaveForm = ({
   };
 
   const canSubmit = () => {
-    return currentUser?.role === 'supervisor' && mode === 'create';
+    return mode === 'create';
   };
 
   return (
@@ -541,81 +552,63 @@ export const LeaveForm = ({
                 </div>
               )}
 
-              {/* Employee Information */}
+              {/* Employee and Leave Type Selection */}
               <div className='space-y-3'>
-                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1 flex items-center gap-2'>
-                  <User className='w-3 h-3' />
-                  Employee Information
-                </h4>
-
-                {mode === 'create' ? (
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                  {/* Employee Selection */}
                   <div className='space-y-1'>
                     <Label htmlFor='employeeId' className='text-xs font-medium'>
                       Select Employee *
                     </Label>
-                    <Select
-                      value={formData.employeeId}
-                      onValueChange={handleEmployeeSelect}
-                      disabled={isLoadingEmployees}
-                    >
-                      <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
-                        <SelectValue placeholder={isLoadingEmployees ? 'Loading employees...' : 'Select employee'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {employees.map((employee) => (
-                          <SelectItem key={employee.id} value={employee.id}>
-                            <div className='flex flex-col'>
-                              <span>{employee.name}</span>
-                              <span className='text-xs text-muted-foreground'>
-                                {employee.employeeId} - {employee.department}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {mode === 'create' ? (
+                      <Select
+                        value={formData.employeeId}
+                        onValueChange={handleEmployeeSelect}
+                        disabled={isLoadingEmployees}
+                      >
+                        <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
+                          <SelectValue placeholder={isLoadingEmployees ? 'Loading employees...' : 'Select employee'} />
+                        </SelectTrigger>
+                        <SelectContent className='max-h-[300px]'>
+                          <div className='p-2 border-b'>
+                            <Input
+                              placeholder='Search employees...'
+                              value={employeeSearchQuery}
+                              onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+                              className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                            />
+                          </div>
+                          <div className='max-h-[200px] overflow-y-auto'>
+                            {filteredEmployees.length > 0 ? (
+                              filteredEmployees.map((employee) => (
+                                <SelectItem key={employee.id} value={employee.id} className='py-2'>
+                                  <div className='flex flex-col'>
+                                    <span className='font-medium'>{employee.name}</span>
+                                    <span className='text-xs text-muted-foreground'>
+                                      {employee.employeeId} - {employee.department}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <div className='px-2 py-4 text-xs text-muted-foreground text-center'>
+                                No employees found matching "{employeeSearchQuery}"
+                              </div>
+                            )}
+                          </div>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center'>
+                        {formData.employeeName}
+                      </div>
+                    )}
                     {errors.employeeId && (
                       <p className='text-destructive text-xs mt-1'>{errors.employeeId}</p>
                     )}
                   </div>
-                ) : (
-                  <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
-                    <div className='space-y-1'>
-                      <Label className='text-xs font-medium'>Employee Name</Label>
-                      <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center'>
-                        {formData.employeeName}
-                      </div>
-                    </div>
-                    <div className='space-y-1'>
-                      <Label className='text-xs font-medium'>Employee ID</Label>
-                      <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center'>
-                        {formData.employeeId}
-                      </div>
-                    </div>
-                    <div className='space-y-1'>
-                      <Label className='text-xs font-medium'>Email</Label>
-                      <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center'>
-                        {formData.employeeEmail}
-                      </div>
-                    </div>
-                    <div className='space-y-1'>
-                      <Label className='text-xs font-medium'>Department</Label>
-                      <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center'>
-                        {formData.department}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
 
-              {/* Leave Details */}
-              <div className='space-y-3'>
-                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1 flex items-center gap-2'>
-                  <Calendar className='w-3 h-3' />
-                  Leave Details
-                </h4>
-
-                <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                  {/* Leave Type Selection */}
                   <div className='space-y-1'>
                     <Label htmlFor='leaveType' className='text-xs font-medium'>
                       Leave Type *
@@ -643,55 +636,51 @@ export const LeaveForm = ({
                       <p className='text-destructive text-xs mt-1'>{errors.leaveType}</p>
                     )}
                   </div>
-
-                  {/* Custom Leave Type Input */}
-                  {showCustomLeaveTypeInput && (
-                    <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2'>
-                      <Label className='text-xs font-medium text-blue-800'>
-                        Add New Leave Type
-                      </Label>
-                      <div className='flex gap-2'>
-                        <Input
-                          placeholder='Enter leave type name'
-                          value={customLeaveTypeName}
-                          onChange={(e) => setCustomLeaveTypeName(e.target.value)}
-                          className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
-                        />
-                        <Button
-                          type='button'
-                          onClick={handleCreateLeaveType}
-                          size='sm'
-                          className='h-8 px-3 bg-blue-600 hover:bg-blue-700'
-                        >
-                          <Plus className='w-3 h-3 mr-1' />
-                          Add
-                        </Button>
-                        <Button
-                          type='button'
-                          onClick={() => {
-                            setShowCustomLeaveTypeInput(false);
-                            setCustomLeaveTypeName('');
-                            setFormData(prev => ({ ...prev, leaveType: '' }));
-                          }}
-                          variant='outline'
-                          size='sm'
-                          className='h-8 px-3'
-                        >
-                          <X className='w-3 h-3' />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className='space-y-1'>
-                    <Label className='text-xs font-medium'>Total Days</Label>
-                    <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center'>
-                      {formData.totalDays} day{formData.totalDays !== 1 ? 's' : ''}
-                    </div>
-                  </div>
                 </div>
 
-                <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                {/* Custom Leave Type Input */}
+                {showCustomLeaveTypeInput && (
+                  <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2'>
+                    <Label className='text-xs font-medium text-blue-800'>
+                      Add New Leave Type
+                    </Label>
+                    <div className='flex gap-2'>
+                      <Input
+                        placeholder='Enter leave type name'
+                        value={customLeaveTypeName}
+                        onChange={(e) => setCustomLeaveTypeName(e.target.value)}
+                        className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                      />
+                      <Button
+                        type='button'
+                        onClick={handleCreateLeaveType}
+                        size='sm'
+                        className='h-8 px-3 bg-blue-600 hover:bg-blue-700'
+                      >
+                        <Plus className='w-3 h-3 mr-1' />
+                        Add
+                      </Button>
+                      <Button
+                        type='button'
+                        onClick={() => {
+                          setShowCustomLeaveTypeInput(false);
+                          setCustomLeaveTypeName('');
+                          setFormData(prev => ({ ...prev, leaveType: '' }));
+                        }}
+                        variant='outline'
+                        size='sm'
+                        className='h-8 px-3'
+                      >
+                        <X className='w-3 h-3' />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Date Selection */}
+              <div className='space-y-3'>
+                <div className='grid grid-cols-1 lg:grid-cols-3 gap-3'>
                   <div className='space-y-1'>
                     <Label htmlFor='startDate' className='text-xs font-medium'>
                       Start Date *
@@ -725,8 +714,18 @@ export const LeaveForm = ({
                       <p className='text-destructive text-xs mt-1'>{errors.endDate}</p>
                     )}
                   </div>
-                </div>
 
+                  <div className='space-y-1'>
+                    <Label className='text-xs font-medium'>Total Days</Label>
+                    <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center font-medium'>
+                      {formData.totalDays} day{formData.totalDays !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reason for Leave */}
+              <div className='space-y-3'>
                 <div className='space-y-1'>
                   <Label htmlFor='reason' className='text-xs font-medium'>
                     Reason for Leave *
@@ -785,9 +784,6 @@ export const LeaveForm = ({
 
               {/* Additional Notes */}
               <div className='space-y-3'>
-                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
-                  Additional Information
-                </h4>
 
                 <div className='space-y-1'>
                   <Label htmlFor='notes' className='text-xs font-medium'>

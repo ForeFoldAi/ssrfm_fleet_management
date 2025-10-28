@@ -143,7 +143,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterDepartment, setFilterDepartment] = useState('all');
+  const [filterUnit, setFilterUnit] = useState('all');
   const [filterContractType, setFilterContractType] = useState('all');
   
   // Sorting and pagination
@@ -660,7 +660,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     }
   ];
 
-  const departments = ['all', 'Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'Customer Service', 'IT'];
+  const units = ['all', 'Main Office', 'Branch Office', 'Remote Office', 'Head Office', 'Field Office', 'Regional Office', 'Satellite Office'];
   const contractTypes = ['all', 'permanent', 'contract', 'temporary', 'intern'];
 
 
@@ -692,9 +692,9 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       );
     }
 
-    // Apply department filter
-    if (filterDepartment !== 'all') {
-      filtered = filtered.filter(employee => employee.department === filterDepartment);
+    // Apply unit filter
+    if (filterUnit !== 'all') {
+      filtered = filtered.filter(employee => employee.unit === filterUnit);
     }
 
 
@@ -725,7 +725,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
 
     setFilteredEmployees(filtered);
     setCurrentPage(1);
-  }, [employees, searchQuery, filterDepartment, filterContractType, sortField, sortOrder]);
+  }, [employees, searchQuery, filterUnit, filterContractType, sortField, sortOrder]);
 
   const loadEmployees = async () => {
     setIsLoading(true);
@@ -818,8 +818,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
         <CardHeader>
           <div className='flex justify-between items-center'>
             <CardTitle className='text-base flex items-center gap-2'>
-              <Users className='w-4 h-4' />
-              All Employees ({filteredEmployees.length})
+              
             </CardTitle>
             
             <div className='flex items-center gap-2'>
@@ -833,14 +832,14 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
                 />
               </div>
               
-              <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+              <Select value={filterUnit} onValueChange={setFilterUnit}>
                 <SelectTrigger className='w-40'>
-                  <SelectValue placeholder='Department' />
+                  <SelectValue placeholder='Unit' />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept === 'all' ? 'All Departments' : dept}
+                  {units.map((unit) => (
+                    <SelectItem key={unit} value={unit}>
+                      {unit === 'all' ? 'All Units' : unit}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -863,11 +862,11 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
               {/* Action Buttons */}
               <div className='flex items-center gap-2 ml-2'>
                 <Button variant='outline' size='sm'>
-                  <Download className='w-4 h-4 mr-2' />
+                  <Upload className='w-4 h-4 mr-2' />
                   Export
                 </Button>
                 <Button variant='outline' size='sm'>
-                  <Upload className='w-4 h-4 mr-2' />
+                  <Download className='w-4 h-4 mr-2' />
                   Import
                 </Button>
                 <Button size='sm' onClick={handleAddEmployee}>
@@ -910,26 +909,6 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
                       </Button>
                     </TableHead>
                     <TableHead className='min-w-[120px]'>Unit/Location</TableHead>
-                    <TableHead className='min-w-[150px]'>
-                      <Button
-                        variant='ghost'
-                        onClick={() => handleSort('department')}
-                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                      >
-                        Department
-                        {getSortIcon('department')}
-                      </Button>
-                    </TableHead>
-                    <TableHead className='min-w-[150px]'>
-                      <Button
-                        variant='ghost'
-                        onClick={() => handleSort('position')}
-                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                      >
-                        Position
-                        {getSortIcon('position')}
-                      </Button>
-                    </TableHead>
                     <TableHead className='min-w-[120px]'>Contact</TableHead>
                     <TableHead className='min-w-[100px]'>Contract</TableHead>
                     <TableHead className='min-w-[120px]'>
@@ -968,21 +947,9 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {employee.department}
-                        </TableCell>
-                        <TableCell>
-                          {employee.position}
-                        </TableCell>
-                        <TableCell>
-                          <div className='space-y-1'>
-                            <div className='flex items-center gap-1 text-sm'>
-                              <Mail className='w-3 h-3 text-muted-foreground' />
-                              <span className='truncate max-w-32'>{employee.email}</span>
-                            </div>
-                            <div className='flex items-center gap-1 text-sm text-muted-foreground'>
-                              <Phone className='w-3 h-3' />
-                              <span>{employee.phone}</span>
-                            </div>
+                          <div className='flex items-center gap-1 text-sm'>
+                            <Phone className='w-3 h-3 text-muted-foreground' />
+                            <span>{employee.phone}</span>
                           </div>
                         </TableCell>
                         <TableCell>
