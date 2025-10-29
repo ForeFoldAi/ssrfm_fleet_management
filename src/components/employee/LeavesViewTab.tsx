@@ -118,7 +118,7 @@ interface LeaveRequest {
   updatedAt: string;
 }
 
-type SortField = 'leaveNumber' | 'employeeName' | 'leaveType' | 'startDate' | 'endDate' | 'totalDays' | 'status' | 'submittedDate' | 'department' | 'createdAt' | 'updatedAt';
+type SortField = 'leaveNumber' | 'employeeName' | 'leaveType' | 'startDate' | 'endDate' | 'totalDays' | 'status' | 'submittedDate' | 'department' | 'unit' | 'createdAt' | 'updatedAt';
 type SortOrder = 'ASC' | 'DESC';
 
 export const LeavesViewTab = ({}: LeavesViewTabProps) => {
@@ -633,6 +633,16 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
                     <TableHead className='min-w-[120px]'>
                       <Button
                         variant='ghost'
+                        onClick={() => handleSort('unit')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Unit/Location
+                        {getSortIcon('unit')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='min-w-[120px]'>
+                      <Button
+                        variant='ghost'
                         onClick={() => handleSort('leaveType')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
@@ -646,7 +656,7 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
                         onClick={() => handleSort('startDate')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        Start Date
+                        FROM
                         {getSortIcon('startDate')}
                       </Button>
                     </TableHead>
@@ -656,7 +666,7 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
                         onClick={() => handleSort('endDate')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        End Date
+                        TO
                         {getSortIcon('endDate')}
                       </Button>
                     </TableHead>
@@ -670,7 +680,6 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
                         {getSortIcon('totalDays')}
                       </Button>
                     </TableHead>
-                    <TableHead className='min-w-[120px]'>Unit/Location</TableHead>
                     <TableHead className='min-w-[100px]'>
                       <Button
                         variant='ghost'
@@ -705,6 +714,12 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
                           </div>
                         </TableCell>
                         <TableCell>
+                          <div className='flex items-center gap-2'>
+                            <MapPin className='w-4 h-4 text-muted-foreground' />
+                            {leave.unit}
+                          </div>
+                        </TableCell>
+                        <TableCell>
                           <Badge className={leaveTypeConfigItem.color}>
                             {React.createElement(leaveTypeConfigItem.icon, { className: 'w-3 h-3 mr-1' })}
                             {leaveTypeConfigItem.label}
@@ -718,12 +733,6 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
                         </TableCell>
                         <TableCell className='font-medium'>
                           {leave.totalDays} day{leave.totalDays !== 1 ? 's' : ''}
-                        </TableCell>
-                        <TableCell>
-                          <div className='flex items-center gap-2'>
-                            <MapPin className='w-4 h-4 text-muted-foreground' />
-                            {leave.unit}
-                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge className={leaveStatusConfig.color}>
@@ -917,14 +926,14 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
                   <div className='space-y-3'>
                     <div className='grid grid-cols-1 lg:grid-cols-3 gap-3'>
                       <div className='space-y-1'>
-                        <Label className='text-xs font-medium'>Start Date</Label>
+                        <Label className='text-xs font-medium'>FROM</Label>
                         <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center'>
                           {format(new Date(selectedLeave.startDate), 'dd-MM-yyyy')}
                         </div>
                       </div>
 
                       <div className='space-y-1'>
-                        <Label className='text-xs font-medium'>End Date</Label>
+                        <Label className='text-xs font-medium'>TO</Label>
                         <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center'>
                           {format(new Date(selectedLeave.endDate), 'dd-MM-yyyy')}
                         </div>

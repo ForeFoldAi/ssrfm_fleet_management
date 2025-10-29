@@ -127,7 +127,7 @@ interface Employee {
   lastLogin?: string;
 }
 
-type SortField = 'fullName' | 'employeeId' | 'department' | 'position' | 'joiningDate' | 'status' | 'createdAt' | 'updatedAt';
+type SortField = 'fullName' | 'employeeId' | 'department' | 'position' | 'unit' | 'phone' | 'contractType' | 'joiningDate' | 'status' | 'createdAt' | 'updatedAt';
 type SortOrder = 'ASC' | 'DESC';
 
 export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
@@ -904,21 +904,48 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
                         onClick={() => handleSort('fullName')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        Employee
+                        Employee Name
                         {getSortIcon('fullName')}
                       </Button>
                     </TableHead>
-                    <TableHead className='min-w-[120px]'>Unit/Location</TableHead>
-                    <TableHead className='min-w-[120px]'>Contact</TableHead>
-                    <TableHead className='min-w-[100px]'>Contract</TableHead>
                     <TableHead className='min-w-[120px]'>
                       <Button
                         variant='ghost'
-                        onClick={() => handleSort('joiningDate')}
+                        onClick={() => handleSort('unit')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        Joining Date
-                        {getSortIcon('joiningDate')}
+                        Unit/Location
+                        {getSortIcon('unit')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='min-w-[120px]'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('phone')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Phone Number
+                        {getSortIcon('phone')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='min-w-[100px]'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('contractType')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Employment Type
+                        {getSortIcon('contractType')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='min-w-[120px]'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('position')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Position/Job Title
+                        {getSortIcon('position')}
                       </Button>
                     </TableHead>
                   </TableRow>
@@ -959,7 +986,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
                           </Badge>
                         </TableCell>
                         <TableCell className='text-muted-foreground'>
-                          {format(new Date(employee.joiningDate), 'dd-MM-yyyy')}
+                          {employee.position}
                         </TableCell>
                       </TableRow>
                     );

@@ -41,7 +41,7 @@ interface EmployeeFormData {
   dateOfBirth: string;
   gender: string;
   maritalStatus: string;
-  nationality: string;
+  unit: string;
   
   // Address Information
   address: string;
@@ -55,7 +55,6 @@ interface EmployeeFormData {
   employeeId: string;
   department: string;
   position: string;
-  unit: string;
   joiningDate: string;
   contractType: string;
   
@@ -66,11 +65,6 @@ interface EmployeeFormData {
   benefits: string;
   workingHours: string;
   workLocation: string;
-  
-  // Additional Information
-  skills: string;
-  experience: string;
-  notes: string;
 }
 
 export const EmployeeOnboardForm = ({
@@ -93,7 +87,7 @@ export const EmployeeOnboardForm = ({
     dateOfBirth: '',
     gender: '',
     maritalStatus: '',
-    nationality: '',
+    unit: '',
     address: '',
     city: '',
     state: '',
@@ -102,7 +96,6 @@ export const EmployeeOnboardForm = ({
     employeeId: '',
     department: '',
     position: '',
-    unit: '',
     joiningDate: '',
     contractType: '',
     probationPeriod: '',
@@ -111,9 +104,6 @@ export const EmployeeOnboardForm = ({
     benefits: '',
     workingHours: '',
     workLocation: '',
-    skills: '',
-    experience: '',
-    notes: '',
   });
 
   // Prefill form data when editing
@@ -127,7 +117,7 @@ export const EmployeeOnboardForm = ({
         dateOfBirth: editingEmployee.dateOfBirth || '',
         gender: editingEmployee.gender || '',
         maritalStatus: editingEmployee.maritalStatus || '',
-        nationality: editingEmployee.nationality || '',
+        unit: editingEmployee.unit || '',
         address: editingEmployee.address || '',
         city: editingEmployee.city || '',
         state: editingEmployee.state || '',
@@ -136,7 +126,6 @@ export const EmployeeOnboardForm = ({
         employeeId: editingEmployee.employeeId || '',
         department: editingEmployee.department || '',
         position: editingEmployee.position || '',
-        unit: editingEmployee.unit || '',
         joiningDate: editingEmployee.joiningDate || '',
         contractType: editingEmployee.contractType || '',
         probationPeriod: editingEmployee.probationPeriod || '',
@@ -145,9 +134,6 @@ export const EmployeeOnboardForm = ({
         benefits: editingEmployee.benefits || '',
         workingHours: editingEmployee.workingHours || '',
         workLocation: editingEmployee.workLocation || '',
-        skills: editingEmployee.skills || '',
-        experience: editingEmployee.experience || '',
-        notes: editingEmployee.notes || '',
       });
     } else if (!editingEmployee && isOpen) {
       // Reset form when adding new employee
@@ -159,7 +145,7 @@ export const EmployeeOnboardForm = ({
         dateOfBirth: '',
         gender: '',
         maritalStatus: '',
-        nationality: '',
+        unit: '',
         address: '',
         city: '',
         state: '',
@@ -168,7 +154,6 @@ export const EmployeeOnboardForm = ({
         employeeId: generateEmployeeId(),
         department: '',
         position: '',
-        unit: '',
         joiningDate: '',
         contractType: '',
         probationPeriod: '',
@@ -177,9 +162,6 @@ export const EmployeeOnboardForm = ({
         benefits: '',
         workingHours: '',
         workLocation: '',
-        skills: '',
-        experience: '',
-        notes: '',
       });
     }
   }, [editingEmployee, isOpen]);
@@ -261,12 +243,7 @@ export const EmployeeOnboardForm = ({
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
-    if (!formData.department) newErrors.department = 'Department is required';
     if (formData.department === 'Other' && !customDepartment.trim()) newErrors.customDepartment = 'Department name is required';
-    if (!formData.position.trim()) newErrors.position = 'Position is required';
-    if (!formData.unit) newErrors.unit = 'Unit is required';
-    if (!formData.joiningDate) newErrors.joiningDate = 'Joining date is required';
-    if (!formData.contractType) newErrors.contractType = 'Contract type is required';
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -342,7 +319,7 @@ export const EmployeeOnboardForm = ({
         dateOfBirth: '',
         gender: '',
         maritalStatus: '',
-        nationality: '',
+        unit: '',
         address: '',
         city: '',
         state: '',
@@ -351,7 +328,6 @@ export const EmployeeOnboardForm = ({
         employeeId: generateEmployeeId(),
         department: '',
         position: '',
-        unit: '',
         joiningDate: '',
         contractType: '',
         probationPeriod: '',
@@ -360,9 +336,6 @@ export const EmployeeOnboardForm = ({
         benefits: '',
         workingHours: '',
         workLocation: '',
-        skills: '',
-        experience: '',
-        notes: '',
       });
       setErrors({});
       setCustomDepartment('');
@@ -389,7 +362,7 @@ export const EmployeeOnboardForm = ({
       dateOfBirth: '',
       gender: '',
       maritalStatus: '',
-      nationality: '',
+      unit: '',
       address: '',
       city: '',
       state: '',
@@ -398,23 +371,19 @@ export const EmployeeOnboardForm = ({
       employeeId: generateEmployeeId(),
       department: '',
       position: '',
-      unit: '',
       joiningDate: '',
       contractType: '',
       probationPeriod: '',
       noticePeriod: '',
       salary: '',
       benefits: '',
-        workingHours: '',
-        workLocation: '',
-        skills: '',
-        experience: '',
-        notes: '',
-      });
-      setErrors({});
-      setCustomDepartment('');
-      setShowCustomDepartmentInput(false);
-      onClose();
+      workingHours: '',
+      workLocation: '',
+    });
+    setErrors({});
+    setCustomDepartment('');
+    setShowCustomDepartmentInput(false);
+    onClose();
   };
 
   return (
@@ -472,7 +441,7 @@ export const EmployeeOnboardForm = ({
                   </div>
                 </div>
 
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 lg:grid-cols-3 gap-4'>
                   <div className='space-y-1'>
                     <Label htmlFor='phone' className='text-xs font-medium'>
                       Phone Number *
@@ -488,6 +457,27 @@ export const EmployeeOnboardForm = ({
                     {errors.phone && (
                       <p className='text-destructive text-xs mt-1'>{errors.phone}</p>
                     )}
+                  </div>
+
+                  <div className='space-y-1'>
+                    <Label htmlFor='unit' className='text-xs font-medium'>
+                      Unit/Location *
+                    </Label>
+                    <Select
+                      value={formData.unit}
+                      onValueChange={(value) => handleSelectChange('unit', value)}
+                    >
+                      <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
+                        <SelectValue placeholder='Select unit' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map((unit) => (
+                          <SelectItem key={unit} value={unit}>
+                            {unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className='space-y-1'>
@@ -520,9 +510,6 @@ export const EmployeeOnboardForm = ({
                       onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                       className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                     />
-                    {errors.dateOfBirth && (
-                      <p className='text-destructive text-xs mt-1'>{errors.dateOfBirth}</p>
-                    )}
                   </div>
 
                   <div className='space-y-1'>
@@ -565,19 +552,6 @@ export const EmployeeOnboardForm = ({
                     </Select>
                   </div>
                 </div>
-
-                <div className='space-y-1'>
-                  <Label htmlFor='nationality' className='text-xs font-medium'>
-                    Nationality
-                  </Label>
-                  <Input
-                    id='nationality'
-                    placeholder='Enter nationality'
-                    value={formData.nationality}
-                    onChange={(e) => handleInputChange('nationality', e.target.value)}
-                    className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
-                  />
-                </div>
               </div>
 
               {/* Address Information */}
@@ -599,7 +573,7 @@ export const EmployeeOnboardForm = ({
                   />
                 </div>
 
-                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
                   <div className='space-y-1'>
                     <Label htmlFor='city' className='text-xs font-medium'>
                       City
@@ -638,19 +612,19 @@ export const EmployeeOnboardForm = ({
                       className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                     />
                   </div>
-                </div>
 
-                <div className='space-y-1'>
-                  <Label htmlFor='country' className='text-xs font-medium'>
-                    Country
-                  </Label>
-                  <Input
-                    id='country'
-                    placeholder='Enter country'
-                    value={formData.country}
-                    onChange={(e) => handleInputChange('country', e.target.value)}
-                    className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
-                  />
+                  <div className='space-y-1'>
+                    <Label htmlFor='country' className='text-xs font-medium'>
+                      Country
+                    </Label>
+                    <Input
+                      id='country'
+                      placeholder='Enter country'
+                      value={formData.country}
+                      onChange={(e) => handleInputChange('country', e.target.value)}
+                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -674,7 +648,7 @@ export const EmployeeOnboardForm = ({
 
                   <div className='space-y-1'>
                     <Label htmlFor='department' className='text-xs font-medium'>
-                      Department *
+                      Department
                     </Label>
                     <Select
                       value={formData.department}
@@ -730,10 +704,10 @@ export const EmployeeOnboardForm = ({
                   </div>
                 </div>
 
-                <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
+                <div className='grid grid-cols-1 lg:grid-cols-3 gap-4'>
                   <div className='space-y-1'>
                     <Label htmlFor='position' className='text-xs font-medium'>
-                      Position/Job Title *
+                      Position/Job Title
                     </Label>
                     <Input
                       id='position'
@@ -748,34 +722,8 @@ export const EmployeeOnboardForm = ({
                   </div>
 
                   <div className='space-y-1'>
-                    <Label htmlFor='unit' className='text-xs font-medium'>
-                      Unit/Location *
-                    </Label>
-                    <Select
-                      value={formData.unit}
-                      onValueChange={(value) => handleSelectChange('unit', value)}
-                    >
-                      <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
-                        <SelectValue placeholder='Select unit' />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {units.map((unit) => (
-                          <SelectItem key={unit} value={unit}>
-                            {unit}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.unit && (
-                      <p className='text-destructive text-xs mt-1'>{errors.unit}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div className='space-y-1'>
                     <Label htmlFor='joiningDate' className='text-xs font-medium'>
-                      Joining Date *
+                      Joining Date
                     </Label>
                     <Input
                       id='joiningDate'
@@ -791,14 +739,14 @@ export const EmployeeOnboardForm = ({
 
                   <div className='space-y-1'>
                     <Label htmlFor='contractType' className='text-xs font-medium'>
-                      Contract Type *
+                      Employment Type
                     </Label>
                     <Select
                       value={formData.contractType}
                       onValueChange={(value) => handleSelectChange('contractType', value)}
                     >
                       <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
-                        <SelectValue placeholder='Select contract type' />
+                        <SelectValue placeholder='Select employment type' />
                       </SelectTrigger>
                       <SelectContent>
                         {contractTypes.map((contract) => (
@@ -935,56 +883,6 @@ export const EmployeeOnboardForm = ({
                   </div>
                 </div>
               )}
-
-
-              {/* Additional Information */}
-              <div className='space-y-2'>
-                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
-                  Additional Information
-                </h4>
-
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div className='space-y-1'>
-                    <Label htmlFor='skills' className='text-xs font-medium'>
-                      Skills & Qualifications
-                    </Label>
-                    <Textarea
-                      id='skills'
-                      placeholder='Enter relevant skills and qualifications'
-                      value={formData.skills}
-                      onChange={(e) => handleInputChange('skills', e.target.value)}
-                      className='min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200'
-                    />
-                  </div>
-
-                  <div className='space-y-1'>
-                    <Label htmlFor='experience' className='text-xs font-medium'>
-                      Previous Experience
-                    </Label>
-                    <Textarea
-                      id='experience'
-                      placeholder='Enter previous work experience'
-                      value={formData.experience}
-                      onChange={(e) => handleInputChange('experience', e.target.value)}
-                      className='min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200'
-                    />
-                  </div>
-                </div>
-
-
-                <div className='space-y-1'>
-                  <Label htmlFor='notes' className='text-xs font-medium'>
-                    Additional Notes
-                  </Label>
-                  <Textarea
-                    id='notes'
-                    placeholder='Any additional notes or comments'
-                    value={formData.notes}
-                    onChange={(e) => handleInputChange('notes', e.target.value)}
-                    className='min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200'
-                  />
-                </div>
-              </div>
             </CardContent>
           </Card>
 

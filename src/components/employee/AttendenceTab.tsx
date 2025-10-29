@@ -43,6 +43,7 @@ import {
   User,
   Building,
   MapPin,
+  Phone,
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -155,21 +156,47 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
   const getApprovedLeavesForDate = async (date: Date): Promise<any[]> => {
     try {
       // In a real app, this would be an API call to get approved leaves
-      // For now, we'll use mock data that matches the LeavesViewTab structure
+      // Using the same mock data structure as LeavesViewTab.tsx
       const mockApprovedLeaves = [
         {
           id: '1',
+          leaveNumber: 'LEV-2024-001',
           employeeId: 'EMP001',
+          employeeName: 'John Doe',
           startDate: '2024-02-15',
           endDate: '2024-02-20',
-          status: 'approved'
+          status: 'approved',
+          leaveType: 'annual'
+        },
+        {
+          id: '2',
+          leaveNumber: 'LEV-2024-002',
+          employeeId: 'EMP002',
+          employeeName: 'Jane Smith',
+          startDate: '2024-01-20',
+          endDate: '2024-01-22',
+          status: 'approved',
+          leaveType: 'sick'
         },
         {
           id: '4',
+          leaveNumber: 'LEV-2024-004',
           employeeId: 'EMP004',
+          employeeName: 'Sarah Wilson',
           startDate: '2024-03-01',
           endDate: '2024-08-31',
-          status: 'approved'
+          status: 'approved',
+          leaveType: 'maternity'
+        },
+        {
+          id: '6',
+          leaveNumber: 'LEV-2024-006',
+          employeeId: 'EMP006',
+          employeeName: 'Lisa Davis',
+          startDate: '2024-01-30',
+          endDate: '2024-02-02',
+          status: 'approved',
+          leaveType: 'bereavement'
         }
       ];
       
@@ -221,30 +248,29 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
 
   const loadAttendanceForDate = async (date: Date) => {
     try {
-      // In a real app, this would be an API call
-      // const response = await attendanceApi.getByDate(format(date, 'yyyy-MM-dd'));
-      // setAttendanceRecords(response.data);
-      
       // Check for approved leaves for this date
       const approvedLeaves = await getApprovedLeavesForDate(date);
       
-      // Mock data for now - simulate some existing attendance records
+      // Create attendance records for all active employees
       const mockRecords: AttendanceRecord[] = employees
         .filter(emp => emp.isActive)
         .map(emp => {
           // Check if employee is on approved leave for this date
-          const isOnLeave = approvedLeaves.some(leave => 
-            leave.employeeId === emp.id && 
-            new Date(leave.startDate) <= date && 
-            new Date(leave.endDate) >= date
+          const leaveRecord = approvedLeaves.find(leave => 
+            leave.employeeId === emp.employeeId
           );
+          
+          // If employee has approved leave for this date, set as "on leave"
+          // Otherwise, default to "present" (can be changed manually for today only)
+          const status = leaveRecord ? 'on_leave' as const : 'present' as const;
           
           return {
             employeeId: emp.id,
             date: format(date, 'yyyy-MM-dd'),
-            status: isOnLeave ? 'on_leave' as const : 'present' as const,
-            markedBy: currentUser?.name || 'System',
+            status,
+            markedBy: leaveRecord ? 'System (Auto from Leave)' : (currentUser?.name || 'System'),
             markedAt: new Date().toISOString(),
+            notes: leaveRecord ? `Auto-marked: ${leaveRecord.leaveType} leave (${leaveRecord.leaveNumber})` : undefined,
           };
         });
       
@@ -271,7 +297,24 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
   };
 
 
-  const handleEmployeeAttendanceChange = (employeeId: string, status: string) => {
+  const handleEmployeeAttendanceChange = async (employeeId: string, status: string) => {
+    // Check if employee is on approved leave for this date
+    const approvedLeaves = await getApprovedLeavesForDate(selectedDate);
+    const employee = employees.find(emp => emp.id === employeeId);
+    const isOnApprovedLeave = employee && approvedLeaves.some(leave => 
+      leave.employeeId === employee.employeeId
+    );
+    
+    // Don't allow manual changes if employee is on approved leave
+    if (isOnApprovedLeave) {
+      toast({
+        title: 'Cannot Change Status',
+        description: 'Employee is on approved leave. Status cannot be changed manually.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setAttendanceRecords(prev => {
       const existingIndex = prev.findIndex(record => record.employeeId === employeeId);
       
@@ -352,7 +395,8 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
 
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         emp.employeeId.toLowerCase().includes(searchQuery.toLowerCase());
+                         emp.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         emp.phone.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesDepartment = filterDepartment === 'all' || emp.department === filterDepartment;
     return matchesSearch && matchesDepartment && emp.isActive;
   });
@@ -505,28 +549,8 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                         onClick={() => handleSort('name')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        Employee
+                        Employee Name
                         {getSortIcon('name')}
-                      </Button>
-                    </TableHead>
-                    <TableHead className='min-w-[120px]'>
-                      <Button
-                        variant='ghost'
-                        onClick={() => handleSort('department')}
-                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                      >
-                        Department
-                        {getSortIcon('department')}
-                      </Button>
-                    </TableHead>
-                    <TableHead className='min-w-[120px]'>
-                      <Button
-                        variant='ghost'
-                        onClick={() => handleSort('position')}
-                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                      >
-                        Position
-                        {getSortIcon('position')}
                       </Button>
                     </TableHead>
                     <TableHead className='min-w-[120px]'>
@@ -537,6 +561,16 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                       >
                         Unit/Location
                         {getSortIcon('unit')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='min-w-[120px]'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('phone')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Phone Number
+                        {getSortIcon('phone')}
                       </Button>
                     </TableHead>
                     <TableHead className='min-w-[100px]'>Status</TableHead>
@@ -557,15 +591,15 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {employee.department}
-                        </TableCell>
-                        <TableCell className='text-muted-foreground'>
-                          {employee.position}
-                        </TableCell>
-                        <TableCell>
                           <div className='flex items-center gap-2'>
                             <MapPin className='w-4 h-4 text-muted-foreground' />
                             {employee.unit}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className='flex items-center gap-1 text-sm'>
+                            <Phone className='w-3 h-3 text-muted-foreground' />
+                            <span>{employee.phone}</span>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -578,23 +612,29 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                         </TableCell>
                         <TableCell>
                           <div className='flex items-center gap-1'>
-                            {attendanceStatuses.map((status) => (
-                              <Button
-                                key={status.value}
-                                variant={currentStatus === status.value ? 'default' : 'outline'}
-                                size='sm'
-                                onClick={() => handleEmployeeAttendanceChange(employee.id, status.value)}
-                                disabled={!isAttendanceEditable()}
-                                className={`h-7 px-2 text-xs ${
-                                  currentStatus === status.value 
-                                    ? 'bg-primary text-primary-foreground' 
-                                    : 'hover:bg-muted'
-                                } ${!isAttendanceEditable() ? 'opacity-50 cursor-not-allowed' : ''}`}
-                              >
-                                {React.createElement(status.icon, { className: 'w-3 h-3 mr-1' })}
-                                {status.label}
-                              </Button>
-                            ))}
+                            {attendanceStatuses.map((status) => {
+                              const isOnLeave = currentStatus === 'on_leave';
+                              const isDisabled = !isAttendanceEditable() || isOnLeave;
+                              
+                              return (
+                                <Button
+                                  key={status.value}
+                                  variant={currentStatus === status.value ? 'default' : 'outline'}
+                                  size='sm'
+                                  onClick={() => handleEmployeeAttendanceChange(employee.id, status.value)}
+                                  disabled={isDisabled}
+                                  className={`h-7 px-2 text-xs ${
+                                    currentStatus === status.value 
+                                      ? 'bg-primary text-primary-foreground' 
+                                      : 'hover:bg-muted'
+                                  } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  title={isOnLeave ? 'Employee is on approved leave - cannot be changed manually' : ''}
+                                >
+                                  {React.createElement(status.icon, { className: 'w-3 h-3 mr-1' })}
+                                  {status.label}
+                                </Button>
+                              );
+                            })}
                           </div>
                         </TableCell>
                       </TableRow>
