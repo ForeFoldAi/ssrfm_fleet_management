@@ -36,8 +36,6 @@ import {
   Calendar,
   Users,
   CheckCircle,
-  XCircle,
-  Clock,
   Download,
   Upload,
   User,
@@ -223,8 +221,6 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
 
   const attendanceStatuses = [
     { value: 'present', label: 'Present', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-    { value: 'absent', label: 'Absent', color: 'bg-red-100 text-red-800', icon: XCircle },
-    { value: 'half_day', label: 'Half Day', color: 'bg-blue-100 text-blue-800', icon: Clock },
     { value: 'on_leave', label: 'On Leave', color: 'bg-purple-100 text-purple-800', icon: Calendar },
   ];
 
@@ -513,29 +509,12 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
               {/* Action Buttons */}
               <div className='flex items-center gap-2 ml-2'>
                 <Button variant='outline' size='sm'>
-                  <Download className='w-4 h-4 mr-2' />
+                  <Upload className='w-4 h-4 mr-2' />
                   Export
                 </Button>
                 <Button variant='outline' size='sm'>
-                  <Upload className='w-4 h-4 mr-2' />
+                  <Download className='w-4 h-4 mr-2' />
                   Import
-                </Button>
-                <Button
-                  onClick={handleSaveAttendance}
-                  disabled={isSaving || !isAttendanceEditable()}
-                  className='bg-primary hover:bg-primary/90'
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className='w-4 h-4 mr-2 animate-spin' />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className='w-4 h-4 mr-2' />
-                      Save Attendance
-                    </>
-                  )}
                 </Button>
               </div>
             </div>
@@ -588,12 +567,11 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                         onClick={() => handleSort('contractType')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        Employee Type
+                        Employment Type
                         {getSortIcon('contractType')}
                       </Button>
                     </TableHead>
-                    <TableHead className='min-w-[100px]'>Status</TableHead>
-                    <TableHead className='min-w-[200px]'>Actions</TableHead>
+                    <TableHead className='min-w-[200px]'>Attendance</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -627,32 +605,35 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {statusConfig && (
-                            <Badge className={statusConfig.color}>
-                              {React.createElement(statusConfig.icon, { className: 'w-3 h-3 mr-1' })}
-                              {statusConfig.label}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
                           <div className='flex items-center gap-1'>
                             {attendanceStatuses.map((status) => {
-                              const isOnLeave = currentStatus === 'on_leave';
-                              const isDisabled = !isAttendanceEditable() || isOnLeave;
+                              const isSelected = currentStatus === status.value;
+                              const isOnLeaveFromSystem = currentStatus === 'on_leave';
+                              
+                              // Check if date is in the future
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              const selected = new Date(selectedDate);
+                              selected.setHours(0, 0, 0, 0);
+                              const isFutureDate = selected.getTime() > today.getTime();
+                              const isPastOrToday = selected.getTime() <= today.getTime();
+                              
+                              // Disable if future date, or if employee is on leave and trying to change it
+                              const isDisabled = (isFutureDate || !isAttendanceEditable() || (isOnLeaveFromSystem && status.value === 'on_leave'));
                               
                               return (
                                 <Button
                                   key={status.value}
-                                  variant={currentStatus === status.value ? 'default' : 'outline'}
+                                  variant={isSelected && isPastOrToday ? 'default' : 'outline'}
                                   size='sm'
                                   onClick={() => handleEmployeeAttendanceChange(employee.id, status.value)}
                                   disabled={isDisabled}
                                   className={`h-7 px-2 text-xs ${
-                                    currentStatus === status.value 
+                                    isSelected && isPastOrToday
                                       ? 'bg-primary text-primary-foreground' 
                                       : 'hover:bg-muted'
-                                  } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                  title={isOnLeave ? 'Employee is on approved leave - cannot be changed manually' : ''}
+                                  } ${isFutureDate ? 'opacity-40 cursor-not-allowed' : ''} ${isOnLeaveFromSystem && status.value === 'on_leave' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                  title={isOnLeaveFromSystem && status.value === 'on_leave' ? 'Employee is on approved leave - cannot be changed manually' : (isFutureDate ? 'Cannot edit future dates' : (!isAttendanceEditable() ? 'Can only edit today\'s attendance' : ''))}
                                 >
                                   {React.createElement(status.icon, { className: 'w-3 h-3 mr-1' })}
                                   {status.label}
