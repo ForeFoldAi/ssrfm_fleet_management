@@ -398,16 +398,16 @@ export const EmployeeOnboardForm = ({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className='space-y-3'>
+        <form onSubmit={handleSubmit} className='space-y-2'>
           <Card className='border-0 shadow-sm'>
-            <CardContent className='space-y-3'>
+            <CardContent className='space-y-2'>
               {/* Personal Information */}
-              <div className='space-y-2'>
+              <div className='space-y-1'>
                 <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
                   Personal Information
                 </h4>
 
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
                   <div className='space-y-1'>
                     <Label htmlFor='firstName' className='text-xs font-medium'>
                       First Name *
@@ -441,7 +441,7 @@ export const EmployeeOnboardForm = ({
                   </div>
                 </div>
 
-                <div className='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+                <div className='grid grid-cols-1 lg:grid-cols-3 gap-3'>
                   <div className='space-y-1'>
                     <Label htmlFor='phone' className='text-xs font-medium'>
                       Phone Number *
@@ -498,7 +498,7 @@ export const EmployeeOnboardForm = ({
                   </div>
                 </div>
 
-                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-3'>
                   <div className='space-y-1'>
                     <Label htmlFor='dateOfBirth' className='text-xs font-medium'>
                       Date of Birth
@@ -555,11 +555,7 @@ export const EmployeeOnboardForm = ({
               </div>
 
               {/* Address Information */}
-              <div className='space-y-2'>
-                <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
-                  Address Information
-                </h4>
-
+              <div className='space-y-1'>
                 <div className='space-y-1'>
                   <Label htmlFor='address' className='text-xs font-medium'>
                     Address
@@ -573,7 +569,7 @@ export const EmployeeOnboardForm = ({
                   />
                 </div>
 
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3'>
                   <div className='space-y-1'>
                     <Label htmlFor='city' className='text-xs font-medium'>
                       City
@@ -630,12 +626,12 @@ export const EmployeeOnboardForm = ({
 
 
               {/* Employment Information */}
-              <div className='space-y-2'>
+              <div className='space-y-1'>
                 <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
                   Employment Information
                 </h4>
 
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
                   <div className='space-y-1'>
                     <Label htmlFor='employeeId' className='text-xs font-medium'>
                       Employee ID (Auto-generated)
@@ -643,7 +639,6 @@ export const EmployeeOnboardForm = ({
                     <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center border border-input'>
                       {formData.employeeId}
                     </div>
-                    <p className='text-xs text-muted-foreground'>Employee ID is automatically generated</p>
                   </div>
 
                   <div className='space-y-1'>
@@ -704,7 +699,7 @@ export const EmployeeOnboardForm = ({
                   </div>
                 </div>
 
-                <div className='grid grid-cols-1 lg:grid-cols-3 gap-4'>
+                <div className='grid grid-cols-1 lg:grid-cols-3 gap-3'>
                   <div className='space-y-1'>
                     <Label htmlFor='position' className='text-xs font-medium'>
                       Position/Job Title
@@ -768,12 +763,12 @@ export const EmployeeOnboardForm = ({
 
               {/* Contract Details - Show only for permanent contracts */}
               {formData.contractType === 'permanent' && (
-                <div className='space-y-2'>
+                <div className='space-y-1'>
                   <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
                     Permanent Contract Details
                   </h4>
 
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
                     <div className='space-y-1'>
                       <Label htmlFor='probationPeriod' className='text-xs font-medium'>
                         Probation Period *
@@ -887,7 +882,7 @@ export const EmployeeOnboardForm = ({
           </Card>
 
           {/* Form Actions */}
-          <div className='flex justify-end gap-3 pt-4 border-t'>
+          <div className='flex justify-end gap-3 pt-2 border-t sticky bottom-0 bg-background pb-2'>
             <Button
               type='button'
               variant='outline'

@@ -71,6 +71,7 @@ interface Employee {
   unit: string;
   email: string;
   phone: string;
+  contractType: string;
   isActive: boolean;
 }
 
@@ -113,17 +114,25 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
 
   // Mock employee data - Replace with actual API call
   const mockEmployees: Employee[] = [
-    { id: '1', name: 'John Doe', employeeId: 'EMP001', department: 'Engineering', position: 'Software Engineer', unit: 'Main Office', email: 'john@company.com', phone: '+1234567890', isActive: true },
-    { id: '2', name: 'Jane Smith', employeeId: 'EMP002', department: 'Marketing', position: 'Marketing Manager', unit: 'Branch Office', email: 'jane@company.com', phone: '+1234567891', isActive: true },
-    { id: '3', name: 'Mike Johnson', employeeId: 'EMP003', department: 'Sales', position: 'Sales Executive', unit: 'Remote Office', email: 'mike@company.com', phone: '+1234567892', isActive: true },
-    { id: '4', name: 'Sarah Wilson', employeeId: 'EMP004', department: 'HR', position: 'HR Manager', unit: 'Head Office', email: 'sarah@company.com', phone: '+1234567893', isActive: true },
-    { id: '5', name: 'David Brown', employeeId: 'EMP005', department: 'Finance', position: 'Accountant', unit: 'Main Office', email: 'david@company.com', phone: '+1234567894', isActive: true },
-    { id: '6', name: 'Lisa Davis', employeeId: 'EMP006', department: 'Engineering', position: 'Senior Developer', unit: 'Branch Office', email: 'lisa@company.com', phone: '+1234567895', isActive: true },
-    { id: '7', name: 'Tom Wilson', employeeId: 'EMP007', department: 'Operations', position: 'Operations Manager', unit: 'Head Office', email: 'tom@company.com', phone: '+1234567896', isActive: true },
-    { id: '8', name: 'Emma Taylor', employeeId: 'EMP008', department: 'Customer Service', position: 'Support Agent', unit: 'Remote Office', email: 'emma@company.com', phone: '+1234567897', isActive: true },
+    { id: '1', name: 'John Doe', employeeId: 'EMP001', department: 'Engineering', position: 'Software Engineer', unit: 'Main Office', email: 'john@company.com', phone: '+1234567890', contractType: 'permanent', isActive: true },
+    { id: '2', name: 'Jane Smith', employeeId: 'EMP002', department: 'Marketing', position: 'Marketing Manager', unit: 'Branch Office', email: 'jane@company.com', phone: '+1234567891', contractType: 'contract', isActive: true },
+    { id: '3', name: 'Mike Johnson', employeeId: 'EMP003', department: 'Sales', position: 'Sales Executive', unit: 'Remote Office', email: 'mike@company.com', phone: '+1234567892', contractType: 'temporary', isActive: true },
+    { id: '4', name: 'Sarah Wilson', employeeId: 'EMP004', department: 'HR', position: 'HR Manager', unit: 'Head Office', email: 'sarah@company.com', phone: '+1234567893', contractType: 'permanent', isActive: true },
+    { id: '5', name: 'David Brown', employeeId: 'EMP005', department: 'Finance', position: 'Accountant', unit: 'Main Office', email: 'david@company.com', phone: '+1234567894', contractType: 'contract', isActive: true },
+    { id: '6', name: 'Lisa Davis', employeeId: 'EMP006', department: 'Engineering', position: 'Senior Developer', unit: 'Branch Office', email: 'lisa@company.com', phone: '+1234567895', contractType: 'permanent', isActive: true },
+    { id: '7', name: 'Tom Wilson', employeeId: 'EMP007', department: 'Operations', position: 'Operations Manager', unit: 'Head Office', email: 'tom@company.com', phone: '+1234567896', contractType: 'temporary', isActive: true },
+    { id: '8', name: 'Emma Taylor', employeeId: 'EMP008', department: 'Customer Service', position: 'Support Agent', unit: 'Remote Office', email: 'emma@company.com', phone: '+1234567897', contractType: 'contract', isActive: true },
   ];
 
-  const departments = ['all', 'Engineering', 'Marketing', 'Sales', 'HR', 'Finance', 'Operations', 'Customer Service'];
+  const units = ['all', 'Main Office', 'Branch Office', 'Remote Office', 'Head Office', 'Field Office', 'Regional Office', 'Satellite Office'];
+
+  const employmentTypes = {
+    permanent: 'Permanent',
+    contract: 'Contract',
+    temporary: 'Temporary',
+    part_time: 'Part-time',
+    freelance: 'Freelance'
+  };
 
   // Sorting functions
   const handleSort = (field: string) => {
@@ -397,8 +406,8 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
     const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          emp.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          emp.phone.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesDepartment = filterDepartment === 'all' || emp.department === filterDepartment;
-    return matchesSearch && matchesDepartment && emp.isActive;
+    const matchesUnit = filterDepartment === 'all' || emp.unit === filterDepartment;
+    return matchesSearch && matchesUnit && emp.isActive;
   });
 
   // Apply sorting to filtered employees
@@ -490,12 +499,12 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
               </div>
               <Select value={filterDepartment} onValueChange={setFilterDepartment}>
                 <SelectTrigger className='w-40'>
-                  <SelectValue placeholder='Department' />
+                  <SelectValue placeholder='Unit' />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>
-                      {dept === 'all' ? 'All Departments' : dept}
+                  {units.map((unit) => (
+                    <SelectItem key={unit} value={unit}>
+                      {unit === 'all' ? 'All Units' : unit}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -573,6 +582,16 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                         {getSortIcon('phone')}
                       </Button>
                     </TableHead>
+                    <TableHead className='min-w-[120px]'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('contractType')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Employee Type
+                        {getSortIcon('contractType')}
+                      </Button>
+                    </TableHead>
                     <TableHead className='min-w-[100px]'>Status</TableHead>
                     <TableHead className='min-w-[200px]'>Actions</TableHead>
                   </TableRow>
@@ -601,6 +620,11 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                             <Phone className='w-3 h-3 text-muted-foreground' />
                             <span>{employee.phone}</span>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant='outline' className='text-xs'>
+                            {employmentTypes[employee.contractType as keyof typeof employmentTypes] || employee.contractType}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           {statusConfig && (

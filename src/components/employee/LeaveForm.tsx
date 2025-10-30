@@ -79,6 +79,7 @@ interface Employee {
   department: string;
   employeeId: string;
   contractType: string;
+  unit: string;
 }
 
 export const LeaveForm = ({
@@ -121,11 +122,11 @@ export const LeaveForm = ({
 
   // Mock employee data - in real app, this would come from API
   const mockEmployees: Employee[] = [
-    { id: '1', name: 'John Doe', email: 'john.doe@company.com', department: 'Engineering', employeeId: 'EMP001', contractType: 'permanent' },
-    { id: '2', name: 'Jane Smith', email: 'jane.smith@company.com', department: 'Marketing', employeeId: 'EMP002', contractType: 'contract' },
-    { id: '3', name: 'Mike Johnson', email: 'mike.johnson@company.com', department: 'Sales', employeeId: 'EMP003', contractType: 'temporary' },
-    { id: '4', name: 'Sarah Wilson', email: 'sarah.wilson@company.com', department: 'HR', employeeId: 'EMP004', contractType: 'permanent' },
-    { id: '5', name: 'David Brown', email: 'david.brown@company.com', department: 'Finance', employeeId: 'EMP005', contractType: 'contract' },
+    { id: '1', name: 'John Doe', email: 'john.doe@company.com', department: 'Engineering', employeeId: 'EMP001', contractType: 'permanent', unit: 'Main Office' },
+    { id: '2', name: 'Jane Smith', email: 'jane.smith@company.com', department: 'Marketing', employeeId: 'EMP002', contractType: 'contract', unit: 'Branch Office' },
+    { id: '3', name: 'Mike Johnson', email: 'mike.johnson@company.com', department: 'Sales', employeeId: 'EMP003', contractType: 'temporary', unit: 'Remote Office' },
+    { id: '4', name: 'Sarah Wilson', email: 'sarah.wilson@company.com', department: 'HR', employeeId: 'EMP004', contractType: 'permanent', unit: 'Head Office' },
+    { id: '5', name: 'David Brown', email: 'david.brown@company.com', department: 'Finance', employeeId: 'EMP005', contractType: 'contract', unit: 'Main Office' },
   ];
 
   const leaveTypes = [
@@ -152,7 +153,7 @@ export const LeaveForm = ({
   const filteredEmployees = employees.filter(employee =>
     employee.name.toLowerCase().includes(employeeSearchQuery.toLowerCase()) ||
     employee.employeeId.toLowerCase().includes(employeeSearchQuery.toLowerCase()) ||
-    (employmentTypes[employee.contractType as keyof typeof employmentTypes] || employee.contractType).toLowerCase().includes(employeeSearchQuery.toLowerCase())
+    employee.unit.toLowerCase().includes(employeeSearchQuery.toLowerCase())
   );
 
   const statusConfig = {
@@ -593,7 +594,7 @@ export const LeaveForm = ({
                                   <div className='flex flex-col'>
                                     <span className='font-medium'>{employee.name}</span>
                                     <span className='text-xs text-muted-foreground'>
-                                      {employee.employeeId} - {employmentTypes[employee.contractType as keyof typeof employmentTypes] || employee.contractType}
+                                      {employee.employeeId} - {employee.unit}
                                     </span>
                                   </div>
                                 </SelectItem>
