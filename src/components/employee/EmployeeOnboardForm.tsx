@@ -407,7 +407,7 @@ export const EmployeeOnboardForm = ({
                   Personal Information
                 </h4>
 
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
                   <div className='space-y-1'>
                     <Label htmlFor='firstName' className='text-xs font-medium'>
                       First Name *
@@ -439,9 +439,7 @@ export const EmployeeOnboardForm = ({
                       <p className='text-destructive text-xs mt-1'>{errors.lastName}</p>
                     )}
                   </div>
-                </div>
 
-                <div className='grid grid-cols-1 lg:grid-cols-3 gap-4'>
                   <div className='space-y-1'>
                     <Label htmlFor='phone' className='text-xs font-medium'>
                       Phone Number *
@@ -479,7 +477,9 @@ export const EmployeeOnboardForm = ({
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
 
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
                   <div className='space-y-1'>
                     <Label htmlFor='email' className='text-xs font-medium'>
                       Email Address
@@ -496,9 +496,7 @@ export const EmployeeOnboardForm = ({
                       <p className='text-destructive text-xs mt-1'>{errors.email}</p>
                     )}
                   </div>
-                </div>
 
-                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                   <div className='space-y-1'>
                     <Label htmlFor='dateOfBirth' className='text-xs font-medium'>
                       Date of Birth
@@ -633,7 +631,7 @@ export const EmployeeOnboardForm = ({
                   Employment Information
                 </h4>
 
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4'>
                   <div className='space-y-1'>
                     <Label htmlFor='employeeId' className='text-xs font-medium'>
                       Employee ID (Auto-generated)
@@ -668,7 +666,7 @@ export const EmployeeOnboardForm = ({
                     
                     {/* Custom Department Input */}
                     {showCustomDepartmentInput && (
-                      <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2'>
+                      <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2 mt-2'>
                         <Label className='text-xs font-medium text-blue-800'>
                           Add New Department
                         </Label>
@@ -699,9 +697,7 @@ export const EmployeeOnboardForm = ({
                       </div>
                     )}
                   </div>
-                </div>
 
-                <div className='grid grid-cols-1 lg:grid-cols-3 gap-4'>
                   <div className='space-y-1'>
                     <Label htmlFor='position' className='text-xs font-medium'>
                       Position/Job Title
