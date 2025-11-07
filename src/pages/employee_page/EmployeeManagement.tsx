@@ -37,53 +37,53 @@ export const EmployeeManagement = () => {
             className="flex flex-row items-center justify-center gap-1.5 md:gap-2 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-xs lg:text-sm font-medium rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
           >
             <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 lg:w-4.5 lg:h-4.5" />
-            <span className="whitespace-nowrap">Attendance</span>
+            <span className="whitespace-nowrap">Attendance Register</span>
           </TabsTrigger>
           
-          <TabsTrigger 
+          {/* <TabsTrigger 
             value="leaves" 
             className="flex flex-row items-center justify-center gap-1.5 md:gap-2 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-xs lg:text-sm font-medium rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
           >
             <FileText className="w-3.5 h-3.5 md:w-4 md:h-4 lg:w-4.5 lg:h-4.5" />
             <span className="whitespace-nowrap">Leave Requests</span>
-          </TabsTrigger>
+          </TabsTrigger> */}
           
           <TabsTrigger 
             value="employees" 
             className="flex flex-row items-center justify-center gap-1.5 md:gap-2 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-xs lg:text-sm font-medium rounded-lg data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
           >
             <Users className="w-3.5 h-3.5 md:w-4 md:h-4 lg:w-4.5 lg:h-4.5" />
-            <span className="whitespace-nowrap">Employees</span>
+            <span className="whitespace-nowrap">Employee Directory</span>
           </TabsTrigger>
           
           
         </TabsList>
 
         {/* Mobile Tabs - Fixed at Bottom */}
-        <TabsList className="sm:hidden fixed bottom-0 left-0 right-0 z-40 grid grid-cols-3 h-auto p-2 bg-gradient-to-r from-foreground to-foreground backdrop-blur-xl shadow-2xl border-t border-warning/20">
+        <TabsList className="sm:hidden fixed bottom-0 left-0 right-0 z-40 grid grid-cols-2 h-auto p-2 bg-gradient-to-r from-foreground to-foreground backdrop-blur-xl shadow-2xl border-t border-warning/20">
           
           <TabsTrigger 
             value="attendance" 
             className="flex flex-col items-center gap-1 px-1 py-2 text-xs font-semibold data-[state=active]:bg-warning data-[state=active]:text-foreground data-[state=active]:shadow-sm text-white/70 data-[state=inactive]:text-white/70"
           >
             <Clock className="w-5 h-5" />
-            <span className="text-[10px] leading-tight">Attendance</span>
+            <span className="text-[10px] leading-tight">Attendance Register</span>
           </TabsTrigger>
           
-          <TabsTrigger 
+          {/* <TabsTrigger 
             value="leaves" 
             className="flex flex-col items-center gap-1 px-1 py-2 text-xs font-semibold data-[state=active]:bg-warning data-[state=active]:text-foreground data-[state=active]:shadow-sm text-white/70 data-[state=inactive]:text-white/70"
           >
             <FileText className="w-5 h-5" />
             <span className="text-[10px] leading-tight">Leave Requests</span>
-          </TabsTrigger>
+          </TabsTrigger> */}
           
           <TabsTrigger 
             value="employees" 
             className="flex flex-col items-center gap-1 px-1 py-2 text-xs font-semibold data-[state=active]:bg-warning data-[state=active]:text-foreground data-[state=active]:shadow-sm text-white/70 data-[state=inactive]:text-white/70"
           >
             <Users className="w-5 h-5" />
-            <span className="text-[10px] leading-tight">Employees</span>
+            <span className="text-[10px] leading-tight">Employee Directory</span>
           </TabsTrigger>
           
           

@@ -35,7 +35,6 @@ import {
   Loader2, 
   Search,
   Filter,
-  Download,
   Upload,
   Eye,
   Edit,
@@ -127,6 +126,12 @@ interface Employee {
   lastLogin?: string;
 }
 
+interface EmployeeLeaveRecord {
+  year: number;
+  month: string;
+  leavesTaken: number;
+}
+
 type SortField = 'fullName' | 'employeeId' | 'department' | 'position' | 'unit' | 'phone' | 'contractType' | 'joiningDate' | 'status' | 'createdAt' | 'updatedAt';
 type SortOrder = 'ASC' | 'DESC';
 
@@ -138,8 +143,11 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isAddEmployeeDialogOpen, setIsAddEmployeeDialogOpen] = useState(false);
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [activeTab, setActiveTab] = useState('all');
+
+  const [leaveRecords, setLeaveRecords] = useState<EmployeeLeaveRecord[]>([]);
   
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState('');
@@ -156,7 +164,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
   const mockEmployees: Employee[] = [
     {
       id: '1',
-      employeeId: 'EMP001',
+      employeeId: 'EU1001',
       firstName: 'John',
       lastName: 'Doe',
       fullName: 'John Doe',
@@ -179,7 +187,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       reportingManager: 'Sarah Wilson',
       joiningDate: '2022-01-15',
       contractType: 'permanent',
-      unit: 'Main Office',
+      unit: 'UNIT1',
       probationPeriod: '3-months',
       noticePeriod: '1-month',
       salary: '85000',
@@ -198,7 +206,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     },
     {
       id: '2',
-      employeeId: 'EMP002',
+      employeeId: 'EU2001',
       firstName: 'Jane',
       lastName: 'Smith',
       fullName: 'Jane Smith',
@@ -221,7 +229,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       reportingManager: 'David Brown',
       joiningDate: '2021-06-01',
       contractType: 'permanent',
-      unit: 'Branch Office',
+      unit: 'UNIT2',
       probationPeriod: '3-months',
       noticePeriod: '2-months',
       salary: '75000',
@@ -240,7 +248,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     },
     {
       id: '3',
-      employeeId: 'EMP003',
+      employeeId: 'EU3001',
       firstName: 'Mike',
       lastName: 'Johnson',
       fullName: 'Mike Johnson',
@@ -263,7 +271,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       reportingManager: 'Tom Wilson',
       joiningDate: '2023-03-01',
       contractType: 'contract',
-      unit: 'Remote Office',
+      unit: 'UNIT3',
       probationPeriod: '2-months',
       noticePeriod: '1-month',
       salary: '60000',
@@ -282,7 +290,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     },
     {
       id: '4',
-      employeeId: 'EMP004',
+      employeeId: 'EU1002',
       firstName: 'Sarah',
       lastName: 'Wilson',
       fullName: 'Sarah Wilson',
@@ -305,7 +313,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       reportingManager: 'CEO',
       joiningDate: '2020-09-01',
       contractType: 'permanent',
-      unit: 'Head Office',
+      unit: 'UNIT1',
       probationPeriod: '6-months',
       noticePeriod: '3-months',
       salary: '95000',
@@ -324,7 +332,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     },
     {
       id: '5',
-      employeeId: 'EMP005',
+      employeeId: 'EU2002',
       firstName: 'David',
       lastName: 'Brown',
       fullName: 'David Brown',
@@ -347,7 +355,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       reportingManager: 'CFO',
       joiningDate: '2021-02-15',
       contractType: 'permanent',
-      unit: 'Main Office',
+      unit: 'UNIT2',
       probationPeriod: '3-months',
       noticePeriod: '2-months',
       salary: '80000',
@@ -366,7 +374,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     },
     {
       id: '6',
-      employeeId: 'EMP006',
+      employeeId: 'EU3002',
       firstName: 'Lisa',
       lastName: 'Garcia',
       fullName: 'Lisa Garcia',
@@ -389,7 +397,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       reportingManager: 'Sarah Wilson',
       joiningDate: '2023-01-10',
       contractType: 'permanent',
-      unit: 'Branch Office',
+      unit: 'UNIT3',
       probationPeriod: '3-months',
       noticePeriod: '1-month',
       salary: '55000',
@@ -408,7 +416,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     },
     {
       id: '7',
-      employeeId: 'EMP007',
+      employeeId: 'EU1003',
       firstName: 'Robert',
       lastName: 'Chen',
       fullName: 'Robert Chen',
@@ -431,7 +439,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       reportingManager: 'David Brown',
       joiningDate: '2021-08-15',
       contractType: 'permanent',
-      unit: 'Head Office',
+      unit: 'UNIT1',
       probationPeriod: '6-months',
       noticePeriod: '2-months',
       salary: '90000',
@@ -450,7 +458,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     },
     {
       id: '8',
-      employeeId: 'EMP008',
+      employeeId: 'EU2003',
       firstName: 'Maria',
       lastName: 'Rodriguez',
       fullName: 'Maria Rodriguez',
@@ -473,7 +481,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       reportingManager: 'John Doe',
       joiningDate: '2023-05-01',
       contractType: 'contract',
-      unit: 'Remote Office',
+      unit: 'UNIT2',
       probationPeriod: '2-months',
       noticePeriod: '1-month',
       salary: '65000',
@@ -492,7 +500,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     },
     {
       id: '9',
-      employeeId: 'EMP009',
+      employeeId: 'EU3003',
       firstName: 'Ahmed',
       lastName: 'Hassan',
       fullName: 'Ahmed Hassan',
@@ -515,7 +523,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       reportingManager: 'David Brown',
       joiningDate: '2022-03-20',
       contractType: 'permanent',
-      unit: 'Main Office',
+      unit: 'UNIT3',
       probationPeriod: '3-months',
       noticePeriod: '2-months',
       salary: '70000',
@@ -534,7 +542,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     },
     {
       id: '10',
-      employeeId: 'EMP010',
+      employeeId: 'EU1004',
       firstName: 'Emma',
       lastName: 'Thompson',
       fullName: 'Emma Thompson',
@@ -557,7 +565,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       reportingManager: 'Jane Smith',
       joiningDate: '2023-09-01',
       contractType: 'temporary',
-      unit: 'Branch Office',
+      unit: 'UNIT1',
       probationPeriod: '1-month',
       noticePeriod: '1-week',
       salary: '45000',
@@ -576,7 +584,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     },
     {
       id: '11',
-      employeeId: 'EMP011',
+      employeeId: 'EU2004',
       firstName: 'Yuki',
       lastName: 'Tanaka',
       fullName: 'Yuki Tanaka',
@@ -599,7 +607,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       reportingManager: 'John Doe',
       joiningDate: '2023-11-15',
       contractType: 'intern',
-      unit: 'Main Office',
+      unit: 'UNIT2',
       probationPeriod: '1-month',
       noticePeriod: '1-week',
       salary: '35000',
@@ -618,7 +626,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     },
     {
       id: '12',
-      employeeId: 'EMP012',
+      employeeId: 'EU3004',
       firstName: 'Carlos',
       lastName: 'Silva',
       fullName: 'Carlos Silva',
@@ -641,7 +649,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       reportingManager: 'Mike Johnson',
       joiningDate: '2022-07-01',
       contractType: 'permanent',
-      unit: 'Branch Office',
+      unit: 'UNIT3',
       probationPeriod: '3-months',
       noticePeriod: '2-months',
       salary: '75000',
@@ -660,8 +668,43 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     }
   ];
 
-  const units = ['all', 'Main Office', 'Branch Office', 'Remote Office', 'Head Office', 'Field Office', 'Regional Office', 'Satellite Office'];
-  const contractTypes = ['all', 'permanent', 'contract', 'temporary', 'intern'];
+  const mockEmployeeLeaveHistory: Record<string, EmployeeLeaveRecord[]> = {
+    EU1001: [
+      { year: 2024, month: 'January', leavesTaken: 2 },
+      { year: 2024, month: 'March', leavesTaken: 1 },
+    ],
+    EU2001: [
+      { year: 2024, month: 'February', leavesTaken: 3 },
+    ],
+    EU3001: [
+      { year: 2024, month: 'April', leavesTaken: 1 },
+      { year: 2024, month: 'May', leavesTaken: 2 },
+    ],
+    EU1002: [],
+    EU2002: [
+      { year: 2024, month: 'January', leavesTaken: 1 },
+    ],
+    EU3002: [
+      { year: 2024, month: 'June', leavesTaken: 2 },
+    ],
+    EU1003: [
+      { year: 2024, month: 'March', leavesTaken: 2 },
+    ],
+    EU2003: [],
+    EU3003: [
+      { year: 2024, month: 'May', leavesTaken: 1 },
+    ],
+    EU1004: [
+      { year: 2024, month: 'April', leavesTaken: 1 },
+    ],
+    EU2004: [
+      { year: 2024, month: 'February', leavesTaken: 2 },
+    ],
+    EU3004: [],
+  };
+
+  const units = ['all', 'UNIT1', 'UNIT2', 'UNIT3'];
+  const contractTypes = ['all', 'permanent', 'contract', 'temporary', 'intern', 'terminated'];
 
 
   const contractTypeConfig = {
@@ -700,7 +743,11 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
 
     // Apply contract type filter
     if (filterContractType !== 'all') {
-      filtered = filtered.filter(employee => employee.contractType === filterContractType);
+      filtered = filtered.filter(employee =>
+        filterContractType === 'terminated'
+          ? employee.status === 'terminated'
+          : employee.contractType === filterContractType
+      );
     }
 
     // Apply sorting
@@ -773,9 +820,22 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     setIsViewDialogOpen(true);
   };
 
+  const handleViewEmployeeLeaves = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    const records = mockEmployeeLeaveHistory[employee.employeeId] || [];
+    setLeaveRecords(records);
+    setIsLeaveDialogOpen(true);
+  };
+
   const handleCloseViewDialog = () => {
     setSelectedEmployee(null);
     setIsViewDialogOpen(false);
+  };
+
+  const handleCloseLeaveDialog = () => {
+    setSelectedEmployee(null);
+    setLeaveRecords([]);
+    setIsLeaveDialogOpen(false);
   };
 
   const handleAddEmployee = () => {
@@ -816,61 +876,108 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       {/* Main Content */}
       <Card className='border-0 shadow-sm'>
         <CardHeader>
-          <div className='flex justify-between items-center'>
-            <CardTitle className='text-base flex items-center gap-2'>
-              
-            </CardTitle>
-            
-            <div className='flex items-center gap-2'>
-              <div className='relative'>
-                <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  placeholder='Search employees...'
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className='pl-10 w-64'
-                />
-              </div>
-              
-              <Select value={filterUnit} onValueChange={setFilterUnit}>
-                <SelectTrigger className='w-40'>
-                  <SelectValue placeholder='Unit' />
-                </SelectTrigger>
-                <SelectContent>
-                  {units.map((unit) => (
-                    <SelectItem key={unit} value={unit}>
-                      {unit === 'all' ? 'All Units' : unit}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              
-              <Select value={filterContractType} onValueChange={setFilterContractType}>
-                <SelectTrigger className='w-36'>
-                  <SelectValue placeholder='Contract' />
-                </SelectTrigger>
-                <SelectContent>
-                  {contractTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type === 'all' ? 'All Types' : type.charAt(0).toUpperCase() + type.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className='flex flex-col gap-4'>
+            <div className='hidden sm:flex justify-between items-center'>
+              <CardTitle className='text-base flex items-center gap-2'>
+                
+              </CardTitle>
 
-              {/* Action Buttons */}
-              <div className='flex items-center gap-2 ml-2'>
-                <Button variant='outline' size='sm'>
-                  <Upload className='w-4 h-4 mr-2' />
+              <div className='flex items-center gap-2'>
+                <div className='relative'>
+                  <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground' />
+                  <Input
+                    placeholder='Search employees...'
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className='pl-10 w-64'
+                  />
+                </div>
+
+                <Select value={filterUnit} onValueChange={setFilterUnit}>
+                  <SelectTrigger className='w-40'>
+                    <SelectValue placeholder='Unit' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map((unit) => (
+                      <SelectItem key={unit} value={unit}>
+                        {unit === 'all' ? 'All Units' : unit}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filterContractType} onValueChange={setFilterContractType}>
+                  <SelectTrigger className='w-36'>
+                    <SelectValue placeholder='Contract' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contractTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type === 'all' ? 'All Types' : type.charAt(0).toUpperCase() + type.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <div className='flex items-center gap-2 ml-2'>
+                  <Button variant='outline' size='sm'>
+                    <Upload className='w-4 h-4 mr-2' />
+                    Export
+                  </Button>
+                  <Button size='sm' onClick={handleAddEmployee}>
+                    <UserPlus className='w-4 h-4 mr-2' />
+                    Add Employee
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className='flex flex-col gap-3 sm:hidden'>
+              <div className='flex items-center gap-2'>
+                <div className='relative flex-1'>
+                  <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground' />
+                  <Input
+                    placeholder='Search employees...'
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className='pl-9 w-full'
+                  />
+                </div>
+
+                <Select value={filterUnit} onValueChange={setFilterUnit}>
+                  <SelectTrigger className='w-24 h-10 text-xs'>
+                    <SelectValue placeholder='Unit' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map((unit) => (
+                      <SelectItem key={unit} value={unit}>
+                        {unit === 'all' ? 'All Units' : unit}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={filterContractType} onValueChange={setFilterContractType}>
+                  <SelectTrigger className='w-24 h-10 text-xs'>
+                    <SelectValue placeholder='Type' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contractTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type === 'all' ? 'All Types' : type.charAt(0).toUpperCase() + type.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className='flex items-center gap-2'>
+                <Button variant='outline' size='sm' className='flex-1 h-10'>
+                  <Upload className='w-4 h-4 mr-1.5' />
                   Export
                 </Button>
-                <Button variant='outline' size='sm'>
-                  <Download className='w-4 h-4 mr-2' />
-                  Import
-                </Button>
-                <Button size='sm' onClick={handleAddEmployee}>
-                  <UserPlus className='w-4 h-4 mr-2' />
+                <Button size='sm' onClick={handleAddEmployee} className='flex-1 h-10'>
+                  <UserPlus className='w-4 h-4 mr-1.5' />
                   Add Employee
                 </Button>
               </div>
@@ -957,15 +1064,30 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
                     return (
                       <TableRow key={employee.id} className='hover:bg-muted/30'>
                         <TableCell className='font-mono text-sm'>
-                          <button
-                            onClick={() => handleEditEmployee(employee)}
-                            className='text-primary hover:text-primary/80 hover:underline cursor-pointer'
-                          >
-                            {employee.employeeId}
-                          </button>
+                          <div className='inline-flex flex-col items-start group'>
+                            <button
+                              onClick={() => handleEditEmployee(employee)}
+                              className='text-primary hover:text-primary/80 hover:underline cursor-pointer'
+                            >
+                              {employee.employeeId}
+                            </button>
+                            <span className='text-[10px] uppercase text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150'>
+                              Edit
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell>
-                          <div className='font-medium'>{employee.fullName}</div>
+                          <div className='inline-flex flex-col items-start group'>
+                            <button
+                              onClick={() => handleViewEmployeeLeaves(employee)}
+                              className='font-medium text-primary hover:text-primary/80 hover:underline'
+                            >
+                              {employee.fullName}
+                            </button>
+                            <span className='text-[10px] uppercase text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150'>
+                              View leave history
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className='flex items-center gap-2'>
@@ -980,10 +1102,17 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={employeeContractConfig.color}>
-                            {React.createElement(employeeContractConfig.icon, { className: 'w-3 h-3 mr-1' })}
-                            {employeeContractConfig.label}
-                          </Badge>
+                          <div className='flex flex-col'>
+                            <Badge className={employeeContractConfig.color}>
+                              {React.createElement(employeeContractConfig.icon, { className: 'w-3 h-3 mr-1' })}
+                              {employeeContractConfig.label}
+                            </Badge>
+                            {employee.status === 'terminated' && (
+                              <span className='text-[10px] uppercase text-destructive font-semibold mt-1'>
+                                Terminated
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className='text-muted-foreground'>
                           {employee.position}
@@ -1291,6 +1420,45 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
                   </CardContent>
                 </Card>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Employee Leave History Dialog */}
+      <Dialog open={isLeaveDialogOpen} onOpenChange={handleCloseLeaveDialog}>
+        <DialogContent className='max-w-xl'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              <Calendar className='w-5 h-5' />
+              {selectedEmployee ? `${selectedEmployee.fullName} - Leave History` : 'Leave History'}
+            </DialogTitle>
+          </DialogHeader>
+
+          {leaveRecords.length > 0 ? (
+            <div className='overflow-x-auto'>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Year</TableHead>
+                    <TableHead>Month</TableHead>
+                    <TableHead className='text-right'>Leaves Taken</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {leaveRecords.map((record, index) => (
+                    <TableRow key={`${record.year}-${record.month}-${index}`}>
+                      <TableCell>{record.year}</TableCell>
+                      <TableCell>{record.month}</TableCell>
+                      <TableCell className='text-right font-medium'>{record.leavesTaken}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className='py-6 text-center text-sm text-muted-foreground'>
+              No leave records found for this employee.
             </div>
           )}
         </DialogContent>

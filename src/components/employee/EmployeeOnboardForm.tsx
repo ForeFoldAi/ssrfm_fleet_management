@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -57,6 +57,7 @@ interface EmployeeFormData {
   position: string;
   joiningDate: string;
   contractType: string;
+  terminated: string;
   
   // Contract Details (for permanent contracts)
   probationPeriod: string;
@@ -74,12 +75,32 @@ export const EmployeeOnboardForm = ({
   editingEmployee,
 }: EmployeeOnboardFormProps) => {
   const { currentUser } = useRole();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [customDepartment, setCustomDepartment] = useState('');
-  const [showCustomDepartmentInput, setShowCustomDepartmentInput] = useState(false);
+  const sequenceCounterRef = useRef(1);
 
-  const [formData, setFormData] = useState<EmployeeFormData>({
+  const sanitizeUnit = (unit?: string) => {
+    const normalized = (unit || '').toUpperCase().replace(/\s+/g, '');
+    return normalized || 'UNIT';
+  };
+
+  const deriveUnitCode = (unit?: string) => {
+    const sanitizedUnit = sanitizeUnit(unit);
+    const unitMatch = sanitizedUnit.match(/UNIT(\d+)/);
+
+    if (unitMatch) {
+      return `U${unitMatch[1]}`;
+    }
+
+    return sanitizedUnit || 'U0';
+  };
+
+  const generateEmployeeId = (unit?: string) => {
+    const unitCode = deriveUnitCode(unit);
+    const sequence = sequenceCounterRef.current.toString().padStart(3, '0');
+    sequenceCounterRef.current += 1;
+    return `E${unitCode}${sequence}`;
+  };
+
+  const buildInitialFormData = (unit = 'UNIT1'): EmployeeFormData => ({
     firstName: '',
     lastName: '',
     email: '',
@@ -87,17 +108,18 @@ export const EmployeeOnboardForm = ({
     dateOfBirth: '',
     gender: '',
     maritalStatus: '',
-    unit: '',
+    unit,
     address: '',
     city: '',
     state: '',
     postalCode: '',
     country: '',
-    employeeId: '',
+    employeeId: generateEmployeeId(unit),
     department: '',
     position: '',
     joiningDate: '',
     contractType: '',
+    terminated: 'no',
     probationPeriod: '',
     noticePeriod: '',
     salary: '',
@@ -106,9 +128,17 @@ export const EmployeeOnboardForm = ({
     workLocation: '',
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [customDepartment, setCustomDepartment] = useState('');
+  const [showCustomDepartmentInput, setShowCustomDepartmentInput] = useState(false);
+  const [formData, setFormData] = useState<EmployeeFormData>(() => buildInitialFormData());
+
   // Prefill form data when editing
   useEffect(() => {
     if (editingEmployee && isOpen) {
+      const unit = sanitizeUnit(editingEmployee.unit);
+
       setFormData({
         firstName: editingEmployee.firstName || '',
         lastName: editingEmployee.lastName || '',
@@ -117,17 +147,18 @@ export const EmployeeOnboardForm = ({
         dateOfBirth: editingEmployee.dateOfBirth || '',
         gender: editingEmployee.gender || '',
         maritalStatus: editingEmployee.maritalStatus || '',
-        unit: editingEmployee.unit || '',
+        unit,
         address: editingEmployee.address || '',
         city: editingEmployee.city || '',
         state: editingEmployee.state || '',
         postalCode: editingEmployee.postalCode || '',
         country: editingEmployee.country || '',
-        employeeId: editingEmployee.employeeId || '',
+        employeeId: editingEmployee.employeeId || generateEmployeeId(unit),
         department: editingEmployee.department || '',
         position: editingEmployee.position || '',
         joiningDate: editingEmployee.joiningDate || '',
         contractType: editingEmployee.contractType || '',
+        terminated: editingEmployee.terminated ?? 'no',
         probationPeriod: editingEmployee.probationPeriod || '',
         noticePeriod: editingEmployee.noticePeriod || '',
         salary: editingEmployee.salary || '',
@@ -136,33 +167,7 @@ export const EmployeeOnboardForm = ({
         workLocation: editingEmployee.workLocation || '',
       });
     } else if (!editingEmployee && isOpen) {
-      // Reset form when adding new employee
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        dateOfBirth: '',
-        gender: '',
-        maritalStatus: '',
-        unit: '',
-        address: '',
-        city: '',
-        state: '',
-        postalCode: '',
-        country: '',
-        employeeId: generateEmployeeId(),
-        department: '',
-        position: '',
-        joiningDate: '',
-        contractType: '',
-        probationPeriod: '',
-        noticePeriod: '',
-        salary: '',
-        benefits: '',
-        workingHours: '',
-        workLocation: '',
-      });
+      setFormData(buildInitialFormData());
     }
   }, [editingEmployee, isOpen]);
 
@@ -189,28 +194,7 @@ export const EmployeeOnboardForm = ({
     'Other',
   ];
 
-  const units = [
-    'Head Office',
-    'Regional Office - North',
-    'Regional Office - South',
-    'Regional Office - East',
-    'Regional Office - West',
-    'Branch Office - Mumbai',
-    'Branch Office - Delhi',
-    'Branch Office - Bangalore',
-    'Branch Office - Chennai',
-    'Branch Office - Kolkata',
-    'Field Office',
-    'Remote Location',
-    'Other',
-  ];
-
-  // Auto-generate Employee ID
-  const generateEmployeeId = () => {
-    const timestamp = Date.now().toString().slice(-6);
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    return `EMP${timestamp}${random}`;
-  };
+  const units = ['UNIT1', 'UNIT2', 'UNIT3'];
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -220,7 +204,16 @@ export const EmployeeOnboardForm = ({
   };
 
   const handleSelectChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const nextValue = field === 'unit' ? sanitizeUnit(value) : value;
+      const nextState = { ...prev, [field]: nextValue };
+
+      if (field === 'unit' && !editingEmployee) {
+        nextState.employeeId = generateEmployeeId(nextValue);
+      }
+
+      return nextState;
+    });
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
@@ -286,9 +279,13 @@ export const EmployeeOnboardForm = ({
 
     try {
       // Prepare employee data for submission
+      const resolvedEmployeeId = editingEmployee
+        ? formData.employeeId
+        : formData.employeeId || generateEmployeeId(formData.unit);
+
       const employeeData = {
         ...formData,
-        employeeId: generateEmployeeId(), // Auto-generate Employee ID
+        employeeId: resolvedEmployeeId,
         department: formData.department === 'Other' ? customDepartment : formData.department,
         fullName: `${formData.firstName} ${formData.lastName}`,
         submittedBy: currentUser?.id,
@@ -311,32 +308,7 @@ export const EmployeeOnboardForm = ({
       });
 
       // Reset form
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        dateOfBirth: '',
-        gender: '',
-        maritalStatus: '',
-        unit: '',
-        address: '',
-        city: '',
-        state: '',
-        postalCode: '',
-        country: '',
-        employeeId: generateEmployeeId(),
-        department: '',
-        position: '',
-        joiningDate: '',
-        contractType: '',
-        probationPeriod: '',
-        noticePeriod: '',
-        salary: '',
-        benefits: '',
-        workingHours: '',
-        workLocation: '',
-      });
+      setFormData(buildInitialFormData());
       setErrors({});
       setCustomDepartment('');
       setShowCustomDepartmentInput(false);
@@ -354,32 +326,7 @@ export const EmployeeOnboardForm = ({
   };
 
   const handleClose = () => {
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      dateOfBirth: '',
-      gender: '',
-      maritalStatus: '',
-      unit: '',
-      address: '',
-      city: '',
-      state: '',
-      postalCode: '',
-      country: '',
-      employeeId: generateEmployeeId(),
-      department: '',
-      position: '',
-      joiningDate: '',
-      contractType: '',
-      probationPeriod: '',
-      noticePeriod: '',
-      salary: '',
-      benefits: '',
-      workingHours: '',
-      workLocation: '',
-    });
+    setFormData(buildInitialFormData());
     setErrors({});
     setCustomDepartment('');
     setShowCustomDepartmentInput(false);
@@ -631,10 +578,10 @@ export const EmployeeOnboardForm = ({
                   Employment Information
                 </h4>
 
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4'>
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4'>
                   <div className='space-y-1'>
                     <Label htmlFor='employeeId' className='text-xs font-medium'>
-                      Employee ID (Auto-generated)
+                      {editingEmployee ? 'Employee ID' : 'Employee ID'}
                     </Label>
                     <div className='h-8 px-2 py-1 bg-muted/30 rounded-[5px] text-xs flex items-center border border-input'>
                       {formData.employeeId}
@@ -729,6 +676,26 @@ export const EmployeeOnboardForm = ({
                       <p className='text-destructive text-xs mt-1'>{errors.joiningDate}</p>
                     )}
                   </div>
+
+                  {editingEmployee && (
+                    <div className='space-y-1'>
+                      <Label htmlFor='terminated' className='text-xs font-medium'>
+                        Terminated
+                      </Label>
+                      <Select
+                        value={formData.terminated}
+                        onValueChange={(value) => handleSelectChange('terminated', value)}
+                      >
+                        <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
+                          <SelectValue placeholder='Select status' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='no'>No</SelectItem>
+                          <SelectItem value='yes'>Yes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   <div className='space-y-1'>
                     <Label htmlFor='contractType' className='text-xs font-medium'>

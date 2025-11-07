@@ -1,60 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { 
-  Loader2, 
-  Plus, 
-  Save,
-  Calendar,
-  Users,
-  CheckCircle,
-  Download,
-  Upload,
-  User,
-  Building,
-  MapPin,
-  Phone,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-  AlertCircle,
-  Search,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown
-} from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2, Save, CheckCircle, Search, Calendar, Upload, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useRole } from '@/contexts/RoleContext';
-import { format, addDays, subDays, startOfWeek, endOfWeek, isSameDay, isToday, isWeekend } from 'date-fns';
+import { getDaysInMonth } from 'date-fns';
 
 interface AttendanceTabProps {
   // Props can be added here if needed
@@ -73,318 +26,172 @@ interface Employee {
   isActive: boolean;
 }
 
-interface AttendanceRecord {
-  employeeId: string;
-  date: string;
-  status: 'present' | 'absent' | 'half_day' | 'on_leave';
-  notes?: string;
-  markedBy: string;
-  markedAt: string;
-}
+type AttendanceStatus = 'present' | 'absent' | 'unmarked';
 
-interface AttendanceSummary {
-  totalEmployees: number;
-  present: number;
-  absent: number;
-  halfDay: number;
-  onLeave: number;
-  attendancePercentage: number;
-}
+  const mockEmployees: Employee[] = [
+    { id: '1', name: 'John Doe', employeeId: 'EU1001', department: 'Engineering', position: 'Software Engineer', unit: 'UNIT1', email: 'john@company.com', phone: '+1234567890', contractType: 'permanent', isActive: true },
+    { id: '2', name: 'Jane Smith', employeeId: 'EU2001', department: 'Marketing', position: 'Marketing Manager', unit: 'UNIT2', email: 'jane@company.com', phone: '+1234567891', contractType: 'contract', isActive: true },
+    { id: '3', name: 'Mike Johnson', employeeId: 'EU3001', department: 'Sales', position: 'Sales Executive', unit: 'UNIT3', email: 'mike@company.com', phone: '+1234567892', contractType: 'temporary', isActive: true },
+    { id: '4', name: 'Sarah Wilson', employeeId: 'EU1002', department: 'HR', position: 'HR Manager', unit: 'UNIT1', email: 'sarah@company.com', phone: '+1234567893', contractType: 'permanent', isActive: true },
+    { id: '5', name: 'David Brown', employeeId: 'EU2002', department: 'Finance', position: 'Accountant', unit: 'UNIT2', email: 'david@company.com', phone: '+1234567894', contractType: 'contract', isActive: true },
+    { id: '6', name: 'Lisa Davis', employeeId: 'EU3002', department: 'Engineering', position: 'Senior Developer', unit: 'UNIT3', email: 'lisa@company.com', phone: '+1234567895', contractType: 'permanent', isActive: true },
+    { id: '7', name: 'Tom Wilson', employeeId: 'EU1003', department: 'Operations', position: 'Operations Manager', unit: 'UNIT1', email: 'tom@company.com', phone: '+1234567896', contractType: 'temporary', isActive: true },
+    { id: '8', name: 'Emma Taylor', employeeId: 'EU2003', department: 'Customer Service', position: 'Support Agent', unit: 'UNIT2', email: 'emma@company.com', phone: '+1234567897', contractType: 'contract', isActive: true },
+  ];
 
 export const AttendenceTab = ({}: AttendanceTabProps) => {
-  const { currentUser } = useRole();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [attendanceMap, setAttendanceMap] = useState<Record<string, Record<number, AttendanceStatus>>>({});
+  const [remarks, setRemarks] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('all');
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  
-  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  
-  // Sorting states
-  const [sortField, setSortField] = useState<string>('name');
-  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('ASC');
 
-  // Mock employee data - Replace with actual API call
-  const mockEmployees: Employee[] = [
-    { id: '1', name: 'John Doe', employeeId: 'EMP001', department: 'Engineering', position: 'Software Engineer', unit: 'Main Office', email: 'john@company.com', phone: '+1234567890', contractType: 'permanent', isActive: true },
-    { id: '2', name: 'Jane Smith', employeeId: 'EMP002', department: 'Marketing', position: 'Marketing Manager', unit: 'Branch Office', email: 'jane@company.com', phone: '+1234567891', contractType: 'contract', isActive: true },
-    { id: '3', name: 'Mike Johnson', employeeId: 'EMP003', department: 'Sales', position: 'Sales Executive', unit: 'Remote Office', email: 'mike@company.com', phone: '+1234567892', contractType: 'temporary', isActive: true },
-    { id: '4', name: 'Sarah Wilson', employeeId: 'EMP004', department: 'HR', position: 'HR Manager', unit: 'Head Office', email: 'sarah@company.com', phone: '+1234567893', contractType: 'permanent', isActive: true },
-    { id: '5', name: 'David Brown', employeeId: 'EMP005', department: 'Finance', position: 'Accountant', unit: 'Main Office', email: 'david@company.com', phone: '+1234567894', contractType: 'contract', isActive: true },
-    { id: '6', name: 'Lisa Davis', employeeId: 'EMP006', department: 'Engineering', position: 'Senior Developer', unit: 'Branch Office', email: 'lisa@company.com', phone: '+1234567895', contractType: 'permanent', isActive: true },
-    { id: '7', name: 'Tom Wilson', employeeId: 'EMP007', department: 'Operations', position: 'Operations Manager', unit: 'Head Office', email: 'tom@company.com', phone: '+1234567896', contractType: 'temporary', isActive: true },
-    { id: '8', name: 'Emma Taylor', employeeId: 'EMP008', department: 'Customer Service', position: 'Support Agent', unit: 'Remote Office', email: 'emma@company.com', phone: '+1234567897', contractType: 'contract', isActive: true },
-  ];
+  const today = useMemo(() => new Date(), []);
+  const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
+  const [selectedYear, setSelectedYear] = useState(today.getFullYear());
 
-  const units = ['all', 'Main Office', 'Branch Office', 'Remote Office', 'Head Office', 'Field Office', 'Regional Office', 'Satellite Office'];
+  const units = ['all', 'UNIT1', 'UNIT2', 'UNIT3'];
+  const months = useMemo(
+    () => [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ],
+    []
+  );
 
-  const employmentTypes = {
-    permanent: 'Permanent',
-    contract: 'Contract',
-    temporary: 'Temporary',
-    part_time: 'Part-time',
-    freelance: 'Freelance'
-  };
+  const yearOptions = useMemo(() => {
+    const startYear = today.getFullYear();
+    return Array.from({ length: 6 }, (_, index) => startYear + index);
+  }, [today]);
 
-  // Sorting functions
-  const handleSort = (field: string) => {
-    let newSortOrder = sortOrder;
+  const daysInSelectedMonth = useMemo(() => {
+    const totalDays = getDaysInMonth(new Date(selectedYear, selectedMonth));
+    return Array.from({ length: totalDays }, (_, index) => index + 1);
+  }, [selectedMonth, selectedYear]);
 
-    if (sortField === field) {
-      // Toggle sort order if same field
-      newSortOrder = sortOrder === 'ASC' ? 'DESC' : 'ASC';
-    } else {
-      // Set new field with ascending order
-      newSortOrder = 'ASC';
-    }
+  const totalDaysInMonth = daysInSelectedMonth.length;
 
-    setSortField(field);
-    setSortOrder(newSortOrder);
-  };
+  const filteredEmployees = useMemo(
+    () =>
+      employees.filter((emp) => {
+        const matchesSearch =
+          emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          emp.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          emp.phone.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesUnit = filterDepartment === 'all' || emp.unit === filterDepartment;
 
-  const getSortIcon = (field: string) => {
-    if (sortField !== field) {
-      return <ArrowUpDown className='w-4 h-4 text-muted-foreground' />;
-    }
-    return sortOrder === 'ASC' ? (
-      <ArrowUp className='w-4 h-4 text-primary' />
-    ) : (
-      <ArrowDown className='w-4 h-4 text-primary' />
-    );
-  };
+        return matchesSearch && matchesUnit && emp.isActive;
+      }),
+    [employees, searchQuery, filterDepartment]
+  );
 
-  // Function to get approved leaves for a specific date
-  const getApprovedLeavesForDate = async (date: Date): Promise<any[]> => {
-    try {
-      // In a real app, this would be an API call to get approved leaves
-      // Using the same mock data structure as LeavesViewTab.tsx
-      const mockApprovedLeaves = [
-        {
-          id: '1',
-          leaveNumber: 'LEV-2024-001',
-          employeeId: 'EMP001',
-          employeeName: 'John Doe',
-          startDate: '2024-02-15',
-          endDate: '2024-02-20',
-          status: 'approved',
-          leaveType: 'annual'
-        },
-        {
-          id: '2',
-          leaveNumber: 'LEV-2024-002',
-          employeeId: 'EMP002',
-          employeeName: 'Jane Smith',
-          startDate: '2024-01-20',
-          endDate: '2024-01-22',
-          status: 'approved',
-          leaveType: 'sick'
-        },
-        {
-          id: '4',
-          leaveNumber: 'LEV-2024-004',
-          employeeId: 'EMP004',
-          employeeName: 'Sarah Wilson',
-          startDate: '2024-03-01',
-          endDate: '2024-08-31',
-          status: 'approved',
-          leaveType: 'maternity'
-        },
-        {
-          id: '6',
-          leaveNumber: 'LEV-2024-006',
-          employeeId: 'EMP006',
-          employeeName: 'Lisa Davis',
-          startDate: '2024-01-30',
-          endDate: '2024-02-02',
-          status: 'approved',
-          leaveType: 'bereavement'
-        }
-      ];
-      
-      // Filter leaves that are approved and cover the given date
-      return mockApprovedLeaves.filter(leave => 
-        leave.status === 'approved' &&
-        new Date(leave.startDate) <= date &&
-        new Date(leave.endDate) >= date
-      );
-    } catch (error) {
-      console.error('Error fetching approved leaves:', error);
-      return [];
-    }
-  };
-
-  const attendanceStatuses = [
-    { value: 'present', label: 'Present', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-    { value: 'on_leave', label: 'On Leave', color: 'bg-purple-100 text-purple-800', icon: Calendar },
-  ];
-
-  // Load employees and attendance data
   useEffect(() => {
-    loadEmployees();
-    loadAttendanceForDate(selectedDate);
-  }, [selectedDate]);
+    setCurrentPage(1);
+  }, [searchQuery, filterDepartment, selectedMonth, selectedYear]);
 
-  const loadEmployees = async () => {
-    setIsLoading(true);
-    try {
-      // In a real app, this would be an API call
-      // const response = await employeesApi.getAll();
-      // setEmployees(response.data);
-      
-      // Mock data for now
-      setEmployees(mockEmployees);
-    } catch (error) {
-      console.error('Error loading employees:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load employees. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / itemsPerPage));
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
     }
-  };
+  }, [filteredEmployees, itemsPerPage, currentPage]);
 
-  const loadAttendanceForDate = async (date: Date) => {
-    try {
-      // Check for approved leaves for this date
-      const approvedLeaves = await getApprovedLeavesForDate(date);
+  const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedEmployees = filteredEmployees.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    setIsLoading(true);
       
-      // Create attendance records for all active employees
-      const mockRecords: AttendanceRecord[] = employees
-        .filter(emp => emp.isActive)
-        .map(emp => {
-          // Check if employee is on approved leave for this date
-          const leaveRecord = approvedLeaves.find(leave => 
-            leave.employeeId === emp.employeeId
-          );
-          
-          // If employee has approved leave for this date, set as "on leave"
-          // Otherwise, default to "present" (can be changed manually for today only)
-          const status = leaveRecord ? 'on_leave' as const : 'present' as const;
-          
-          return {
-            employeeId: emp.id,
-            date: format(date, 'yyyy-MM-dd'),
-            status,
-            markedBy: leaveRecord ? 'System (Auto from Leave)' : (currentUser?.name || 'System'),
-            markedAt: new Date().toISOString(),
-            notes: leaveRecord ? `Auto-marked: ${leaveRecord.leaveType} leave (${leaveRecord.leaveNumber})` : undefined,
-          };
+    const timeout = setTimeout(() => {
+      setEmployees(mockEmployees);
+      setIsLoading(false);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (!employees.length) {
+      return;
+    }
+
+    setAttendanceMap((prev) => {
+      const next: Record<string, Record<number, AttendanceStatus>> = {};
+
+      employees.forEach((employee) => {
+        if (!employee.isActive) {
+          return;
+        }
+
+        const existing = prev[employee.id] || {};
+        const row: Record<number, AttendanceStatus> = {};
+
+        daysInSelectedMonth.forEach((day) => {
+          row[day] = existing[day] ?? 'unmarked';
         });
       
-      setAttendanceRecords(mockRecords);
-    } catch (error) {
-      console.error('Error loading attendance:', error);
-    }
-  };
-
-  const handleDateChange = (direction: 'prev' | 'next') => {
-    const newDate = direction === 'next' 
-      ? addDays(selectedDate, 1)
-      : subDays(selectedDate, 1);
-    setSelectedDate(newDate);
-  };
-
-  // Check if attendance is editable (only for today)
-  const isAttendanceEditable = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selected = new Date(selectedDate);
-    selected.setHours(0, 0, 0, 0);
-    return selected.getTime() === today.getTime();
-  };
-
-
-  const handleEmployeeAttendanceChange = async (employeeId: string, status: string) => {
-    // Check if employee is on approved leave for this date
-    const approvedLeaves = await getApprovedLeavesForDate(selectedDate);
-    const employee = employees.find(emp => emp.id === employeeId);
-    const isOnApprovedLeave = employee && approvedLeaves.some(leave => 
-      leave.employeeId === employee.employeeId
-    );
-    
-    // Don't allow manual changes if employee is on approved leave
-    if (isOnApprovedLeave) {
-      toast({
-        title: 'Cannot Change Status',
-        description: 'Employee is on approved leave. Status cannot be changed manually.',
-        variant: 'destructive',
+        next[employee.id] = row;
       });
+
+      return next;
+    });
+
+    setRemarks((prev) => {
+      const next: Record<string, string> = {};
+
+      employees.forEach((employee) => {
+        if (!employee.isActive) {
+          return;
+        }
+
+        next[employee.id] = prev[employee.id] || '';
+      });
+
+      return next;
+    });
+  }, [employees, daysInSelectedMonth]);
+
+  const handleMarkAllPresent = () => {
+    if (!filteredEmployees.length) {
       return;
     }
     
-    setAttendanceRecords(prev => {
-      const existingIndex = prev.findIndex(record => record.employeeId === employeeId);
-      
-      if (existingIndex >= 0) {
-        // Update existing record
-        const updated = [...prev];
-        updated[existingIndex] = {
-          ...updated[existingIndex],
-          status: status as AttendanceRecord['status'],
-          markedBy: currentUser?.name || 'System',
-          markedAt: new Date().toISOString(),
-        };
-        return updated;
-      } else {
-        // Add new record
-        return [...prev, {
-          employeeId,
-          date: format(selectedDate, 'yyyy-MM-dd'),
-          status: status as AttendanceRecord['status'],
-          markedBy: currentUser?.name || 'System',
-          markedAt: new Date().toISOString(),
-        }];
+    const shouldMarkAll = !filteredEmployees.every((employee) => {
+      const dayMap = attendanceMap[employee.id];
+      if (!dayMap) {
+        return false;
       }
+      return daysInSelectedMonth.every((day) => dayMap[day] === 'present');
     });
-  };
 
-  const getAttendanceStatus = (employeeId: string): string => {
-    const record = attendanceRecords.find(r => r.employeeId === employeeId);
-    return record?.status || 'present';
-  };
-
-  const getAttendanceSummary = (): AttendanceSummary => {
-    const activeEmployees = employees.filter(emp => emp.isActive);
-    const totalEmployees = activeEmployees.length;
-    
-    const present = attendanceRecords.filter(r => r.status === 'present').length;
-    const absent = attendanceRecords.filter(r => r.status === 'absent').length;
-    const halfDay = attendanceRecords.filter(r => r.status === 'half_day').length;
-    const onLeave = attendanceRecords.filter(r => r.status === 'on_leave').length;
-    
-    const attendancePercentage = totalEmployees > 0 ? (present / totalEmployees) * 100 : 0;
-    
-    return {
-      totalEmployees,
-      present,
-      absent,
-      halfDay,
-      onLeave,
-      attendancePercentage,
-    };
+    toggleAllEmployees(shouldMarkAll);
   };
 
   const handleSaveAttendance = async () => {
     setIsSaving(true);
     
     try {
-      // In a real app, this would be an API call
-      // await attendanceApi.saveBatch(attendanceRecords);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       
       toast({
         title: 'Attendance Saved',
-        description: `Attendance for ${format(selectedDate, 'MMMM dd, yyyy')} has been saved successfully.`,
+        description: `Attendance for ${months[selectedMonth]} ${selectedYear} has been saved successfully.`,
       });
     } catch (error) {
       console.error('Error saving attendance:', error);
@@ -398,129 +205,242 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
     }
   };
 
-  const filteredEmployees = employees.filter(emp => {
-    const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         emp.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         emp.phone.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesUnit = filterDepartment === 'all' || emp.unit === filterDepartment;
-    return matchesSearch && matchesUnit && emp.isActive;
-  });
-
-  // Apply sorting to filtered employees
-  const sortedEmployees = [...filteredEmployees].sort((a, b) => {
-    let aValue: any = a[sortField as keyof Employee];
-    let bValue: any = b[sortField as keyof Employee];
-
-    // Handle string comparison
-    if (typeof aValue === 'string') {
-      aValue = aValue.toLowerCase();
-      bValue = bValue.toLowerCase();
+  const toggleAllEmployees = (value: boolean) => {
+    if (!filteredEmployees.length) {
+      return;
     }
 
-    if (aValue < bValue) return sortOrder === 'ASC' ? -1 : 1;
-    if (aValue > bValue) return sortOrder === 'ASC' ? 1 : -1;
-    return 0;
+    setAttendanceMap((prev) => {
+      const next = { ...prev };
+
+      filteredEmployees.forEach((employee) => {
+        const row: Record<number, AttendanceStatus> = { ...(next[employee.id] || {}) };
+        daysInSelectedMonth.forEach((day) => {
+          row[day] = value ? 'present' : 'unmarked';
+        });
+        next[employee.id] = row;
+      });
+
+      return next;
+    });
+  };
+
+  const toggleEmployeeRow = (employeeId: string, value: boolean) => {
+    setAttendanceMap((prev) => {
+      const existing = prev[employeeId] || {};
+      const row: Record<number, AttendanceStatus> = { ...existing };
+
+      daysInSelectedMonth.forEach((day) => {
+        row[day] = value ? 'present' : 'unmarked';
+      });
+
+      return {
+        ...prev,
+        [employeeId]: row,
+      };
+    });
+  };
+
+  const toggleSingleDay = (employeeId: string, day: number, value: boolean) => {
+    setAttendanceMap((prev) => {
+      const existing = prev[employeeId] || {};
+      const nextStatus: AttendanceStatus = value ? 'present' : 'absent';
+
+      return {
+        ...prev,
+        [employeeId]: {
+          ...existing,
+          [day]: nextStatus,
+        },
+      };
+    });
+  };
+
+  const isAllSelected = filteredEmployees.length > 0 && filteredEmployees.every((employee) => {
+    const dayMap = attendanceMap[employee.id];
+
+    if (!dayMap) {
+      return false;
+    }
+
+    return daysInSelectedMonth.every((day) => dayMap[day] === 'present');
   });
 
-  // Calculate pagination
-  const totalPages = Math.ceil(sortedEmployees.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedEmployees = sortedEmployees.slice(startIndex, endIndex);
+  const isPartiallySelected = !isAllSelected && filteredEmployees.some((employee) => {
+    const dayMap = attendanceMap[employee.id];
 
-  const summary = getAttendanceSummary();
+    if (!dayMap) {
+      return false;
+    }
+
+    return daysInSelectedMonth.some((day) => dayMap[day] === 'present');
+  });
+
+  const getRowTotals = (employeeId: string) => {
+    const dayMap = attendanceMap[employeeId] || {};
+    const totalPresent = daysInSelectedMonth.reduce((count, day) => (dayMap[day] === 'present' ? count + 1 : count), 0);
+    const totalAbsent = daysInSelectedMonth.reduce((count, day) => (dayMap[day] === 'absent' ? count + 1 : count), 0);
+
+    return { totalPresent, totalAbsent };
+  };
+
+  const headerCheckedState = isAllSelected ? true : isPartiallySelected ? 'indeterminate' : false;
 
   return (
     <div className='space-y-6'>
-
-    
-
-     
-
-      {/* Main Content */}
       <Card className='border-0 shadow-sm'>
-        <CardHeader>
-          <div className='flex justify-between items-center'>
-            <CardTitle className='text-base flex items-center gap-2'>
-              <Calendar className='w-4 h-4' />
-              
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-                <PopoverTrigger asChild>
-                  <button
-                    className='ml-2 text-primary hover:text-primary/80 underline cursor-pointer flex items-center gap-2'
-                  >
-                    {format(selectedDate, 'MMMM dd, yyyy')} ({format(selectedDate, 'EEEE')})
-                    {isToday(selectedDate) && (
-                      <Badge variant='outline' className='ml-1 text-xs'>
-                        Today
-                      </Badge>
-                    )}
-                    {isWeekend(selectedDate) && (
-                      <Badge variant='outline' className='ml-1 text-xs bg-yellow-50 text-yellow-700'>
-                        Weekend
-                      </Badge>
-                    )}
-                    {!isAttendanceEditable() && (
-                      <Badge variant='outline' className='ml-1 text-xs bg-gray-50 text-gray-700'>
-                        View Only
-                      </Badge>
-                    )}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className='w-auto p-0' align='start'>
-                  <CalendarComponent
-                    mode='single'
-                    selected={selectedDate}
-                    onSelect={(date) => {
-                      if (date) {
-                        setSelectedDate(date);
-                        setIsCalendarOpen(false);
-                      }
-                    }}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </CardTitle>
-            
-            <div className='flex items-center gap-2'>
-              <div className='relative'>
-                <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground' />
-                <Input 
-                  placeholder='Search employees...'
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className='w-64 pl-10'
-                />
+        <CardHeader className='px-4 sm:px-6'>
+          <div className='flex flex-col gap-4'>
+            <div className='hidden sm:flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
+              <div className='flex flex-wrap items-center gap-2'>
+                <Button variant='secondary' size='sm' onClick={handleMarkAllPresent} disabled={!filteredEmployees.length}>
+                  <CheckCircle className='w-4 h-4 mr-2' />
+                  {isAllSelected ? 'Unmark All Present' : 'Mark All Present'}
+                </Button>
+
+                <Button variant='default' size='sm' onClick={handleSaveAttendance} disabled={isSaving}>
+                  {isSaving ? <Loader2 className='w-4 h-4 mr-2 animate-spin' /> : <Save className='w-4 h-4 mr-2' />}
+                  Save
+                </Button>
+
+                <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value, 10))}>
+                  <SelectTrigger className='w-[140px]'>
+                    <SelectValue placeholder='Month' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map((month, index) => (
+                      <SelectItem key={month} value={index.toString()}>
+                        {month}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value, 10))}>
+                  <SelectTrigger className='w-[120px]'>
+                    <SelectValue placeholder='Year' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Select value={filterDepartment} onValueChange={setFilterDepartment}>
-                <SelectTrigger className='w-40'>
-                  <SelectValue placeholder='Unit' />
-                </SelectTrigger>
-                <SelectContent>
-                  {units.map((unit) => (
-                    <SelectItem key={unit} value={unit}>
-                      {unit === 'all' ? 'All Units' : unit}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              {/* Action Buttons */}
-              <div className='flex items-center gap-2 ml-2'>
+
+              <div className='flex flex-wrap items-center gap-2'>
+                <div className='relative'>
+                  <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground' />
+                  <Input 
+                    placeholder='Search employees...'
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className='w-64 pl-10'
+                  />
+                </div>
+                <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                  <SelectTrigger className='w-40'>
+                    <SelectValue placeholder='Unit' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map((unit) => (
+                      <SelectItem key={unit} value={unit}>
+                        {unit === 'all' ? 'All Units' : unit}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Button variant='outline' size='sm'>
                   <Upload className='w-4 h-4 mr-2' />
                   Export
                 </Button>
-                <Button variant='outline' size='sm'>
-                  <Download className='w-4 h-4 mr-2' />
-                  Import
+              </div>
+            </div>
+
+            <div className='flex flex-col gap-3 sm:hidden'>
+              <div className='flex items-center gap-2'>
+                <div className='relative flex-1'>
+                  <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground' />
+                  <Input
+                    placeholder='Search employees...'
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className='w-full pl-9'
+                  />
+                </div>
+                <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                  <SelectTrigger className='w-28 h-10 text-xs'>
+                    <SelectValue placeholder='Unit' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map((unit) => (
+                      <SelectItem key={unit} value={unit}>
+                        {unit === 'all' ? 'All Units' : unit}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant='outline' size='sm' className='h-10 px-3'>
+                  <Upload className='w-4 h-4 mr-1.5' />
+                  Export
+                </Button>
+              </div>
+
+              <div className='flex flex-wrap items-center gap-2'>
+                <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value, 10))}>
+                  <SelectTrigger className='flex-1 min-w-[140px] h-10 text-sm'>
+                    <SelectValue placeholder='Month' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map((month, index) => (
+                      <SelectItem key={month} value={index.toString()}>
+                        {month}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value, 10))}>
+                  <SelectTrigger className='flex-1 min-w-[120px] h-10 text-sm'>
+                    <SelectValue placeholder='Year' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant='secondary'
+                  size='sm'
+                  onClick={handleMarkAllPresent}
+                  disabled={!filteredEmployees.length}
+                  className='flex-1 min-w-[150px] h-10'
+                >
+                  <CheckCircle className='w-4 h-4 mr-1.5' />
+                  {isAllSelected ? 'Unmark All Present' : 'Mark All Present'}
+                </Button>
+
+                <Button
+                  variant='default'
+                  size='sm'
+                  onClick={handleSaveAttendance}
+                  disabled={isSaving}
+                  className='flex-1 min-w-[120px] h-10'
+                >
+                  {isSaving ? <Loader2 className='w-4 h-4 mr-1.5 animate-spin' /> : <Save className='w-4 h-4 mr-1.5' />}
+                  Save
                 </Button>
               </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className='px-4 sm:px-6'>
           {isLoading ? (
             <div className='flex justify-center items-center py-8'>
               <Loader2 className='w-6 h-6 animate-spin' />
@@ -531,142 +451,136 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
               <Table>
                 <TableHeader>
                   <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
-                    <TableHead className='min-w-[200px]'>
-                      <Button
-                        variant='ghost'
-                        onClick={() => handleSort('name')}
-                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                      >
-                        Employee Name
-                        {getSortIcon('name')}
-                      </Button>
+                    <TableHead className='w-12 text-center'>
+                      <div className='flex justify-center'>
+                        <Checkbox
+                          checked={headerCheckedState}
+                          onCheckedChange={(value) => toggleAllEmployees(value === true)}
+                          disabled={!filteredEmployees.length}
+                          className='h-4 w-4'
+                        />
+                      </div>
                     </TableHead>
-                    <TableHead className='min-w-[120px]'>
-                      <Button
-                        variant='ghost'
-                        onClick={() => handleSort('unit')}
-                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                      >
-                        Unit/Location
-                        {getSortIcon('unit')}
-                      </Button>
+                    <TableHead className='min-w-[140px]'>Employee Name</TableHead>
+                    <TableHead className='w-36 text-center'>
+                      <div className='flex flex-col items-center leading-4'>
+                        <span>Present</span>
+                        <span className='text-xs text-muted-foreground'>Total</span>
+                      </div>
                     </TableHead>
-                    <TableHead className='min-w-[120px]'>
-                      <Button
-                        variant='ghost'
-                        onClick={() => handleSort('phone')}
-                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                      >
-                        Phone Number
-                        {getSortIcon('phone')}
-                      </Button>
+                    <TableHead className='w-36 text-center'>
+                      <div className='flex flex-col items-center leading-4'>
+                        <span>Absent</span>
+                        <span className='text-xs text-muted-foreground'>Total</span>
+                      </div>
                     </TableHead>
-                    <TableHead className='min-w-[120px]'>
-                      <Button
-                        variant='ghost'
-                        onClick={() => handleSort('contractType')}
-                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
-                      >
-                        Employment Type
-                        {getSortIcon('contractType')}
-                      </Button>
+                    {daysInSelectedMonth.map((day) => (
+                      <TableHead key={day} className='text-center w-20 px-3'>
+                        {day}
                     </TableHead>
-                    <TableHead className='min-w-[200px]'>Attendance</TableHead>
+                    ))}
+                    <TableHead className='min-w-[200px]'>Remark</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedEmployees.map((employee) => {
-                    const currentStatus = getAttendanceStatus(employee.id);
-                    const statusConfig = attendanceStatuses.find(s => s.value === currentStatus);
+                    const totals = getRowTotals(employee.id);
+                    const rowDayMap = attendanceMap[employee.id] || {};
+                    const isRowSelected = daysInSelectedMonth.every((day) => rowDayMap[day] === 'present');
+                    const isRowPartiallySelected = !isRowSelected && daysInSelectedMonth.some((day) => rowDayMap[day] === 'present');
+                    const rowCheckedState = isRowSelected ? true : isRowPartiallySelected ? 'indeterminate' : false;
                     
                     return (
                       <TableRow key={employee.id} className='hover:bg-muted/30'>
+                        <TableCell className='w-12'>
+                          <div className='flex justify-center'>
+                            <Checkbox
+                              checked={rowCheckedState}
+                              onCheckedChange={(value) => toggleEmployeeRow(employee.id, value === true)}
+                              className='h-4 w-4'
+                            />
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <div>
                             <div className='font-medium'>{employee.name}</div>
                             <div className='text-sm text-muted-foreground'>{employee.employeeId}</div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className='flex items-center gap-2'>
-                            <MapPin className='w-4 h-4 text-muted-foreground' />
-                            {employee.unit}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className='flex items-center gap-1 text-sm'>
-                            <Phone className='w-3 h-3 text-muted-foreground' />
-                            <span>{employee.phone}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant='outline' className='text-xs'>
-                            {employmentTypes[employee.contractType as keyof typeof employmentTypes] || employee.contractType}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className='flex items-center gap-1'>
-                            {attendanceStatuses.map((status) => {
-                              const isSelected = currentStatus === status.value;
-                              const isOnLeaveFromSystem = currentStatus === 'on_leave';
-                              
-                              // Check if date is in the future
-                              const today = new Date();
-                              today.setHours(0, 0, 0, 0);
-                              const selected = new Date(selectedDate);
-                              selected.setHours(0, 0, 0, 0);
-                              const isFutureDate = selected.getTime() > today.getTime();
-                              const isPastOrToday = selected.getTime() <= today.getTime();
-                              
-                              // Disable if future date, or if employee is on leave and trying to change it
-                              const isDisabled = (isFutureDate || !isAttendanceEditable() || (isOnLeaveFromSystem && status.value === 'on_leave'));
+                        <TableCell className='text-center px-3'>{totals.totalPresent}</TableCell>
+                        <TableCell className='text-center px-3'>{totals.totalAbsent}</TableCell>
+                        {daysInSelectedMonth.map((day) => {
+                          const status = rowDayMap[day] ?? 'unmarked';
+                          const isPresent = status === 'present';
+                          const isAbsent = status === 'absent';
                               
                               return (
-                                <Button
-                                  key={status.value}
-                                  variant={isSelected && isPastOrToday ? 'default' : 'outline'}
-                                  size='sm'
-                                  onClick={() => handleEmployeeAttendanceChange(employee.id, status.value)}
-                                  disabled={isDisabled}
-                                  className={`h-7 px-2 text-xs ${
-                                    isSelected && isPastOrToday
-                                      ? 'bg-primary text-primary-foreground' 
-                                      : 'hover:bg-muted'
-                                  } ${isFutureDate ? 'opacity-40 cursor-not-allowed' : ''} ${isOnLeaveFromSystem && status.value === 'on_leave' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                  title={isOnLeaveFromSystem && status.value === 'on_leave' ? 'Employee is on approved leave - cannot be changed manually' : (isFutureDate ? 'Cannot edit future dates' : (!isAttendanceEditable() ? 'Can only edit today\'s attendance' : ''))}
+                            <TableCell key={day} className='text-center px-3'>
+                              <div className='relative flex justify-center'>
+                                <Checkbox
+                                  checked={isPresent}
+                                  onCheckedChange={(value) => toggleSingleDay(employee.id, day, value === true)}
+                                  className={`h-5 w-5 [&_svg]:hidden transition-colors duration-150 ${
+                                    isPresent
+                                      ? '!border-green-600 !bg-green-600'
+                                      : isAbsent
+                                        ? '!border-red-600 !bg-red-600'
+                                        : '!border-yellow-400 !bg-transparent'
+                                  }`}
+                                />
+                                <span
+                                  className={`pointer-events-none absolute inset-0 flex items-center justify-center text-[11px] font-semibold ${
+                                    isPresent || isAbsent ? 'text-white' : 'text-transparent'
+                                  }`}
                                 >
-                                  {React.createElement(status.icon, { className: 'w-3 h-3 mr-1' })}
-                                  {status.label}
-                                </Button>
+                                  {isPresent ? 'P' : isAbsent ? 'A' : ''}
+                                </span>
+                              </div>
+                            </TableCell>
                               );
                             })}
-                          </div>
+                        <TableCell>
+                          <Input
+                            placeholder='Add remark'
+                            value={remarks[employee.id] || ''}
+                            maxLength={30}
+                            onChange={(event) => {
+                              const nextValue = event.target.value;
+                              setRemarks((prev) => ({
+                                ...prev,
+                                [employee.id]: nextValue,
+                              }));
+                            }}
+                          />
                         </TableCell>
                       </TableRow>
                     );
                   })}
+                  {!filteredEmployees.length && (
+                    <TableRow>
+                      <TableCell colSpan={4 + totalDaysInMonth + 2} className='text-center py-8 text-muted-foreground'>
+                        No employees found for the selected filters.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
           )}
 
-          {/* Pagination - Hide when searching */}
-          {!searchQuery.trim() && (
+          {!searchQuery.trim() && filteredEmployees.length > 0 && (
             <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
-              {/* Page Info */}
               <div className='text-xs sm:text-sm text-muted-foreground'>
-                Showing {startIndex + 1} to {Math.min(endIndex, sortedEmployees.length)} of {sortedEmployees.length} entries
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredEmployees.length)} of {filteredEmployees.length} entries
               </div>
 
-              {/* Pagination Controls */}
               <div className='flex flex-col sm:flex-row items-center gap-3 sm:gap-2 w-full sm:w-auto'>
-                {/* Items per page selector - Mobile optimized */}
                 <div className='flex items-center gap-2 w-full sm:w-auto justify-center'>
                   <span className='text-xs sm:text-sm text-muted-foreground whitespace-nowrap'>Show:</span>
                   <Select
                     value={itemsPerPage.toString()}
                     onValueChange={(value) => {
-                      const newLimit = parseInt(value);
+                      const newLimit = parseInt(value, 10);
                       setItemsPerPage(newLimit);
                       setCurrentPage(1);
                     }}
@@ -684,9 +598,7 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                   <span className='text-xs sm:text-sm text-muted-foreground whitespace-nowrap'>per page</span>
                 </div>
 
-                {/* Page navigation - Mobile optimized */}
                 <div className='flex items-center gap-1'>
-                  {/* First page button */}
                   <Button
                     variant='outline'
                     size='sm'
@@ -696,8 +608,6 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                   >
                     <ChevronsLeft className='w-3 h-3 sm:w-4 sm:h-4' />
                   </Button>
-
-                  {/* Previous page button */}
                   <Button
                     variant='outline'
                     size='sm'
@@ -708,21 +618,18 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                     <ChevronLeft className='w-3 h-3 sm:w-4 sm:h-4' />
                   </Button>
 
-                  {/* Page numbers - Show up to 6 pages */}
                   <div className='flex items-center gap-1 mx-1 sm:mx-2'>
-                    {Array.from(
-                      { length: Math.min(6, totalPages) },
-                      (_, i) => {
+                    {Array.from({ length: Math.min(6, totalPages) }, (_, index) => {
                         let pageNum;
                         
                         if (totalPages <= 6) {
-                          pageNum = i + 1;
+                        pageNum = index + 1;
                         } else if (currentPage <= 3) {
-                          pageNum = i + 1;
+                        pageNum = index + 1;
                         } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 5 + i;
+                        pageNum = totalPages - 5 + index;
                         } else {
-                          pageNum = currentPage - 3 + i;
+                        pageNum = currentPage - 3 + index;
                         }
 
                         return (
@@ -736,11 +643,9 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                             {pageNum}
                           </Button>
                         );
-                      }
-                    )}
+                    })}
                   </div>
 
-                  {/* Next page button */}
                   <Button
                     variant='outline'
                     size='sm'
@@ -750,8 +655,6 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                   >
                     <ChevronRight className='w-3 h-3 sm:w-4 sm:h-4' />
                   </Button>
-
-                  {/* Last page button */}
                   <Button
                     variant='outline'
                     size='sm'
@@ -767,14 +670,6 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
           )}
         </CardContent>
       </Card>
-
-      {/* Search Results Info - Show when searching */}
-      {searchQuery.trim() && sortedEmployees.length > 0 && (
-        <div className='text-sm text-muted-foreground text-center py-2'>
-          Showing {sortedEmployees.length} employee
-          {sortedEmployees.length !== 1 ? 's' : ''} matching "{searchQuery}"
-        </div>
-      )}
     </div>
   );
 };
