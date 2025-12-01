@@ -333,7 +333,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
   };
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedEmployees = filteredEmployees.slice(startIndex, endIndex);
@@ -637,7 +637,10 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
             <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
               {/* Page Info */}
               <div className='text-xs sm:text-sm text-muted-foreground'>
-                Showing {startIndex + 1} to {Math.min(endIndex, filteredEmployees.length)} of {filteredEmployees.length} entries
+                {filteredEmployees.length > 0 
+                  ? `Showing ${startIndex + 1} to ${Math.min(endIndex, filteredEmployees.length)} of ${filteredEmployees.length} entries`
+                  : 'Showing 0 to 0 of 0 entries'
+                }
               </div>
 
               {/* Pagination Controls */}
