@@ -1997,7 +1997,7 @@ export const MaterialOrderBookTab = () => {
                   onClick={() => handleSort('branch')}
                 >
                   <div className='flex items-center gap-2'>
-                    Unit/Location
+                  Factory Location
                     {getSortIcon('branch')}
                   </div>
                 </TableHead>
@@ -2212,7 +2212,7 @@ export const MaterialOrderBookTab = () => {
                   onClick={() => handleSort('branch')}
                 >
                   <div className='flex items-center gap-2'>
-                  Unit/Location
+                  Factory Location
                     {getSortIcon('branch')}
                   </div>
                 </TableHead>

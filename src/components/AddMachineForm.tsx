@@ -602,7 +602,7 @@ export const AddMachineForm = ({
                 <div className='grid grid-cols-1 lg:grid-cols-2 gap-3'>
                   <div className='space-y-1'>
                     <Label htmlFor='branch' className='text-xs font-medium'>
-                      Unit/Location *
+                    Factory Location *
                     </Label>
                     <Select
                       value={formData.unitId > 0 ? formData.unitId.toString() : ''}

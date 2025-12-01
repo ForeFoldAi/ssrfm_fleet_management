@@ -549,7 +549,7 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
                 <SelectContent>
                   {units.map((unit) => (
                     <SelectItem key={unit} value={unit}>
-                      {unit === 'all' ? 'All Units' : unit}
+                      {unit === 'all' ? 'Factory Location' : unit}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -636,7 +636,7 @@ export const LeavesViewTab = ({}: LeavesViewTabProps) => {
                         onClick={() => handleSort('unit')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        Unit/Location
+                      Factory Location
                         {getSortIcon('unit')}
                       </Button>
                     </TableHead>

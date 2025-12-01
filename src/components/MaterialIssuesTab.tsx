@@ -1057,7 +1057,7 @@ export const MaterialIssuesTab = () => {
                         onClick={() => handleSort('branch')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        Unit/Location
+                        Factory Location
                         {getSortIcon('branch')}
                       </Button>
                     </TableHead>
@@ -1292,7 +1292,7 @@ export const MaterialIssuesTab = () => {
                         onClick={() => handleSort('branch')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        Unit/Location
+                      Factory Location
                         {getSortIcon('branch')}
                       </Button>
                     </TableHead>

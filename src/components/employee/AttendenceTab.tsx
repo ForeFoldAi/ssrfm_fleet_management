@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -28,17 +29,6 @@ interface Employee {
 
 type AttendanceStatus = 'present' | 'absent' | 'unmarked';
 
-  const mockEmployees: Employee[] = [
-    { id: '1', name: 'John Doe', employeeId: 'EU1001', department: 'Engineering', position: 'Software Engineer', unit: 'UNIT1', email: 'john@company.com', phone: '+1234567890', contractType: 'permanent', isActive: true },
-    { id: '2', name: 'Jane Smith', employeeId: 'EU2001', department: 'Marketing', position: 'Marketing Manager', unit: 'UNIT2', email: 'jane@company.com', phone: '+1234567891', contractType: 'contract', isActive: true },
-    { id: '3', name: 'Mike Johnson', employeeId: 'EU3001', department: 'Sales', position: 'Sales Executive', unit: 'UNIT3', email: 'mike@company.com', phone: '+1234567892', contractType: 'temporary', isActive: true },
-    { id: '4', name: 'Sarah Wilson', employeeId: 'EU1002', department: 'HR', position: 'HR Manager', unit: 'UNIT1', email: 'sarah@company.com', phone: '+1234567893', contractType: 'permanent', isActive: true },
-    { id: '5', name: 'David Brown', employeeId: 'EU2002', department: 'Finance', position: 'Accountant', unit: 'UNIT2', email: 'david@company.com', phone: '+1234567894', contractType: 'contract', isActive: true },
-    { id: '6', name: 'Lisa Davis', employeeId: 'EU3002', department: 'Engineering', position: 'Senior Developer', unit: 'UNIT3', email: 'lisa@company.com', phone: '+1234567895', contractType: 'permanent', isActive: true },
-    { id: '7', name: 'Tom Wilson', employeeId: 'EU1003', department: 'Operations', position: 'Operations Manager', unit: 'UNIT1', email: 'tom@company.com', phone: '+1234567896', contractType: 'temporary', isActive: true },
-    { id: '8', name: 'Emma Taylor', employeeId: 'EU2003', department: 'Customer Service', position: 'Support Agent', unit: 'UNIT2', email: 'emma@company.com', phone: '+1234567897', contractType: 'contract', isActive: true },
-  ];
-
 export const AttendenceTab = ({}: AttendanceTabProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -49,34 +39,24 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
   const [filterDepartment, setFilterDepartment] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  
+  // Drag state for date range selection
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartEmployeeId, setDragStartEmployeeId] = useState<string | null>(null);
+  const [dragStartDay, setDragStartDay] = useState<number | null>(null);
+  const [dragStatus, setDragStatus] = useState<AttendanceStatus | null>(null);
+  
+  // Shift+Click state for range selection
+  const [lastSelectedDate, setLastSelectedDate] = useState<{ employeeId: string; day: number } | null>(null);
 
   const today = useMemo(() => new Date(), []);
   const [selectedMonth, setSelectedMonth] = useState(today.getMonth());
   const [selectedYear, setSelectedYear] = useState(today.getFullYear());
 
-  const units = ['all', 'UNIT1', 'UNIT2', 'UNIT3'];
-  const months = useMemo(
-    () => [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ],
-    []
-  );
-
-  const yearOptions = useMemo(() => {
-    const startYear = today.getFullYear();
-    return Array.from({ length: 6 }, (_, index) => startYear + index);
-  }, [today]);
+  // TODO: Populate from API
+  const [units, setUnits] = useState<string[]>([]);
+  const [months, setMonths] = useState<Array<{ value: number; label: string }>>([]);
+  const [yearOptions, setYearOptions] = useState<number[]>([]);
 
   const daysInSelectedMonth = useMemo(() => {
     const totalDays = getDaysInMonth(new Date(selectedYear, selectedMonth));
@@ -116,14 +96,28 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
   const paginatedEmployees = filteredEmployees.slice(startIndex, endIndex);
 
   useEffect(() => {
-    setIsLoading(true);
-      
-    const timeout = setTimeout(() => {
-      setEmployees(mockEmployees);
-      setIsLoading(false);
-    }, 300);
+    const loadEmployees = async () => {
+      setIsLoading(true);
+      try {
+        // TODO: Replace with actual API call
+        // const response = await employeesApi.getAll();
+        // setEmployees(response.data);
+        
+        // Placeholder - will be populated from API
+        setEmployees([]);
+      } catch (error) {
+        console.error('Error loading employees:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load employees. Please try again.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    return () => clearTimeout(timeout);
+    loadEmployees();
   }, []);
 
   useEffect(() => {
@@ -167,6 +161,49 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
     });
   }, [employees, daysInSelectedMonth]);
 
+  // Global mouse handlers for better trackpad support
+  useEffect(() => {
+    if (!isDragging || !dragStartEmployeeId || dragStartDay === null || dragStatus === null) {
+      return;
+    }
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const cell = target.closest('td[data-day]') as HTMLElement;
+      
+      if (cell) {
+        const dayAttr = cell.getAttribute('data-day');
+        const employeeIdAttr = cell.getAttribute('data-employee-id');
+        
+        if (dayAttr && employeeIdAttr && employeeIdAttr === dragStartEmployeeId) {
+          const targetDay = parseInt(dayAttr, 10);
+          markDateRange(dragStartEmployeeId, dragStartDay, targetDay, dragStatus);
+        }
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      if (isDragging && dragStartEmployeeId && dragStartDay !== null) {
+        setLastSelectedDate({ employeeId: dragStartEmployeeId, day: dragStartDay });
+      }
+      
+      setIsDragging(false);
+      setDragStartEmployeeId(null);
+      setDragStartDay(null);
+      setDragStatus(null);
+    };
+
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    document.addEventListener('mouseleave', handleGlobalMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('mouseleave', handleGlobalMouseUp);
+    };
+  }, [isDragging, dragStartEmployeeId, dragStartDay, dragStatus]);
+
   const handleMarkAllPresent = () => {
     if (!filteredEmployees.length) {
       return;
@@ -189,9 +226,10 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
+      const monthName = months.find(m => m.value === selectedMonth)?.label || `Month ${selectedMonth + 1}`;
       toast({
         title: 'Attendance Saved',
-        description: `Attendance for ${months[selectedMonth]} ${selectedYear} has been saved successfully.`,
+        description: `Attendance for ${monthName} ${selectedYear} has been saved successfully.`,
       });
     } catch (error) {
       console.error('Error saving attendance:', error);
@@ -254,6 +292,93 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
         },
       };
     });
+    
+    // Update last selected date for Shift+Click functionality
+    setLastSelectedDate({ employeeId, day });
+  };
+
+  const markDateRange = (employeeId: string, startDay: number, endDay: number, status: AttendanceStatus) => {
+    setAttendanceMap((prev) => {
+      const existing = prev[employeeId] || {};
+      const updated = { ...existing };
+      
+      const minDay = Math.min(startDay, endDay);
+      const maxDay = Math.max(startDay, endDay);
+      
+      for (let day = minDay; day <= maxDay; day++) {
+        updated[day] = status;
+      }
+
+      return {
+        ...prev,
+        [employeeId]: updated,
+      };
+    });
+  };
+
+  const handleDragStart = (employeeId: string, day: number, e: React.MouseEvent) => {
+    // Handle Shift+Click for range selection
+    if (e.shiftKey && lastSelectedDate && lastSelectedDate.employeeId === employeeId) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Use the status of the last selected date (don't toggle)
+      const lastStatus = attendanceMap[employeeId]?.[lastSelectedDate.day] ?? 'unmarked';
+      // If unmarked, default to present; otherwise use the same status
+      const newStatus: AttendanceStatus = lastStatus === 'unmarked' ? 'present' : lastStatus;
+      
+      // Mark range from last selected date to current date with the same status
+      markDateRange(employeeId, lastSelectedDate.day, day, newStatus);
+      setLastSelectedDate({ employeeId, day });
+      return;
+    }
+    
+    // Don't start drag if clicking directly on checkbox (let checkbox handle single clicks)
+    // But allow Shift+Click which is handled above
+    if ((e.target as HTMLElement).closest('button[role="checkbox"]') && !e.shiftKey) {
+      return;
+    }
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const currentStatus = attendanceMap[employeeId]?.[day] ?? 'unmarked';
+    // Determine the status to apply: if unmarked or absent, mark as present; if present, mark as absent
+    const newStatus: AttendanceStatus = currentStatus === 'present' ? 'absent' : 'present';
+    
+    setIsDragging(true);
+    setDragStartEmployeeId(employeeId);
+    setDragStartDay(day);
+    setDragStatus(newStatus);
+    
+    // Mark the initial day
+    markDateRange(employeeId, day, day, newStatus);
+  };
+
+  const handleDragEnter = (employeeId: string, day: number) => {
+    if (!isDragging || !dragStartEmployeeId || dragStartDay === null || dragStatus === null) {
+      return;
+    }
+    
+    // Only allow dragging within the same employee row
+    if (employeeId !== dragStartEmployeeId) {
+      return;
+    }
+    
+    // Mark the range from start to current day
+    markDateRange(employeeId, dragStartDay, day, dragStatus);
+  };
+
+  const handleDragEnd = () => {
+    if (isDragging && dragStartEmployeeId && dragStartDay !== null) {
+      // Update last selected date when drag ends
+      setLastSelectedDate({ employeeId: dragStartEmployeeId, day: dragStartDay });
+    }
+    
+    setIsDragging(false);
+    setDragStartEmployeeId(null);
+    setDragStartDay(null);
+    setDragStatus(null);
   };
 
   const isAllSelected = filteredEmployees.length > 0 && filteredEmployees.every((employee) => {
@@ -291,8 +416,8 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
       <Card className='border-0 shadow-sm'>
         <CardHeader className='px-4 sm:px-6'>
           <div className='flex flex-col gap-4'>
-            <div className='hidden sm:flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
-              <div className='flex flex-wrap items-center gap-2'>
+            <div className='hidden sm:flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
+              <div className='flex flex-wrap items-end gap-2'>
                 <Button variant='secondary' size='sm' onClick={handleMarkAllPresent} disabled={!filteredEmployees.length}>
                   <CheckCircle className='w-4 h-4 mr-2' />
                   {isAllSelected ? 'Unmark All Present' : 'Mark All Present'}
@@ -304,23 +429,25 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                 </Button>
 
                 <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value, 10))}>
-                  <SelectTrigger className='w-[140px]'>
+                  <SelectTrigger className='w-[140px] h-9'>
                     <SelectValue placeholder='Month' />
                   </SelectTrigger>
                   <SelectContent>
-                    {months.map((month, index) => (
-                      <SelectItem key={month} value={index.toString()}>
-                        {month}
+                    {/* TODO: Populate from API */}
+                    {months.map((month) => (
+                      <SelectItem key={month.value} value={month.value.toString()}>
+                        {month.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
                 <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value, 10))}>
-                  <SelectTrigger className='w-[120px]'>
+                  <SelectTrigger className='w-[120px] h-9'>
                     <SelectValue placeholder='Year' />
                   </SelectTrigger>
                   <SelectContent>
+                    {/* TODO: Populate from API */}
                     {yearOptions.map((year) => (
                       <SelectItem key={year} value={year.toString()}>
                         {year}
@@ -330,29 +457,34 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                 </Select>
               </div>
 
-              <div className='flex flex-wrap items-center gap-2'>
+              <div className='flex flex-wrap items-end gap-2'>
                 <div className='relative'>
                   <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground' />
                   <Input 
                     placeholder='Search employees...'
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className='w-64 pl-10'
+                    className='w-64 pl-10 h-9'
                   />
                 </div>
-                <Select value={filterDepartment} onValueChange={setFilterDepartment}>
-                  <SelectTrigger className='w-40'>
-                    <SelectValue placeholder='Unit' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map((unit) => (
-                      <SelectItem key={unit} value={unit}>
-                        {unit === 'all' ? 'All Units' : unit}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button variant='outline' size='sm'>
+                <div className='flex flex-col'>
+                  <Label className='text-xs text-muted-foreground mb-1'>Factory Location</Label>
+                  <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                    <SelectTrigger className='w-40 h-9'>
+                      <SelectValue placeholder='Unit' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* TODO: Populate from API */}
+                      <SelectItem value='all'>All Units</SelectItem>
+                      {units.map((unit) => (
+                        <SelectItem key={unit} value={unit}>
+                          {unit}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button variant='outline' size='sm' className='h-9'>
                   <Upload className='w-4 h-4 mr-2' />
                   Export
                 </Button>
@@ -360,82 +492,95 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
             </div>
 
             <div className='flex flex-col gap-3 sm:hidden'>
-              <div className='flex items-center gap-2'>
-                <div className='relative flex-1'>
+              {/* Search and Filters Row */}
+              <div className='flex flex-col gap-2'>
+                <div className='relative w-full'>
                   <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground' />
                   <Input
                     placeholder='Search employees...'
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className='w-full pl-9'
+                    className='w-full pl-9 h-10'
                   />
                 </div>
-                <Select value={filterDepartment} onValueChange={setFilterDepartment}>
-                  <SelectTrigger className='w-28 h-10 text-xs'>
-                    <SelectValue placeholder='Unit' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map((unit) => (
-                      <SelectItem key={unit} value={unit}>
-                        {unit === 'all' ? 'All Units' : unit}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button variant='outline' size='sm' className='h-10 px-3'>
-                  <Upload className='w-4 h-4 mr-1.5' />
-                  Export
-                </Button>
+                <div className='flex items-end gap-2'>
+                  <div className='flex flex-col flex-1'>
+                    <Label className='text-xs text-muted-foreground mb-1'>Factory Location</Label>
+                    <Select value={filterDepartment} onValueChange={setFilterDepartment}>
+                      <SelectTrigger className='w-full h-10 text-xs'>
+                        <SelectValue placeholder='Unit' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {units.map((unit) => (
+                          <SelectItem key={unit} value={unit}>
+                            {unit === 'all' ? 'All Units' : unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button variant='outline' size='sm' className='h-10 px-4'>
+                    <Upload className='w-4 h-4 mr-1.5' />
+                    Export
+                  </Button>
+                </div>
               </div>
 
-              <div className='flex flex-wrap items-center gap-2'>
-                <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value, 10))}>
-                  <SelectTrigger className='flex-1 min-w-[140px] h-10 text-sm'>
-                    <SelectValue placeholder='Month' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {months.map((month, index) => (
-                      <SelectItem key={month} value={index.toString()}>
-                        {month}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Month, Year, and Action Buttons Row */}
+              <div className='flex flex-col gap-2'>
+                <div className='flex gap-2'>
+                  <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value, 10))}>
+                    <SelectTrigger className='flex-1 h-10 text-sm'>
+                      <SelectValue placeholder='Month' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* TODO: Populate from API */}
+                      {months.map((month) => (
+                        <SelectItem key={month.value} value={month.value.toString()}>
+                          {month.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-                <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value, 10))}>
-                  <SelectTrigger className='flex-1 min-w-[120px] h-10 text-sm'>
-                    <SelectValue placeholder='Year' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {yearOptions.map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value, 10))}>
+                    <SelectTrigger className='flex-1 h-10 text-sm'>
+                      <SelectValue placeholder='Year' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* TODO: Populate from API */}
+                      {yearOptions.map((year) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <Button
-                  variant='secondary'
-                  size='sm'
-                  onClick={handleMarkAllPresent}
-                  disabled={!filteredEmployees.length}
-                  className='flex-1 min-w-[150px] h-10'
-                >
-                  <CheckCircle className='w-4 h-4 mr-1.5' />
-                  {isAllSelected ? 'Unmark All Present' : 'Mark All Present'}
-                </Button>
+                <div className='flex gap-2'>
+                  <Button
+                    variant='secondary'
+                    size='sm'
+                    onClick={handleMarkAllPresent}
+                    disabled={!filteredEmployees.length}
+                    className='flex-1 h-10 text-xs'
+                  >
+                    <CheckCircle className='w-4 h-4 mr-1.5' />
+                    {isAllSelected ? 'Unmark All Present' : 'Mark All Present'}
+                  </Button>
 
-                <Button
-                  variant='default'
-                  size='sm'
-                  onClick={handleSaveAttendance}
-                  disabled={isSaving}
-                  className='flex-1 min-w-[120px] h-10'
-                >
-                  {isSaving ? <Loader2 className='w-4 h-4 mr-1.5 animate-spin' /> : <Save className='w-4 h-4 mr-1.5' />}
-                  Save
-                </Button>
+                  <Button
+                    variant='default'
+                    size='sm'
+                    onClick={handleSaveAttendance}
+                    disabled={isSaving}
+                    className='flex-1 h-10'
+                  >
+                    {isSaving ? <Loader2 className='w-4 h-4 mr-1.5 animate-spin' /> : <Save className='w-4 h-4 mr-1.5' />}
+                    Save
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -447,7 +592,7 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
               <span className='ml-2'>Loading employees...</span>
             </div>
           ) : (
-            <div className='overflow-x-auto'>
+            <div className='overflow-x-auto' style={{ userSelect: isDragging ? 'none' : 'auto' }}>
               <Table>
                 <TableHeader>
                   <TableRow className='bg-secondary/20 border-b-2 border-secondary/30'>
@@ -515,11 +660,43 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                           const isAbsent = status === 'absent';
                               
                               return (
-                            <TableCell key={day} className='text-center px-3'>
+                            <TableCell 
+                              key={day} 
+                              className={`text-center px-3 ${isDragging && dragStartEmployeeId === employee.id ? 'cursor-grabbing' : 'cursor-pointer'}`}
+                              onMouseDown={(e) => handleDragStart(employee.id, day, e)}
+                              onMouseEnter={() => {
+                                if (isDragging && dragStartEmployeeId === employee.id) {
+                                  handleDragEnter(employee.id, day);
+                                }
+                              }}
+                              data-day={day}
+                              data-employee-id={employee.id}
+                              style={{ userSelect: 'none' }}
+                            >
                               <div className='relative flex justify-center'>
                                 <Checkbox
                                   checked={isPresent}
-                                  onCheckedChange={(value) => toggleSingleDay(employee.id, day, value === true)}
+                                  onCheckedChange={(value) => {
+                                    // Handle single click toggle when not dragging
+                                    if (!isDragging) {
+                                      toggleSingleDay(employee.id, day, value === true);
+                                    }
+                                  }}
+                                  onMouseDown={(e) => {
+                                    // Handle Shift+Click before checkbox processes it
+                                    if (e.shiftKey && lastSelectedDate && lastSelectedDate.employeeId === employee.id) {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      
+                                      // Use the status of the last selected date (don't toggle)
+                                      const lastStatus = attendanceMap[employee.id]?.[lastSelectedDate.day] ?? 'unmarked';
+                                      // If unmarked, default to present; otherwise use the same status
+                                      const newStatus: AttendanceStatus = lastStatus === 'unmarked' ? 'present' : lastStatus;
+                                      
+                                      markDateRange(employee.id, lastSelectedDate.day, day, newStatus);
+                                      setLastSelectedDate({ employeeId: employee.id, day });
+                                    }
+                                  }}
                                   className={`h-5 w-5 [&_svg]:hidden transition-colors duration-150 ${
                                     isPresent
                                       ? '!border-green-600 !bg-green-600'
@@ -559,7 +736,7 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
                   {!filteredEmployees.length && (
                     <TableRow>
                       <TableCell colSpan={4 + totalDaysInMonth + 2} className='text-center py-8 text-muted-foreground'>
-                        No employees found for the selected filters.
+                        No employees found
                       </TableCell>
                     </TableRow>
                   )}

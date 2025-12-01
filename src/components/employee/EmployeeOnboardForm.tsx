@@ -58,14 +58,6 @@ interface EmployeeFormData {
   joiningDate: string;
   contractType: string;
   terminated: string;
-  
-  // Contract Details (for permanent contracts)
-  probationPeriod: string;
-  noticePeriod: string;
-  salary: string;
-  benefits: string;
-  workingHours: string;
-  workLocation: string;
 }
 
 export const EmployeeOnboardForm = ({
@@ -100,7 +92,7 @@ export const EmployeeOnboardForm = ({
     return `E${unitCode}${sequence}`;
   };
 
-  const buildInitialFormData = (unit = 'UNIT1'): EmployeeFormData => ({
+  const buildInitialFormData = (unit = ''): EmployeeFormData => ({
     firstName: '',
     lastName: '',
     email: '',
@@ -114,30 +106,41 @@ export const EmployeeOnboardForm = ({
     state: '',
     postalCode: '',
     country: '',
-    employeeId: generateEmployeeId(unit),
+    employeeId: '',
     department: '',
     position: '',
     joiningDate: '',
     contractType: '',
     terminated: 'no',
-    probationPeriod: '',
-    noticePeriod: '',
-    salary: '',
-    benefits: '',
-    workingHours: '',
-    workLocation: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [customDepartment, setCustomDepartment] = useState('');
   const [showCustomDepartmentInput, setShowCustomDepartmentInput] = useState(false);
+  const [customPosition, setCustomPosition] = useState('');
+  const [showCustomPositionInput, setShowCustomPositionInput] = useState(false);
   const [formData, setFormData] = useState<EmployeeFormData>(() => buildInitialFormData());
+
+  // TODO: Populate from API
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [positions, setPositions] = useState<string[]>([]);
+  const [units, setUnits] = useState<string[]>([]);
+  const [contractTypes, setContractTypes] = useState<Array<{ value: string; label: string; description: string }>>([]);
+  const [genders, setGenders] = useState<Array<{ value: string; label: string }>>([]);
+  const [maritalStatuses, setMaritalStatuses] = useState<Array<{ value: string; label: string }>>([]);
 
   // Prefill form data when editing
   useEffect(() => {
     if (editingEmployee && isOpen) {
       const unit = sanitizeUnit(editingEmployee.unit);
+      const employeeDepartment = editingEmployee.department || '';
+      const employeePosition = editingEmployee.position || '';
+      
+      // Check if department is in the list (will be populated from API)
+      const isDepartmentCustom = employeeDepartment && departments.length > 0 && !departments.includes(employeeDepartment);
+      // Check if position is in the list (will be populated from API)
+      const isPositionCustom = employeePosition && positions.length > 0 && !positions.includes(employeePosition);
 
       setFormData({
         firstName: editingEmployee.firstName || '',
@@ -154,47 +157,37 @@ export const EmployeeOnboardForm = ({
         postalCode: editingEmployee.postalCode || '',
         country: editingEmployee.country || '',
         employeeId: editingEmployee.employeeId || generateEmployeeId(unit),
-        department: editingEmployee.department || '',
-        position: editingEmployee.position || '',
+        department: isDepartmentCustom ? 'Add Department' : employeeDepartment,
+        position: isPositionCustom ? 'Add Position' : employeePosition,
         joiningDate: editingEmployee.joiningDate || '',
         contractType: editingEmployee.contractType || '',
         terminated: editingEmployee.terminated ?? 'no',
-        probationPeriod: editingEmployee.probationPeriod || '',
-        noticePeriod: editingEmployee.noticePeriod || '',
-        salary: editingEmployee.salary || '',
-        benefits: editingEmployee.benefits || '',
-        workingHours: editingEmployee.workingHours || '',
-        workLocation: editingEmployee.workLocation || '',
       });
+      
+      // Set custom department and position if needed
+      if (isDepartmentCustom) {
+        setCustomDepartment(employeeDepartment);
+        setShowCustomDepartmentInput(true);
+      } else {
+        setCustomDepartment('');
+        setShowCustomDepartmentInput(false);
+      }
+      
+      if (isPositionCustom) {
+        setCustomPosition(employeePosition);
+        setShowCustomPositionInput(true);
+      } else {
+        setCustomPosition('');
+        setShowCustomPositionInput(false);
+      }
     } else if (!editingEmployee && isOpen) {
       setFormData(buildInitialFormData());
+      setCustomDepartment('');
+      setShowCustomDepartmentInput(false);
+      setCustomPosition('');
+      setShowCustomPositionInput(false);
     }
-  }, [editingEmployee, isOpen]);
-
-  const contractTypes = [
-    { value: 'permanent', label: 'Permanent', description: 'Full-time permanent employment' },
-    { value: 'contract', label: 'Contract', description: 'Fixed-term contract' },
-    { value: 'temporary', label: 'Temporary', description: 'Temporary employment' },
-    { value: 'intern', label: 'Intern', description: 'Internship position' },
-  ];
-
-  const departments = [
-    'Human Resources',
-    'Finance',
-    'Operations',
-    'IT',
-    'Marketing',
-    'Sales',
-    'Customer Service',
-    'Maintenance',
-    'Fleet Management',
-    'Procurement',
-    'Quality Assurance',
-    'Administration',
-    'Other',
-  ];
-
-  const units = ['UNIT1', 'UNIT2', 'UNIT3'];
+  }, [editingEmployee, isOpen, departments, positions]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -219,13 +212,44 @@ export const EmployeeOnboardForm = ({
     }
     
     // Handle custom department
-    if (field === 'department' && value === 'Other') {
+    if (field === 'department' && value === 'Add Department') {
       setShowCustomDepartmentInput(true);
       setCustomDepartment('');
-    } else if (field === 'department' && value !== 'Other') {
+    } else if (field === 'department' && value !== 'Add Department') {
       setShowCustomDepartmentInput(false);
       setCustomDepartment('');
     }
+    
+    // Handle custom position
+    if (field === 'position' && value === 'Add Position') {
+      setShowCustomPositionInput(true);
+      setCustomPosition('');
+    } else if (field === 'position' && value !== 'Add Position') {
+      setShowCustomPositionInput(false);
+      setCustomPosition('');
+    }
+  };
+
+  const handleAddDepartment = () => {
+    if (!customDepartment.trim()) {
+      setErrors((prev) => ({ ...prev, customDepartment: 'Department name is required' }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, department: customDepartment }));
+    setShowCustomDepartmentInput(false);
+    setCustomDepartment('');
+    setErrors((prev) => ({ ...prev, customDepartment: '' }));
+  };
+
+  const handleAddPosition = () => {
+    if (!customPosition.trim()) {
+      setErrors((prev) => ({ ...prev, customPosition: 'Position name is required' }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, position: customPosition }));
+    setShowCustomPositionInput(false);
+    setCustomPosition('');
+    setErrors((prev) => ({ ...prev, customPosition: '' }));
   };
 
 
@@ -236,7 +260,8 @@ export const EmployeeOnboardForm = ({
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
-    if (formData.department === 'Other' && !customDepartment.trim()) newErrors.customDepartment = 'Department name is required';
+    if (formData.department === 'Add Department' && !customDepartment.trim()) newErrors.customDepartment = 'Department name is required';
+    if (formData.position === 'Add Position' && !customPosition.trim()) newErrors.customPosition = 'Position name is required';
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -248,14 +273,6 @@ export const EmployeeOnboardForm = ({
     const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
     if (formData.phone && !phoneRegex.test(formData.phone.replace(/\s/g, ''))) {
       newErrors.phone = 'Please enter a valid phone number';
-    }
-
-    // Permanent contract specific validations
-    if (formData.contractType === 'permanent') {
-      if (!formData.probationPeriod) newErrors.probationPeriod = 'Probation period is required for permanent contracts';
-      if (!formData.noticePeriod) newErrors.noticePeriod = 'Notice period is required for permanent contracts';
-      if (!formData.salary.trim()) newErrors.salary = 'Salary is required for permanent contracts';
-      if (!formData.workingHours.trim()) newErrors.workingHours = 'Working hours are required for permanent contracts';
     }
 
     return newErrors;
@@ -286,7 +303,8 @@ export const EmployeeOnboardForm = ({
       const employeeData = {
         ...formData,
         employeeId: resolvedEmployeeId,
-        department: formData.department === 'Other' ? customDepartment : formData.department,
+        department: formData.department === 'Add Department' ? customDepartment : formData.department,
+        position: formData.position === 'Add Position' ? customPosition : formData.position,
         fullName: `${formData.firstName} ${formData.lastName}`,
         submittedBy: currentUser?.id,
         submittedAt: new Date().toISOString(),
@@ -312,6 +330,8 @@ export const EmployeeOnboardForm = ({
       setErrors({});
       setCustomDepartment('');
       setShowCustomDepartmentInput(false);
+      setCustomPosition('');
+      setShowCustomPositionInput(false);
       onClose();
     } catch (error) {
       console.error('Error submitting employee form:', error);
@@ -330,6 +350,8 @@ export const EmployeeOnboardForm = ({
     setErrors({});
     setCustomDepartment('');
     setShowCustomDepartmentInput(false);
+    setCustomPosition('');
+    setShowCustomPositionInput(false);
     onClose();
   };
 
@@ -406,7 +428,7 @@ export const EmployeeOnboardForm = ({
 
                   <div className='space-y-1'>
                     <Label htmlFor='unit' className='text-xs font-medium'>
-                      Unit/Location *
+                    Factory Location*
                     </Label>
                     <Select
                       value={formData.unit}
@@ -416,6 +438,7 @@ export const EmployeeOnboardForm = ({
                         <SelectValue placeholder='Select unit' />
                       </SelectTrigger>
                       <SelectContent>
+                        {/* TODO: Populate from API */}
                         {units.map((unit) => (
                           <SelectItem key={unit} value={unit}>
                             {unit}
@@ -469,10 +492,12 @@ export const EmployeeOnboardForm = ({
                         <SelectValue placeholder='Select gender' />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value='male'>Male</SelectItem>
-                        <SelectItem value='female'>Female</SelectItem>
-                        <SelectItem value='other'>Other</SelectItem>
-                        <SelectItem value='prefer-not-to-say'>Prefer not to say</SelectItem>
+                        {/* TODO: Populate from API */}
+                        {genders.map((gender) => (
+                          <SelectItem key={gender.value} value={gender.value}>
+                            {gender.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -489,10 +514,12 @@ export const EmployeeOnboardForm = ({
                         <SelectValue placeholder='Select status' />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value='single'>Single</SelectItem>
-                        <SelectItem value='married'>Married</SelectItem>
-                        <SelectItem value='divorced'>Divorced</SelectItem>
-                        <SelectItem value='widowed'>Widowed</SelectItem>
+                        {/* TODO: Populate from API */}
+                        {maritalStatuses.map((status) => (
+                          <SelectItem key={status.value} value={status.value}>
+                            {status.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -600,11 +627,13 @@ export const EmployeeOnboardForm = ({
                         <SelectValue placeholder='Select department' />
                       </SelectTrigger>
                       <SelectContent>
+                        {/* TODO: Populate from API */}
                         {departments.map((dept) => (
                           <SelectItem key={dept} value={dept}>
                             {dept}
                           </SelectItem>
                         ))}
+                        <SelectItem value='Add Department'>Add Department</SelectItem>
                       </SelectContent>
                     </Select>
                     {errors.department && (
@@ -613,7 +642,7 @@ export const EmployeeOnboardForm = ({
                     
                     {/* Custom Department Input */}
                     {showCustomDepartmentInput && (
-                      <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2 mt-2'>
+                      <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2 mt-2 w-full'>
                         <Label className='text-xs font-medium text-blue-800'>
                           Add New Department
                         </Label>
@@ -621,15 +650,37 @@ export const EmployeeOnboardForm = ({
                           <Input
                             placeholder='Enter department name'
                             value={customDepartment}
-                            onChange={(e) => setCustomDepartment(e.target.value)}
-                            className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                            onChange={(e) => {
+                              setCustomDepartment(e.target.value);
+                              if (errors.customDepartment) {
+                                setErrors((prev) => ({ ...prev, customDepartment: '' }));
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddDepartment();
+                              }
+                            }}
+                            className='flex-1 min-w-[200px] h-8 px-3 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
                           />
+                          <Button
+                            type='button'
+                            onClick={handleAddDepartment}
+                            variant='default'
+                            size='sm'
+                            className='h-8 px-3'
+                          >
+                            <Plus className='w-3 h-3 mr-1' />
+                            Add
+                          </Button>
                           <Button
                             type='button'
                             onClick={() => {
                               setShowCustomDepartmentInput(false);
                               setCustomDepartment('');
                               setFormData(prev => ({ ...prev, department: '' }));
+                              setErrors((prev) => ({ ...prev, customDepartment: '' }));
                             }}
                             variant='outline'
                             size='sm'
@@ -649,15 +700,80 @@ export const EmployeeOnboardForm = ({
                     <Label htmlFor='position' className='text-xs font-medium'>
                       Position/Job Title
                     </Label>
-                    <Input
-                      id='position'
-                      placeholder='Enter job title'
+                    <Select
                       value={formData.position}
-                      onChange={(e) => handleInputChange('position', e.target.value)}
-                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
-                    />
+                      onValueChange={(value) => handleSelectChange('position', value)}
+                    >
+                      <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
+                        <SelectValue placeholder='Select position' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {/* TODO: Populate from API */}
+                        {positions.map((position) => (
+                          <SelectItem key={position} value={position} className='text-left'>
+                            {position}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value='Add Position'>Add Position</SelectItem>
+                      </SelectContent>
+                    </Select>
                     {errors.position && (
                       <p className='text-destructive text-xs mt-1'>{errors.position}</p>
+                    )}
+                    
+                    {/* Custom Position Input */}
+                    {showCustomPositionInput && (
+                      <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2 mt-2 w-full'>
+                        <Label className='text-xs font-medium text-blue-800'>
+                          Add New Position
+                        </Label>
+                        <div className='flex gap-2'>
+                          <Input
+                            placeholder='Enter position name'
+                            value={customPosition}
+                            onChange={(e) => {
+                              setCustomPosition(e.target.value);
+                              if (errors.customPosition) {
+                                setErrors((prev) => ({ ...prev, customPosition: '' }));
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddPosition();
+                              }
+                            }}
+                            className='flex-1 min-w-[200px] h-8 px-3 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
+                          />
+                          <Button
+                            type='button'
+                            onClick={handleAddPosition}
+                            variant='default'
+                            size='sm'
+                            className='h-8 px-3'
+                          >
+                            <Plus className='w-3 h-3 mr-1' />
+                            Add
+                          </Button>
+                          <Button
+                            type='button'
+                            onClick={() => {
+                              setShowCustomPositionInput(false);
+                              setCustomPosition('');
+                              setFormData(prev => ({ ...prev, position: '' }));
+                              setErrors((prev) => ({ ...prev, customPosition: '' }));
+                            }}
+                            variant='outline'
+                            size='sm'
+                            className='h-8 px-3'
+                          >
+                            <X className='w-3 h-3' />
+                          </Button>
+                        </div>
+                        {errors.customPosition && (
+                          <p className='text-destructive text-xs mt-1'>{errors.customPosition}</p>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -709,12 +825,10 @@ export const EmployeeOnboardForm = ({
                         <SelectValue placeholder='Select employment type' />
                       </SelectTrigger>
                       <SelectContent>
+                        {/* TODO: Populate from API */}
                         {contractTypes.map((contract) => (
-                          <SelectItem key={contract.value} value={contract.value}>
-                            <div className='flex flex-col'>
-                              <span>{contract.label}</span>
-                              <span className='text-xs text-muted-foreground'>{contract.description}</span>
-                            </div>
+                          <SelectItem key={contract.value} value={contract.value} className='text-left'>
+                            {contract.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -725,124 +839,6 @@ export const EmployeeOnboardForm = ({
                   </div>
                 </div>
               </div>
-
-              {/* Contract Details - Show only for permanent contracts */}
-              {formData.contractType === 'permanent' && (
-                <div className='space-y-2'>
-                  <h4 className='text-xs font-medium text-muted-foreground border-b pb-1'>
-                    Permanent Contract Details
-                  </h4>
-
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <div className='space-y-1'>
-                      <Label htmlFor='probationPeriod' className='text-xs font-medium'>
-                        Probation Period *
-                      </Label>
-                      <Select
-                        value={formData.probationPeriod}
-                        onValueChange={(value) => handleSelectChange('probationPeriod', value)}
-                      >
-                        <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
-                          <SelectValue placeholder='Select probation period' />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value='1-month'>1 Month</SelectItem>
-                          <SelectItem value='2-months'>2 Months</SelectItem>
-                          <SelectItem value='3-months'>3 Months</SelectItem>
-                          <SelectItem value='6-months'>6 Months</SelectItem>
-                          <SelectItem value='1-year'>1 Year</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {errors.probationPeriod && (
-                        <p className='text-destructive text-xs mt-1'>{errors.probationPeriod}</p>
-                      )}
-                    </div>
-
-                    <div className='space-y-1'>
-                      <Label htmlFor='noticePeriod' className='text-xs font-medium'>
-                        Notice Period *
-                      </Label>
-                      <Select
-                        value={formData.noticePeriod}
-                        onValueChange={(value) => handleSelectChange('noticePeriod', value)}
-                      >
-                        <SelectTrigger className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'>
-                          <SelectValue placeholder='Select notice period' />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value='1-month'>1 Month</SelectItem>
-                          <SelectItem value='2-months'>2 Months</SelectItem>
-                          <SelectItem value='3-months'>3 Months</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {errors.noticePeriod && (
-                        <p className='text-destructive text-xs mt-1'>{errors.noticePeriod}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <div className='space-y-1'>
-                      <Label htmlFor='salary' className='text-xs font-medium'>
-                        Salary *
-                      </Label>
-                      <Input
-                        id='salary'
-                        type='number'
-                        placeholder='Enter salary amount'
-                        value={formData.salary}
-                        onChange={(e) => handleInputChange('salary', e.target.value)}
-                        className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
-                      />
-                      {errors.salary && (
-                        <p className='text-destructive text-xs mt-1'>{errors.salary}</p>
-                      )}
-                    </div>
-
-                    <div className='space-y-1'>
-                      <Label htmlFor='workingHours' className='text-xs font-medium'>
-                        Working Hours *
-                      </Label>
-                      <Input
-                        id='workingHours'
-                        placeholder='e.g., 9:00 AM - 5:00 PM'
-                        value={formData.workingHours}
-                        onChange={(e) => handleInputChange('workingHours', e.target.value)}
-                        className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
-                      />
-                      {errors.workingHours && (
-                        <p className='text-destructive text-xs mt-1'>{errors.workingHours}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className='space-y-1'>
-                    <Label htmlFor='benefits' className='text-xs font-medium'>
-                      Benefits & Perks
-                    </Label>
-                    <Textarea
-                      id='benefits'
-                      placeholder='Enter benefits and perks (health insurance, vacation days, etc.)'
-                      value={formData.benefits}
-                      onChange={(e) => handleInputChange('benefits', e.target.value)}
-                      className='min-h-[40px] px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs resize-none transition-all duration-200'
-                    />
-                  </div>
-
-                  <div className='space-y-1'>
-                    <Label htmlFor='workLocation' className='text-xs font-medium'>
-                      Work Location
-                    </Label>
-                    <Input
-                      id='workLocation'
-                      placeholder='Enter work location'
-                      value={formData.workLocation}
-                      onChange={(e) => handleInputChange('workLocation', e.target.value)}
-                      className='h-8 px-2 py-1 border border-input bg-background hover:border-primary/50 focus:border-transparent focus:ring-0 outline-none rounded-[5px] text-xs transition-all duration-200'
-                    />
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
 

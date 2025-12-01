@@ -560,7 +560,7 @@ const CompanyOwnerDashboard = () => {
           <Card className="p-4 sm:p-6 border-l-4 border-l-green-500">
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Total Expenses - All Units</p>
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">Total Expenses - All Factory Location</p>
                 <p className="text-xl sm:text-2xl font-bold truncate">₹{allUnitsTotal.toLocaleString()}</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
                   {branches.length > 0 ? branches.map(b => b.name).join(', ') : 'All Branches'}

@@ -160,551 +160,9 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Mock employee data - Replace with actual API call
-  const mockEmployees: Employee[] = [
-    {
-      id: '1',
-      employeeId: 'EU1001',
-      firstName: 'John',
-      lastName: 'Doe',
-      fullName: 'John Doe',
-      email: 'john.doe@company.com',
-      phone: '+1234567890',
-      dateOfBirth: '1990-05-15',
-      gender: 'male',
-      maritalStatus: 'single',
-      nationality: 'American',
-      address: '123 Main Street, Apt 4B',
-      city: 'New York',
-      state: 'NY',
-      postalCode: '10001',
-      country: 'USA',
-      emergencyContactName: 'Jane Doe',
-      emergencyContactPhone: '+1234567891',
-      emergencyContactRelation: 'Sister',
-      department: 'Engineering',
-      position: 'Senior Software Engineer',
-      reportingManager: 'Sarah Wilson',
-      joiningDate: '2022-01-15',
-      contractType: 'permanent',
-      unit: 'UNIT1',
-      probationPeriod: '3-months',
-      noticePeriod: '1-month',
-      salary: '85000',
-      benefits: 'Health Insurance, 401k, Paid Time Off',
-      workingHours: '9:00 AM - 6:00 PM',
-      workLocation: 'Office',
-      status: 'active',
-      skills: 'React, TypeScript, Node.js, Python',
-      experience: '5 years in software development',
-      education: 'Bachelor of Computer Science',
-      notes: 'Excellent team player, leads technical initiatives',
-      createdAt: '2022-01-15T09:00:00Z',
-      updatedAt: '2024-01-15T10:30:00Z',
-      createdBy: 'HR Manager',
-      lastLogin: '2024-01-20T08:45:00Z'
-    },
-    {
-      id: '2',
-      employeeId: 'EU2001',
-      firstName: 'Jane',
-      lastName: 'Smith',
-      fullName: 'Jane Smith',
-      email: 'jane.smith@company.com',
-      phone: '+1234567892',
-      dateOfBirth: '1988-08-22',
-      gender: 'female',
-      maritalStatus: 'married',
-      nationality: 'Canadian',
-      address: '456 Oak Avenue',
-      city: 'Toronto',
-      state: 'ON',
-      postalCode: 'M5V 3A8',
-      country: 'Canada',
-      emergencyContactName: 'Mike Smith',
-      emergencyContactPhone: '+1234567893',
-      emergencyContactRelation: 'Husband',
-      department: 'Marketing',
-      position: 'Marketing Manager',
-      reportingManager: 'David Brown',
-      joiningDate: '2021-06-01',
-      contractType: 'permanent',
-      unit: 'UNIT2',
-      probationPeriod: '3-months',
-      noticePeriod: '2-months',
-      salary: '75000',
-      benefits: 'Health Insurance, Dental, Vision, 401k',
-      workingHours: '9:00 AM - 5:00 PM',
-      workLocation: 'Hybrid',
-      status: 'active',
-      skills: 'Digital Marketing, SEO, Content Strategy, Analytics',
-      experience: '7 years in marketing',
-      education: 'Master of Business Administration',
-      notes: 'Creative and strategic thinker',
-      createdAt: '2021-06-01T09:00:00Z',
-      updatedAt: '2024-01-10T14:20:00Z',
-      createdBy: 'HR Manager',
-      lastLogin: '2024-01-20T09:15:00Z'
-    },
-    {
-      id: '3',
-      employeeId: 'EU3001',
-      firstName: 'Mike',
-      lastName: 'Johnson',
-      fullName: 'Mike Johnson',
-      email: 'mike.johnson@company.com',
-      phone: '+1234567894',
-      dateOfBirth: '1992-12-10',
-      gender: 'male',
-      maritalStatus: 'single',
-      nationality: 'British',
-      address: '789 Pine Street',
-      city: 'London',
-      state: 'England',
-      postalCode: 'SW1A 1AA',
-      country: 'UK',
-      emergencyContactName: 'Lisa Johnson',
-      emergencyContactPhone: '+1234567895',
-      emergencyContactRelation: 'Mother',
-      department: 'Sales',
-      position: 'Sales Executive',
-      reportingManager: 'Tom Wilson',
-      joiningDate: '2023-03-01',
-      contractType: 'contract',
-      unit: 'UNIT3',
-      probationPeriod: '2-months',
-      noticePeriod: '1-month',
-      salary: '60000',
-      benefits: 'Health Insurance, Commission',
-      workingHours: '8:30 AM - 5:30 PM',
-      workLocation: 'Remote',
-      status: 'active',
-      skills: 'Sales, CRM, Negotiation, Customer Relations',
-      experience: '3 years in sales',
-      education: 'Bachelor of Business',
-      notes: 'High performer, exceeds targets consistently',
-      createdAt: '2023-03-01T09:00:00Z',
-      updatedAt: '2024-01-18T16:45:00Z',
-      createdBy: 'HR Manager',
-      lastLogin: '2024-01-19T10:30:00Z'
-    },
-    {
-      id: '4',
-      employeeId: 'EU1002',
-      firstName: 'Sarah',
-      lastName: 'Wilson',
-      fullName: 'Sarah Wilson',
-      email: 'sarah.wilson@company.com',
-      phone: '+1234567896',
-      dateOfBirth: '1985-04-18',
-      gender: 'female',
-      maritalStatus: 'married',
-      nationality: 'Australian',
-      address: '321 Elm Street',
-      city: 'Sydney',
-      state: 'NSW',
-      postalCode: '2000',
-      country: 'Australia',
-      emergencyContactName: 'Robert Wilson',
-      emergencyContactPhone: '+1234567897',
-      emergencyContactRelation: 'Husband',
-      department: 'HR',
-      position: 'HR Manager',
-      reportingManager: 'CEO',
-      joiningDate: '2020-09-01',
-      contractType: 'permanent',
-      unit: 'UNIT1',
-      probationPeriod: '6-months',
-      noticePeriod: '3-months',
-      salary: '95000',
-      benefits: 'Full Benefits Package',
-      workingHours: '9:00 AM - 6:00 PM',
-      workLocation: 'Office',
-      status: 'active',
-      skills: 'HR Management, Recruitment, Employee Relations, Compliance',
-      experience: '10 years in HR',
-      education: 'Master of Human Resources',
-      notes: 'Experienced HR professional, team leader',
-      createdAt: '2020-09-01T09:00:00Z',
-      updatedAt: '2024-01-15T11:20:00Z',
-      createdBy: 'CEO',
-      lastLogin: '2024-01-20T08:00:00Z'
-    },
-    {
-      id: '5',
-      employeeId: 'EU2002',
-      firstName: 'David',
-      lastName: 'Brown',
-      fullName: 'David Brown',
-      email: 'david.brown@company.com',
-      phone: '+1234567898',
-      dateOfBirth: '1987-11-25',
-      gender: 'male',
-      maritalStatus: 'divorced',
-      nationality: 'American',
-      address: '654 Maple Drive',
-      city: 'Los Angeles',
-      state: 'CA',
-      postalCode: '90210',
-      country: 'USA',
-      emergencyContactName: 'Emily Brown',
-      emergencyContactPhone: '+1234567899',
-      emergencyContactRelation: 'Daughter',
-      department: 'Finance',
-      position: 'Senior Accountant',
-      reportingManager: 'CFO',
-      joiningDate: '2021-02-15',
-      contractType: 'permanent',
-      unit: 'UNIT2',
-      probationPeriod: '3-months',
-      noticePeriod: '2-months',
-      salary: '80000',
-      benefits: 'Health Insurance, 401k, Stock Options',
-      workingHours: '8:00 AM - 5:00 PM',
-      workLocation: 'Office',
-      status: 'active',
-      skills: 'Accounting, Financial Analysis, Excel, QuickBooks',
-      experience: '8 years in accounting',
-      education: 'Bachelor of Accounting',
-      notes: 'Detail-oriented, excellent with numbers',
-      createdAt: '2021-02-15T09:00:00Z',
-      updatedAt: '2024-01-12T13:15:00Z',
-      createdBy: 'HR Manager',
-      lastLogin: '2024-01-20T07:45:00Z'
-    },
-    {
-      id: '6',
-      employeeId: 'EU3002',
-      firstName: 'Lisa',
-      lastName: 'Garcia',
-      fullName: 'Lisa Garcia',
-      email: 'lisa.garcia@company.com',
-      phone: '+1234567800',
-      dateOfBirth: '1991-07-12',
-      gender: 'female',
-      maritalStatus: 'single',
-      nationality: 'Spanish',
-      address: '789 Pine Street',
-      city: 'Madrid',
-      state: 'Madrid',
-      postalCode: '28001',
-      country: 'Spain',
-      emergencyContactName: 'Carlos Garcia',
-      emergencyContactPhone: '+1234567801',
-      emergencyContactRelation: 'Brother',
-      department: 'Customer Service',
-      position: 'Customer Support Manager',
-      reportingManager: 'Sarah Wilson',
-      joiningDate: '2023-01-10',
-      contractType: 'permanent',
-      unit: 'UNIT3',
-      probationPeriod: '3-months',
-      noticePeriod: '1-month',
-      salary: '55000',
-      benefits: 'Health Insurance, 401k',
-      workingHours: '9:00 AM - 6:00 PM',
-      workLocation: 'Office',
-      status: 'active',
-      skills: 'Customer Relations, CRM, Communication, Problem Solving',
-      experience: '4 years in customer service',
-      education: 'Bachelor of Business Administration',
-      notes: 'Excellent customer service skills, multilingual',
-      createdAt: '2023-01-10T09:00:00Z',
-      updatedAt: '2024-01-18T14:30:00Z',
-      createdBy: 'HR Manager',
-      lastLogin: '2024-01-20T09:30:00Z'
-    },
-    {
-      id: '7',
-      employeeId: 'EU1003',
-      firstName: 'Robert',
-      lastName: 'Chen',
-      fullName: 'Robert Chen',
-      email: 'robert.chen@company.com',
-      phone: '+1234567802',
-      dateOfBirth: '1989-03-25',
-      gender: 'male',
-      maritalStatus: 'married',
-      nationality: 'Chinese',
-      address: '456 Oak Avenue',
-      city: 'Beijing',
-      state: 'Beijing',
-      postalCode: '100000',
-      country: 'China',
-      emergencyContactName: 'Wei Chen',
-      emergencyContactPhone: '+1234567803',
-      emergencyContactRelation: 'Wife',
-      department: 'Operations',
-      position: 'Operations Manager',
-      reportingManager: 'David Brown',
-      joiningDate: '2021-08-15',
-      contractType: 'permanent',
-      unit: 'UNIT1',
-      probationPeriod: '6-months',
-      noticePeriod: '2-months',
-      salary: '90000',
-      benefits: 'Full Benefits Package',
-      workingHours: '8:00 AM - 6:00 PM',
-      workLocation: 'Office',
-      status: 'active',
-      skills: 'Operations Management, Process Improvement, Team Leadership',
-      experience: '8 years in operations',
-      education: 'Master of Business Administration',
-      notes: 'Strong leadership skills, process optimization expert',
-      createdAt: '2021-08-15T09:00:00Z',
-      updatedAt: '2024-01-16T11:45:00Z',
-      createdBy: 'HR Manager',
-      lastLogin: '2024-01-20T08:15:00Z'
-    },
-    {
-      id: '8',
-      employeeId: 'EU2003',
-      firstName: 'Maria',
-      lastName: 'Rodriguez',
-      fullName: 'Maria Rodriguez',
-      email: 'maria.rodriguez@company.com',
-      phone: '+1234567804',
-      dateOfBirth: '1993-11-08',
-      gender: 'female',
-      maritalStatus: 'single',
-      nationality: 'Mexican',
-      address: '321 Elm Street',
-      city: 'Mexico City',
-      state: 'CDMX',
-      postalCode: '01000',
-      country: 'Mexico',
-      emergencyContactName: 'Jose Rodriguez',
-      emergencyContactPhone: '+1234567805',
-      emergencyContactRelation: 'Father',
-      department: 'IT',
-      position: 'Software Developer',
-      reportingManager: 'John Doe',
-      joiningDate: '2023-05-01',
-      contractType: 'contract',
-      unit: 'UNIT2',
-      probationPeriod: '2-months',
-      noticePeriod: '1-month',
-      salary: '65000',
-      benefits: 'Health Insurance, Flexible Hours',
-      workingHours: 'Flexible',
-      workLocation: 'Remote',
-      status: 'active',
-      skills: 'JavaScript, Python, React, Node.js, Database Design',
-      experience: '3 years in software development',
-      education: 'Bachelor of Computer Science',
-      notes: 'Full-stack developer, remote work specialist',
-      createdAt: '2023-05-01T09:00:00Z',
-      updatedAt: '2024-01-19T16:20:00Z',
-      createdBy: 'HR Manager',
-      lastLogin: '2024-01-20T10:45:00Z'
-    },
-    {
-      id: '9',
-      employeeId: 'EU3003',
-      firstName: 'Ahmed',
-      lastName: 'Hassan',
-      fullName: 'Ahmed Hassan',
-      email: 'ahmed.hassan@company.com',
-      phone: '+1234567806',
-      dateOfBirth: '1986-09-14',
-      gender: 'male',
-      maritalStatus: 'married',
-      nationality: 'Egyptian',
-      address: '654 Maple Drive',
-      city: 'Cairo',
-      state: 'Cairo',
-      postalCode: '11511',
-      country: 'Egypt',
-      emergencyContactName: 'Fatima Hassan',
-      emergencyContactPhone: '+1234567807',
-      emergencyContactRelation: 'Wife',
-      department: 'Finance',
-      position: 'Financial Analyst',
-      reportingManager: 'David Brown',
-      joiningDate: '2022-03-20',
-      contractType: 'permanent',
-      unit: 'UNIT3',
-      probationPeriod: '3-months',
-      noticePeriod: '2-months',
-      salary: '70000',
-      benefits: 'Health Insurance, 401k, Stock Options',
-      workingHours: '9:00 AM - 5:00 PM',
-      workLocation: 'Office',
-      status: 'active',
-      skills: 'Financial Analysis, Excel, SQL, Data Visualization',
-      experience: '6 years in financial analysis',
-      education: 'Master of Finance',
-      notes: 'Expert in financial modeling and data analysis',
-      createdAt: '2022-03-20T09:00:00Z',
-      updatedAt: '2024-01-17T13:15:00Z',
-      createdBy: 'HR Manager',
-      lastLogin: '2024-01-20T07:30:00Z'
-    },
-    {
-      id: '10',
-      employeeId: 'EU1004',
-      firstName: 'Emma',
-      lastName: 'Thompson',
-      fullName: 'Emma Thompson',
-      email: 'emma.thompson@company.com',
-      phone: '+1234567808',
-      dateOfBirth: '1994-12-03',
-      gender: 'female',
-      maritalStatus: 'single',
-      nationality: 'British',
-      address: '987 Cedar Lane',
-      city: 'Manchester',
-      state: 'England',
-      postalCode: 'M1 1AA',
-      country: 'UK',
-      emergencyContactName: 'James Thompson',
-      emergencyContactPhone: '+1234567809',
-      emergencyContactRelation: 'Brother',
-      department: 'Marketing',
-      position: 'Digital Marketing Specialist',
-      reportingManager: 'Jane Smith',
-      joiningDate: '2023-09-01',
-      contractType: 'temporary',
-      unit: 'UNIT1',
-      probationPeriod: '1-month',
-      noticePeriod: '1-week',
-      salary: '45000',
-      benefits: 'Health Insurance',
-      workingHours: '9:00 AM - 5:00 PM',
-      workLocation: 'Hybrid',
-      status: 'active',
-      skills: 'Digital Marketing, Social Media, Content Creation, Analytics',
-      experience: '2 years in digital marketing',
-      education: 'Bachelor of Marketing',
-      notes: 'Creative marketer with strong social media presence',
-      createdAt: '2023-09-01T09:00:00Z',
-      updatedAt: '2024-01-20T12:00:00Z',
-      createdBy: 'HR Manager',
-      lastLogin: '2024-01-20T11:15:00Z'
-    },
-    {
-      id: '11',
-      employeeId: 'EU2004',
-      firstName: 'Yuki',
-      lastName: 'Tanaka',
-      fullName: 'Yuki Tanaka',
-      email: 'yuki.tanaka@company.com',
-      phone: '+1234567810',
-      dateOfBirth: '1992-06-18',
-      gender: 'female',
-      maritalStatus: 'single',
-      nationality: 'Japanese',
-      address: '555 Sakura Street',
-      city: 'Tokyo',
-      state: 'Tokyo',
-      postalCode: '100-0001',
-      country: 'Japan',
-      emergencyContactName: 'Hiroshi Tanaka',
-      emergencyContactPhone: '+1234567811',
-      emergencyContactRelation: 'Father',
-      department: 'Engineering',
-      position: 'Frontend Developer',
-      reportingManager: 'John Doe',
-      joiningDate: '2023-11-15',
-      contractType: 'intern',
-      unit: 'UNIT2',
-      probationPeriod: '1-month',
-      noticePeriod: '1-week',
-      salary: '35000',
-      benefits: 'Health Insurance, Learning Budget',
-      workingHours: '9:00 AM - 6:00 PM',
-      workLocation: 'Office',
-      status: 'active',
-      skills: 'React, Vue.js, TypeScript, CSS, UI/UX Design',
-      experience: '1 year in frontend development',
-      education: 'Bachelor of Computer Science',
-      notes: 'Talented intern with strong design skills',
-      createdAt: '2023-11-15T09:00:00Z',
-      updatedAt: '2024-01-19T15:30:00Z',
-      createdBy: 'HR Manager',
-      lastLogin: '2024-01-20T09:45:00Z'
-    },
-    {
-      id: '12',
-      employeeId: 'EU3004',
-      firstName: 'Carlos',
-      lastName: 'Silva',
-      fullName: 'Carlos Silva',
-      email: 'carlos.silva@company.com',
-      phone: '+1234567812',
-      dateOfBirth: '1988-04-22',
-      gender: 'male',
-      maritalStatus: 'married',
-      nationality: 'Brazilian',
-      address: '777 Copacabana Avenue',
-      city: 'Rio de Janeiro',
-      state: 'RJ',
-      postalCode: '22000-000',
-      country: 'Brazil',
-      emergencyContactName: 'Ana Silva',
-      emergencyContactPhone: '+1234567813',
-      emergencyContactRelation: 'Wife',
-      department: 'Sales',
-      position: 'Sales Manager',
-      reportingManager: 'Mike Johnson',
-      joiningDate: '2022-07-01',
-      contractType: 'permanent',
-      unit: 'UNIT3',
-      probationPeriod: '3-months',
-      noticePeriod: '2-months',
-      salary: '75000',
-      benefits: 'Health Insurance, Commission, Car Allowance',
-      workingHours: '8:30 AM - 5:30 PM',
-      workLocation: 'Office',
-      status: 'active',
-      skills: 'Sales Management, CRM, Negotiation, Team Leadership',
-      experience: '7 years in sales',
-      education: 'Bachelor of Business',
-      notes: 'Top performer, consistently exceeds targets',
-      createdAt: '2022-07-01T09:00:00Z',
-      updatedAt: '2024-01-18T17:45:00Z',
-      createdBy: 'HR Manager',
-      lastLogin: '2024-01-20T08:30:00Z'
-    }
-  ];
-
-  const mockEmployeeLeaveHistory: Record<string, EmployeeLeaveRecord[]> = {
-    EU1001: [
-      { year: 2024, month: 'January', leavesTaken: 2 },
-      { year: 2024, month: 'March', leavesTaken: 1 },
-    ],
-    EU2001: [
-      { year: 2024, month: 'February', leavesTaken: 3 },
-    ],
-    EU3001: [
-      { year: 2024, month: 'April', leavesTaken: 1 },
-      { year: 2024, month: 'May', leavesTaken: 2 },
-    ],
-    EU1002: [],
-    EU2002: [
-      { year: 2024, month: 'January', leavesTaken: 1 },
-    ],
-    EU3002: [
-      { year: 2024, month: 'June', leavesTaken: 2 },
-    ],
-    EU1003: [
-      { year: 2024, month: 'March', leavesTaken: 2 },
-    ],
-    EU2003: [],
-    EU3003: [
-      { year: 2024, month: 'May', leavesTaken: 1 },
-    ],
-    EU1004: [
-      { year: 2024, month: 'April', leavesTaken: 1 },
-    ],
-    EU2004: [
-      { year: 2024, month: 'February', leavesTaken: 2 },
-    ],
-    EU3004: [],
-  };
-
-  const units = ['all', 'UNIT1', 'UNIT2', 'UNIT3'];
-  const contractTypes = ['all', 'permanent', 'contract', 'temporary', 'intern', 'terminated'];
+  // TODO: Populate from API
+  const [units, setUnits] = useState<string[]>([]);
+  const [contractTypes, setContractTypes] = useState<string[]>([]);
 
 
   const contractTypeConfig = {
@@ -777,12 +235,12 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
   const loadEmployees = async () => {
     setIsLoading(true);
     try {
-      // In a real app, this would be an API call
+      // TODO: Replace with actual API call
       // const response = await employeesApi.getAll();
       // setEmployees(response.data);
       
-      // Mock data for now
-      setEmployees(mockEmployees);
+      // Placeholder - will be populated from API
+      setEmployees([]);
     } catch (error) {
       console.error('Error loading employees:', error);
       toast({
@@ -820,11 +278,21 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
     setIsViewDialogOpen(true);
   };
 
-  const handleViewEmployeeLeaves = (employee: Employee) => {
+  const handleViewEmployeeLeaves = async (employee: Employee) => {
     setSelectedEmployee(employee);
-    const records = mockEmployeeLeaveHistory[employee.employeeId] || [];
-    setLeaveRecords(records);
+    try {
+      // TODO: Replace with actual API call
+      // const response = await employeesApi.getLeaveHistory(employee.id);
+      // setLeaveRecords(response.data);
+      
+      // Placeholder - will be populated from API
+      setLeaveRecords([]);
+    } catch (error) {
+      console.error('Error loading leave history:', error);
+      setLeaveRecords([]);
+    } finally {
     setIsLeaveDialogOpen(true);
+    }
   };
 
   const handleCloseViewDialog = () => {
@@ -877,54 +345,64 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
       <Card className='border-0 shadow-sm'>
         <CardHeader>
           <div className='flex flex-col gap-4'>
-            <div className='hidden sm:flex justify-between items-center'>
+            <div className='hidden sm:flex flex-col gap-4 md:flex-row md:justify-between md:items-end'>
               <CardTitle className='text-base flex items-center gap-2'>
                 
               </CardTitle>
 
-              <div className='flex items-center gap-2'>
+              <div className='flex flex-wrap items-end gap-2'>
                 <div className='relative'>
                   <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground' />
                   <Input
                     placeholder='Search employees...'
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className='pl-10 w-64'
+                    className='pl-10 w-64 h-9'
                   />
                 </div>
 
-                <Select value={filterUnit} onValueChange={setFilterUnit}>
-                  <SelectTrigger className='w-40'>
-                    <SelectValue placeholder='Unit' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map((unit) => (
-                      <SelectItem key={unit} value={unit}>
-                        {unit === 'all' ? 'All Units' : unit}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className='flex flex-col'>
+                  <Label className='text-xs text-muted-foreground mb-1'>Factory Location</Label>
+                  <Select value={filterUnit} onValueChange={setFilterUnit}>
+                    <SelectTrigger className='w-40 h-9'>
+                      <SelectValue placeholder='Unit' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* TODO: Populate from API */}
+                      <SelectItem value='all'>All Units</SelectItem>
+                      {units.map((unit) => (
+                        <SelectItem key={unit} value={unit}>
+                          {unit}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <Select value={filterContractType} onValueChange={setFilterContractType}>
-                  <SelectTrigger className='w-36'>
-                    <SelectValue placeholder='Contract' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contractTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type === 'all' ? 'All Types' : type.charAt(0).toUpperCase() + type.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className='flex flex-col'>
+                  <Label className='text-xs text-muted-foreground mb-1'>Employment Type</Label>
+                  <Select value={filterContractType} onValueChange={setFilterContractType}>
+                    <SelectTrigger className='w-36 h-9'>
+                      <SelectValue placeholder='Contract' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* TODO: Populate from API */}
+                      <SelectItem value='all'>All Types</SelectItem>
+                      {contractTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <div className='flex items-center gap-2 ml-2'>
-                  <Button variant='outline' size='sm'>
+                <div className='flex items-center gap-2 ml-0 md:ml-2'>
+                  <Button variant='outline' size='sm' className='h-9'>
                     <Upload className='w-4 h-4 mr-2' />
                     Export
                   </Button>
-                  <Button size='sm' onClick={handleAddEmployee}>
+                  <Button size='sm' onClick={handleAddEmployee} className='h-9'>
                     <UserPlus className='w-4 h-4 mr-2' />
                     Add Employee
                   </Button>
@@ -933,44 +411,57 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
             </div>
 
             <div className='flex flex-col gap-3 sm:hidden'>
-              <div className='flex items-center gap-2'>
-                <div className='relative flex-1'>
-                  <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground' />
-                  <Input
-                    placeholder='Search employees...'
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className='pl-9 w-full'
-                  />
-                </div>
-
-                <Select value={filterUnit} onValueChange={setFilterUnit}>
-                  <SelectTrigger className='w-24 h-10 text-xs'>
-                    <SelectValue placeholder='Unit' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map((unit) => (
-                      <SelectItem key={unit} value={unit}>
-                        {unit === 'all' ? 'All Units' : unit}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                <Select value={filterContractType} onValueChange={setFilterContractType}>
-                  <SelectTrigger className='w-24 h-10 text-xs'>
-                    <SelectValue placeholder='Type' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contractTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type === 'all' ? 'All Types' : type.charAt(0).toUpperCase() + type.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Search Bar - Full Width */}
+              <div className='relative w-full'>
+                <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground' />
+                <Input
+                  placeholder='Search employees...'
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className='pl-9 w-full h-10'
+                />
               </div>
 
+              {/* Filters Row */}
+              <div className='flex items-end gap-2'>
+                <div className='flex flex-col flex-1'>
+                  <Label className='text-xs text-muted-foreground mb-1'>Factory Location</Label>
+                  <Select value={filterUnit} onValueChange={setFilterUnit}>
+                    <SelectTrigger className='w-full h-10 text-xs'>
+                      <SelectValue placeholder='Unit' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* TODO: Populate from API */}
+                      <SelectItem value='all'>All Units</SelectItem>
+                      {units.map((unit) => (
+                        <SelectItem key={unit} value={unit}>
+                          {unit}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className='flex flex-col flex-1'>
+                  <Label className='text-xs text-muted-foreground mb-1'>Employment Type</Label>
+                  <Select value={filterContractType} onValueChange={setFilterContractType}>
+                    <SelectTrigger className='w-full h-10 text-xs'>
+                      <SelectValue placeholder='Type' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* TODO: Populate from API */}
+                      <SelectItem value='all'>All Types</SelectItem>
+                      {contractTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Action Buttons Row */}
               <div className='flex items-center gap-2'>
                 <Button variant='outline' size='sm' className='flex-1 h-10'>
                   <Upload className='w-4 h-4 mr-1.5' />
@@ -1021,8 +512,18 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
                         onClick={() => handleSort('unit')}
                         className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
                       >
-                        Unit/Location
+                        Factory Location
                         {getSortIcon('unit')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className='min-w-[150px]'>
+                      <Button
+                        variant='ghost'
+                        onClick={() => handleSort('department')}
+                        className='h-auto p-0 font-semibold text-foreground hover:text-primary flex items-center gap-2'
+                      >
+                        Department
+                        {getSortIcon('department')}
                       </Button>
                     </TableHead>
                     <TableHead className='min-w-[120px]'>
@@ -1093,6 +594,12 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
                           <div className='flex items-center gap-2'>
                             <MapPin className='w-4 h-4 text-muted-foreground' />
                             {employee.unit}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className='flex items-center gap-2'>
+                            <Building className='w-4 h-4 text-muted-foreground' />
+                            {employee.department}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -1311,7 +818,7 @@ export const EmployeeViewTab = ({}: EmployeeViewTabProps) => {
                 </CardHeader>
                 <CardContent className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                   <div>
-                    <Label className='text-sm font-medium text-muted-foreground'>Unit/Location</Label>
+                    <Label className='text-sm font-medium text-muted-foreground'>Factory Location</Label>
                     <p>{selectedEmployee.unit}</p>
                   </div>
                   <div>
