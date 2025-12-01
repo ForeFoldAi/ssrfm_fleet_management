@@ -745,10 +745,13 @@ export const AttendenceTab = ({}: AttendanceTabProps) => {
             </div>
           )}
 
-          {!searchQuery.trim() && filteredEmployees.length > 0 && (
+          {!searchQuery.trim() && (
             <div className='flex flex-col sm:flex-row items-center justify-between gap-4 mt-6'>
               <div className='text-xs sm:text-sm text-muted-foreground'>
-                Showing {startIndex + 1} to {Math.min(endIndex, filteredEmployees.length)} of {filteredEmployees.length} entries
+                {filteredEmployees.length > 0 
+                  ? `Showing ${startIndex + 1} to ${Math.min(endIndex, filteredEmployees.length)} of ${filteredEmployees.length} entries`
+                  : 'Showing 0 to 0 of 0 entries'
+                }
               </div>
 
               <div className='flex flex-col sm:flex-row items-center gap-3 sm:gap-2 w-full sm:w-auto'>

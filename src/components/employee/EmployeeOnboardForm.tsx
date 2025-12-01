@@ -642,7 +642,7 @@ export const EmployeeOnboardForm = ({
                     
                     {/* Custom Department Input */}
                     {showCustomDepartmentInput && (
-                      <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2 mt-2 w-full'>
+                      <div className='p-3 bg-blue-50 rounded-lg space-y-2 mt-2 w-full'>
                         <Label className='text-xs font-medium text-blue-800'>
                           Add New Department
                         </Label>
@@ -671,12 +671,13 @@ export const EmployeeOnboardForm = ({
                             size='sm'
                             className='h-8 px-3'
                           >
-                            <Plus className='w-3 h-3 mr-1' />
                             Add
                           </Button>
                           <Button
                             type='button'
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               setShowCustomDepartmentInput(false);
                               setCustomDepartment('');
                               setFormData(prev => ({ ...prev, department: '' }));
@@ -684,7 +685,7 @@ export const EmployeeOnboardForm = ({
                             }}
                             variant='outline'
                             size='sm'
-                            className='h-8 px-3'
+                            className='h-8 px-3 relative z-10'
                           >
                             <X className='w-3 h-3' />
                           </Button>
@@ -723,7 +724,7 @@ export const EmployeeOnboardForm = ({
                     
                     {/* Custom Position Input */}
                     {showCustomPositionInput && (
-                      <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2 mt-2 w-full'>
+                      <div className='p-3 bg-blue-50 rounded-lg space-y-2 mt-2 w-full'>
                         <Label className='text-xs font-medium text-blue-800'>
                           Add New Position
                         </Label>
@@ -752,12 +753,13 @@ export const EmployeeOnboardForm = ({
                             size='sm'
                             className='h-8 px-3'
                           >
-                            <Plus className='w-3 h-3 mr-1' />
                             Add
                           </Button>
                           <Button
                             type='button'
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               setShowCustomPositionInput(false);
                               setCustomPosition('');
                               setFormData(prev => ({ ...prev, position: '' }));
@@ -765,7 +767,7 @@ export const EmployeeOnboardForm = ({
                             }}
                             variant='outline'
                             size='sm'
-                            className='h-8 px-3'
+                            className='h-8 px-3 relative z-10'
                           >
                             <X className='w-3 h-3' />
                           </Button>
